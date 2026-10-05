@@ -1,0 +1,4 @@
+/MODULE.bazel.lock
+/bazel-*
+example/MODULE.bazel.lock
+example/bazel-*
