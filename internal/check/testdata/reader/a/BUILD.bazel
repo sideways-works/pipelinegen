@@ -1,0 +1,10 @@
+load(":lists.bzl", "INPUTS")
+
+exports_files(["input.txt"])
+
+filegroup(
+    name = "lint",
+    srcs = ["//:lint.sh"],
+    data = INPUTS,
+    tags = ["slice-lint"],
+)

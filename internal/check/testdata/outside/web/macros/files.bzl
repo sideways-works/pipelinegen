@@ -1,0 +1,1 @@
+CONFIGS = ["//web:tsconfig.json"]

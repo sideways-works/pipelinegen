@@ -1,0 +1,6 @@
+filegroup(
+    name = "lint",
+    srcs = ["//:lint.sh"],
+    data = ["Noto Sans/0-255.pbf"],
+    tags = ["slice-lint"],
+)

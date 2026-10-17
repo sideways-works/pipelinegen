@@ -1,0 +1,5 @@
+module(name = "fixture")
+
+local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")
+
+local_repository(name = "pipelinegen_deps", path = ".pipelinegen/deps")

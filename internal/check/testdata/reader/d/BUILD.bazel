@@ -1,0 +1,6 @@
+filegroup(
+    name = "lint",
+    srcs = ["//:lint.sh"],
+    data = ["input.txt"],
+    tags = ["slice-lint"],
+)

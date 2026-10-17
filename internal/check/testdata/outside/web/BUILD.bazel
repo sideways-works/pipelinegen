@@ -1,0 +1,27 @@
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@npm//web:eslint/package_json.bzl", eslint_bin = "bin")
+load("@npm//web:typescript/package_json.bzl", tsc_bin = "bin")
+load("@web_tools//macros:web.bzl", "web_project")
+load("@sample//web/macros:files.bzl", "CONFIGS")
+
+exports_files([
+    "package.json",
+    "pnpm-lock.yaml",
+])
+
+npm_link_all_packages(name = "node_modules")
+
+web_project(
+    name = "web",
+    srcs = glob(["src/**"]),
+    configs = CONFIGS,
+    eslint = eslint_bin,
+    lint_deps = [":node_modules/eslint"] + [eslint_bin],
+    tags = ["slice-web"],
+    tsc = tsc_bin.tsc_binary,
+    deps = [
+        ":package.json",
+        ":pnpm-lock.yaml",
+        "//web/macros:files.bzl",
+    ],
+)

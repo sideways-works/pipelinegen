@@ -1,0 +1,5 @@
+filegroup(
+    name = "specs",
+    srcs = glob(["*.spec.ts"]),
+    data = ["//web"],
+)
