@@ -1,0 +1,23 @@
+{
+  "config": {"rootDir": "/build/source/e2e"},
+  "suites": [
+    {"title": "checkout.spec.ts", "file": "checkout.spec.ts", "specs": [
+      {"title": "pays", "file": "checkout.spec.ts", "tests": [
+        {"projectName": "phone", "results": [{"duration": 1500, "status": "failed"}, {"duration": 1200, "status": "passed"}]},
+        {"projectName": "desktop", "results": [{"duration": 900, "status": "passed"}]}
+      ]}
+    ], "suites": [
+      {"title": "refunds", "file": "checkout.spec.ts", "specs": [
+        {"title": "refunds half", "file": "checkout.spec.ts", "tests": [
+          {"projectName": "phone", "results": [{"duration": 300, "status": "passed"}]}
+        ]}
+      ]}
+    ]},
+    {"title": "console/search.spec.ts", "file": "console/search.spec.ts", "specs": [
+      {"title": "finds", "file": "console/search.spec.ts", "tests": [
+        {"projectName": "desktop", "results": [{"duration": 41200, "status": "passed"}]},
+        {"projectName": "phone", "results": []}
+      ]}
+    ]}
+  ]
+}

@@ -1,0 +1,11 @@
+# go: building with the race detector
+{"Time":"2026-01-01T00:00:00Z","Action":"start","Package":"example.com/m/api"}
+{"Time":"2026-01-01T00:00:00Z","Action":"run","Package":"example.com/m/api","Test":"TestOrders"}
+{"Time":"2026-01-01T00:00:01Z","Action":"output","Package":"example.com/m/api","Test":"TestOrders","Output":"=== RUN   TestOrders\n"}
+{"Time":"2026-01-01T00:00:02Z","Action":"pass","Package":"example.com/m/api","Test":"TestOrders/one","Elapsed":1.5}
+{"Time":"2026-01-01T00:00:03Z","Action":"pass","Package":"example.com/m/api","Test":"TestOrders","Elapsed":2.25}
+{"Time":"2026-01-01T00:00:04Z","Action":"fail","Package":"example.com/m/api","Test":"TestRefunds","Elapsed":4}
+{"Time":"2026-01-01T00:00:05Z","Action":"skip","Package":"example.com/m/api","Test":"TestSlow","Elapsed":0}
+{"Time":"2026-01-01T00:00:06Z","Action":"pass","Package":"example.com/m/api","Test":"TestOrders","Elapsed":1}
+{"Time":"2026-01-01T00:00:07Z","Action":"fail","Package":"example.com/m/api","Elapsed":9}
+{"Time":"2026-01-01T00:00:07Z","Action":"pass","Package":"example.com/m/money","Test":"TestRound","Elapsed":0.05}
