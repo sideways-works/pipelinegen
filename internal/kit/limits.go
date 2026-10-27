@@ -1,0 +1,131 @@
+package kit
+
+import (
+	"fmt"
+	"slices"
+
+	"go.yaml.in/yaml/v3"
+)
+
+var stepKinds = []string{"task", "get", "put", "set_pipeline"}
+
+// hookKeys are a step's hooks. Concourse runs a hook after the step even
+// when the step's time limit ended it, with a fresh context, so no limit
+// around the step reaches its hooks: every step in one needs its own.
+var hookKeys = []string{"ensure", "on_success", "on_failure", "on_error", "on_abort"}
+
+// unlimitedSteps are the steps of a pipeline with no time limit of their own
+// or on a step around them: a step that hangs without one holds its build,
+// and its run's statuses pending, for ever.
+func unlimitedSteps(text []byte) []string {
+	var doc map[string]any
+	if err := yaml.Unmarshal(text, &doc); err != nil {
+		return []string{"the pipeline isn't YAML: " + err.Error()}
+	}
+
+	jobs, _ := doc["jobs"].([]any) //nolint:errcheck // a pipeline without jobs has nothing to check
+
+	var out []string
+
+	for _, j := range jobs {
+		job, ok := j.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		name := fmt.Sprint(job["name"])
+
+		// the job's own hooks run outside its plan
+		out = append(out, unlimited(job["plan"], name, false)...)
+
+		for _, h := range hookKeys {
+			out = append(out, unlimited(job[h], name, false)...)
+		}
+	}
+
+	return out
+}
+
+func unlimited(v any, job string, bounded bool) []string {
+	switch x := v.(type) {
+	case []any:
+		out := make([]string, 0, len(x))
+		for _, e := range x {
+			out = append(out, unlimited(e, job, bounded)...)
+		}
+
+		return out
+	case map[string]any:
+		var out []string
+
+		inner := bounded || x["timeout"] != nil
+
+		if kind := stepKind(x); kind != "" && !inner {
+			out = append(out, fmt.Sprintf("job %s, %s %v: no time limit", job, kind, x[kind]))
+		}
+
+		for _, k := range []string{"do", "in_parallel", "steps", "try"} {
+			if c, ok := x[k]; ok {
+				out = append(out, unlimited(c, job, inner)...)
+			}
+		}
+
+		for _, h := range hookKeys {
+			if c, ok := x[h]; ok {
+				out = append(out, unlimited(c, job, false)...)
+			}
+		}
+
+		return out
+	}
+
+	return nil
+}
+
+func stepKind(x map[string]any) string {
+	for _, k := range stepKinds {
+		if _, ok := x[k]; ok {
+			return k
+		}
+	}
+
+	return ""
+}
+
+// waitBoundWithBatch are, with locks taken per batch, the steps whose one
+// time limit holds both the wait for a lock's slot and the batch: a batch
+// that waits behind another run's lease then loses its time to the wait.
+func waitBoundWithBatch(text []byte) []string {
+	var doc any
+	if err := yaml.Unmarshal(text, &doc); err != nil {
+		return []string{"the pipeline isn't YAML: " + err.Error()}
+	}
+
+	var out []string
+
+	walkJobs(doc, "", func(x map[string]any, job string) {
+		do, ok := x["do"].([]any)
+		if !ok || x["timeout"] == nil {
+			return
+		}
+
+		if len(do) < 2 {
+			return
+		}
+
+		// only a lock step the limit holds directly, beside what it guards
+		for _, step := range do {
+			if m, ok := step.(map[string]any); !ok || m["task"] == nil {
+				continue
+			}
+
+			for _, c := range lockCalls(step, "acquire", job) {
+				out = appendNew(out, c.where+": the wait for lock "+c.lock+"'s slot counts against the time limit of the step it guards")
+			}
+		}
+	})
+
+	slices.Sort(out)
+
+	return out
+}
