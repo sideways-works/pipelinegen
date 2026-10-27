@@ -1,0 +1,182 @@
+# pipelinegen's own CI, made by pipelinegen. Four suites: lint and the Go
+# tests of the tool itself, and the example's two suites, whose slices
+# (example/calc, example/text, example/words) are slices here too.
+
+pipeline: pipelinegen
+
+bazel:
+  workspace: .
+  bazelisk: bazelisk
+
+github:
+  repository: sideways-works/pipelinegen
+  token: github_token
+
+concourse:
+  url: https://concourse.home.simulevski.at
+  team: sideways-works
+  repository:
+    uri: https://github.com/sideways-works/pipelinegen.git
+    username: x-access-token
+    password: ((github_token))
+  planner:
+    image: {repository: golang, tag: 1.27.1}
+    # go-sbom and go-correlator type-check the module: its dependencies
+    # must be in the planning job's module cache
+    prepare: go mod download
+    digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
+    bootstrap:
+      release: {version: v0.1.13-rc.6, sha256: 43c0903adfd82be0d50835d5aeec9bfaf9028d503ce1707fd14ecb2f98b1c076}
+      bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
+  # planning, reporting and the pipeline job run on untagged workers; the
+  # suites' own tasks stay on the test worker
+  bookkeeping:
+    tags: []
+  include: ci/root.yml
+  # Every suite, and the checks, on one worker's own tag. Two workers under
+  # one tag are a pool: Concourse places a task and the fetch of its image
+  # apart, and without peer-to-peer streaming every image then crosses
+  # through the web node (a golang image took 25 minutes). So never a
+  # shared tag such as cloud for suites here.
+  # Every suite runs on cloud-1: the other cloud worker runs an adopter's
+  # browser stacks, which need its memory.
+  resource_tags: [cloud-1]
+
+
+plugins:
+  # the go suite is bound by what each test file ran: go-sbom lists the
+  # module's declarations, go-correlator binds the test files and reads
+  # their coverage
+  - name: go-sbom
+    kind: sbom
+    repository: sideways-works/go-sbom
+    release: {version: v0.1.3-rc.3, sha256: fd95aa5ad762e5fb145e16aff50c608d7b43969a01509106dc70a7de8f64573f}
+    config: {modules: [.]}
+  - name: go-correlator
+    kind: correlator
+    repository: sideways-works/go-correlator
+    release: {version: v0.1.8-rc.9, sha256: 70bcc88c61194abea16be29370e778e1d3978e17acec305f32c7bdd511b001da}
+    config: {modules: [.]}
+  - name: concourse
+    kind: runner
+    repository: sideways-works/concourse-runner
+    release: {version: v0.1.9-rc.4, sha256: f31bec594a504ade596f52d5031293496ee4d049c726891b42f38ed37c9acc35}
+
+suites:
+  lint:
+    # two explicit slices: lint has no test files, and the commit subjects
+    # (every change reaches them)
+    tag: slice-pipelinegen-lint
+    run_slice: ci/lint.yml
+    run_on: {tags: [cloud-1]}
+  proof:
+    # one explicit slice: planning a fixture through the released plugins
+    # (ci/proof/plugins.sh); outside the nightly only a change under
+    # ci/proof or to the planning and recording code (//:proved) selects
+    # it, and then it plans with the tool built from the commit
+    tag: slice-pipelinegen-proof
+    run_slice: ci/proof/task.yml
+    run_on: {tags: [cloud-1]}
+    # the proof downloads the pinned private releases through the GitHub API
+    secrets: {batch: {GITHUB_TOKEN: github_token}}
+  go:
+    tests: ["connectors/**/*_test.go", "internal/**/*_test.go", "plugin/**/*_test.go"]
+    owner: "//:code"
+    # each test file runs when code it ran, or what that code needs,
+    # changed; a test that runs the tool in a child process records the
+    # child's code too (testenv.ExitChild)
+    bind: recorded
+    # code that runs only in a child its test kills is never recorded: those
+    # files run in go-whole instead
+    exclude: &killed-children
+      - internal/gitssh/gitssh_test.go
+      - internal/gitstore/storetest/daemon_test.go
+      - internal/scratch/scratch_test.go
+    extra_deps:
+      # the example's tests read the example
+      - tests: ["internal/example/*_test.go"]
+        deps: ["//:example"]
+      # the docs check reads every page, and the config's and commands' code
+      - tests: ["internal/docscheck/*_test.go"]
+        deps: ["//:docs", "//:code"]
+    run_slice: ci/go-test.yml
+    run_on: {tags: [cloud-1]}
+  go-whole:
+    # test files whose code runs in a child process their test kills (the
+    # key and scratch directories removed on a signal, a daemon that dies
+    # with its test): a killed child writes no coverage, so these are bound
+    # to all of the module's code and run on every change to it
+    tests: *killed-children
+    owner: "//:code"
+    run_slice: ci/go-test.yml
+    run_on: {tags: [cloud-1]}
+  unit:
+    tests: ["example/**/*_test.sh"]
+    owner: "//{dir}:{stem}"
+    bind: graph
+    run_slice: example/ci/unit-slices.yml
+    run_on: {tags: [cloud-1]}
+    params: {EXAMPLE_DIR: example}
+  smoke:
+    tests: ["example/**/*_smoke.sh"]
+    owner: "//{dir}:{stem}"
+    # graph until a released collector can take the running server's
+    # coverage between slices; then recorded, as in the example's config
+    bind: graph
+    prepare: example/ci/smoke-prepare.yml
+    run_slice: example/ci/smoke-slices.yml
+    run_on: {tags: [cloud-1]}
+    params: {EXAMPLE_DIR: example}
+
+runs:
+  main:
+    # continuous: a build of a commit that is no longer the branch's newest
+    # exits at once, so pushes minutes apart don't each run the suites
+    trigger: {branch: main, continuous: true}
+    compare: last_passed
+    select: affected
+    suites: {lint: {}, go: {}, go-whole: {}, unit: {}, smoke: {}, proof: {params: {PROOF_TOOL: source}}}
+    record: true
+  nightly:
+    trigger:
+      timer: {start: "3:00", stop: "4:00", location: Europe/Berlin}
+      branch: main
+    compare: none
+    select: all
+    suites: {lint: {}, go: {}, go-whole: {}, unit: {}, smoke: {}, proof: {}}
+    record: true
+
+  newest:
+    # the plugin proof with each piece's newest release instead of the
+    # pins; no branch rule requires its status, so a release that breaks
+    # the proof's table shows here before anyone pins it
+    trigger:
+      timer: {start: "4:00", stop: "5:00", location: Europe/Berlin}
+      branch: main
+    compare: none
+    select: all
+    suites: {proof: {params: {PROOF_NEWEST: "true"}}}
+
+everything_on:
+  - pipelinegen.yaml
+  - MODULE.bazel
+  - .bazelversion
+  - REPO.bazel
+  - ci/*
+  - example/ci/**
+  - example/MODULE.bazel
+  - example/.bazelversion
+  # the fixtures the Go tests read; Bazel ignores them (REPO.bazel)
+  - "**/testdata/**"
+  # the module's dependencies and the toolchain: every test links them
+  - go.mod
+  - go.sum
+  - .tool-versions
+
+untested:
+  - paths: [pipelinegen.yaml, MODULE.bazel, .bazelversion, REPO.bazel, "ci/*", "**/testdata/**"]
+    reason: the build setup and the ignored fixture; a change to them runs every slice (everything_on)
+  - paths: ["example-notes/**"]
+    reason: the book's sample repository, a Bazel workspace of its own that this one ignores (REPO.bazel)
+  - paths: ["ci/book/**"]
+    reason: the check that the book shows what the tool prints; it runs the book's steps on example-notes
