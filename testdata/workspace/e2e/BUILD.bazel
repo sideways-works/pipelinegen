@@ -1,0 +1,24 @@
+filegroup(
+    name = "checkout",
+    srcs = [
+        "checkout.spec.ts",
+        "//api/money",
+        "//web",
+    ],
+    tags = ["slice-e2e"],
+)
+
+filegroup(
+    name = "orders",
+    srcs = [
+        "orders.spec.ts",
+        "//api/orders",
+        "//web",
+    ],
+    tags = ["slice-e2e"],
+)
+
+filegroup(
+    name = "helpers",
+    srcs = ["helpers.ts"],
+)

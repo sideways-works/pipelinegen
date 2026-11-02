@@ -1,0 +1,55 @@
+pipeline: fixture
+github: {repository: owner/fixture, token: github_token}
+concourse:
+  url: https://ci.example
+  team: fixture
+  repository: {uri: "https://github.com/owner/fixture.git", password: ((github_token))}
+  planner:
+    image: {repository: golang, tag: "1.27.1"}
+    digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    bootstrap: {commit: 0123456789abcdef0123456789abcdef01234567, bazelisk: {version: v1.27.0, sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}}
+suites:
+  e2e:
+    tag: slice-e2e
+    prepare: ci/e2e-prepare.yml
+    run_slice: ci/e2e-slice.yml
+    params: {PROJECTS: phone}
+    # a token only the prepare task gets, for private packages
+    secrets: {prepare: {NPM_TOKEN: npm_token}}
+    whole_suite:
+      - name: reconcile
+        task: ci/reconcile.yml
+        also_on: ["//api/money:money"]
+  specs:
+    tests: ["e2e/*.spec.ts"]
+    owner: "//{dir}:{stem}"
+    run_slice: ci/e2e-slice.yml
+  backend:
+    tag: slice-backend
+    run_slice: ci/backend-slice.yml
+    parallel: 2
+runs:
+  pr:
+    trigger: {pull_requests: {base: main, draft: false, labels_without: [batch]}}
+    compare: merged_target
+    select: affected
+    suites: {e2e: {}, backend: {}}
+    record: true
+    report: {comment: {format: mermaid}}
+  main:
+    trigger: {branch: main}
+    compare: last_passed
+    select: affected
+    suites: {e2e: {}, backend: {}}
+    record: true
+  nightly:
+    trigger: {timer: {start: "3:00", stop: "4:00", location: Europe/Berlin}, branch: main}
+    compare: none
+    select: all
+    suites: {e2e: {params: {PROJECTS: all}}, backend: {}}
+    record: true
+everything_on:
+  - pipelinegen.yaml
+  - MODULE.bazel
+  - .bazelversion
+  - ci/**

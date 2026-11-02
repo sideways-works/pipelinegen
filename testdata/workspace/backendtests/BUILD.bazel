@@ -1,0 +1,11 @@
+filegroup(
+    name = "money_test",
+    srcs = [
+        "money_test.go",
+        "//api/money",
+    ],
+    tags = [
+        "manual",
+        "slice-backend",
+    ],
+)

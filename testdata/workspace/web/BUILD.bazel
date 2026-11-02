@@ -1,0 +1,5 @@
+filegroup(
+    name = "web",
+    srcs = ["app.ts"],
+    visibility = ["//visibility:public"],
+)
