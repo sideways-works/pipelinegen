@@ -1,0 +1,281 @@
+# pipelinegen's own CI, made by pipelinegen. Its suites: lint, the Go tests
+# of the tool itself, the plugin proof, and the example's two suites, whose
+# slices (example/calc, example/text, example/words) are slices here too.
+# Every suite runs by drivers: its steps name them, and no task file or
+# script of this repository runs a batch.
+
+pipeline: pipelinegen
+
+bazel:
+  workspace: .
+  bazelisk: bazelisk
+
+github:
+  repository: sideways-works/pipelinegen
+  token: github_token
+
+concourse:
+  url: https://concourse.home.simulevski.at
+  team: sideways-works
+  repository:
+    uri: https://github.com/sideways-works/pipelinegen.git
+    username: x-access-token
+    password: ((github_token))
+  planner:
+    image: {repository: golang, tag: 1.27.1}
+    # go-sbom and go-correlator type-check the module: its dependencies
+    # must be in the planning job's module cache
+    prepare: go mod download
+    digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
+    bootstrap:
+      release: {version: v0.1.13-rc.18, sha256: 1dcacdb41949c3a032966f0221f384c04ed854f2398c8a8771d0e8e830598c56}
+      bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
+  include: ci/root.yml
+
+
+plugins:
+  # the go suite is bound by what each test file ran: go-sbom lists the
+  # module's declarations, go-correlator binds the test files and reads
+  # their coverage
+  - name: go-sbom
+    kind: sbom
+    repository: sideways-works/pipelinegen-sbom-go
+    release: {version: v0.1.3-rc.5, sha256: 2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327}
+    config: {modules: [.]}
+  - name: go-correlator
+    kind: correlator
+    repository: sideways-works/pipelinegen-correlator-go
+    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    config: {modules: [.]}
+  # the drivers that run the suites' steps (the command driver comes with
+  # pipelinegen)
+  - name: go
+    kind: driver
+    repository: sideways-works/pipelinegen-driver-go
+    release: {version: v0.1.0-rc.3, sha256: 5945eb8a61a5a68972dce44d812bd98c394dabd26a575e9b65510ba18005971c}
+  - name: shell
+    kind: driver
+    repository: sideways-works/pipelinegen-driver-shell
+    release: {version: v0.1.0-rc.2, sha256: 3e18675e34cf40ce7f741cceae73f794ee425e46bf984a17d9b08d48c7345d62}
+  - name: concourse
+    kind: runner
+    repository: sideways-works/pipelinegen-runner-concourse
+    release: {version: v0.1.9-rc.10, sha256: bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2}
+    config:
+      placement:
+        # Every suite, and the checks, on one worker's own tag. Two workers
+        # under one tag are a pool: Concourse places a task and the fetch of
+        # its image apart, and without peer-to-peer streaming every image
+        # then crosses through the web node (a golang image took 25
+        # minutes). So never a shared tag such as cloud for suites here.
+        # Every suite runs on cloud-1: the other cloud worker runs an
+        # adopter's browser stacks, which need its memory.
+        default: [cloud-1]
+        # planning, reporting and the pipeline job run on untagged workers
+        rules:
+          - {for: pipeline, tags: []}
+          - {for: planning, tags: []}
+          - {for: bookkeeping, tags: []}
+
+suites:
+  lint:
+    # two explicit slices: lint has no test files, and the commit subjects
+    # (every change reaches them)
+    tag: slice-pipelinegen-lint
+    image: golang
+    params:
+      GOFLAGS: -trimpath
+      GOCACHE: "{cache}/go-build"
+      GOMODCACHE: "{cache}/mod"
+      GOLANGCI_LINT_CACHE: "{cache}/lint"
+      LINT_VERSION: 2.14.0
+      LINT_SHA256: ab90aeb7b066f92a33415b638a50fe5344bbb75a0d32ad30cc248d88f81032ab
+    steps:
+      # golangci-lint at its pinned version and checksum over every package,
+      # with the repository's .golangci.yml, then pipelinegen's own check of
+      # the tree (a git work tree at the tested commit with its history)
+      - run: shell
+        take: ["//:lint"]
+        with:
+          script: |
+            tgz=golangci-lint-$LINT_VERSION-linux-amd64.tar.gz
+            curl -fsSL -o "$PIPELINEGEN_WORK/$tgz" "https://github.com/golangci/golangci-lint/releases/download/v$LINT_VERSION/$tgz"
+            echo "$LINT_SHA256  $PIPELINEGEN_WORK/$tgz" | sha256sum -c -
+            tar -xzf "$PIPELINEGEN_WORK/$tgz" -C "$PIPELINEGEN_WORK" --strip-components=1 "golangci-lint-$LINT_VERSION-linux-amd64/golangci-lint"
+            "$PIPELINEGEN_WORK/golangci-lint" run
+            pipelinegen check
+      # the subjects of the commits the build brings
+      - run: command
+        take: ["//:subjects"]
+        with: {each: [go, run, ./internal/commitmsg/cmd, new]}
+  proof:
+    # one explicit slice: planning a fixture through the released plugins
+    # (go run ./ci/proof); outside the nightly only a change under
+    # ci/proof or to the planning and recording code (//:proved) selects
+    # it, and then it plans with the tool built from the commit
+    tag: slice-pipelinegen-proof
+    image: golang
+    # the proof downloads the pinned private releases through the GitHub
+    # API; the token reaches only its helper's Authorization header
+    secrets: {batch: {GITHUB_TOKEN: github_token}}
+    params:
+      GOFLAGS: -trimpath
+      # the Go build and module caches and Bazel's download stay with the
+      # job; the fixture, its Bazel output root and its temporary
+      # directories live in the step's work directory and go with the task
+      GOCACHE: "{cache}/go-build"
+      GOMODCACHE: "{cache}/gomod"
+      XDG_CACHE_HOME: "{cache}/xdg"
+      # "true" plans with each piece's newest release instead of the pins
+      PROOF_NEWEST: ""
+      # "source" plans with the tool built from the tested commit
+      PROOF_TOOL: ""
+      # how many workers plan the cases side by side, each with two Bazel
+      # servers of its own (the plan's and the walk's), and each server's
+      # Java heap: 3 workers hold at most 8 servers of 1 GB heap at once
+      PROOF_WORKERS: "3"
+      PROOF_BAZEL_HEAP: 1g
+    steps:
+      - run: shell
+        with:
+          shell: [bash, -eu]
+          script: |
+            case $PROOF_NEWEST/$PROOF_TOOL in
+            /) mode=() ;;
+            true/) mode=(--newest) ;;
+            /source) mode=(--source) ;;
+            *) echo "PROOF_NEWEST=$PROOF_NEWEST PROOF_TOOL=$PROOF_TOOL: set at most one, PROOF_NEWEST to true or PROOF_TOOL to source" >&2; exit 2 ;;
+            esac
+            go run ./ci/proof "${mode[@]}" "$PIPELINEGEN_WORK/proof"
+  go:
+    tests: ["connectors/**/*_test.go", "internal/**/*_test.go", "plugin/**/*_test.go"]
+    owner: "//:code"
+    # each test file runs when code it ran, or what that code needs,
+    # changed; a test that runs the tool in a child process records the
+    # child's code too (testenv.ExitChild)
+    bind: recorded
+    # code that runs only in a child its test kills is never recorded: those
+    # files run in go-whole instead
+    exclude: &killed-children
+      - internal/gitssh/gitssh_test.go
+      - internal/gitstore/storetest/daemon_test.go
+      - internal/scratch/scratch_test.go
+    extra_deps:
+      # the example's tests read the example
+      - tests: ["internal/example/*_test.go"]
+        deps: ["//:example"]
+      # the docs check reads every page, and the config's and commands' code
+      - tests: ["internal/docscheck/*_test.go"]
+        deps: ["//:docs", "//:code"]
+      # the release tests build and run the release command
+      - tests: ["internal/releasetest/*_test.go"]
+        deps: ["//:release"]
+    image: golang
+    # Go's caches and the bazel-diff the tests fetch, kept with the job;
+    # bazelisk comes first on PATH from the tools
+    params: &go-params
+      GOFLAGS: -trimpath
+      GOCACHE: "{cache}/go-build"
+      GOMODCACHE: "{cache}/mod"
+      XDG_CACHE_HOME: "{cache}/xdg"
+    # a package's files share one go test, each file with its own result
+    # and recording; a file holding "//ci:race" runs alone under the race
+    # detector, one holding "//ci:alone" alone. A file's limit is 60
+    # minutes, a bundle's that times its files; the build cache stays
+    # within 4 GB.
+    steps: &go-steps
+      - run: go
+        batch: true
+        with: {timeout: 60m, cover_tags: [pipelinegen_cover], cache_mb: 4096}
+  go-whole:
+    # test files whose code runs in a child process their test kills (the
+    # key and scratch directories removed on a signal, a daemon that dies
+    # with its test): a killed child writes no coverage, so these are bound
+    # to all of the module's code and run on every change to it
+    tests: *killed-children
+    owner: "//:code"
+    image: golang
+    params: *go-params
+    steps: *go-steps
+  unit:
+    tests: ["example/**/*_test.sh"]
+    owner: "//{dir}:{stem}"
+    bind: graph
+    # each file's test_ functions, each in a shell of its own
+    image: busybox
+    steps:
+      - run: shell
+        with: {functions: test_}
+  smoke:
+    tests: ["example/**/*_smoke.sh"]
+    owner: "//{dir}:{stem}"
+    # graph until a released collector can take the running server's
+    # coverage between slices; then recorded, as in the example's config
+    bind: graph
+    # the words server, built once per build of the suite and started once
+    # per batch; each file's test_ functions run against it
+    image: busybox
+    steps:
+      - prepare: command
+        image: golang
+        with: {run: [go, build, -trimpath, -o, "{prepared}/bin/words", .], dir: example/words, env: {CGO_ENABLED: "0"}}
+      - setup: command
+        with:
+          start: ["{prepared}/bin/words"]
+          env: {ADDR: "127.0.0.1:8080"}
+          ready: {http: "http://127.0.0.1:8080/healthz", seconds: 60}
+          export: {WORDS: "http://127.0.0.1:8080"}
+      - run: shell
+        with: {functions: test_}
+
+runs:
+  main:
+    # continuous: a build of a commit that is no longer the branch's newest
+    # exits at once, so pushes minutes apart don't each run the suites
+    trigger: {branch: main, continuous: true}
+    compare: last_passed
+    select: affected
+    suites: {lint: {}, go: {}, go-whole: {}, unit: {}, smoke: {}, proof: {params: {PROOF_TOOL: source}}}
+    record: true
+  nightly:
+    trigger:
+      timer: {start: "3:00", stop: "4:00", location: Europe/Berlin}
+      branch: main
+    compare: none
+    select: all
+    suites: {lint: {}, go: {}, go-whole: {}, unit: {}, smoke: {}, proof: {}}
+    record: true
+
+  newest:
+    # the plugin proof with each piece's newest release instead of the
+    # pins; no branch rule requires its status, so a release that breaks
+    # the proof's table shows here before anyone pins it
+    trigger:
+      timer: {start: "4:00", stop: "5:00", location: Europe/Berlin}
+      branch: main
+    compare: none
+    select: all
+    suites: {proof: {params: {PROOF_NEWEST: "true"}}}
+
+everything_on:
+  - MODULE.bazel
+  - .bazelversion
+  - REPO.bazel
+  - ci/*
+  - example/ci/**
+  - example/MODULE.bazel
+  - example/.bazelversion
+  # the fixtures the Go tests read; Bazel ignores them (REPO.bazel)
+  - "**/testdata/**"
+  # the module's dependencies and the toolchain: every test links them
+  - go.mod
+  - go.sum
+  - .tool-versions
+
+untested:
+  - paths: [MODULE.bazel, .bazelversion, REPO.bazel, "ci/*", "**/testdata/**"]
+    reason: the build setup and the ignored fixture; a change to them runs every slice (everything_on)
+  - paths: ["example-notes/**"]
+    reason: the book's sample repository, a Bazel workspace of its own that this one ignores (REPO.bazel)
+  - paths: ["ci/book/**"]
+    reason: the check that the book shows what the tool prints; it runs the book's steps on example-notes

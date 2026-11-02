@@ -1,0 +1,140 @@
+# This repository's own targets; pipelinegen.yaml says how each suite runs.
+# Every _test.go file is a slice of the go suite, owned by :code and bound
+# by what it ran (go-correlator); the
+# example's test files (example/calc, example/text, example/words) are
+# slices here too, owned by their own targets.
+
+filegroup(
+    name = "code",
+    srcs = glob(
+        [
+            "cmd/**/*.go",
+            "connectors/**/*.go",
+            "internal/**/*.go",
+            "plugin/**/*.go",
+        ],
+        exclude = ["**/*_test.go"],
+    ) + [
+        ".tool-versions",
+        "go.mod",
+        "go.sum",
+        # the conformance kit's fixture spec, embedded in the binary
+        "internal/kit/spec.json",
+        # how the release's notice lists a Node bundle's packages, embedded
+        "internal/release/bundled.mjs",
+    ],
+)
+
+# golangci-lint over every package and pipelinegen's own check of this
+# repository: the lint suite's one slice. A change to the code, the tests,
+# the ignore files or the config, which the check reads, selects it.
+filegroup(
+    name = "lint",
+    srcs = [".golangci.yml"],
+    data = [
+        ".bazelignore",
+        ".gitignore",
+        "pipelinegen.yaml",
+        ":code",
+    ] + glob(
+        [
+            "cmd/**/*_test.go",
+            "connectors/**/*_test.go",
+            "internal/**/*_test.go",
+            "plugin/**/*_test.go",
+        ],
+        allow_empty = True,
+    ),
+    tags = ["slice-pipelinegen-lint"],
+)
+
+# The lint suite's second slice: the subjects of the commits a build
+# brings. Every tracked file reaches it (this package's files, and the
+# example's through its targets), so a docs-only change checks them too.
+filegroup(
+    name = "subjects",
+    srcs = glob(
+        ["**"],
+        exclude = [
+            ".git/**",
+            ".pipelinegen/**",
+            "bazel-*/**",
+        ],
+    ),
+    data = [":example"],
+    tags = ["slice-pipelinegen-lint"],
+)
+
+# What the example's Go tests read: its config, its tasks and every test
+# file's owner.
+filegroup(
+    name = "example",
+    srcs = glob([
+        "example/.bazelignore",
+        "example/.bazelversion",
+        "example/.gitignore",
+        "example/MODULE.bazel",
+        "example/ci/**",
+        "example/pipelinegen.yaml",
+    ]) + [
+        "//example/calc:add_test",
+        "//example/calc:lib_test",
+        "//example/calc:mul_test",
+        "//example/text:upper_test",
+        "//example/words:count_smoke",
+        "//example/words:upper_smoke",
+    ],
+)
+
+# The code the plugin proof proves: planning through plugins and recording
+# what slices touched.
+filegroup(
+    name = "proved",
+    srcs = glob(
+        [
+            "internal/deps/*.go",
+            "internal/depsrepo/*.go",
+            "internal/lists/*.go",
+            "internal/plugincache/*.go",
+            "internal/plugins/*.go",
+            "internal/recording/*.go",
+            "internal/report/*.go",
+            "plugin/*.go",
+        ],
+        exclude = ["**/*_test.go"],
+    ) + [
+        "internal/cli/collect.go",
+        "internal/cli/narrowed.go",
+        "internal/cli/pluginsprep.go",
+        "internal/cli/report.go",
+        "internal/cli/run.go",
+        "internal/cli/sample.go",
+    ],
+)
+
+# The plugin proof: one explicit slice of the proof suite, its program
+# (ci/proof and internal/proof, the fixture with it) and the pins of the
+# releases it plans with.
+filegroup(
+    name = "proof",
+    srcs = glob(["ci/proof/**"]) + glob(
+        ["internal/proof/*.go"],
+        exclude = ["**/*_test.go"],
+    ),
+    # the planning and recording code it proves, so a change to that code
+    # runs it
+    data = [":proved"],
+    tags = ["slice-pipelinegen-proof"],
+)
+
+# The release command, which the release tests build and run.
+filegroup(
+    name = "release",
+    srcs = glob(["ci/release/**"]),
+)
+
+# Prose, read by people and by the docs check.
+filegroup(
+    name = "docs",
+    srcs = glob(["docs/**"]) + ["README.md"],
+)

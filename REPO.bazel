@@ -1,0 +1,3 @@
+# Fixture workspaces the Go tests copy: their labels are their own root's,
+# so they can't load as part of this one.
+ignore_directories(["**/testdata/**", "example-notes"])
