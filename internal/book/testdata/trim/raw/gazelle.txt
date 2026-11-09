@@ -1,0 +1,5 @@
+$ bazel run //:gazelle
+Starting local Bazel server and connecting to it...
+Loading: 0 packagesAnalyzing: 3 targetsINFO: Build completed successfully, 12 total actions
+INFO: Running command line: bazel-bin/gazelle
+[exit 0]

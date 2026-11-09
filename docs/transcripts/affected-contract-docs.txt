@@ -1,0 +1,4 @@
+$ pipelinegen affected --base HEAD~1
+pipelinegen affected: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
+e2e: 0 selected, 2 untouched
+go: 0 selected, 5 untouched

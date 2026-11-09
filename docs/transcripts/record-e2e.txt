@@ -1,0 +1,22 @@
+$ pipelinegen record --suite e2e
+prepared e2e
+command setup: warning: GOCOVERDIR not set, no coverage data emitted
+setup ended
+playwright run: playwright-driver: npm ci in the tree's root
+playwright run: 
+playwright run: added 3 packages in <time>
+playwright run: 
+playwright run: Running 2 tests using 1 worker
+playwright run: 
+playwright run: [1/2] [chromium] › e2e/create.spec.ts:3:5 › adds a note
+playwright run: [2/2] [chromium] › e2e/create.spec.ts:11:5 › refuses a note without a title
+playwright run:   2 passed (<time>)
+slice e2e/create.spec.ts: passed
+playwright run: 
+playwright run: Running 1 test using 1 worker
+playwright run: 
+playwright run: [1/1] [chromium] › e2e/search.spec.ts:3:5 › finds a note by a word in it
+playwright run:   1 passed (<time>)
+slice e2e/search.spec.ts: passed
+lists of 5d0f0a819953: local local-<time> 5d0f0a819953 merged into its own lists; 8 slices, 3 changed
+recorded 2 slices of e2e at 5d0f0a819953; the lists are in the local store /home/you/notes/.git/pipelinegen/local.git, which affected and why read unless the config names a remote (then: --local)

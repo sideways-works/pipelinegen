@@ -1,0 +1,4 @@
+$ pipelinegen check
+wrote /home/you/.cache/pipelinegen/x and /home/you/notes/y
+run local-<time> ok
+[exit 1]

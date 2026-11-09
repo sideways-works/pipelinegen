@@ -1,0 +1,7 @@
+$ pipelinegen affected --base HEAD~1
+e2e: 0 selected, 2 untouched
+go: 4 selected, 1 untouched
+  run api/create_test.go
+  run api/search_test.go
+  run search/search_test.go
+  run text/text_test.go

@@ -1,0 +1,2 @@
+$ record-locally.sh ~/src/pipelinegen owner/notes go=ci/go-batch.sh e2e=ci/e2e-batch.sh
+file:///tmp/tmp.XXXXXXXXXX/remote here

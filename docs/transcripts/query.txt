@@ -1,0 +1,16 @@
+$ bazel query //...
+//:gazelle
+//:gazelle-runner
+//api:api
+//api:api_test
+//api/notesapi:notesapi
+//cmd/notes:notes
+//cmd/notes:notes_lib
+//e2e:e2e
+//notes:notes
+//notes:notes_test
+//search:search
+//search:search_test
+//text:text
+//text:text_test
+//web:web

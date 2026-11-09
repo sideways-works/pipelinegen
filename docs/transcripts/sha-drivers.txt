@@ -1,0 +1,3 @@
+$ sha256sum -c tools/drivers.sums
+tools/plugins/go: OK
+tools/plugins/playwright: OK

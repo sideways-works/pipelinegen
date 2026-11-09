@@ -1,0 +1,6 @@
+$ pipelinegen check --summary
+9	uncovered-file	.
+2	uncovered-file	cmd/
+11 findings
+pipelinegen check: 11 findings: did not pass
+[exit 1]

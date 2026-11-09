@@ -1,0 +1,8 @@
+$ pipelinegen affected --base HEAD~1
+pipelinegen affected: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
+e2e: 1 selected, 1 untouched
+  run e2e/search.spec.ts
+go: 3 selected, 2 untouched
+  run api/search_test.go
+  run search/search_test.go
+  run text/text_test.go

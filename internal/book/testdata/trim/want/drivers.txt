@@ -1,0 +1,6 @@
+$ pipelinegen record --suite go
+go run: --- PASS: TestCreate (<time>)
+go run: ok  	example.com/notes/api	<time>	coverage: 43.4% of statements in ./...
+playwright run: added 3 packages in <time>
+playwright run:   2 passed (<time>)
+slice e2e/a.spec.ts: passed (1.5s)

@@ -1,0 +1,12 @@
+$ pipelinegen affected --base HEAD~1
+every slice: text/title_test.go changed and no Bazel target owns it: it is in no target yet (run gazelle)
+e2e: 2 selected, 0 untouched
+  run e2e/create.spec.ts
+  run e2e/search.spec.ts
+go: 6 selected, 0 untouched
+  run api/create_test.go
+  run api/search_test.go
+  run notes/notes_test.go
+  run search/search_test.go
+  run text/text_test.go
+  run text/title_test.go

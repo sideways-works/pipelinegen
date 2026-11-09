@@ -1,0 +1,15 @@
+$ pipelinegen slices
+e2e e2e/create.spec.ts
+  e2e/create.spec.ts
+e2e e2e/search.spec.ts
+  e2e/search.spec.ts
+go api/create_test.go
+  api/create_test.go
+go api/search_test.go
+  api/search_test.go
+go notes/notes_test.go
+  notes/notes_test.go
+go search/search_test.go
+  search/search_test.go
+go text/text_test.go
+  text/text_test.go

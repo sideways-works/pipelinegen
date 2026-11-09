@@ -1,0 +1,10 @@
+$ pipelinegen check
+plugins: 3 of 10 files claimed
+  go-sbom: 2
+  other: 1
+no actions running
+wrote /scratch/w/xdg/pipelinegen/x and /scratch/w/notes/y
+run local-20260101-120000-123 ok
+$TEST_TMPDIR defined: x
+Extracting Bazel installation...
+[exit 1]

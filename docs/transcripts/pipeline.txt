@@ -1,0 +1,2 @@
+$ pipelinegen pipeline --out pipeline.yml && pipelinegen pipeline --vars
+github_token

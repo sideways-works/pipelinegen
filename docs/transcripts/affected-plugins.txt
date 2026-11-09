@@ -1,0 +1,12 @@
+$ pipelinegen affected --base HEAD~1
+pipelinegen affected: no remote to read the recordings from (git.remote, the github section or the checkout's origin), and no local store (`pipelinegen record` makes one): recorded slices are bound to everything
+pipelinegen affected: filling the gomodcache cache for go-sbom, go-correlator: go mod download in ., into /home/you/.cache/pipelinegen/repos/notes-2afb52553fae/caches/gomodcache
+e2e: 2 selected, 0 untouched
+  run e2e/create.spec.ts
+  run e2e/search.spec.ts
+go: 5 selected, 0 untouched
+  run api/create_test.go
+  run api/search_test.go
+  run notes/notes_test.go
+  run search/search_test.go
+  run text/text_test.go

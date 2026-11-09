@@ -1,0 +1,2 @@
+$ bazel mod tidy
+INFO: Updated use_repo calls for @gazelle//:extensions.bzl%go_deps

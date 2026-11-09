@@ -1,0 +1,6 @@
+$ pipelinegen try --last 4
+057f55317c68  e2e 0/2  go 1/5  notes/notes_test.go: its test file changed: notes/notes_test.go
+f566bb69c9a0  e2e 2/2  go 0/5  e2e/create.spec.ts: the target //web:index.html changed, through //web:web → //e2e:e2e
+d1e88f5d3c1d  e2e 0/2  go 4/5  api/create_test.go: the target //text:text.go changed, through //text:text → //api:api → //api:api_test
+f22dae2252a2  e2e 0/2  go 2/5  api/create_test.go: the target //api:api.go changed, through //api:api → //api:api_test
+total: 4 commits, e2e median 0% worst 100%, go median 20% worst 80%, 0 ran everything

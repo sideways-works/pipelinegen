@@ -1,0 +1,5 @@
+$ bazel query //...
+Loading: 1
+//:a
+//b:c
+[exit 0]

@@ -1,0 +1,6 @@
+$ pipelinegen affected --base HEAD~1
+pipelinegen affected: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
+e2e: 1 selected, 1 untouched
+  run e2e/create.spec.ts
+go: 1 selected, 4 untouched
+  run api/create_test.go

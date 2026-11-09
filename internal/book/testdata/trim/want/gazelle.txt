@@ -1,0 +1,4 @@
+$ bazel run //:gazelle
+...
+INFO: Build completed successfully
+INFO: Running command line: bazel-bin/gazelle

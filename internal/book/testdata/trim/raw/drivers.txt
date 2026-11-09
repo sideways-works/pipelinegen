@@ -1,0 +1,12 @@
+$ pipelinegen record --suite go
+2026/11/16 11:21:07 Downloading https://releases.bazel.build/9.2.0/release/bazel-9.2.0-linux-x86_64...
+2026/11/16 11:21:08 Signed by Bazel Developer (Bazel APT repository key) <bazel-dev@googlegroups.com>
+pipelinegen affected: bazel-diff generate-hashes, 1m0s so far
+... still trying to connect to local Bazel server (3531733) after 10 seconds ...
+go run: go: downloading github.com/google/uuid v1.6.0
+go run: --- PASS: TestCreate (0.01s)
+go run: ok  	example.com/notes/api	0.005s	coverage: 43.4% of statements in ./...
+playwright run: added 3 packages in 1s
+playwright run:   2 passed (4.1s)
+slice e2e/a.spec.ts: passed (1.5s)
+[exit 0]

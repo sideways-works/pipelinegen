@@ -1,0 +1,7 @@
+$ pipelinegen check
+warning: cmd/notes/main.go: judged by the plan: go-sbom may claim it, and a file an sbom plugin claims is covered through its units
+  fix: nothing, if go-sbom claims it (pipelinegen plugins claims shows it); otherwise make a slice depend on it or list it in untested
+warning: go.mod: judged by the plan: go-sbom may claim it, and a file an sbom plugin claims is covered through its units
+  fix: nothing, if go-sbom claims it (pipelinegen plugins claims shows it); otherwise make a slice depend on it or list it in untested
+warning: go.sum: judged by the plan: go-sbom may claim it, and a file an sbom plugin claims is covered through its units
+  fix: nothing, if go-sbom claims it (pipelinegen plugins claims shows it); otherwise make a slice depend on it or list it in untested

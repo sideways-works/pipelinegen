@@ -1,0 +1,11 @@
+$ pipelinegen affected --base HEAD~1
+every slice: go.mod changed (everything_on go.mod)
+e2e: 2 selected, 0 untouched
+  run e2e/create.spec.ts
+  run e2e/search.spec.ts
+go: 5 selected, 0 untouched
+  run api/create_test.go
+  run api/search_test.go
+  run notes/notes_test.go
+  run search/search_test.go
+  run text/text_test.go

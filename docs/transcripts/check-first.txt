@@ -1,0 +1,25 @@
+$ pipelinegen check
+.bazelversion: no slice depends on this file, so a change to it would run nothing
+  fix: add it to the srcs or data of a target a slice depends on, or to untested in pipelinegen.yaml with a reason
+.gitignore: no slice depends on this file, so a change to it would run nothing
+  fix: add it to the srcs or data of a target a slice depends on, or to untested in pipelinegen.yaml with a reason
+BUILD.bazel: no slice depends on this file, so a change to it would run nothing
+  fix: make a slice depend on a target of this package, or add the file to untested in pipelinegen.yaml with a reason
+MODULE.bazel: no slice depends on this file, so a change to it would run nothing
+  fix: add it to the srcs or data of a target a slice depends on, or to untested in pipelinegen.yaml with a reason
+MODULE.bazel.lock: no slice depends on this file, so a change to it would run nothing
+  fix: add it to the srcs or data of a target a slice depends on, or to untested in pipelinegen.yaml with a reason
+cmd/notes/BUILD.bazel: no slice depends on this file, so a change to it would run nothing
+  fix: make a slice depend on a target of this package, or add the file to untested in pipelinegen.yaml with a reason
+cmd/notes/main.go: no slice depends on this file, so a change to it would run nothing
+  fix: add it to the srcs or data of a target a slice depends on, or to untested in pipelinegen.yaml with a reason
+go.mod: no slice depends on this file, so a change to it would run nothing
+  fix: add it to the srcs or data of a target a slice depends on, or to untested in pipelinegen.yaml with a reason
+go.sum: no slice depends on this file, so a change to it would run nothing
+  fix: add it to the srcs or data of a target a slice depends on, or to untested in pipelinegen.yaml with a reason
+package-lock.json: no slice depends on this file, so a change to it would run nothing
+  fix: add it to the srcs or data of a target a slice depends on, or to untested in pipelinegen.yaml with a reason
+package.json: no slice depends on this file, so a change to it would run nothing
+  fix: add it to the srcs or data of a target a slice depends on, or to untested in pipelinegen.yaml with a reason
+pipelinegen check: 11 findings: did not pass
+[exit 1]
