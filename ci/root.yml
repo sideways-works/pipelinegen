@@ -1,0 +1,54 @@
+# This repository's own root jobs, next to the ones pipelinegen generates:
+# a version tag (v1.2.3) builds and publishes a release. The release task and
+# command come from main, so an old tag is built by today's checks. The
+# images the suites' tasks run in are resources here too (suites.<s>.image),
+# checked on the worker the suites run on.
+resources:
+  - name: golang
+    type: registry-image
+    icon: language-go
+    tags: [cloud-1]
+    source: {repository: golang, tag: 1.27.1}
+  - name: busybox
+    type: registry-image
+    icon: console
+    tags: [cloud-1]
+    source: {repository: busybox, tag: 1.37.0}
+  - name: version-tag
+    type: git
+    icon: tag
+    check_every: 5m
+    tags: [cloud-1]
+    source:
+      uri: https://github.com/sideways-works/pipelinegen.git
+      username: x-access-token
+      password: ((github_token))
+      tag_regex: '^v[0-9]+\.[0-9]+\.[0-9]+$'
+      fetch_tags: true
+  - name: release-tools
+    type: git
+    icon: tools
+    tags: [cloud-1]
+    source:
+      uri: https://github.com/sideways-works/pipelinegen.git
+      username: x-access-token
+      password: ((github_token))
+      branch: main
+      # the release command and the code it is built from
+      paths: [ci/release/**, ci/release.yml, internal/release/**, plugin/**, go.mod, go.sum]
+
+jobs:
+  - name: release
+    plan:
+      - in_parallel:
+          - get: version-tag
+            trigger: true
+            tags: [cloud-1]
+          - get: release-tools
+            tags: [cloud-1]
+      - task: release
+        file: release-tools/ci/release.yml
+        input_mapping: {source: version-tag}
+        params: {GITHUB_TOKEN: ((github_token))}
+        tags: [cloud-1]
+        timeout: 15m

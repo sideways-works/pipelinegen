@@ -1,0 +1,290 @@
+// Package release builds and publishes a release of pipelinegen or of one of
+// its plugins.
+//
+// A release is made only from a commit a run of every test passed on, which
+// Tested reads from the commit's statuses. Build takes the tagged commit
+// from git, builds it twice in fresh directories and fails unless both give
+// the same bytes: static binaries per platform for a Go module or
+// dist/NAME.mjs for a Node package, the files the repository names for its
+// release, plugin.json for a plugin, LICENSE, NOTICE and SHA256SUMS. A tag
+// vX.Y.Z-rc.N is published as a prerelease, and a release that exists is
+// never changed.
+package release
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"slices"
+	"strings"
+)
+
+// ErrRelease is a release the build or publish refuses; its message says
+// why.
+var ErrRelease = errors.New("release")
+
+func refuse(format string, args ...any) error {
+	return fmt.Errorf("%w: %s", ErrRelease, fmt.Sprintf(format, args...))
+}
+
+var versionTag = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$`)
+
+var candidate = regexp.MustCompile(`-rc\.[0-9]+$`)
+
+// IO is where a release's commands write.
+type IO struct {
+	Stdout, Stderr io.Writer
+}
+
+func (o IO) run(ctx context.Context, dir string, env []string, name string, args ...string) error {
+	cmd := exec.CommandContext(ctx, name, args...) //nolint:gosec // the release's own tools
+	cmd.Dir = dir
+	cmd.Env = env
+	cmd.Stdout, cmd.Stderr = o.Stdout, o.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s %s: %w", name, strings.Join(args, " "), err)
+	}
+
+	return nil
+}
+
+func output(ctx context.Context, dir string, name string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, name, args...) //nolint:gosec // the release's own tools
+	cmd.Dir = dir
+
+	var stderr bytes.Buffer
+
+	cmd.Stderr = &stderr
+
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("%s %s: %w: %s", name, strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
+	}
+
+	return strings.TrimRight(string(out), "\n"), nil
+}
+
+func quiet(ctx context.Context, dir string, name string, args ...string) bool {
+	cmd := exec.CommandContext(ctx, name, args...) //nolint:gosec // the release's own tools
+	cmd.Dir = dir
+
+	return cmd.Run() == nil
+}
+
+func hasTag(ctx context.Context, dir, tag string) bool {
+	return quiet(ctx, dir, "git", "-C", dir, "rev-parse", "-q", "--verify", "refs/tags/"+tag+"^{commit}")
+}
+
+func legal(ctx context.Context, dir, tag string) error {
+	for _, f := range []string{licenseFile, noticeFileName} {
+		if !quiet(ctx, dir, "git", "-C", dir, "cat-file", "-e", "refs/tags/"+tag+"^{commit}:"+f) {
+			return refuse("%s has no %s", tag, f)
+		}
+	}
+
+	return nil
+}
+
+func changelogEntry(ctx context.Context, dir, tag string) error {
+	version := strings.TrimPrefix(tag, "v")
+	if i := strings.Index(version, "-rc."); i >= 0 {
+		version = version[:i]
+	}
+
+	ref := "refs/tags/" + tag + "^{commit}:CHANGELOG.md"
+	if !quiet(ctx, dir, "git", "-C", dir, "cat-file", "-e", ref) {
+		return nil
+	}
+
+	log, err := output(ctx, dir, "git", "-C", dir, "show", ref)
+	if err != nil {
+		return err
+	}
+
+	if regexp.MustCompile(`(?m)^## \[` + regexp.QuoteMeta(version) + `\]`).MatchString(log) {
+		return nil
+	}
+
+	if candidate.MatchString(tag) && regexp.MustCompile(`(?m)^## \[Unreleased\]`).MatchString(log) {
+		return nil
+	}
+
+	also := ""
+	if strings.Contains(tag, "-rc") {
+		also = ` or "## [Unreleased]"`
+	}
+
+	return refuse(`CHANGELOG.md at %s has no entry "## [%s]"%s`, tag, version, also)
+}
+
+// Build builds the tag of the repository checked out in dir into out,
+// twice, and prints SHA256SUMS once both builds gave the same files.
+func Build(ctx context.Context, o IO, dir, tag, out string) error {
+	// absolute, since the builds run in other directories
+	dir, err := filepath.Abs(dir)
+	if err == nil {
+		dir, err = filepath.EvalSymlinks(dir)
+	}
+
+	if err != nil {
+		return fmt.Errorf("build: %w", err)
+	}
+
+	out, err = filepath.Abs(out)
+	if err != nil {
+		return fmt.Errorf("build: %w", err)
+	}
+
+	switch {
+	case !versionTag.MatchString(tag):
+		return refuse("%s is no version tag (v1.2.3, or v1.2.3-rc.1 for a candidate)", tag)
+	case exists(out):
+		return refuse("%s exists", out)
+	case !hasTag(ctx, dir, tag):
+		return refuse("%s has no tag %s", dir, tag)
+	}
+
+	if err := legal(ctx, dir, tag); err != nil {
+		return err
+	}
+
+	if err := changelogEntry(ctx, dir, tag); err != nil {
+		return err
+	}
+
+	check, err := os.MkdirTemp("", "release-check-")
+	if err != nil {
+		return fmt.Errorf("build: %w", err)
+	}
+
+	defer func() { _ = os.RemoveAll(check) }() //nolint:errcheck // a scratch directory
+
+	if err := buildOnce(ctx, o, dir, tag, out); err != nil {
+		return err
+	}
+
+	again := filepath.Join(check, "again")
+	if err := buildOnce(ctx, o, dir, tag, again); err != nil {
+		return err
+	}
+
+	first, err := os.ReadFile(filepath.Join(out, sumsFile)) //nolint:gosec // the build's own sums
+	if err != nil {
+		return fmt.Errorf("build: %w", err)
+	}
+
+	second, err := os.ReadFile(filepath.Join(again, sumsFile)) //nolint:gosec // the build's own sums
+	if err != nil {
+		return fmt.Errorf("build: %w", err)
+	}
+
+	if !bytes.Equal(first, second) {
+		return refuse("two builds of %s differ: %s", tag, diffLine(ctx, filepath.Join(out, sumsFile), filepath.Join(again, sumsFile)))
+	}
+
+	if _, err := o.Stdout.Write(first); err != nil {
+		return fmt.Errorf("build: %w", err)
+	}
+
+	return nil
+}
+
+func diffLine(ctx context.Context, a, b string) string {
+	out, _ := exec.CommandContext(ctx, "diff", a, b).Output() //nolint:errcheck,gosec // diff exits 1 when the files differ, which they do
+
+	return strings.ReplaceAll(string(out), "\n", " ")
+}
+
+func exists(p string) bool {
+	_, err := os.Lstat(p)
+
+	return err == nil
+}
+
+// Tested fails unless one of the named commit statuses passed on the
+// commit.
+func Tested(ctx context.Context, o IO, repo, commit string, contexts []string) error {
+	states, err := output(ctx, "", "gh", "api", "repos/"+repo+"/commits/"+commit+"/status?per_page=100", "--jq", `.statuses[] | "\(.context) \(.state)"`)
+	if err != nil {
+		return refuse("can't read the statuses of %s", commit)
+	}
+
+	lines := strings.Split(states, "\n")
+
+	for _, c := range contexts {
+		if slices.Contains(lines, c+" success") {
+			_, err := fmt.Fprintf(o.Stdout, "%s passed %s\n", commit, c)
+
+			return err //nolint:wrapcheck // the run's own output
+		}
+	}
+
+	return refuse("no run of every test passed on %s (%s): run one before releasing it", commit, strings.Join(contexts, " "))
+}
+
+// Publish attaches out's files to the tag's GitHub release of repo
+// (owner/name). A release that exists is never changed: publishing
+// succeeds when it holds exactly this build and fails when it doesn't.
+func Publish(ctx context.Context, o IO, repo, tag, out string) error {
+	out, err := filepath.Abs(out)
+	if err != nil {
+		return fmt.Errorf("publish: %w", err)
+	}
+
+	if !exists(filepath.Join(out, sumsFile)) {
+		return refuse("%s holds no build", out)
+	}
+
+	if err := checkSums(out); err != nil {
+		return refuse("%s's files don't match their SHA256SUMS", out)
+	}
+
+	if quiet(ctx, "", "gh", "release", "view", tag, "-R", repo) {
+		// configs pin a release by its checksums: never change a published
+		// one
+		published, err := os.MkdirTemp("", "release-published-")
+		if err != nil {
+			return fmt.Errorf("publish: %w", err)
+		}
+
+		defer func() { _ = os.RemoveAll(published) }() //nolint:errcheck // a scratch directory
+
+		if err := (IO{Stdout: o.Stderr, Stderr: o.Stderr}).run(ctx, "", os.Environ(), "gh", "release", "download", tag, "-R", repo, "-p", sumsFile, "-D", published); err != nil {
+			return refuse("%s is released without SHA256SUMS; leaving it alone", tag)
+		}
+
+		a, errA := os.ReadFile(filepath.Join(published, sumsFile)) //nolint:gosec // the release's own sums
+		b, errB := os.ReadFile(filepath.Join(out, sumsFile))       //nolint:gosec // the build's own sums
+
+		if errA != nil || errB != nil || !bytes.Equal(a, b) {
+			return refuse("%s is released with other files than this build: %s", tag, diffLine(ctx, filepath.Join(published, sumsFile), filepath.Join(out, sumsFile)))
+		}
+
+		_, err = fmt.Fprintf(o.Stdout, "%s is released with exactly these files\n", tag)
+
+		return err //nolint:wrapcheck // the run's own output
+	}
+
+	files, err := filepath.Glob(filepath.Join(out, "*"))
+	if err != nil {
+		return fmt.Errorf("publish: %w", err)
+	}
+
+	args := []string{"release", "create", tag, "-R", repo, "--verify-tag", "--title", tag}
+	// a candidate is there to be tried, never what a newest-release lookup
+	// finds
+	if candidate.MatchString(tag) {
+		args = append(args, "--prerelease", "--latest=false")
+	}
+
+	args = append(append(args, "--notes", "Check the files against SHA256SUMS before you run them."), files...)
+
+	return o.run(ctx, "", os.Environ(), "gh", args...)
+}

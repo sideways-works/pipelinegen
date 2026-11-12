@@ -1,0 +1,35 @@
+# Builds and publishes the release of the version tag in source, with the
+# release command of release-tools (go run ./ci/release, see
+# internal/release).
+platform: linux
+image_resource:
+  type: registry-image
+  source: {repository: golang, tag: 1.27.1}
+inputs:
+  - name: source
+  - name: release-tools
+params:
+  GITHUB_TOKEN:
+  REPOSITORY: sideways-works/pipelinegen
+  GH_VERSION: 2.103.2
+  GH_SHA256: 62ccf747115ddc61237efffdde66a3c8f70ba249433dc64f70801089b59c59c8
+run:
+  path: bash
+  args:
+    - -euc
+    - |
+      tgz=gh_${GH_VERSION}_linux_amd64.tar.gz
+      curl -fsSL -o "/tmp/$tgz" "https://github.com/cli/cli/releases/download/v$GH_VERSION/$tgz"
+      echo "$GH_SHA256  /tmp/$tgz" | sha256sum -c -
+      tar -xzf "/tmp/$tgz" -C /usr/local --strip-components=1 "gh_${GH_VERSION}_linux_amd64/bin/gh"
+      # the input belongs to another user than the task; git must still read it
+      git config --global --add safe.directory '*'
+      # the release's own tag; a nested module's SUB/vX.Y.Z may sit beside it
+      tag=$(git -C source tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+      [ -n "$tag" ] || { echo "no version tag on this commit" >&2; exit 1; }
+      commit=$(git -C source rev-parse HEAD)
+      cd release-tools
+      # only a commit the nightly ran every test on and passed is released
+      GH_TOKEN=$GITHUB_TOKEN go run ./ci/release tested "$REPOSITORY" "$commit" pipelinegen/nightly
+      go run ./ci/release build ../source "$tag" ../dist
+      GH_TOKEN=$GITHUB_TOKEN go run ./ci/release publish "$REPOSITORY" "$tag" ../dist
