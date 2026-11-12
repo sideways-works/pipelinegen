@@ -1,0 +1,7 @@
+load("@gazelle//:def.bzl", "gazelle")
+
+# gazelle:prefix example.com/notes
+# The server's coverage hook is linked only into the coverage build the e2e
+# suite's prepare step makes with go build; Bazel never builds it.
+# gazelle:exclude cmd/notes/cover.go
+gazelle(name = "gazelle")

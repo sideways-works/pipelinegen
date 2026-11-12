@@ -1,0 +1,5 @@
+package: notesapi
+output: notesapi.gen.go
+generate:
+  std-http-server: true
+  models: true

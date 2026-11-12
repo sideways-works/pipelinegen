@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "text",
+    srcs = ["text.go"],
+    importpath = "example.com/notes/text",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "text_test",
+    srcs = ["text_test.go"],
+    embed = [":text"],
+)

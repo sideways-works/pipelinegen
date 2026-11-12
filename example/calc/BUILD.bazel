@@ -1,0 +1,34 @@
+# Each test file is a slice of the unit suite. Its owner (the suite's owner
+# pattern //{dir}:{stem}) is the target named after it here, holding the
+# file and what it depends on. Labels stay inside this package (":lib",
+# never "//calc:lib"), so the example loads both as a workspace of its own
+# and inside a larger one.
+
+filegroup(
+    name = "lib",
+    srcs = ["lib.sh"],
+)
+
+filegroup(
+    name = "add_test",
+    srcs = [
+        "add_test.sh",
+        ":lib",
+    ],
+)
+
+filegroup(
+    name = "mul_test",
+    srcs = [
+        "mul_test.sh",
+        ":lib",
+    ],
+)
+
+filegroup(
+    name = "lib_test",
+    srcs = [
+        "lib_test.sh",
+        ":lib",
+    ],
+)

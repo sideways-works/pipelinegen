@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "web",
+    srcs = ["web.go"],
+    embedsrcs = ["index.html"],
+    importpath = "example.com/notes/web",
+    visibility = ["//visibility:public"],
+)

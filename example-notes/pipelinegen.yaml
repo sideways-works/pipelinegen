@@ -1,0 +1,144 @@
+# The notes service's pipelinegen config: the end state of the book's
+# step-by-step guide. Two suites, both run by drivers and bound by
+# recording through the Go plugins: the Go tests, and the browser specs,
+# which are bound to the Go code the server ran for them.
+
+pipeline: notes
+
+github:
+  repository: owner/notes
+  token: github_token           # the name of a Concourse var, never the token
+
+concourse:
+  url: https://concourse.example.com
+  team: main
+  repository:
+    uri: https://github.com/owner/notes.git
+    username: x-access-token
+    password: ((github_token))
+  # the images the suites' tasks run in
+  include: ci/root.yml
+  # pipelinegen's own steps run on a stock image and fetch the tool and
+  # bazelisk, each checked against its checksum
+  planner:
+    image: {repository: golang, tag: 1.27.1}
+    digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
+    prepare: go mod download
+    bootstrap:
+      release: {version: v0.1.13-rc.16, sha256: 7b48ab8a8e3b68f39bdb1d4bab1a19a1f667997b906a8945f0c9aa7c06b93237}
+      bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
+
+plugins:
+  - name: go-sbom
+    kind: sbom
+    repository: sideways-works/pipelinegen-sbom-go
+    release: {version: v0.1.3-rc.5, sha256: 2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327}
+  - name: go-correlator
+    kind: correlator
+    repository: sideways-works/pipelinegen-correlator-go
+    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    config:
+      # the running server's counters pass through here between specs
+      cover_dir: work/command/ctl
+  - name: openapi-sbom
+    kind: sbom
+    repository: sideways-works/pipelinegen-sbom-openapi
+    release: {version: v0.1.2-rc.4, sha256: c9854ead7c4d78985fff1f2dc4e55a8148bb9d8f284c828060da849b7688a737}
+  - name: oapi-codegen-correlator
+    kind: correlator
+    repository: sideways-works/pipelinegen-correlator-oapi-codegen
+    release: {version: v0.1.5-rc.1, sha256: ae24f130f54fae4cddda0b97de588a27b629af917e3644a6bb838e69e98dc215}
+    config:
+      # the server appends the route of each request it serves here
+      request_log: work/command/requests.log
+      request_log_lines: patterns
+      other_routes: ["GET /"]
+  - name: concourse
+    kind: runner
+    repository: sideways-works/pipelinegen-runner-concourse
+    release: {version: v0.1.9-rc.10, sha256: bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2}
+  # the drivers that run the suites' tests
+  - name: go
+    kind: driver
+    repository: sideways-works/pipelinegen-driver-go
+    release: {version: v0.1.0-rc.1, sha256: 7783cecb1cf9192cb679de805a2273fd4d4df02ffd4bf019465cc040946f7049}
+  - name: playwright
+    kind: driver
+    repository: sideways-works/pipelinegen-driver-playwright
+    release: {version: v0.1.0-rc.2, sha256: 002364b0a8f48dcf8404143afd8a6c1e9bb3ca1686483ff365b1eb4a7a1624fd}
+
+suites:
+  go:
+    tests: ["**/*_test.go"]
+    bind: recorded
+    correlators: [go-correlator]
+    image: golang
+    steps:
+      - run: go
+  e2e:
+    tests: ["e2e/**/*.spec.ts"]
+    owner: "//e2e:e2e"
+    bind: recorded
+    correlators: [go-correlator, oapi-codegen-correlator]
+    # the specs talk to one server for the whole batch, whose coverage
+    # go-correlator takes at each spec's edges
+    stack: true
+    image: playwright
+    steps:
+      # the server, built once with coverage and go-correlator's cover
+      # package, in an image with Go
+      - prepare: command
+        image: golang
+        with: {run: [go, build, -tags, pipelinegen_cover, -cover, -covermode=atomic, "-coverpkg=example.com/notes/...", -o, "{prepared}/notes-server", ./cmd/notes]}
+      # started once per batch with the seed notes; it stops when the batch
+      # ends
+      - setup: command
+        with:
+          start: ["{prepared}/notes-server", -addr, "127.0.0.1:8080", -seed, e2e/seed.json]
+          env: {PIPELINEGEN_COVER_DIR: "{work}/ctl", NOTES_REQUEST_LOG: "{work}/requests.log"}
+          ready: {http: "http://127.0.0.1:8080/notes", seconds: 30}
+          export: {NOTES_URL: "http://127.0.0.1:8080"}
+      # one spec file at a time: pipelinegen takes the server's coverage
+      # between them
+      - run: playwright
+        with: {config: e2e/playwright.config.ts}
+
+runs:
+  pr:
+    trigger:
+      pull_requests: {base: main, draft: false}
+    compare: merged_target
+    select: affected
+    suites: {go: {}, e2e: {}}
+    record: true
+    report:
+      comment: {format: list}
+  main:
+    trigger: {branch: main}
+    compare: last_passed
+    select: affected
+    suites: {go: {}, e2e: {}}
+    record: true
+  nightly:
+    trigger:
+      timer: {start: "3:00", stop: "4:00", location: Europe/Berlin}
+      branch: main
+    compare: none
+    select: all
+    suites: {go: {}, e2e: {}}
+    record: true
+
+# A change to the build setup runs every test.
+# go.mod and go.sum are not here: go-sbom lists the modules they name, so a
+# module bump runs only the slices whose code links that module.
+everything_on: [MODULE.bazel, MODULE.bazel.lock, .bazelversion, package.json, package-lock.json, "ci/**"]
+
+untested:
+  - paths: [BUILD.bazel]
+    reason: holds only Gazelle's own target
+  - paths: [.gitignore]
+    reason: repository settings
+  - paths: [cmd/notes/BUILD.bazel]
+    reason: builds the server, which the browser specs run; their recordings bind its code
+  - paths: [cmd/notes/cover.go]
+    reason: links go-correlator's cover package into the e2e suite's coverage build only, which Bazel never builds

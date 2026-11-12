@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "notes_lib",
+    srcs = ["main.go"],
+    importpath = "example.com/notes/cmd/notes",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//api",
+        "//notes",
+        "//web",
+    ],
+)
+
+go_binary(
+    name = "notes",
+    embed = [":notes_lib"],
+    visibility = ["//visibility:public"],
+)

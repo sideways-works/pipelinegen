@@ -1,0 +1,12 @@
+# What the browser specs depend on besides the Go code the server runs for
+# them, which their recordings bind: the page they open, the seed notes and
+# the Playwright config. A change to the page runs every spec.
+filegroup(
+    name = "e2e",
+    srcs = glob(["*.spec.ts"]),
+    data = [
+        "playwright.config.ts",
+        "seed.json",
+        "//web",
+    ],
+)

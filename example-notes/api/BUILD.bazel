@@ -1,0 +1,26 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+exports_files(["notes.yaml"])
+
+go_library(
+    name = "api",
+    srcs = ["api.go"],
+    importpath = "example.com/notes/api",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//api/notesapi",
+        "//notes",
+        "//search",
+        "//text",
+    ],
+)
+
+go_test(
+    name = "api_test",
+    srcs = [
+        "create_test.go",
+        "search_test.go",
+    ],
+    embed = [":api"],
+    deps = ["//notes"],
+)

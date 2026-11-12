@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Notes</title>
+</head>
+<body>
+  <h1>Notes</h1>
+  <form id="add">
+    <input name="title" placeholder="Title" aria-label="Title">
+    <input name="body" placeholder="Note" aria-label="Note">
+    <button>Add</button>
+  </form>
+  <p id="error" role="alert"></p>
+  <form id="search">
+    <input name="q" placeholder="Search" aria-label="Search">
+    <button>Search</button>
+  </form>
+  <ul id="notes"></ul>
+  <script>
+    const list = document.getElementById("notes");
+    const error = document.getElementById("error");
+
+    async function show(query) {
+      const url = query ? "/notes?q=" + encodeURIComponent(query) : "/notes";
+      const notes = await (await fetch(url)).json();
+      list.replaceChildren(...notes.map((n) => {
+        const li = document.createElement("li");
+        li.textContent = n.title + ": " + n.body;
+        return li;
+      }));
+    }
+
+    document.getElementById("add").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const res = await fetch("/notes", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title: form.get("title"), body: form.get("body")}),
+      });
+      error.textContent = res.ok ? "" : await res.text();
+      if (res.ok) e.target.reset();
+      show();
+    });
+
+    document.getElementById("search").addEventListener("submit", (e) => {
+      e.preventDefault();
+      show(new FormData(e.target).get("q"));
+    });
+
+    show();
+  </script>
+</body>
+</html>

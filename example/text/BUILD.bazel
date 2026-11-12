@@ -1,0 +1,12 @@
+filegroup(
+    name = "lib",
+    srcs = ["lib.sh"],
+)
+
+filegroup(
+    name = "upper_test",
+    srcs = [
+        "upper_test.sh",
+        ":lib",
+    ],
+)

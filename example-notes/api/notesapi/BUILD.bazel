@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "notesapi",
+    srcs = [
+        "generate.go",
+        "notesapi.gen.go",
+    ],
+    # what the generated code is made from
+    data = [
+        "cfg.yaml",  # keep
+        "//api:notes.yaml",  # keep
+    ],
+    importpath = "example.com/notes/api/notesapi",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_oapi_codegen_runtime//:runtime"],
+)

@@ -1,0 +1,8 @@
+# The images the example's suites run in (suites.<name>.image).
+resources:
+  - name: busybox
+    type: registry-image
+    source: {repository: busybox, tag: 1.37.0}
+  - name: golang
+    type: registry-image
+    source: {repository: golang, tag: 1.27.1}

@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "search",
+    srcs = ["search.go"],
+    importpath = "example.com/notes/search",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//notes",
+        "//text",
+    ],
+)
+
+go_test(
+    name = "search_test",
+    srcs = ["search_test.go"],
+    embed = [":search"],
+    deps = ["//notes"],
+)

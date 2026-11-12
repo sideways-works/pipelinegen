@@ -1,0 +1,138 @@
+# A small repository's pipelinegen config: two suites and the three runs
+# most repositories want.
+#
+#   unit   shell tests (*_test.sh), bound to what they use by the Bazel graph
+#   smoke  tests (*_smoke.sh) against a Go server that a prepare step builds,
+#          bound to what they use by the Bazel graph as well
+#
+# Both suites run by drivers: the shell driver runs each test file's test_
+# functions, and the command driver, built into pipelinegen, builds and
+# starts the server. No task file or script of the repository runs them.
+#
+# Every test file is a slice of its own. Its owner target, named after it
+# (calc/BUILD.bazel, text/BUILD.bazel, words/BUILD.bazel), says what it
+# depends on.
+
+pipeline: example
+
+bazel:
+  workspace: .
+  bazelisk: bazelisk
+
+github:
+  repository: owner/example
+  token: github_token            # the name of a Concourse var, never the token
+
+concourse:
+  url: https://concourse.example.com
+  team: example
+  repository:
+    uri: https://github.com/owner/example.git
+    username: x-access-token
+    password: ((github_token))
+  # the images the suites' tasks run in
+  include: ci/root.yml
+  # pipelinegen's own steps run on a stock image and fetch the tool and
+  # bazelisk, each checked against its pinned checksum.
+  planner:
+    image: {repository: golang, tag: 1.27.1}
+    digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
+    bootstrap:
+      release: {version: v0.1.13-rc.16, sha256: 7b48ab8a8e3b68f39bdb1d4bab1a19a1f667997b906a8945f0c9aa7c06b93237}
+      bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
+
+
+plugins:
+  - name: concourse
+    kind: runner
+    repository: sideways-works/pipelinegen-runner-concourse
+    release: {version: v0.1.9-rc.10, sha256: bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2}
+  # runs shell test files function by function
+  - name: shell
+    kind: driver
+    repository: sideways-works/pipelinegen-driver-shell
+    release: {version: v0.1.0-rc.1, sha256: ceb27b60993215a6b1170d1108088fe9fb7438c10ca130d1b621e79fe96b5140}
+
+suites:
+  unit:
+    tests: ["**/*_test.sh"]
+    owner: "//{dir}:{stem}"      # calc/add_test.sh is owned by //calc:add_test
+    bind: graph                  # bound by the Bazel graph alone
+    image: busybox
+    steps:
+      # each file's test_ functions, each in a shell of its own
+      - run: shell
+        with: {functions: test_}
+  smoke:
+    tests: ["**/*_smoke.sh"]
+    owner: "//{dir}:{stem}"
+    bind: graph                  # bound by the Bazel graph too: recording what
+                                 # each file executed needs sbom and correlator
+                                 # plugins (see the plugin proof's fixture)
+    image: busybox
+    steps:
+      # the server, built once per build of the suite, in an image with Go
+      - prepare: command
+        image: golang
+        with: {run: [go, build, -trimpath, -o, "{prepared}/bin/words", .], dir: words, env: {CGO_ENABLED: "0"}}
+      # started once per batch; its address reaches the tests as WORDS, and
+      # it is stopped when the batch ends
+      - setup: command
+        with:
+          start: ["{prepared}/bin/words"]
+          env: {ADDR: "127.0.0.1:8080"}
+          ready: {http: "http://127.0.0.1:8080/healthz", seconds: 60}
+          export: {WORDS: "http://127.0.0.1:8080"}
+      - run: shell
+        with: {functions: test_}
+    # Two changes that both reach smoke take turns.
+    run_on: {serial_group: smoke}
+
+runs:
+  # Ready pull requests into main: the change merged into main's tip, compared
+  # with that tip; only the slices it reaches run. One comment per pull
+  # request shows the run as it goes.
+  pr:
+    trigger:
+      pull_requests: {base: main, draft: false}
+    compare: merged_target
+    select: affected
+    suites: {unit: {}, smoke: {}}
+    record: true
+    report:
+      comment: {format: mermaid}
+
+  # Every commit on main, compared with the last commit whose run passed.
+  main:
+    trigger: {branch: main}
+    compare: last_passed
+    select: affected
+    suites: {unit: {}, smoke: {}}
+    record: true
+
+  # Once a night everything runs. record: true changes nothing here, since
+  # no suite is bound by recording; a recorded suite's runs would attach
+  # what each slice executed to the tested commit
+  # (refs/pipelinegen/lists/<commit>).
+  nightly:
+    trigger:
+      timer: {start: "3:00", stop: "4:00", location: Europe/Berlin}
+      branch: main
+    compare: none
+    select: all
+    suites: {unit: {}, smoke: {}}
+    record: true
+
+# A change to any of these runs every slice.
+everything_on:
+  - MODULE.bazel
+  - .bazelversion
+  - ci/**
+
+untested:
+  - paths: [MODULE.bazel, .bazelversion, "ci/**"]
+    reason: the build setup; a change to it runs every slice (everything_on)
+  - paths: [.gitignore, .bazelignore]
+    reason: repository settings
+  - paths: [README.md]
+    reason: says what the example is; nothing runs it

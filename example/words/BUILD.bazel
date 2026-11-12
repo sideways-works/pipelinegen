@@ -1,0 +1,28 @@
+# The words server, in Go. The smoke suite runs one server per batch.
+
+filegroup(
+    name = "server",
+    srcs = [
+        "go.mod",
+        "main.go",
+        "words.go",
+    ],
+)
+
+# Each test file's owner (the suite's owner pattern //{dir}:{stem}): the
+# file and what it runs against.
+filegroup(
+    name = "upper_smoke",
+    srcs = [
+        "upper_smoke.sh",
+        ":server",
+    ],
+)
+
+filegroup(
+    name = "count_smoke",
+    srcs = [
+        "count_smoke.sh",
+        ":server",
+    ],
+)

@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "notes",
+    srcs = ["notes.go"],
+    importpath = "example.com/notes/notes",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "notes_test",
+    srcs = ["notes_test.go"],
+    embed = [":notes"],
+)

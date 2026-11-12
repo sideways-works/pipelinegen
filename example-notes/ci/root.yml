@@ -1,0 +1,8 @@
+# The images the notes service's suites run in (suites.<name>.image).
+resources:
+  - name: golang
+    type: registry-image
+    source: {repository: golang, tag: 1.27.1}
+  - name: playwright
+    type: registry-image
+    source: {repository: mcr.microsoft.com/playwright, tag: v1.63.0-noble}

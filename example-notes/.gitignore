@@ -1,0 +1,4 @@
+/bazel-*
+/tools/
+/node_modules/
+/test-results/
