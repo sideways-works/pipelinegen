@@ -1,0 +1,19 @@
+# The images the suites' tasks run in (suites.<name>.image), merged into
+# the pipeline pipelinegen generates. They are checked on the workers the
+# suites run on.
+resources:
+  - name: golang
+    type: registry-image
+    icon: language-go
+    tags: [cloud-2]
+    source: {repository: golang, tag: 1.25.7-bookworm}
+  - name: node
+    type: registry-image
+    icon: nodejs
+    tags: [cloud-2]
+    source: {repository: node, tag: 24.22.3-bookworm}
+  - name: playwright
+    type: registry-image
+    icon: web
+    tags: [cloud-2]
+    source: {repository: mcr.microsoft.com/playwright, tag: v1.60.0-noble}

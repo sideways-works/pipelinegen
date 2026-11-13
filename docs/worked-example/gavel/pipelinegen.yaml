@@ -1,0 +1,588 @@
+pipeline: gavel
+
+bazel:
+  workspace: .
+  bazelisk: bazelisk
+
+# --- GitHub: where runs report (statuses, the pull request comment) and
+# where the run state lives (hidden refs of this repository).
+github:
+  repository: Azer0s/gavel
+  # the names of Concourse vars, never the tokens. A step gets only the
+  # token of what it does: read fetches the code and the releases of
+  # pipelinegen and its plugins, and is the only one a task running a
+  # change's own scripts may hold; the others write statuses, the comment
+  # and the records, on this repository only
+  token: github_token
+  tokens: {read: github_read_token, changes: github_token, report: github_token, store: github_token}
+
+# --- Concourse: what the generated pipeline needs. The web address is left
+# out on purpose: whoever generates the pipeline gives it in
+# PIPELINEGEN_CONCOURSE_URL, so no host name lands in this public file.
+concourse:
+  team: sideways-works
+  branch: pipelinegen            # this fork's default branch for the tool; yours is main
+  # the images the suites' tasks run in, as registry-image resources
+  include: ci/root.yml
+  repository:
+    uri: https://github.com/Azer0s/gavel.git
+    username: x-access-token
+    password: ((github_token))
+  planner:
+    image: {repository: golang, tag: 1.27.1}
+    digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
+    # The TypeScript and React plugins are Node programs, and this image
+    # has no Node: fetch a pinned one (kept in the plan cache, so once per
+    # worker), check it, and put it on the default PATH for the plan step.
+    # Then fill the module cache: the Go plugins read it and never download.
+    prepare: >-
+      v=v24.22.3; f="$npm_config_cache/../node-$v-linux-x64.tar.gz";
+      [ -f "$f" ] || curl -fsSLo "$f" "https://nodejs.org/dist/$v/node-$v-linux-x64.tar.gz";
+      echo "061ec3e3062115705b56b51fa9cc330ab50d34b6969387d4e4b1a50c6809acc2  $f" | sha256sum -c - &&
+      tar -xzf "$f" -C /usr/local --strip-components=1 --no-same-owner "node-$v-linux-x64/bin/node" &&
+      go mod download && (cd tools && go mod download)
+    bootstrap:
+      release: {version: v0.1.13-rc.18, sha256: 1dcacdb41949c3a032966f0221f384c04ed854f2398c8a8771d0e8e830598c56}
+      bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
+
+plugins:
+  # What exists: every Go declaration and module, with a digest that
+  # ignores comments and formatting.
+  - name: go-sbom
+    kind: sbom
+    repository: sideways-works/pipelinegen-sbom-go
+    release: {version: v0.1.3-rc.5, sha256: 2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327}
+    exclude: ["examples/**"]
+  # Who uses what: links between declarations, and which declarations each
+  # test file ran, read from the coverage its run leaves.
+  - name: go-correlator
+    kind: correlator
+    repository: sideways-works/pipelinegen-correlator-go
+    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    exclude: ["examples/**"]
+    config:
+      # the browser suite's server hands its counters over here between
+      # spec files (the server set-up's work directory)
+      cover_dir: work/shell/server/ctl
+  # TypeScript: what exists in the web app and the specs (functions,
+  # components, module init) and who ran it, from the browser's and the
+  # test runner's coverage, read through the bundle's source map.
+  - name: ts
+    kind: sbom
+    repository: sideways-works/pipelinegen-sbom-ts
+    release: {version: v0.1.3-rc.2, sha256: 78f4abbf2c529e6b8d335df2300590630e1c397e4c9610fd29addb4317e74c27}
+    exclude: ["examples/**", "docs/**"]
+  - name: react
+    kind: correlator
+    repository: sideways-works/pipelinegen-correlator-react
+    release: {version: v0.1.4-rc.15, sha256: 45cd4fd378072c039d3847ec2657d712d507843dd7dda073fd40a823ae6f457c}
+    exclude: ["examples/**", "docs/**"]
+    config:
+      # gavel has no Vite config to read the build from: the browser
+      # suite's set-up puts the built app into apps/web/dist, and the
+      # server serves it at /
+      bundles:
+        - {dist: apps/web/dist, base: /, html: apps/web/index.html, public: apps/web/public}
+  # The web app's npm packages, read from its pnpm lockfile: the units the
+  # TypeScript correlator links code to when it imports a package.
+  - name: npm
+    kind: sbom
+    repository: sideways-works/pipelinegen-sbom-npm
+    release: {version: v0.1.2-rc.2, sha256: 63fd411fd3d6e48ad362f781209c51545c28ad18896b81f2ccf15f45b1e11cd0}
+    exclude: ["examples/**"]
+  # The API contract: each operation of openapi/v1 a unit, and which Go code
+  # serves it (oapi-codegen's generated wrapper and gavel's handler), and
+  # which operations each browser spec requested.
+  - name: openapi
+    kind: sbom
+    repository: sideways-works/pipelinegen-sbom-openapi
+    release: {version: v0.1.2-rc.4, sha256: c9854ead7c4d78985fff1f2dc4e55a8148bb9d8f284c828060da849b7688a737}
+    exclude: ["examples/**", "docs/**", ".github/**"]
+  - name: api-uses
+    kind: correlator
+    repository: sideways-works/pipelinegen-correlator-oapi-codegen
+    release: {version: v0.1.5-rc.2, sha256: ad95aa58e261ebdd18711cf9d1ad4c7f439bda4ca746761efdfe6e27a4aa1bbe}
+    exclude: ["examples/**"]
+    config:
+      documents:
+        # generated by `make openapi-gen`, which leaves no go:generate line
+        - path: openapi/v1/openapi.yaml
+          go: {package: core/userinterface/api/v1/gen, strict: true}
+  # The drivers that run the suites' steps (the command driver comes with
+  # pipelinegen).
+  - name: go
+    kind: driver
+    repository: sideways-works/pipelinegen-driver-go
+    release: {version: v0.1.0-rc.3, sha256: 5945eb8a61a5a68972dce44d812bd98c394dabd26a575e9b65510ba18005971c}
+  - name: shell
+    kind: driver
+    repository: sideways-works/pipelinegen-driver-shell
+    release: {version: v0.1.0-rc.2, sha256: 3e18675e34cf40ce7f741cceae73f794ee425e46bf984a17d9b08d48c7345d62}
+  - name: playwright
+    kind: driver
+    repository: sideways-works/pipelinegen-driver-playwright
+    release: {version: v0.1.0-rc.3, sha256: 7bd93f5776c1db5508f5c018d66230d2792d9226e86a06b8163d7abad7d8fb60}
+  # Writes the Concourse pipeline from this file.
+  - name: concourse
+    kind: runner
+    repository: sideways-works/pipelinegen-runner-concourse
+    release: {version: v0.1.9-rc.10, sha256: bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2}
+    config:
+      placement:
+        # every step of this pipeline, the resources' checks included, on
+        # the workers tagged cloud-2
+        default: [cloud-2]
+
+suites:
+  # Go tests that need no database: one slice per _test.go file, run by
+  # go test. Their task has no Docker daemon, so the database tests stay in
+  # the go-db suite.
+  go:
+    tests: ["**/*_test.go"]
+    exclude:
+      - "examples/**"
+      - "apps/cli/test/e2e/*_test.go"
+      - "apps/server/test/e2e/**"
+      # the database tests are the go-db suite
+      - "core/infrastructure/*/postgres/*_test.go"
+      - "core/infrastructure/platform/database/*_test.go"
+      - "core/infrastructure/platform/sourceblob/*_test.go"
+      - "core/infrastructure/supporting/search/*_test.go"
+      - "apps/cli/test/integration/submit/*_test.go"
+    bind: recorded
+    # only Go code runs in these tests: the TypeScript and API correlators
+    # have nothing to see here, and their "can't tell" would bind every slice
+    correlators: [go-correlator]
+    image: golang
+    params:
+      GOFLAGS: -trimpath
+      GOCACHE: "{cache}/go-build"
+      GOMODCACHE: "{cache}/mod"
+    steps:
+      # What Bazel gave these tests and go test doesn't: a runfiles tree
+      # (two tests read MODULE.bazel and openapi/v1 through rules_go's
+      # runfiles), the built gavel binary the CLI spec tests run, and file
+      # permissions that hold: the task runs as root, whom no mode bit
+      # stops, and some tests expect a file they can't read or write. As
+      # root each test binary runs without the two capabilities that
+      # bypass permission bits (go test -exec without-dac).
+      - setup: shell
+        with:
+          timeout: 10m
+          script: |
+            mkdir -p "$PIPELINEGEN_WORK/runfiles" "$PIPELINEGEN_WORK/bin"
+            ln -sfn "$PIPELINEGEN_TREE" "$PIPELINEGEN_WORK/runfiles/_main"
+            go build -o "$PIPELINEGEN_WORK/gavel" ./apps/cli/cmd/gavel
+            printf '%s\n' '#!/bin/sh' '[ "$(id -u)" = 0 ] || exec "$@"' \
+              'exec setpriv --inh-caps=-dac_override,-dac_read_search --bounding-set=-dac_override,-dac_read_search -- "$@"' \
+              >"$PIPELINEGEN_WORK/bin/without-dac"
+            chmod +x "$PIPELINEGEN_WORK/bin/without-dac"
+            {
+              echo "PATH=$PIPELINEGEN_WORK/bin:$PATH"
+              echo "RUNFILES_DIR=$PIPELINEGEN_WORK/runfiles"
+              echo "GAVEL_BINARY=$PIPELINEGEN_WORK/gavel"
+            } >>"$PIPELINEGEN_EXPORT"
+      - run: go
+        with:
+          flags: [-exec, without-dac]
+          timeout: 15m
+          cache_mb: 4096
+          modcache_mb: 3072
+          # without the binary these tests skip, and a skip passes. A
+          # pattern holds in every file, so it names exactly these tests
+          must_run:
+            apps/cli/test/integration/clispec/clispec_test.go: "^Test(AllSpecCommandsExistInBinary|AllBinaryCommandsDocumentedInSpec|AllSpecFlagsExistInBinary|AllBinaryFlagsDocumentedInSpec|FlagTypesMatchSpec|FlagShortAliasesMatchSpec|GlobalFlagsExistInBinary|UnknownFlagRejected)$"
+
+  # Go tests of packages whose tests start PostgreSQL through
+  # testcontainers: their batches start a Docker daemon of their own, and a
+  # test that skips because none answers fails its file.
+  go-db:
+    tests: ["core/infrastructure/*/postgres/*_test.go", "core/infrastructure/platform/database/*_test.go", "core/infrastructure/platform/sourceblob/*_test.go", "core/infrastructure/supporting/search/*_test.go", "apps/cli/test/integration/submit/*_test.go"]
+    bind: recorded
+    correlators: [go-correlator]
+    privileged: true
+    image: golang
+    params:
+      GOFLAGS: -trimpath
+      GOCACHE: "{cache}/go-build"
+      GOMODCACHE: "{cache}/mod"
+      # Each test file is a go test process of its own, and each process a
+      # testcontainers session: the reaper of one would remove the
+      # database container the next one reuses by name. The batch's own
+      # daemon, and the set-up's stop, end the container instead.
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    steps:
+      - setup: shell
+        with:
+          timeout: 10m
+          script: |
+            if ! docker info >/dev/null 2>&1; then
+              command -v dockerd >/dev/null || { apt-get update -qq && apt-get install -y -qq docker.io >/dev/null; }
+              setsid dockerd >"$PIPELINEGEN_WORK/dockerd.log" 2>&1 &
+              echo $! >"$PIPELINEGEN_WORK/dockerd.pid"
+              i=0
+              until docker info >/dev/null 2>&1; do
+                i=$((i + 1))
+                [ "$i" -lt 60 ] || { tail -20 "$PIPELINEGEN_WORK/dockerd.log"; exit 1; }
+                sleep 1
+              done
+            fi
+          stop: |
+            [ -f "$PIPELINEGEN_WORK/dockerd.pid" ] || exit 0
+            docker ps -aq --filter label=org.testcontainers=true | xargs -r docker rm -f >/dev/null
+            kill "$(cat "$PIPELINEGEN_WORK/dockerd.pid")"
+            i=0
+            while kill -0 "$(cat "$PIPELINEGEN_WORK/dockerd.pid")" 2>/dev/null && [ "$i" -lt 8 ]; do i=$((i + 1)); sleep 1; done
+      - run: go
+        with:
+          timeout: 15m
+          cache_mb: 4096
+          modcache_mb: 3072
+          must_run:
+            apps/cli/test/integration/submit/submit_e2e_test.go: "."
+            core/infrastructure/casefile/postgres/case_file_repository_integration_test.go: "."
+            core/infrastructure/casefile/postgres/error_paths_integration_test.go: "."
+            core/infrastructure/casefile/postgres/file_coverage_integration_test.go: "."
+            core/infrastructure/casefile/postgres/query_finders_integration_test.go: "."
+            core/infrastructure/gavelspace/postgres/gavelspace_integration_test.go: "."
+            core/infrastructure/iam/postgres/integration_test.go: "."
+            core/infrastructure/iam/postgres/tenant_provisioner_integration_test.go: "."
+            core/infrastructure/platform/database/connection_integration_test.go: "."
+            core/infrastructure/platform/database/db_test.go: "."
+            core/infrastructure/platform/database/escape_test.go: "."
+            core/infrastructure/platform/database/seed_integration_test.go: "."
+            core/infrastructure/platform/sourceblob/storage_integration_test.go: "."
+            core/infrastructure/pleading/postgres/pleading_finder_integration_test.go: "."
+            core/infrastructure/pleading/postgres/pleading_repository_integration_test.go: "."
+            core/infrastructure/project/postgres/project_repository_integration_test.go: "."
+            core/infrastructure/project/postgres/query_finder_integration_test.go: "."
+            core/infrastructure/supporting/search/finder_integration_test.go: "."
+
+  # The web app's type check and lint, each a tagged filegroup in
+  # apps/web/BUILD.bazel that names the Bazel test target running it.
+  web:
+    tag: slice-web
+    image: golang
+    steps:
+      - run: shell
+        with:
+          timeout: 30m
+          caches:
+            - {dir: bazel, env: BAZEL_ROOT, mb: 12288, age: 14d, unit: whole}
+            - {dir: bazelisk, env: BAZELISK_HOME, mb: 512, age: 30d, unit: whole}
+          script: |
+            b() { bazelisk --output_user_root="$BAZEL_ROOT" "$@"; }
+            trap 'b shutdown >/dev/null 2>&1 || true' EXIT
+            b test "$PIPELINEGEN_TARGET" --noshow_progress --test_output=errors
+
+  # gavel's Playwright specs against the real server and PostgreSQL. Bound
+  # by recording: the server's Go coverage, the browser's coverage and the
+  # API requests of each spec file.
+  browser:
+    tests: ["apps/web/e2e/*.ts"]
+    helpers: ["apps/web/e2e/fixtures.ts", "apps/web/e2e/recording.ts", "apps/web/e2e/global-setup.ts", "apps/web/e2e/global-teardown.ts"]
+    # no Bazel target holds the specs: their owner is a filegroup whose data
+    # is what every spec shares. A recorded suite takes only its owner's data
+    # from the graph; the code the specs ran comes from the recordings
+    owner: "//apps/web:e2e_shared"
+    bind: recorded
+    # a change to how Playwright runs breaks every spec alike: a few tell
+    sample_on: [apps/web/playwright.config.ts, apps/web/playwright.pipelinegen.config.ts]
+    # one server for the whole batch, whose coverage go-correlator takes at
+    # each spec file's edges
+    stack: true
+    # the batch's own Docker daemon, for PostgreSQL
+    privileged: true
+    image: playwright
+    steps:
+      # The web app, built by Bazel, and the server. A recording run
+      # bundles the app again with esbuild and the web_project macro's
+      # settings: Bazel's bundle names its map web.bundle.js.map, which
+      # isn't there, and leaves the sources' text out, so react-correlator
+      # couldn't read it. It builds the server with coverage and
+      # go-correlator's cover package, which it adds to this task's own copy
+      # of go.mod (never to the tree's) and fetches with the run's read
+      # token: the module is private.
+      - prepare: shell
+        image: golang
+        with:
+          timeout: 60m
+          caches:
+            - {dir: bazel, env: BAZEL_ROOT, mb: 12288, age: 14d, unit: whole}
+            - {dir: bazelisk, env: BAZELISK_HOME, mb: 512, age: 30d, unit: whole}
+            - {dir: go-build, env: GOCACHE, mb: 4096, age: 14d}
+            - {dir: mod, env: GOMODCACHE, mb: 3072, age: 30d, unit: whole}
+          script: |
+            b() { bazelisk --output_user_root="$BAZEL_ROOT" "$@"; }
+            trap 'b shutdown >/dev/null 2>&1 || true' EXIT
+            b build //apps/web //apps/web:node_modules --noshow_progress
+            d=$PIPELINEGEN_PREPARED/dist
+            mkdir -p "$d"
+            cp -RL bazel-bin/apps/web/dist/. "$d/"
+            chmod -R u+w "$d"
+            if [ "${PIPELINEGEN_RECORD:-false}" != true ]; then
+              go build -o "$PIPELINEGEN_PREPARED/gavel-server" ./apps/server/cmd/gavel-server
+              exit 0
+            fi
+            # built at apps/web/dist, where the batches put it, so that the
+            # map's paths to the sources hold there
+            [ -e apps/web/node_modules ] || ln -s "$PWD/bazel-bin/apps/web/node_modules" apps/web/node_modules
+            (cd apps/web && node_modules/esbuild/bin/esbuild src/main.tsx --bundle --minify --sourcemap \
+              --target=es2020 --platform=browser --jsx=automatic --loader:.css=empty \
+              --define:import.meta.env.DEV=false --tsconfig=tsconfig.app.json --outfile=dist/bundle.js)
+            cp apps/web/dist/bundle.js apps/web/dist/bundle.js.map "$d/"
+            w=$PIPELINEGEN_WORK/cover
+            mkdir -p "$w"
+            cp go.mod go.sum "$w/"
+            # go's cover tool reads the package's files from disk, past any
+            # -overlay, so the file goes into this task's tree for the build
+            f=apps/server/cmd/gavel-server/pipelinegen_cover.go
+            trap 'rm -f "$f"; b shutdown >/dev/null 2>&1 || true' EXIT
+            printf '//go:build pipelinegen_cover\n\npackage main\n\nimport _ "github.com/sideways-works/pipelinegen-correlator-go/cover"\n' >"$f"
+            if [ -n "${GITHUB_TOKEN:-}" ]; then
+              eval "$(pipelinegen git-auth GITHUB_TOKEN)"
+              export GOPRIVATE='github.com/sideways-works/*'
+            fi
+            GOWORK=off GOFLAGS="${GOFLAGS:-} -mod=mod" go get -modfile="$w/go.mod" github.com/sideways-works/pipelinegen-correlator-go/cover@v0.1.8-rc.12
+            GOWORK=off go build -modfile="$w/go.mod" -tags pipelinegen_cover \
+              -cover -covermode=atomic -coverpkg=github.com/usegavel/gavel/... \
+              -o "$PIPELINEGEN_PREPARED/gavel-server" ./apps/server/cmd/gavel-server
+      # PostgreSQL in the batch's own Docker daemon, the specs' packages,
+      # the built app where the server and react-correlator look for it, and
+      # in a recording run react-correlator's Playwright fixture
+      - setup: shell
+        with:
+          timeout: 20m
+          caches:
+            - {dir: pnpm-store, env: PNPM_STORE, mb: 2048, age: 30d, unit: whole}
+            - {dir: npm, env: npm_config_cache, mb: 512, age: 30d, unit: whole}
+          script: |
+            w=$PIPELINEGEN_WORK/stack
+            mkdir -p "$w/bin"
+            if ! docker info >/dev/null 2>&1; then
+              command -v dockerd >/dev/null || { apt-get update -qq && apt-get install -y -qq docker.io >/dev/null; }
+              # the task's root is an overlay filesystem, on which the
+              # Docker of this image (Ubuntu's, with containerd's overlayfs
+              # snapshotter) can't unpack an image's layers: Docker's own
+              # store with the vfs driver works on any filesystem
+              printf '%s\n' '{"storage-driver": "vfs", "features": {"containerd-snapshotter": false}}' >"$w/daemon.json"
+              setsid dockerd --config-file "$w/daemon.json" --data-root "$w/docker" >"$w/dockerd.log" 2>&1 &
+              echo $! >"$w/dockerd.pid"
+              i=0
+              until docker info >/dev/null 2>&1; do
+                i=$((i + 1))
+                [ "$i" -lt 60 ] || { tail -20 "$w/dockerd.log"; exit 1; }
+                sleep 1
+              done
+            fi
+            c=${GAVEL_PG_CONTAINER:-gavel-e2e-postgres}
+            docker rm -f "$c" >/dev/null 2>&1 || true
+            docker run -d --name "$c" -e POSTGRES_USER=gavel -e POSTGRES_PASSWORD=gavel -e POSTGRES_DB=gaveltest \
+              -p 127.0.0.1::5432 postgres:16-alpine >/dev/null
+            echo "$c" >"$w/container"
+            # over TCP: the image's first start runs a server on the socket
+            # alone while it creates the database, then restarts it
+            i=0
+            until docker exec "$c" pg_isready -h 127.0.0.1 -U gavel -d gaveltest >/dev/null 2>&1; do
+              i=$((i + 1))
+              [ "$i" -lt 60 ] || { docker logs "$c" | tail -20; exit 1; }
+              sleep 1
+            done
+            port=$(docker port "$c" 5432/tcp | head -1 | sed 's/.*://')
+            # global-setup.ts empties the database with `podman exec
+            # gavel-e2e-postgres psql ...`: this batch has Docker and its own
+            # container name
+            printf '#!/bin/sh\nif [ "$1" = exec ]; then shift 2; exec docker exec "%s" "$@"; fi\nexec docker "$@"\n' "$c" >"$w/bin/podman"
+            chmod +x "$w/bin/podman"
+            (cd apps/web && npx --yes pnpm@10.12.1 install --frozen-lockfile --store-dir "$PNPM_STORE")
+            rm -rf apps/web/dist
+            cp -R "$PIPELINEGEN_PREPARED/dist" apps/web/dist
+            mkdir -p "$w/runfiles"
+            ln -sfn "$PIPELINEGEN_TREE" "$w/runfiles/_main"
+            {
+              echo "PATH=$w/bin:$PATH"
+              echo "RUNFILES_DIR=$w/runfiles"
+              echo "GAVEL_DATABASE_URL=postgres://gavel:gavel@127.0.0.1:$port/gaveltest?sslmode=disable"
+            } >>"$PIPELINEGEN_EXPORT"
+            [ "${PIPELINEGEN_RECORD:-false}" = true ] || exit 0
+            fixture=${REACT_CORRELATOR_FIXTURE:-$w/playwright.mjs}
+            if [ ! -f "$fixture" ]; then
+              [ -n "${GITHUB_TOKEN:-}" ] || { echo "a recording run needs react-correlator's fixture: give the run's browser batch GITHUB_TOKEN, or name the file in REACT_CORRELATOR_FIXTURE" >&2; exit 1; }
+              command -v curl >/dev/null || { apt-get update -qq && apt-get install -y -qq curl >/dev/null; }
+              api=https://api.github.com/repos/sideways-works/pipelinegen-correlator-react/releases/tags/v0.1.4-rc.15
+              url=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "$api" |
+                node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const a=JSON.parse(s).assets.find(a=>a.name==="playwright.mjs");console.log(a?a.url:"")})')
+              curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/octet-stream" -o "$fixture" "$url"
+            fi
+            echo "2cfe03612b245c6af37e1a7c80798843c3e5b69a472aa2980148f94d3b6c78c7  $fixture" | sha256sum -c -
+            echo "REACT_CORRELATOR_FIXTURE=$fixture" >>"$PIPELINEGEN_EXPORT"
+          stop: |
+            w=$PIPELINEGEN_WORK/stack
+            if [ -f "$w/container" ]; then docker rm -f "$(cat "$w/container")" >/dev/null 2>&1 || true; fi
+            [ -f "$w/dockerd.pid" ] || exit 0
+            # the driver may have stopped a daemon whose set-up failed
+            kill "$(cat "$w/dockerd.pid")" 2>/dev/null || exit 0
+            i=0
+            while kill -0 "$(cat "$w/dockerd.pid")" 2>/dev/null && [ "$i" -lt 6 ]; do i=$((i + 1)); sleep 1; done
+      # the server, once per batch, until the batch ends
+      - setup: shell
+        with:
+          timeout: 5m
+          script: |
+            w=$PIPELINEGEN_WORK/server
+            mkdir -p "$w/data" "$w/ctl"
+            port=${E2E_SERVER_PORT:-3333}
+            GAVEL_ADDR=127.0.0.1:$port GAVEL_DATA_DIR=$w/data GAVEL_SECURE_COOKIES=false GAVEL_ADMIN_PASSWORD=changeme \
+              PIPELINEGEN_COVER_DIR=$w/ctl setsid "$PIPELINEGEN_PREPARED/gavel-server" serve >"$w/server.log" 2>&1 &
+            echo $! >"$w/pid"
+            i=0
+            until node -e 'fetch(process.argv[1]).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))' "http://127.0.0.1:$port/healthz"; do
+              i=$((i + 1))
+              kill -0 "$(cat "$w/pid")" 2>/dev/null || { echo "the server exited:" >&2; tail -20 "$w/server.log" >&2; exit 1; }
+              [ "$i" -lt 60 ] || { tail -20 "$w/server.log"; exit 1; }
+              sleep 1
+            done
+            echo "E2E_SERVER_PORT=$port" >>"$PIPELINEGEN_EXPORT"
+          stop: |
+            w=$PIPELINEGEN_WORK/server
+            kill "$(cat "$w/pid")"
+            i=0
+            while kill -0 "$(cat "$w/pid")" 2>/dev/null && [ "$i" -lt 6 ]; do i=$((i + 1)); sleep 1; done
+      - run: playwright
+        with: {dir: apps/web, config: playwright.pipelinegen.config.ts, install: false}
+
+  # The web app's unit tests (vitest), bound by the Bazel graph: they sit in
+  # the app's sources, so a change to the app runs them.
+  vitest:
+    tests: ["apps/web/src/**/*.test.ts", "apps/web/src/**/*.test.tsx"]
+    owner: "//apps/web:web"
+    # how vitest runs breaks every test file alike: a few tell
+    sample_on: [apps/web/vitest.config.ts]
+    image: node
+    steps:
+      - setup: shell
+        with:
+          dir: apps/web
+          timeout: 15m
+          caches:
+            - {dir: pnpm-store, env: PNPM_STORE, mb: 2048, age: 30d, unit: whole}
+            - {dir: npm, env: npm_config_cache, mb: 512, age: 30d, unit: whole}
+          script: npx --yes pnpm@10.12.1 install --frozen-lockfile --store-dir "$PNPM_STORE"
+      # the batch's files in one vitest run; when it fails, each file runs
+      # again on its own, so a file's result is its own
+      - run: shell
+        batch: true
+        with:
+          dir: apps/web
+          timeout: 10m
+          script: |
+            set --
+            for s in $PIPELINEGEN_SLICES; do set -- "$@" "${s#apps/web/}"; done
+            node_modules/.bin/vitest run "$@"
+
+runs:
+  # Ready pull requests into the default branch: the change merged into its
+  # tip, compared with that tip. Only the test files it reaches run. A pull
+  # request's tasks run its own code, so they get no secret: the run
+  # records nothing, and the browser suite then needs neither the cover
+  # module nor the fixture, which only the read token fetches.
+  pr:
+    trigger:
+      pull_requests: {base: pipelinegen, draft: false}
+    compare: merged_target
+    select: affected
+    suites: {go: {}, go-db: {}, web: {}, browser: {}, vitest: {}}
+    record: false
+    report:
+      comment: {format: mermaid}
+      reasoning: true
+
+  # Every commit on the default branch, compared with the last one whose run
+  # passed. Its recordings become the lists the next plans read.
+  main:
+    trigger: {branch: pipelinegen}
+    compare: last_passed
+    select: affected
+    suites: {go: {}, go-db: {}, web: {}, vitest: {}}
+    record: true
+
+  # The browser specs on every commit of the branch, recording nothing yet:
+  # a recording's observe step runs in the planner's image, which has no
+  # Node for react-correlator, and no key of this file reaches that step.
+  # The specs run and pass; without lists they run on every change. They
+  # record again in main and the nightly once the tool runs the planner's
+  # prepare in that step. A recording is per run, so they have a run of
+  # their own meanwhile.
+  browser:
+    trigger: {branch: pipelinegen}
+    compare: last_passed
+    select: affected
+    suites: {browser: {}}
+    record: false
+
+  # Once a night, everything: the net under every narrowing.
+  nightly:
+    trigger:
+      timer: {start: "3:00", stop: "4:00"}
+      branch: pipelinegen
+    compare: none
+    select: all
+    suites: {go: {}, go-db: {}, web: {}, vitest: {}}
+    record: true
+
+# The web app's BUILD file calls web_project, a macro from gavel's own
+# module registry (gavel_tools), which globs the app's files itself. The
+# check can't see inside another repository's macro, so it is told here.
+macros:
+  "@gavel_tools//macros:web.bzl%web_project":
+    reads: ["src/**/*.ts", "src/**/*.tsx", "src/**/*.css", "public/**", index.html, "tsconfig*.json", eslint.config.js, tailwind.config.js]
+    reason: bundles, styles, type-checks and lints the app's sources
+
+# go.mod, go.sum, go.work and tools/go.* are not here: go-sbom claims them
+# and lists each module as a unit, so a bump runs the slices whose code
+# links the bumped module, and the graph-bound suites through Bazel's
+# go_deps. pipelinegen.yaml isn't either: the planner judges a change to it
+# by what it means for the tests.
+everything_on:
+  - MODULE.bazel
+  # MODULE.bazel includes it: build setup like MODULE.bazel itself
+  - .gavel/gavel.MODULE.bazel
+  - .bazelversion
+  - .bazelrc
+  - .bazelignore
+  - tools/BUILD.bazel
+  # the images every suite's tasks run in
+  - ci/root.yml
+  # the web app's npm packages: Bazel installs them from this lockfile for
+  # the app, and the suites' set-ups for the vitest files and the browser
+  # specs
+  - apps/web/package.json
+  - apps/web/pnpm-lock.yaml
+
+untested:
+  - paths: ["examples/**"]
+    reason: separate Bazel workspaces (in .bazelignore) that gavel's onboarding job judges; no test of this workspace reads them
+  - paths: ["docs/**", "**/*.md", LICENSE, glama.json]
+    reason: prose and listings, read by people only
+  - paths: [".github/**", .gitignore, codecov.yml]
+    reason: repository settings and the old CI
+  - paths: [.gavel/architecture.yml, ".gavel/baseline/**", .gavel/gavel.bazelrc, .gavel/gavel.yaml, .golangci.yml]
+    reason: gavel's own quality baseline and lint settings, read when gavel judges itself; .bazelrc imports gavel.bazelrc, which holds only named configs a plain bazel test doesn't use
+  - paths: [.goreleaser.yaml, hack/release.sh, install.sh, Makefile]
+    reason: release and developer scripts, run by people
+  - paths: [apps/web/.gitignore]
+    reason: repository settings
+  - paths: ["apps/web/src/assets/**"]
+    reason: images in the source tree that nothing imports and the build doesn't take
+  - paths: [apps/web/scripts/generate-tokens.mjs, apps/web/tokens.json]
+    reason: the design tokens and the script a person runs to turn them into the checked-in styles
+  - paths: ["apps/cli/test/e2e/*_test.go", "apps/server/test/e2e/*_test.go", apps/cli/test/e2e/run.sh, apps/server/test/e2e/run.sh]
+    reason: end-to-end tests behind the build tag e2e; they do not build at this commit
+  - paths: [apps/server/test/e2e/devdemo.sh, "apps/server/testdata/**"]
+    reason: a script and sample data for running a demo by hand
+  - paths: [apps/server/cmd/gavel-server/BUILD.bazel, apps/server/internal/platform/frontend/BUILD.bazel]
+    reason: the server's Bazel build, which no test runs; the browser suite builds the server with go build
+  - paths: [apps/cli/BUILD.bazel, apps/cli/test/e2e/BUILD.bazel, apps/server/test/e2e/BUILD.bazel, core/domain/iam/model/BUILD.bazel, core/userinterface/api/v1/server/supporting/BUILD.bazel]
+    reason: BUILD files that declare no target
+  - paths: [core/userinterface/api/v1/gen/oapi-codegen.yaml]
+    reason: the generator's settings; what it generates is checked in and tested
