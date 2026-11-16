@@ -14,9 +14,15 @@ when it ran. It owns no units and no namespace. The fields are in
 - `detect`: claim the files you read, each with a role, on positive
   evidence.
 - `links` or `bind`, for planning (below).
-- `collect`, inside the batch task, and `observe`, in the step after it,
-  for recording. That step sees only the tree and the coverage output
+- `collect`, inside the batch task, and `observe`, for recording.
+  `observe` runs in the batch task too, once its last slice ended, for a
+  batch run by drivers, and in the step after it for what the batch left
+  and for a batch of task files. Either step sees only the tree and the
+  coverage output
   ([what the step that observes can see](../plugins.md#what-the-step-that-observes-can-see)).
+  Your file's first line names your interpreter (`#!/usr/bin/env node`
+  for a `.mjs`); a batch whose task lacks it stops before its first
+  slice and says so.
 
 The protocol also defines `why`, which explains a link step by step. The
 core doesn't call it yet.

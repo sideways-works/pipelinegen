@@ -158,9 +158,12 @@ from them, without starting each one to describe again.
 
 ### What the step that observes can see
 
-`observe` runs in the step after a batch (`report batch-end`), and that
-step sees the tree (`source/` in its working directory) and the coverage
-output (`coverage/`), nothing else. Every runner gives it these two and
+`observe` runs in the batch's own task once its last slice ended (a batch
+run by drivers), and in the step after a batch (`report batch-end`) for
+what the batch left there and for a batch of task files. That step sees
+the tree (`source/` in its working directory) and the coverage output
+(`coverage/`), nothing else, and an observe in the batch's task reads
+only the same two. Every runner gives it these two and
 only these, and a correlator may rely on them alone: a build another task
 made, or a prepared directory, isn't there unless the batch copied it into
 the coverage output. A correlator whose config names a path it reads while

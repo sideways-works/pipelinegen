@@ -281,6 +281,39 @@ machine's lowest CPU and I/O priority, one slice's observe at a time, and
 gives a round up rather than waiting out a busy store's back-offs. If it
 dies the batch goes on.
 
+A recording batch run by drivers (`slice run`) observes its slices in its
+own task, where its tests ran and its correlators collected, once its
+last slice has ended: each correlator's answer for each slice is kept in
+`result/.pipelinegen/observed/<slice>/<correlator>.json`, and the batch's
+end takes the kept answers instead of observing again. The batch's end
+observes, as before, only what the batch left: a correlator whose observe
+failed in the batch's task, or one the batch had no time for. An
+observation in the batch never changes a slice's result: it comes after
+the last slice ended and its result was written, an error only leaves the
+call to the batch's end, and it stops two minutes before the task's
+limit (the suite's minutes, counted from the step's start), so the task
+ends, its journal already written, within its limit; its time counts
+against the batch task's limit, not against any slice's. In a recording
+run the batch's kept answers come from the task that ran the tests, as
+the recordings they are made from already do, and its correlators run
+there with no token that writes; nothing of a proposed change's run is
+attached to a branch, so neither can reach a branch's lists. A batch of
+task files (`slice start` and `slice end`) is observed by its end, as
+before.
+
+Before its first slice, a recording batch reads the first line of each
+correlator's file in `tools/plugins/<name>`: the interpreter it names
+(`#!/usr/bin/env node`, or a path) must be in the task, or the batch stops
+at once, naming the suite, the correlator, the interpreter and the task
+("suite e2e records with react, which needs node; this task (slice run)
+has none"): without it the correlator can't describe itself or collect
+there, and the batch would end every slice errored after its tests ran.
+The batch's end checks the same for each correlator it still has to
+observe: when its task lacks the interpreter too, it says so once, and
+those slices fail with that line, never with an exit status. A
+correlator's `needs` from its describe are a matter of planning, where
+they are checked; they aren't asked of the batch's tasks.
+
 The batch's ensure is `report batch-end`, which flushes whatever the
 journal holds before it closes the batch's slices, so a batch killed
 between flushes loses no slice that ended: the ensure finds the journal in

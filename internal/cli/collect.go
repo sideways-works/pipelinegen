@@ -23,6 +23,9 @@ import (
 type batchPlugins struct {
 	sets []correlatorSet
 	work string
+	dir  string
+	// observed is where the batch keeps its correlators' answers for its end (observeAhead); empty: none.
+	observed string
 }
 
 type correlatorSet struct {
@@ -43,7 +46,7 @@ func loadCorrelators(ctx context.Context, cfg *config.Config, suite, tools, kept
 		return nil, fmt.Errorf("plugins: %w", err)
 	}
 
-	b := &batchPlugins{work: work}
+	b := &batchPlugins{work: work, dir: filepath.Join(tools, "plugins")}
 	described := readDescribed(kept)
 	learned := false
 
@@ -247,19 +250,25 @@ func (s setCollector) Collect(ctx context.Context, action, slice, dir string) er
 func (b *batchPlugins) Observe(ctx context.Context, source, slice, setup string, parts []string) ([]report.Observation, error) {
 	var out []report.Observation
 
+	missing := b.missingInterpreters()
+
 	for _, c := range b.sets {
-		if c.err != nil {
-			return nil, fmt.Errorf("observe: %w", c.err)
+		if obs, ok := b.kept(slice, c.name); ok {
+			out = append(out, obs...)
+
+			continue
 		}
 
-		obs, err := c.set.Observe(ctx, source, slice, setup, parts)
+		if prog, lacks := missing[c.name]; lacks {
+			return nil, fmt.Errorf("%w: %s", errInterpreter, interpreterLine(os.Getenv(envSuite), c.name, prog, batchEndCommand))
+		}
+
+		obs, err := observeOne(ctx, c, source, slice, setup, parts)
 		if err != nil {
-			return nil, fmt.Errorf("observe: %w", err)
+			return nil, err
 		}
 
-		for _, o := range obs {
-			out = append(out, report.Observation{Plugin: o.Plugin, CantTell: o.CantTell, Reason: o.Reason, Touched: o.Touched, SetupLike: o.SetupLike})
-		}
+		out = append(out, obs...)
 	}
 
 	return out, nil

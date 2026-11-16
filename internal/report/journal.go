@@ -169,8 +169,42 @@ func (j *Journal) read() ([]journalLine, error) {
 	return out, nil
 }
 
-// pending are the slices' latest events since the last flush, in the order
-// they first appear, and when the last flush was (or the journal began).
+// Ends are the slices the journal holds as ended, each as its last end
+// says it, with its paths this task's, in the order they ended.
+func (j *Journal) Ends() ([]SliceEvent, error) {
+	lines, err := j.read()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		order []string
+		last  = map[string]SliceEvent{}
+	)
+
+	for _, l := range lines {
+		if l.Slice == nil || l.Event != eventEnd {
+			continue
+		}
+
+		key := l.Slice.Suite + "/" + l.Slice.Slice
+		if _, ok := last[key]; !ok {
+			order = append(order, key)
+		}
+
+		ev := *l.Slice
+		ev.Running = false
+		last[key] = ev
+	}
+
+	out := make([]SliceEvent, 0, len(order))
+	for _, k := range order {
+		out = append(out, last[k])
+	}
+
+	return out, nil
+}
+
 func pending(lines []journalLine) ([]SliceEvent, time.Time) {
 	from, since := 0, time.Time{}
 

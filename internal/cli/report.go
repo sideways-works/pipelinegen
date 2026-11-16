@@ -410,17 +410,19 @@ func (s *step) open(ctx context.Context, name string, args []string, more func(*
 
 	// only a recording run asks its correlators for anything.
 	if suite := os.Getenv(envSuite); s.tools != "" && cfg.Records(id.Run, suite) {
-		// the batch's correlators describe themselves once, at its setup's
-		// end; its later steps take what they said from its result
-		kept, claimed := "", ""
+		// The batch's correlators describe themselves once, at its setup's end; later steps read what they said.
+		kept, claimed, observed := "", "", ""
 		if f := fs.Lookup("result"); f != nil && f.Value.String() != "" {
 			kept = filepath.Join(f.Value.String(), report.JournalDir, describedFile)
 			claimed = filepath.Join(f.Value.String(), report.JournalDir, claimedFile)
+			observed = filepath.Join(f.Value.String(), report.JournalDir, observedDir)
 		}
 
 		if s.plugins, err = loadCorrelators(ctx, cfg, suite, s.tools, kept); err != nil {
 			return err
 		}
+
+		s.plugins.observed = observed
 
 		s.plugins.claim(ctx, s.root, claimed)
 
@@ -614,8 +616,16 @@ func readBatch(dir, batch string) ([]batchSlice, error) {
 	return out, nil
 }
 
-// sliceEvent is a batch slice's end as the batch task leaves it: its result
-// file and, when recording, its coverage and the batch's setup's.
+func batchEvents(suite string, list []batchSlice, root, result, coverage string) []report.SliceEvent {
+	evs := make([]report.SliceEvent, 0, len(list))
+
+	for _, sl := range list {
+		evs = append(evs, sliceEvent(suite, sl, root, result, coverage))
+	}
+
+	return evs
+}
+
 func sliceEvent(suite string, sl batchSlice, root, result, coverage string) report.SliceEvent {
 	ev := report.SliceEvent{
 		Suite: suite, Slice: sl.Name, Label: sl.Label, JobURL: os.Getenv(envJobURL), Source: root,
@@ -668,10 +678,12 @@ func reportBatchEnd(ctx context.Context, args []string) (err error) {
 	}
 
 	suite := os.Getenv(envSuite)
-	evs := make([]report.SliceEvent, 0, len(list))
+	evs := batchEvents(suite, list, s.root, result, coverage)
 
-	for _, sl := range list {
-		evs = append(evs, sliceEvent(suite, sl, s.root, result, coverage))
+	// a correlator the batch left to this step that this task can't run
+	// is said once, before anything else; its slices fail saying so.
+	if s.reporter.Observer != nil {
+		s.plugins.sayLeftUnrunnable(suite, evs, os.Stderr)
 	}
 
 	// what the batch's journal holds goes in first, so a batch killed
@@ -892,7 +904,7 @@ func sliceStep(ctx context.Context, args []string, start bool, stdout io.Writer)
 	}
 
 	if start && rec != "" {
-		if err := errors.Join(needCollector(s.reporter.Config, s.plugins, suite), needObservable(s.reporter.Config, s.plugins, suite)); err != nil {
+		if err := errors.Join(needCollector(s.reporter.Config, s.plugins, suite), needObservable(s.reporter.Config, s.plugins, suite), needInterpreters(s.plugins, suite, "slice start")); err != nil {
 			return err
 		}
 	}

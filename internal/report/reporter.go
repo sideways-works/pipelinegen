@@ -438,15 +438,7 @@ var errNoObserver = errors.New("no configured correlator observes")
 // every part. One correlator that couldn't tell leaves the slice's list as
 // it was.
 func (r *Reporter) observe(ctx context.Context, ev SliceEvent) (recording.Recording, error) {
-	parts := ev.Parts
-	if len(parts) == 0 {
-		parts = ev.Coverage[:1]
-	}
-
-	setup := ""
-	if len(ev.Coverage) > 1 {
-		setup = ev.Coverage[1]
-	}
+	setup, parts := ObserveInputs(ev)
 
 	obs, err := r.Observer.Observe(ctx, ev.Source, ev.Slice, setup, parts)
 	if err != nil {
@@ -502,6 +494,21 @@ func (r *Reporter) observe(ctx context.Context, ev SliceEvent) (recording.Record
 	}
 
 	return rec, nil
+}
+
+// ObserveInputs are what the correlators observe of a slice that ended
+// with coverage: the batch's setup directory and the slice's parts.
+func ObserveInputs(ev SliceEvent) (setup string, parts []string) {
+	parts = ev.Parts
+	if len(parts) == 0 && len(ev.Coverage) > 0 {
+		parts = ev.Coverage[:1]
+	}
+
+	if len(ev.Coverage) > 1 {
+		setup = ev.Coverage[1]
+	}
+
+	return setup, parts
 }
 
 // Suite ends a suite: it marks the end, so the suite's slices that never

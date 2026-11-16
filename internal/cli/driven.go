@@ -462,7 +462,7 @@ func batchSliceRun(ctx context.Context, args []string, stdout io.Writer) (err er
 	if cfg.Records(s.reporter.ID.Run, suite) {
 		rec = f.coverage
 
-		if err := errors.Join(needCollector(cfg, s.plugins, suite), needObservable(cfg, s.plugins, suite)); err != nil {
+		if err := errors.Join(needCollector(cfg, s.plugins, suite), needObservable(cfg, s.plugins, suite), needInterpreters(s.plugins, suite, "slice run")); err != nil {
 			return err
 		}
 	} else {
@@ -501,6 +501,11 @@ func batchSliceRun(ctx context.Context, args []string, stdout io.Writer) (err er
 
 	if err := b.run(ctx, list, h, setupEnd); err != nil {
 		return err
+	}
+
+	// Observe here, where the slices ran and within the task's limit, and keep it for the batch's end.
+	if rec != "" && s.reporter.Observer != nil {
+		s.plugins.observeAhead(ctx, j, suite, b.deadline.Add(-plugin.LimitMarginSeconds*time.Second), os.Stderr)
 	}
 
 	if len(h.notPassed) > 0 {
