@@ -14,19 +14,12 @@ released; the other pages link here.
 - Drivers are part of pipelinegen: `steps`, `pipelinegen slice run`,
   `slice prepare` and `slice mark`, and the built-in command driver.
 - A suite with steps needs a runner whose release has the capability
-  `steps`: concourse-runner has it from v0.1.9-rc.3. With an older runner
-  `pipelinegen pipeline` refuses such a suite, here the example's smoke
-  suite:
-
-  ```
-  $ pipelinegen pipeline --out pipeline.yml
-  pipelinegen pipeline: runner: suite smoke is run by drivers (steps), and runner concourse v0.1.9-rc.1 can't write its tasks: update the runner
-  [exit 1]
-  ```
-- The go, shell, bazel and playwright drivers are released as candidates:
-  go-driver v0.1.0-rc.1, shell-driver v0.1.0-rc.1, bazel-driver
-  v0.1.0-rc.1 and playwright-driver v0.1.0-rc.2. The command driver comes
-  with pipelinegen and needs no release of its own.
+  `steps`, as every release of concourse-runner has. A runner without it
+  can't write such a suite's tasks, and `pipelinegen pipeline` refuses
+  the suite and says to update the runner.
+- The go, shell, bazel and playwright drivers are released, each at
+  v0.2.0 with the rest of the family. The command driver comes with
+  pipelinegen and needs no release of its own.
 
 ## What a batch has to do
 

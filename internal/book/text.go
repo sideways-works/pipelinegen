@@ -81,8 +81,8 @@ func trimmed(name, raw, work string) string {
 		skipPlugins = false
 
 		// what the go driver downloads depends on what its module cache
-		// held
-		if strings.HasPrefix(l, "go run: go: downloading ") || progress.MatchString(l) || bazeliskLine.MatchString(l) ||
+		// held, and npm's notices on what the registry has published since
+		if strings.HasPrefix(l, "go run: go: downloading ") || strings.HasPrefix(l, "playwright run: npm notice") || progress.MatchString(l) || bazeliskLine.MatchString(l) ||
 			strings.HasPrefix(l, "... still trying to connect to local Bazel server") {
 			continue
 		}

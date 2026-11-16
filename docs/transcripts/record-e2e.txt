@@ -18,5 +18,5 @@ playwright run:
 playwright run: [1/1] [chromium] › e2e/search.spec.ts:3:5 › finds a note by a word in it
 playwright run:   1 passed (<time>)
 slice e2e/search.spec.ts: passed
-lists of 5d0f0a819953: local local-<time> 5d0f0a819953 merged into its own lists; 8 slices, 3 changed
-recorded 2 slices of e2e at 5d0f0a819953; the lists are in the local store /home/you/notes/.git/pipelinegen/local.git, which affected and why read unless the config names a remote (then: --local)
+lists of 26118462acef: local local-<time> 26118462acef merged into its own lists; 8 slices, 3 changed
+recorded 2 slices of e2e at 26118462acef; the lists are in the local store /home/you/notes/.git/pipelinegen/local.git, which affected and why read unless the config names a remote (then: --local)

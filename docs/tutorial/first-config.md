@@ -12,11 +12,11 @@ plugins:
   - name: go
     kind: driver
     repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.1.0-rc.1, sha256: 7783cecb1cf9192cb679de805a2273fd4d4df02ffd4bf019465cc040946f7049}
+    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
   - name: playwright
     kind: driver
     repository: sideways-works/pipelinegen-driver-playwright
-    release: {version: v0.1.0-rc.2, sha256: 002364b0a8f48dcf8404143afd8a6c1e9bb3ca1686483ff365b1eb4a7a1624fd}
+    release: {version: v0.2.0, sha256: 1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9}
 
 suites:
   go:
@@ -43,7 +43,46 @@ go-driver runs Go test files with `go test`, playwright-driver runs
 Playwright specs. Each driver is a release of its own repository, pinned
 under `plugins` by version and by the checksum of its Linux binary.
 Nothing runs a test before [step 7](tasks.md), which completes the steps
-(the browser specs need a server) and puts the drivers on your machine.
+(the browser specs need a server).
+
+## Put the drivers where pipelinegen finds them
+
+The CI pipeline downloads the pinned drivers itself. On your machine,
+pipelinegen looks for them in `tools/plugins/<name>` under the
+repository's root, and `pipelinegen check` asks each what settings its
+steps take; without them it warns that the steps went unchecked. Download
+each, keep `tools/` out of git, and check each against its pin, the
+checksums from the config in a file (`tools/drivers.sums` here):
+
+```sh
+mkdir -p tools/plugins
+curl -fsSL -o tools/plugins/go \
+  https://github.com/sideways-works/pipelinegen-driver-go/releases/download/v0.2.0/go-driver-linux-amd64
+curl -fsSL -o tools/plugins/playwright \
+  https://github.com/sideways-works/pipelinegen-driver-playwright/releases/download/v0.2.0/playwright-driver-linux-amd64
+chmod +x tools/plugins/go tools/plugins/playwright
+echo '/tools/' >> .gitignore
+```
+
+<!-- output: sha-drivers -->
+```
+$ sha256sum -c tools/drivers.sums
+tools/plugins/go: OK
+tools/plugins/playwright: OK
+```
+
+`/tools/` keeps the downloads and the checksum file out of git; a file git
+doesn't ignore is one the check asks you to cover. If your repository has
+a `tools/` directory of its own, ignore only `/tools/plugins/`, as [the
+worked
+example](../worked-example/README.md#step-6-bind-the-go-tests-by-what-they-ran)
+does, and keep the checksum files under `tools/plugins/` too.
+
+On macOS, or for a release without a binary for your system, build a
+driver from source instead (`go install
+github.com/sideways-works/pipelinegen-driver-go/cmd/go-driver@v0.2.0`,
+the same for playwright-driver) and copy the binary into
+`tools/plugins/` under the name the config gives it.
 
 Patterns are paths from the repository's root: `*` stays inside one
 directory and `**` crosses any number of them.

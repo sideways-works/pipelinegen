@@ -16,14 +16,14 @@ works today](../introduction/what-works-today.md#versions)); a newer
 release can print some things differently.
 
 ```
-$ VERSION=v0.1.13-rc.16
+$ VERSION=v0.2.0
 $ curl -fsSLO https://github.com/sideways-works/pipelinegen/releases/download/$VERSION/pipelinegen-linux-amd64
 $ curl -fsSLO https://github.com/sideways-works/pipelinegen/releases/download/$VERSION/SHA256SUMS
 $ sha256sum --check --ignore-missing SHA256SUMS
 pipelinegen-linux-amd64: OK
 $ install -m 755 pipelinegen-linux-amd64 ~/bin/pipelinegen
 $ pipelinegen version
-v0.1.13-rc.16
+v0.2.0
 ```
 
 On macOS, download `pipelinegen-darwin-arm64` (Apple silicon) or

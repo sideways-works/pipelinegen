@@ -1,4 +1,6 @@
 $ pipelinegen record --suite go
+playwright run: npm notice
+playwright run: npm notice New major version of npm available! 11.19.1 -> 12.2.2
 2026/11/16 11:21:07 Downloading https://releases.bazel.build/9.2.0/release/bazel-9.2.0-linux-x86_64...
 2026/11/16 11:21:08 Signed by Bazel Developer (Bazel APT repository key) <bazel-dev@googlegroups.com>
 pipelinegen affected: bazel-diff generate-hashes, 1m0s so far

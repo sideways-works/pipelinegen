@@ -35,19 +35,19 @@ plugins:
   - name: go-sbom
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.1.3-rc.5, sha256: 2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327}
+    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
   - name: go-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
   - name: openapi-sbom
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-openapi
-    release: {version: v0.1.2-rc.4, sha256: c9854ead7c4d78985fff1f2dc4e55a8148bb9d8f284c828060da849b7688a737}
+    release: {version: v0.2.0, sha256: fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab}
   - name: oapi-codegen-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-oapi-codegen
-    release: {version: v0.1.5-rc.1, sha256: ae24f130f54fae4cddda0b97de588a27b629af917e3644a6bb838e69e98dc215}
+    release: {version: v0.2.0, sha256: 155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce}
     config:
       # the server appends the route of each request it serves here
       request_log: work/command/requests.log
@@ -126,28 +126,20 @@ made ([step 7](tasks.md)).
 
 The CI pipeline downloads the pinned plugins itself. On your machine,
 pipelinegen looks for them in `tools/plugins/<name>` under the
-repository's root. Download each and check it against the pin:
+repository's root, beside the drivers of step 3. Download each and check
+it against the pin:
 
 ```sh
-mkdir -p tools/plugins
 curl -fsSL -o tools/plugins/go-sbom \
-  https://github.com/sideways-works/pipelinegen-sbom-go/releases/download/v0.1.3-rc.5/go-sbom-linux-amd64
+  https://github.com/sideways-works/pipelinegen-sbom-go/releases/download/v0.2.0/go-sbom-linux-amd64
 curl -fsSL -o tools/plugins/go-correlator \
-  https://github.com/sideways-works/pipelinegen-correlator-go/releases/download/v0.1.8-rc.12/go-correlator-linux-amd64
+  https://github.com/sideways-works/pipelinegen-correlator-go/releases/download/v0.2.0/go-correlator-linux-amd64
 curl -fsSL -o tools/plugins/openapi-sbom \
-  https://github.com/sideways-works/pipelinegen-sbom-openapi/releases/download/v0.1.2-rc.4/openapi-sbom-linux-amd64
+  https://github.com/sideways-works/pipelinegen-sbom-openapi/releases/download/v0.2.0/openapi-sbom-linux-amd64
 curl -fsSL -o tools/plugins/oapi-codegen-correlator \
-  https://github.com/sideways-works/pipelinegen-correlator-oapi-codegen/releases/download/v0.1.5-rc.1/oapi-codegen-correlator-linux-amd64
+  https://github.com/sideways-works/pipelinegen-correlator-oapi-codegen/releases/download/v0.2.0/oapi-codegen-correlator-linux-amd64
 chmod +x tools/plugins/*
-echo '/tools/' >> .gitignore
 ```
-
-`/tools/` keeps the downloads, and the checksum file below, out of git; a
-file git doesn't ignore is one the check asks you to cover. If your
-repository has a `tools/` directory of its own, ignore only
-`/tools/plugins/`, as [the worked
-example](../worked-example/README.md#step-6-bind-the-go-tests-by-what-they-ran)
-does, and keep the checksum file under `tools/plugins/` too.
 
 Then check each against its pin, with the checksums from the config in a
 file (`tools/sums` here):
@@ -163,7 +155,7 @@ tools/plugins/oapi-codegen-correlator: OK
 
 On macOS, or for a release without a binary for your system, build them
 from source instead (`go install
-github.com/sideways-works/pipelinegen-sbom-go/cmd/go-sbom@v0.1.3-rc.5`,
+github.com/sideways-works/pipelinegen-sbom-go/cmd/go-sbom@v0.2.0`,
 the same for the others) and copy the binaries into `tools/plugins/`.
 
 ## The Go plugins' module cache

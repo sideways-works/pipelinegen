@@ -25,29 +25,29 @@ concourse:
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     prepare: go mod download
     bootstrap:
-      release: {version: v0.1.13-rc.16, sha256: 7b48ab8a8e3b68f39bdb1d4bab1a19a1f667997b906a8945f0c9aa7c06b93237}
+      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 
 plugins:
   - name: go-sbom
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.1.3-rc.5, sha256: 2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327}
+    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
   - name: go-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
     config:
       # the running server's counters pass through here between specs
       cover_dir: work/command/ctl
   - name: openapi-sbom
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-openapi
-    release: {version: v0.1.2-rc.4, sha256: c9854ead7c4d78985fff1f2dc4e55a8148bb9d8f284c828060da849b7688a737}
+    release: {version: v0.2.0, sha256: fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab}
   - name: oapi-codegen-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-oapi-codegen
-    release: {version: v0.1.5-rc.1, sha256: ae24f130f54fae4cddda0b97de588a27b629af917e3644a6bb838e69e98dc215}
+    release: {version: v0.2.0, sha256: 155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce}
     config:
       # the server appends the route of each request it serves here
       request_log: work/command/requests.log
@@ -56,16 +56,16 @@ plugins:
   - name: concourse
     kind: runner
     repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.1.9-rc.10, sha256: bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2}
+    release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
   # the drivers that run the suites' tests
   - name: go
     kind: driver
     repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.1.0-rc.1, sha256: 7783cecb1cf9192cb679de805a2273fd4d4df02ffd4bf019465cc040946f7049}
+    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
   - name: playwright
     kind: driver
     repository: sideways-works/pipelinegen-driver-playwright
-    release: {version: v0.1.0-rc.2, sha256: 002364b0a8f48dcf8404143afd8a6c1e9bb3ca1686483ff365b1eb4a7a1624fd}
+    release: {version: v0.2.0, sha256: 1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9}
 
 suites:
   go:

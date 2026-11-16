@@ -2,31 +2,10 @@
 
 pipelinegen's core doesn't know how your tests run: each suite's `steps`
 say it, and the drivers they name do it. The config of [step
-3](first-config.md) names a driver per suite. This step puts the drivers
-on your machine and completes the browser suite, whose specs need a
-running server. It is the one piece of CI you own; everything around it
-is generated.
-
-## Put the drivers where pipelinegen finds them
-
-The drivers are plugins, and live beside the others in `tools/plugins/`.
-Download each and check it against its pin, the drivers' checksums in a
-file of their own:
-
-```sh
-curl -fsSL -o tools/plugins/go \
-  https://github.com/sideways-works/pipelinegen-driver-go/releases/download/v0.1.0-rc.1/go-driver-linux-amd64
-curl -fsSL -o tools/plugins/playwright \
-  https://github.com/sideways-works/pipelinegen-driver-playwright/releases/download/v0.1.0-rc.2/playwright-driver-linux-amd64
-chmod +x tools/plugins/go tools/plugins/playwright
-```
-
-<!-- output: sha-drivers -->
-```
-$ sha256sum -c tools/drivers.sums
-tools/plugins/go: OK
-tools/plugins/playwright: OK
-```
+3](first-config.md) names a driver per suite, and step 3 put the drivers
+on your machine. This step completes the browser suite, whose specs need
+a running server. It is the one piece of CI you own; everything around
+it is generated.
 
 ## Go tests
 
@@ -89,7 +68,7 @@ edges through `cover_dir`, which goes into its entry:
   - name: go-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
     config:
       # the running server's counters pass through here between specs
       cover_dir: work/command/ctl
@@ -107,7 +86,7 @@ README](https://github.com/sideways-works/pipelinegen-driver-playwright)).
 
 The server hands its counters over while it keeps running through
 go-correlator's `cover` package, the module
-`github.com/sideways-works/pipelinegen-correlator-go/cover` at `v0.1.8-rc.12`, linked
+`github.com/sideways-works/pipelinegen-correlator-go/cover` at `v0.2.0`, linked
 into the coverage build only. A file with the build tag the prepare step
 passes links it, [cmd/notes/cover.go](../../example-notes/cmd/notes/cover.go):
 
@@ -126,8 +105,8 @@ Add the module to `go.mod`:
 
 <!-- output: go-get-cover -->
 ```
-$ go get github.com/sideways-works/pipelinegen-correlator-go/cover@v0.1.8-rc.12 && go mod tidy
-go: added github.com/sideways-works/pipelinegen-correlator-go/cover v0.1.8-rc.12
+$ go get github.com/sideways-works/pipelinegen-correlator-go/cover@v0.2.0 && go mod tidy
+go: added github.com/sideways-works/pipelinegen-correlator-go/cover v0.2.0
 ```
 
 The file is for the prepare step's `go build`, not for Bazel: keep it out

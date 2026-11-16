@@ -6,7 +6,7 @@ tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 
 require (
 	github.com/oapi-codegen/runtime v1.9.0
-	github.com/sideways-works/pipelinegen-correlator-go/cover v0.1.8-rc.12
+	github.com/sideways-works/pipelinegen-correlator-go/cover v0.2.0
 )
 
 require (

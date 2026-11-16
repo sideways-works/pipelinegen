@@ -18,10 +18,10 @@ recording:
 ```
 $ pipelinegen lists show --slice e2e/search.spec.ts
 pipelinegen lists show: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-lists of 5d0f0a819953: its own lists
+lists of 26118462acef: its own lists
 with the recordings of the live runs:
-  local local-<time> 5d0f0a819953 (5 slices)
-  local local-<time> 5d0f0a819953 (2 slices)
+  local local-<time> 26118462acef (5 slices)
+  local local-<time> 26118462acef (2 slices)
 e2e e2e/search.spec.ts: 9 units
   api:listNotes
   go:api#func:writeJSON

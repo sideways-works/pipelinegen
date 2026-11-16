@@ -26,11 +26,11 @@ const driverEntries = `plugins:
   - name: go
     kind: driver
     repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.1.0-rc.1, sha256: 7783cecb1cf9192cb679de805a2273fd4d4df02ffd4bf019465cc040946f7049}
+    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
   - name: playwright
     kind: driver
     repository: sideways-works/pipelinegen-driver-playwright
-    release: {version: v0.1.0-rc.2, sha256: 002364b0a8f48dcf8404143afd8a6c1e9bb3ca1686483ff365b1eb4a7a1624fd}
+    release: {version: v0.2.0, sha256: 1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9}
 `
 
 const firstConfig = `pipeline: notes
@@ -73,37 +73,33 @@ func TestTitleKeepsShortTitles(t *testing.T) {
 }
 `
 
-// pluginSums are the checksums the guide's step 6 checks the plugins
-// against.
-const pluginSums = `2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327  tools/plugins/go-sbom
-9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337  tools/plugins/go-correlator
-c9854ead7c4d78985fff1f2dc4e55a8148bb9d8f284c828060da849b7688a737  tools/plugins/openapi-sbom
-ae24f130f54fae4cddda0b97de588a27b629af917e3644a6bb838e69e98dc215  tools/plugins/oapi-codegen-correlator
+const pluginSums = `9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95  tools/plugins/go-sbom
+2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210  tools/plugins/go-correlator
+fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab  tools/plugins/openapi-sbom
+155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce  tools/plugins/oapi-codegen-correlator
 `
 
-// driverSums are the checksums the guide's step 7 checks the drivers
-// against, in a file of their own.
-const driverSums = `7783cecb1cf9192cb679de805a2273fd4d4df02ffd4bf019465cc040946f7049  tools/plugins/go
-002364b0a8f48dcf8404143afd8a6c1e9bb3ca1686483ff365b1eb4a7a1624fd  tools/plugins/playwright
+const driverSums = `ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76  tools/plugins/go
+1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9  tools/plugins/playwright
 `
 
 const pluginEntries = `plugins:
   - name: go-sbom
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.1.3-rc.5, sha256: 2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327}
+    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
   - name: go-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
   - name: openapi-sbom
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-openapi
-    release: {version: v0.1.2-rc.4, sha256: c9854ead7c4d78985fff1f2dc4e55a8148bb9d8f284c828060da849b7688a737}
+    release: {version: v0.2.0, sha256: fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab}
   - name: oapi-codegen-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-oapi-codegen
-    release: {version: v0.1.5-rc.1, sha256: ae24f130f54fae4cddda0b97de588a27b629af917e3644a6bb838e69e98dc215}
+    release: {version: v0.2.0, sha256: 155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce}
     config:
       # the server appends the route of each request it serves here
       request_log: work/command/requests.log
@@ -128,9 +124,7 @@ const buildBazel = `load("@gazelle//:def.bzl", "gazelle")
 gazelle(name = "gazelle")
 `
 
-// coverModule is go-correlator's cover package, which step 7 links into
-// the server's coverage build.
-const coverModule = "github.com/sideways-works/pipelinegen-correlator-go/cover@v0.1.8-rc.12"
+const coverModule = "github.com/sideways-works/pipelinegen-correlator-go/cover@v0.2.0"
 
 const e2eSteps = `    # the specs talk to one server for the whole batch, whose coverage
     # go-correlator takes at each spec's edges
@@ -155,8 +149,8 @@ const e2eSteps = `    # the specs talk to one server for the whole batch, whose 
 `
 
 func runTheServer(s string) string {
-	s = strings.Replace(s, "    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}\n",
-		"    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}\n"+
+	s = strings.Replace(s, "    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}\n",
+		"    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}\n"+
 			"    config:\n      # the running server's counters pass through here between specs\n      cover_dir: work/command/ctl\n", 1)
 	s = strings.Replace(s, "  - paths: [cmd/notes/BUILD.bazel]\n    reason: builds the server, which the browser specs run; their recordings bind its code\n",
 		"  - paths: [cmd/notes/BUILD.bazel]\n    reason: builds the server, which the browser specs run; their recordings bind its code\n"+
@@ -214,8 +208,6 @@ func (g *guide) onItsPort(config string) string {
 	return strings.ReplaceAll(config, "127.0.0.1:8080", "127.0.0.1:"+g.port)
 }
 
-// drivers puts step 7's drivers where pipelinegen finds them, with their
-// checksums beside them.
 func (g *guide) drivers() error {
 	for _, p := range []string{"go", "playwright"} {
 		if err := g.copyFile(filepath.Join(g.plugins, p), "tools/plugins/"+p, 0o755); err != nil {
@@ -322,8 +314,12 @@ func (g *guide) run(ctx context.Context) error {
 		step("query", "bazel query //..."),
 		commitAll("build the notes service with Bazel"),
 
-		// step 3: first config
+		// step 3: first config, and its drivers where pipelinegen finds
+		// them
 		func() error { return g.write("pipelinegen.yaml", firstConfig) },
+		g.drivers,
+		step("sha-drivers", "sha256sum -c tools/drivers.sums"),
+		func() error { return g.appendTo(".gitignore", "/tools/\n") },
 		step("slices", "pipelinegen slices"),
 		step("check-first", "pipelinegen check"),
 		step("check-summary", "pipelinegen check --summary"),
@@ -358,7 +354,6 @@ func (g *guide) run(ctx context.Context) error {
 		},
 		step("sha-plugins", "sha256sum -c tools/sums"),
 		g.executable,
-		func() error { return g.appendTo(".gitignore", "/tools/\n") },
 		func() error {
 			data, err := os.ReadFile(filepath.Join(g.notes, "pipelinegen.yaml"))
 			if err != nil {
@@ -376,8 +371,6 @@ func (g *guide) run(ctx context.Context) error {
 		reset(&plugins),
 
 		// step 7: the suites' steps
-		g.drivers,
-		step("sha-drivers", "sha256sum -c tools/drivers.sums"),
 		cp("cmd/notes/cover.go", "cmd/notes/cover.go"),
 		step("go-get-cover", "go get "+coverModule+" && go mod tidy"),
 		cp("BUILD.bazel", "BUILD.bazel"),

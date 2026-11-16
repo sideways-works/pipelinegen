@@ -50,7 +50,7 @@ concourse:
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     prepare: go mod download
     bootstrap:
-      release: {version: v0.1.13-rc.16, sha256: 7b48ab8a8e3b68f39bdb1d4bab1a19a1f667997b906a8945f0c9aa7c06b93237}
+      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 
 plugins:
@@ -58,7 +58,7 @@ plugins:
   - name: concourse
     kind: runner
     repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.1.9-rc.10, sha256: bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2}
+    release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
 
 suites:
   go:
@@ -173,8 +173,8 @@ step 6:
 
 ```sh
 curl -fsSL -o tools/plugins/concourse \
-  https://github.com/sideways-works/pipelinegen-runner-concourse/releases/download/v0.1.9-rc.10/concourse-runner-linux-amd64
-echo "bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2  tools/plugins/concourse" | sha256sum -c -
+  https://github.com/sideways-works/pipelinegen-runner-concourse/releases/download/v0.2.0/concourse-runner-linux-amd64
+echo "e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a  tools/plugins/concourse" | sha256sum -c -
 chmod +x tools/plugins/concourse
 ```
 
