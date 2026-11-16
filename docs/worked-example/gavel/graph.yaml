@@ -7,26 +7,27 @@ bazel:
 # the same suites and steps as pipelinegen.yaml, bound by Bazel's graph
 # alone: no sbom or correlator plugins
 plugins:
-  # The drivers that run the suites' steps (the command driver comes with
-  # pipelinegen).
   - name: go
     kind: driver
     repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.1.0-rc.3, sha256: 5945eb8a61a5a68972dce44d812bd98c394dabd26a575e9b65510ba18005971c}
+    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
   - name: shell
     kind: driver
     repository: sideways-works/pipelinegen-driver-shell
-    release: {version: v0.1.0-rc.2, sha256: 3e18675e34cf40ce7f741cceae73f794ee425e46bf984a17d9b08d48c7345d62}
+    release: {version: v0.2.0, sha256: 38d59a75f3cf9818085cbe1c54225c94f68c7db626c37490de18b0d0debe5ed8}
   - name: playwright
     kind: driver
     repository: sideways-works/pipelinegen-driver-playwright
-    release: {version: v0.1.0-rc.3, sha256: 7bd93f5776c1db5508f5c018d66230d2792d9226e86a06b8163d7abad7d8fb60}
+    release: {version: v0.2.0, sha256: 1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9}
 
 suites:
+  # Go tests that need no database: one slice per _test.go file, run by
+  # go test. Their task has no Docker daemon, so the database tests stay in
+  # the go-db suite.
   go:
     tests: ["**/*_test.go"]
     exclude:
-      # the Go end-to-end tests don't build today: untested, below
+      - "examples/**"
       - "apps/cli/test/e2e/*_test.go"
       - "apps/server/test/e2e/**"
       # the database tests are the go-db suite
@@ -35,6 +36,8 @@ suites:
       - "core/infrastructure/platform/sourceblob/*_test.go"
       - "core/infrastructure/supporting/search/*_test.go"
       - "apps/cli/test/integration/submit/*_test.go"
+    # only Go code runs in these tests: the TypeScript and API correlators
+    # have nothing to see here, and their "can't tell" would bind every slice
     image: golang
     params:
       GOFLAGS: -trimpath
@@ -43,18 +46,30 @@ suites:
     steps:
       # What Bazel gave these tests and go test doesn't: a runfiles tree
       # (two tests read MODULE.bazel and openapi/v1 through rules_go's
-      # runfiles), and the built gavel binary the CLI spec tests run.
+      # runfiles), the built gavel binary the CLI spec tests run, and file
+      # permissions that hold: the task runs as root, whom no mode bit
+      # stops, and some tests expect a file they can't read or write. As
+      # root each test binary runs without the two capabilities that
+      # bypass permission bits (go test -exec without-dac).
       - setup: shell
         with:
           timeout: 10m
           script: |
-            mkdir -p "$PIPELINEGEN_WORK/runfiles"
+            mkdir -p "$PIPELINEGEN_WORK/runfiles" "$PIPELINEGEN_WORK/bin"
             ln -sfn "$PIPELINEGEN_TREE" "$PIPELINEGEN_WORK/runfiles/_main"
             go build -o "$PIPELINEGEN_WORK/gavel" ./apps/cli/cmd/gavel
-            echo "RUNFILES_DIR=$PIPELINEGEN_WORK/runfiles" >>"$PIPELINEGEN_EXPORT"
-            echo "GAVEL_BINARY=$PIPELINEGEN_WORK/gavel" >>"$PIPELINEGEN_EXPORT"
+            printf '%s\n' '#!/bin/sh' '[ "$(id -u)" = 0 ] || exec "$@"' \
+              'exec setpriv --inh-caps=-dac_override,-dac_read_search --bounding-set=-dac_override,-dac_read_search -- "$@"' \
+              >"$PIPELINEGEN_WORK/bin/without-dac"
+            chmod +x "$PIPELINEGEN_WORK/bin/without-dac"
+            {
+              echo "PATH=$PIPELINEGEN_WORK/bin:$PATH"
+              echo "RUNFILES_DIR=$PIPELINEGEN_WORK/runfiles"
+              echo "GAVEL_BINARY=$PIPELINEGEN_WORK/gavel"
+            } >>"$PIPELINEGEN_EXPORT"
       - run: go
         with:
+          flags: [-exec, without-dac]
           timeout: 15m
           cache_mb: 4096
           modcache_mb: 3072
@@ -63,7 +78,9 @@ suites:
           must_run:
             apps/cli/test/integration/clispec/clispec_test.go: "^Test(AllSpecCommandsExistInBinary|AllBinaryCommandsDocumentedInSpec|AllSpecFlagsExistInBinary|AllBinaryFlagsDocumentedInSpec|FlagTypesMatchSpec|FlagShortAliasesMatchSpec|GlobalFlagsExistInBinary|UnknownFlagRejected)$"
 
-
+  # Go tests of packages whose tests start PostgreSQL through
+  # testcontainers: their batches start a Docker daemon of their own, and a
+  # test that skips because none answers fails its file.
   go-db:
     tests: ["core/infrastructure/*/postgres/*_test.go", "core/infrastructure/platform/database/*_test.go", "core/infrastructure/platform/sourceblob/*_test.go", "core/infrastructure/supporting/search/*_test.go", "apps/cli/test/integration/submit/*_test.go"]
     privileged: true
@@ -126,7 +143,6 @@ suites:
 
   # The web app's type check and lint, each a tagged filegroup in
   # apps/web/BUILD.bazel that names the Bazel test target running it.
-
   web:
     tag: slice-web
     image: golang
@@ -145,47 +161,23 @@ suites:
   # gavel's Playwright specs against the real server and PostgreSQL. Bound
   # by recording: the server's Go coverage, the browser's coverage and the
   # API requests of each spec file.
-
-  vitest:
-    tests: ["apps/web/src/**/*.test.ts", "apps/web/src/**/*.test.tsx"]
-    helpers: ["apps/web/src/test/**"]
-    owner: "//apps/web:web"
-    sample_on: [apps/web/vitest.config.ts]
-    image: node
-    steps:
-      - setup: shell
-        with:
-          dir: apps/web
-          timeout: 15m
-          caches:
-            - {dir: pnpm-store, env: PNPM_STORE, mb: 2048, age: 30d, unit: whole}
-            - {dir: npm, env: npm_config_cache, mb: 512, age: 30d, unit: whole}
-          script: npx --yes pnpm@10.12.1 install --frozen-lockfile --store-dir "$PNPM_STORE"
-      # the batch's files in one vitest run; when it fails, each file runs
-      # again on its own, so a file's result is its own
-      - run: shell
-        batch: true
-        with:
-          dir: apps/web
-          timeout: 10m
-          script: |
-            set --
-            for s in $PIPELINEGEN_SLICES; do set -- "$@" "${s#apps/web/}"; done
-            node_modules/.bin/vitest run "$@"
-
-
   browser:
     tests: ["apps/web/e2e/*.ts"]
     helpers: ["apps/web/e2e/fixtures.ts", "apps/web/e2e/recording.ts", "apps/web/e2e/global-setup.ts", "apps/web/e2e/global-teardown.ts"]
+    # no Bazel target holds the specs: their owner is a filegroup whose data
+    # is what every spec shares. A recorded suite takes only its owner's data
+    # from the graph; the code the specs ran comes from the recordings
     owner: "//apps/server/cmd/gavel-server:gavel-server"
     extra_deps:
       - tests: ["apps/web/e2e/*.spec.ts"]
         deps: ["//apps/web:e2e_shared"]
+    # a change to how Playwright runs breaks every spec alike: a few tell
     sample_on: [apps/web/playwright.config.ts, apps/web/playwright.pipelinegen.config.ts]
-    privileged: true
     # one server for the whole batch, whose coverage go-correlator takes at
     # each spec file's edges
     stack: true
+    # the batch's own Docker daemon, for PostgreSQL
+    privileged: true
     image: playwright
     steps:
       # The web app, built by Bazel, and the server. A recording run
@@ -236,7 +228,7 @@ suites:
               eval "$(pipelinegen git-auth GITHUB_TOKEN)"
               export GOPRIVATE='github.com/sideways-works/*'
             fi
-            GOWORK=off GOFLAGS="$GOFLAGS -mod=mod" go get -modfile="$w/go.mod" github.com/sideways-works/pipelinegen-correlator-go/cover@v0.1.8-rc.12
+            GOWORK=off GOFLAGS="${GOFLAGS:-} -mod=mod" go get -modfile="$w/go.mod" github.com/sideways-works/pipelinegen-correlator-go/cover@v0.2.0
             GOWORK=off go build -modfile="$w/go.mod" -tags pipelinegen_cover \
               -cover -covermode=atomic -coverpkg=github.com/usegavel/gavel/... \
               -o "$PIPELINEGEN_PREPARED/gavel-server" ./apps/server/cmd/gavel-server
@@ -254,7 +246,12 @@ suites:
             mkdir -p "$w/bin"
             if ! docker info >/dev/null 2>&1; then
               command -v dockerd >/dev/null || { apt-get update -qq && apt-get install -y -qq docker.io >/dev/null; }
-              setsid dockerd >"$w/dockerd.log" 2>&1 &
+              # the task's root is an overlay filesystem, on which the
+              # Docker of this image (Ubuntu's, with containerd's overlayfs
+              # snapshotter) can't unpack an image's layers: Docker's own
+              # store with the vfs driver works on any filesystem
+              printf '%s\n' '{"storage-driver": "vfs", "features": {"containerd-snapshotter": false}}' >"$w/daemon.json"
+              setsid dockerd --config-file "$w/daemon.json" --data-root "$w/docker" >"$w/dockerd.log" 2>&1 &
               echo $! >"$w/dockerd.pid"
               i=0
               until docker info >/dev/null 2>&1; do
@@ -268,8 +265,10 @@ suites:
             docker run -d --name "$c" -e POSTGRES_USER=gavel -e POSTGRES_PASSWORD=gavel -e POSTGRES_DB=gaveltest \
               -p 127.0.0.1::5432 postgres:16-alpine >/dev/null
             echo "$c" >"$w/container"
+            # over TCP: the image's first start runs a server on the socket
+            # alone while it creates the database, then restarts it
             i=0
-            until docker exec "$c" pg_isready -U gavel -d gaveltest >/dev/null 2>&1; do
+            until docker exec "$c" pg_isready -h 127.0.0.1 -U gavel -d gaveltest >/dev/null 2>&1; do
               i=$((i + 1))
               [ "$i" -lt 60 ] || { docker logs "$c" | tail -20; exit 1; }
               sleep 1
@@ -293,18 +292,21 @@ suites:
             [ "${PIPELINEGEN_RECORD:-false}" = true ] || exit 0
             fixture=${REACT_CORRELATOR_FIXTURE:-$w/playwright.mjs}
             if [ ! -f "$fixture" ]; then
-              api=https://api.github.com/repos/sideways-works/pipelinegen-correlator-react/releases/tags/v0.1.4-rc.14
+              [ -n "${GITHUB_TOKEN:-}" ] || { echo "a recording run needs react-correlator's fixture: give the run's browser batch GITHUB_TOKEN, or name the file in REACT_CORRELATOR_FIXTURE" >&2; exit 1; }
+              command -v curl >/dev/null || { apt-get update -qq && apt-get install -y -qq curl >/dev/null; }
+              api=https://api.github.com/repos/sideways-works/pipelinegen-correlator-react/releases/tags/v0.2.0
               url=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "$api" |
                 node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const a=JSON.parse(s).assets.find(a=>a.name==="playwright.mjs");console.log(a?a.url:"")})')
               curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/octet-stream" -o "$fixture" "$url"
             fi
-            echo "cab713eecbda5edad59e68278413e23815e6d208e6534cd384e23900930654e3  $fixture" | sha256sum -c -
+            echo "2cfe03612b245c6af37e1a7c80798843c3e5b69a472aa2980148f94d3b6c78c7  $fixture" | sha256sum -c -
             echo "REACT_CORRELATOR_FIXTURE=$fixture" >>"$PIPELINEGEN_EXPORT"
           stop: |
             w=$PIPELINEGEN_WORK/stack
-            [ -f "$w/container" ] && docker rm -f "$(cat "$w/container")" >/dev/null 2>&1
+            if [ -f "$w/container" ]; then docker rm -f "$(cat "$w/container")" >/dev/null 2>&1 || true; fi
             [ -f "$w/dockerd.pid" ] || exit 0
-            kill "$(cat "$w/dockerd.pid")"
+            # the driver may have stopped a daemon whose set-up failed
+            kill "$(cat "$w/dockerd.pid")" 2>/dev/null || exit 0
             i=0
             while kill -0 "$(cat "$w/dockerd.pid")" 2>/dev/null && [ "$i" -lt 6 ]; do i=$((i + 1)); sleep 1; done
       # the server, once per batch, until the batch ends
@@ -321,6 +323,7 @@ suites:
             i=0
             until node -e 'fetch(process.argv[1]).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))' "http://127.0.0.1:$port/healthz"; do
               i=$((i + 1))
+              kill -0 "$(cat "$w/pid")" 2>/dev/null || { echo "the server exited:" >&2; tail -20 "$w/server.log" >&2; exit 1; }
               [ "$i" -lt 60 ] || { tail -20 "$w/server.log"; exit 1; }
               sleep 1
             done
@@ -335,23 +338,67 @@ suites:
 
   # The web app's unit tests (vitest), bound by the Bazel graph: they sit in
   # the app's sources, so a change to the app runs them.
+  vitest:
+    tests: ["apps/web/src/**/*.test.ts", "apps/web/src/**/*.test.tsx"]
+    owner: "//apps/web:web"
+    # how vitest runs breaks every test file alike: a few tell
+    sample_on: [apps/web/vitest.config.ts]
+    image: node
+    steps:
+      - setup: shell
+        with:
+          dir: apps/web
+          timeout: 15m
+          caches:
+            - {dir: pnpm-store, env: PNPM_STORE, mb: 2048, age: 30d, unit: whole}
+            - {dir: npm, env: npm_config_cache, mb: 512, age: 30d, unit: whole}
+          script: npx --yes pnpm@10.12.1 install --frozen-lockfile --store-dir "$PNPM_STORE"
+      # the batch's files in one vitest run; when it fails, each file runs
+      # again on its own, so a file's result is its own
+      - run: shell
+        batch: true
+        with:
+          dir: apps/web
+          timeout: 10m
+          script: |
+            set --
+            for s in $PIPELINEGEN_SLICES; do set -- "$@" "${s#apps/web/}"; done
+            node_modules/.bin/vitest run "$@"
 
+# The web app's BUILD file calls web_project, a macro from gavel's own
+# module registry (gavel_tools), which globs the app's files itself. The
+# check can't see inside another repository's macro, so it is told here.
+macros:
+  "@gavel_tools//macros:web.bzl%web_project":
+    reads: ["src/**/*.ts", "src/**/*.tsx", "src/**/*.css", "public/**", index.html, "tsconfig*.json", eslint.config.js, tailwind.config.js]
+    reason: bundles, styles, type-checks and lints the app's sources
+
+# go.mod, go.sum, go.work and tools/go.* are not here: go-sbom claims them
+# and lists each module as a unit, so a bump runs the slices whose code
+# links the bumped module, and the graph-bound suites through Bazel's
+# go_deps. pipelinegen.yaml isn't either: the planner judges a change to it
+# by what it means for the tests.
 everything_on:
-  - MODULE.bazel
-  - .gavel/gavel.MODULE.bazel
-  - .bazelversion
-  - .bazelrc
-  - .bazelignore
   - go.mod
   - go.sum
   - go.work
   - go.work.sum
   - tools/go.mod
   - tools/go.sum
+  - MODULE.bazel
+  # MODULE.bazel includes it: build setup like MODULE.bazel itself
+  - .gavel/gavel.MODULE.bazel
+  - .bazelversion
+  - .bazelrc
+  - .bazelignore
   - tools/BUILD.bazel
+  # the images every suite's tasks run in
+  - ci/root.yml
+  # the web app's npm packages: Bazel installs them from this lockfile for
+  # the app, and the suites' set-ups for the vitest files and the browser
+  # specs
   - apps/web/package.json
   - apps/web/pnpm-lock.yaml
-  - ci/root.yml
 
 untested:
   # planned with --same-config, the config of neither commit is read: a
@@ -363,27 +410,25 @@ untested:
     reason: separate Bazel workspaces (in .bazelignore) that gavel's onboarding job judges; no test of this workspace reads them
   - paths: ["docs/**", "**/*.md", LICENSE, glama.json]
     reason: prose and listings, read by people only
-  - paths: [".github/**", .gitignore, "**/.gitignore", codecov.yml]
+  - paths: [".github/**", .gitignore, codecov.yml]
     reason: repository settings and the old CI
-  - paths: [".gavel/architecture.yml", ".gavel/baseline/**", .gavel/gavel.bazelrc, .golangci.yml]
-    reason: gavel's own baseline and lint settings, read when gavel judges itself
+  - paths: [.gavel/architecture.yml, ".gavel/baseline/**", .gavel/gavel.bazelrc, .gavel/gavel.yaml, .golangci.yml]
+    reason: gavel's own quality baseline and lint settings, read when gavel judges itself; .bazelrc imports gavel.bazelrc, which holds only named configs a plain bazel test doesn't use
   - paths: [.goreleaser.yaml, hack/release.sh, install.sh, Makefile]
-    reason: release and developer scripts
-  - paths: ["apps/cli/test/e2e/*_test.go", "apps/server/test/e2e/*_test.go"]
-    reason: Go end-to-end tests that do not build today (build tag e2e); they join a suite when they do
-  - paths: [apps/cli/test/e2e/run.sh, apps/server/test/e2e/run.sh, apps/server/test/e2e/devdemo.sh, "apps/server/testdata/**"]
-    reason: scripts and sample data for running things by hand
-  - paths: [apps/cli/BUILD.bazel, core/domain/iam/model/BUILD.bazel, core/userinterface/api/v1/server/supporting/BUILD.bazel]
+    reason: release and developer scripts, run by people
+  - paths: [apps/web/.gitignore]
+    reason: repository settings
+  - paths: ["apps/web/src/assets/**"]
+    reason: images in the source tree that nothing imports and the build doesn't take
+  - paths: [apps/web/scripts/generate-tokens.mjs, apps/web/tokens.json]
+    reason: the design tokens and the script a person runs to turn them into the checked-in styles
+  - paths: ["apps/cli/test/e2e/*_test.go", "apps/server/test/e2e/*_test.go", apps/cli/test/e2e/run.sh, apps/server/test/e2e/run.sh]
+    reason: end-to-end tests behind the build tag e2e; they do not build at this commit
+  - paths: [apps/server/test/e2e/devdemo.sh, "apps/server/testdata/**"]
+    reason: a script and sample data for running a demo by hand
+  - paths: [apps/server/cmd/gavel-server/BUILD.bazel, apps/server/internal/platform/frontend/BUILD.bazel]
+    reason: the server's Bazel build, which no test runs; the browser suite builds the server with go build
+  - paths: [apps/cli/BUILD.bazel, apps/cli/test/e2e/BUILD.bazel, apps/server/test/e2e/BUILD.bazel, core/domain/iam/model/BUILD.bazel, core/userinterface/api/v1/server/supporting/BUILD.bazel]
     reason: BUILD files that declare no target
-  - paths: [apps/web/src/assets/hero.png, apps/web/src/assets/vite.svg]
-    reason: images no source of the app imports
-  - paths: [apps/web/tokens.json, apps/web/scripts/generate-tokens.mjs]
-    reason: the design tokens exported from src/index.css by a developer script; nothing in the build reads them
   - paths: [core/userinterface/api/v1/gen/oapi-codegen.yaml]
-    reason: the generator's settings; its output is checked in and tested
-
-macros:
-  "@gavel_tools//macros:web.bzl%web_project":
-    reads: ["src/**/*.ts", "src/**/*.tsx", "src/**/*.css", "public/**", index.html, "tsconfig*.json", eslint.config.js, tailwind.config.js]
-    reason: bundles, styles, type-checks and lints the app's sources
-
+    reason: the generator's settings; what it generates is checked in and tested

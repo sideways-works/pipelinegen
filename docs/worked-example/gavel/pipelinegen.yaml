@@ -42,7 +42,7 @@ concourse:
       tar -xzf "$f" -C /usr/local --strip-components=1 --no-same-owner "node-$v-linux-x64/bin/node" &&
       go mod download && (cd tools && go mod download)
     bootstrap:
-      release: {version: v0.1.13-rc.18, sha256: 1dcacdb41949c3a032966f0221f384c04ed854f2398c8a8771d0e8e830598c56}
+      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 
 plugins:
@@ -51,14 +51,14 @@ plugins:
   - name: go-sbom
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.1.3-rc.5, sha256: 2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327}
+    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
     exclude: ["examples/**"]
   # Who uses what: links between declarations, and which declarations each
   # test file ran, read from the coverage its run leaves.
   - name: go-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
     exclude: ["examples/**"]
     config:
       # the browser suite's server hands its counters over here between
@@ -70,12 +70,12 @@ plugins:
   - name: ts
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-ts
-    release: {version: v0.1.3-rc.2, sha256: 78f4abbf2c529e6b8d335df2300590630e1c397e4c9610fd29addb4317e74c27}
+    release: {version: v0.2.0, sha256: 5c51edb18c7e736548cec063a9572c226c647673499db30a94b907fd5b41fdbe}
     exclude: ["examples/**", "docs/**"]
   - name: react
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-react
-    release: {version: v0.1.4-rc.15, sha256: 45cd4fd378072c039d3847ec2657d712d507843dd7dda073fd40a823ae6f457c}
+    release: {version: v0.2.0, sha256: 32b1688da148017ccca64067e00d57c685a50b3b0adf6bfc976c6eb8abd7f32b}
     exclude: ["examples/**", "docs/**"]
     config:
       # gavel has no Vite config to read the build from: the browser
@@ -88,7 +88,7 @@ plugins:
   - name: npm
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-npm
-    release: {version: v0.1.2-rc.2, sha256: 63fd411fd3d6e48ad362f781209c51545c28ad18896b81f2ccf15f45b1e11cd0}
+    release: {version: v0.2.0, sha256: 9b85e7f3a4aeb5f723e5080a3270ab1c7446d2e319007162602ae499d61fa9bb}
     exclude: ["examples/**"]
   # The API contract: each operation of openapi/v1 a unit, and which Go code
   # serves it (oapi-codegen's generated wrapper and gavel's handler), and
@@ -96,12 +96,12 @@ plugins:
   - name: openapi
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-openapi
-    release: {version: v0.1.2-rc.4, sha256: c9854ead7c4d78985fff1f2dc4e55a8148bb9d8f284c828060da849b7688a737}
+    release: {version: v0.2.0, sha256: fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab}
     exclude: ["examples/**", "docs/**", ".github/**"]
   - name: api-uses
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-oapi-codegen
-    release: {version: v0.1.5-rc.2, sha256: ad95aa58e261ebdd18711cf9d1ad4c7f439bda4ca746761efdfe6e27a4aa1bbe}
+    release: {version: v0.2.0, sha256: 155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce}
     exclude: ["examples/**"]
     config:
       documents:
@@ -113,20 +113,20 @@ plugins:
   - name: go
     kind: driver
     repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.1.0-rc.3, sha256: 5945eb8a61a5a68972dce44d812bd98c394dabd26a575e9b65510ba18005971c}
+    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
   - name: shell
     kind: driver
     repository: sideways-works/pipelinegen-driver-shell
-    release: {version: v0.1.0-rc.2, sha256: 3e18675e34cf40ce7f741cceae73f794ee425e46bf984a17d9b08d48c7345d62}
+    release: {version: v0.2.0, sha256: 38d59a75f3cf9818085cbe1c54225c94f68c7db626c37490de18b0d0debe5ed8}
   - name: playwright
     kind: driver
     repository: sideways-works/pipelinegen-driver-playwright
-    release: {version: v0.1.0-rc.3, sha256: 7bd93f5776c1db5508f5c018d66230d2792d9226e86a06b8163d7abad7d8fb60}
+    release: {version: v0.2.0, sha256: 1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9}
   # Writes the Concourse pipeline from this file.
   - name: concourse
     kind: runner
     repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.1.9-rc.10, sha256: bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2}
+    release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
     config:
       placement:
         # every step of this pipeline, the resources' checks included, on
@@ -343,7 +343,7 @@ suites:
               eval "$(pipelinegen git-auth GITHUB_TOKEN)"
               export GOPRIVATE='github.com/sideways-works/*'
             fi
-            GOWORK=off GOFLAGS="${GOFLAGS:-} -mod=mod" go get -modfile="$w/go.mod" github.com/sideways-works/pipelinegen-correlator-go/cover@v0.1.8-rc.12
+            GOWORK=off GOFLAGS="${GOFLAGS:-} -mod=mod" go get -modfile="$w/go.mod" github.com/sideways-works/pipelinegen-correlator-go/cover@v0.2.0
             GOWORK=off go build -modfile="$w/go.mod" -tags pipelinegen_cover \
               -cover -covermode=atomic -coverpkg=github.com/usegavel/gavel/... \
               -o "$PIPELINEGEN_PREPARED/gavel-server" ./apps/server/cmd/gavel-server
@@ -409,7 +409,7 @@ suites:
             if [ ! -f "$fixture" ]; then
               [ -n "${GITHUB_TOKEN:-}" ] || { echo "a recording run needs react-correlator's fixture: give the run's browser batch GITHUB_TOKEN, or name the file in REACT_CORRELATOR_FIXTURE" >&2; exit 1; }
               command -v curl >/dev/null || { apt-get update -qq && apt-get install -y -qq curl >/dev/null; }
-              api=https://api.github.com/repos/sideways-works/pipelinegen-correlator-react/releases/tags/v0.1.4-rc.15
+              api=https://api.github.com/repos/sideways-works/pipelinegen-correlator-react/releases/tags/v0.2.0
               url=$(curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" "$api" |
                 node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const a=JSON.parse(s).assets.find(a=>a.name==="playwright.mjs");console.log(a?a.url:"")})')
               curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/octet-stream" -o "$fixture" "$url"

@@ -28,7 +28,7 @@ concourse:
     prepare: go mod download
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     bootstrap:
-      release: {version: v0.1.13-rc.18, sha256: 1dcacdb41949c3a032966f0221f384c04ed854f2398c8a8771d0e8e830598c56}
+      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
   include: ci/root.yml
 
@@ -40,27 +40,27 @@ plugins:
   - name: go-sbom
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.1.3-rc.5, sha256: 2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327}
+    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
     config: {modules: [.]}
   - name: go-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
     config: {modules: [.]}
   # the drivers that run the suites' steps (the command driver comes with
   # pipelinegen)
   - name: go
     kind: driver
     repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.1.0-rc.3, sha256: 5945eb8a61a5a68972dce44d812bd98c394dabd26a575e9b65510ba18005971c}
+    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
   - name: shell
     kind: driver
     repository: sideways-works/pipelinegen-driver-shell
-    release: {version: v0.1.0-rc.2, sha256: 3e18675e34cf40ce7f741cceae73f794ee425e46bf984a17d9b08d48c7345d62}
+    release: {version: v0.2.0, sha256: 38d59a75f3cf9818085cbe1c54225c94f68c7db626c37490de18b0d0debe5ed8}
   - name: concourse
     kind: runner
     repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.1.9-rc.10, sha256: bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2}
+    release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
     config:
       placement:
         # Every suite, and the checks, on one worker's own tag. Two workers

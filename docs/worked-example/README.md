@@ -1,9 +1,12 @@
 # Converting gavel to pipelinegen
 
-> Where the conversion stands: gavel's config now pins pipelinegen
-> v0.1.13-rc.18 and its plugins' current candidates, and all five suites
-> name steps run by drivers, with no batch script left. On a developer's
-> machine, with those releases: the `go` suite was recorded whole (289 of
+> Where the conversion stands: made with v0.2.0. gavel's config pins
+> pipelinegen v0.2.0 and the v0.2.0 releases of its runner, plugins and
+> drivers, and all five suites name steps run by drivers, with no batch
+> script left. The numbers on this page were measured with the last
+> candidate, v0.1.13-rc.18, whose code v0.2.0's tool is plus the fixes
+> listed in the changelog's 0.2.0 entry; none of them changes what a plan
+> selects. On a developer's machine, with those releases: the `go` suite was recorded whole (289 of
 > 289 test files passed), the `go-db` suite's 18 files passed, the `web`
 > suite's 2 checks and the `vitest` suite's 56 files passed, and the 5
 > browser specs passed, both run plainly and recorded. The pipeline runs
@@ -11,8 +14,8 @@
 > the go, go-db, web and vitest suites pass and record, and the browser
 > specs pass but don't record yet (step 10 says why).
 > The table of fifteen commits and the three changes at the top were
-> measured again with these releases, and so were step 4's check and
-> step 5's plans.
+> measured again with v0.1.13-rc.18, and so were step 4's check and step
+> 5's plans.
 
 This page follows one real conversion from start to finish. The project is
 [gavel](https://github.com/gavelcode/gavel), an open source code quality
@@ -245,7 +248,7 @@ bazelisk on your `PATH`. The config beside this page pins:
 
 ```
 $ pipelinegen version
-v0.1.13-rc.18
+v0.2.0
 ```
 
 First make sure the project's own tests pass on your machine, so that a
@@ -286,7 +289,7 @@ plugins:
   - name: go
     kind: driver
     repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.1.0-rc.3, sha256: 5945eb8a61a5a68972dce44d812bd98c394dabd26a575e9b65510ba18005971c}
+    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
 
 suites:
   go:
@@ -681,12 +684,12 @@ plugins:
   - name: go-sbom
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.1.3-rc.5, sha256: 2c07e4419733085fbc90e1fc080e940e2d6eca99c02d0d6e7ace422f9ebf7327}
+    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
     exclude: ["examples/**"]
   - name: go-correlator
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.1.8-rc.12, sha256: 9850db46545444bd5d4c84631c29d0481c404cf1bfd51d7401ad8cadb0b27337}
+    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
     exclude: ["examples/**"]
 ```
 
@@ -772,11 +775,11 @@ The drivers are pinned beside the other plugins:
   - name: go
     kind: driver
     repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.1.0-rc.3, sha256: 5945eb8a61a5a68972dce44d812bd98c394dabd26a575e9b65510ba18005971c}
+    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
   - name: shell
     kind: driver
     repository: sideways-works/pipelinegen-driver-shell
-    release: {version: v0.1.0-rc.2, sha256: 3e18675e34cf40ce7f741cceae73f794ee425e46bf984a17d9b08d48c7345d62}
+    release: {version: v0.2.0, sha256: 38d59a75f3cf9818085cbe1c54225c94f68c7db626c37490de18b0d0debe5ed8}
 ```
 
 ### The Go tests
@@ -979,8 +982,9 @@ and the other passed.
 ### Run them on your machine
 
 `pipelinegen slice run --suite <suite>` runs a suite's steps on your
-working tree, as the batch task does, and prints each slice's result. On
-a developer's machine, with the releases pinned beside this page:
+working tree, as the batch task does, and prints each slice's result. On a
+developer's machine, with the last development build and development
+builds of the go and shell drivers:
 
 | Suite | Slices | Result | Time |
 |---|---|---|---|
@@ -1015,11 +1019,9 @@ commit, so the same recordings serve them.
 
 Pass `--work` with a directory of your own. The batch builds in `source`
 under it, and Bazel keeps one output base per workspace path: without
-`--work`, every recording builds in a new temporary path, cold. With
-v0.1.13-rc.18 a second `record` into the same directory stops at once
-("symlink ... file exists") and would read what the first one left in
-its `coverage` directory, so before each recording remove everything
-under its `build` but `cache`.
+`--work`, every recording builds in a new temporary path, cold. A second
+`record` into the same directory removes what the first one left of its
+run and keeps the caches.
 
 At the replay's first commit:
 
@@ -1102,12 +1104,12 @@ The config adds the four plugins:
   - name: ts
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-ts
-    release: {version: v0.1.3-rc.2, sha256: 78f4abbf2c529e6b8d335df2300590630e1c397e4c9610fd29addb4317e74c27}
+    release: {version: v0.2.0, sha256: 5c51edb18c7e736548cec063a9572c226c647673499db30a94b907fd5b41fdbe}
     exclude: ["examples/**", "docs/**"]
   - name: react
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-react
-    release: {version: v0.1.4-rc.15, sha256: 45cd4fd378072c039d3847ec2657d712d507843dd7dda073fd40a823ae6f457c}
+    release: {version: v0.2.0, sha256: 32b1688da148017ccca64067e00d57c685a50b3b0adf6bfc976c6eb8abd7f32b}
     exclude: ["examples/**", "docs/**"]
     config:
       bundles:
@@ -1115,17 +1117,17 @@ The config adds the four plugins:
   - name: npm
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-npm
-    release: {version: v0.1.2-rc.2, sha256: 63fd411fd3d6e48ad362f781209c51545c28ad18896b81f2ccf15f45b1e11cd0}
+    release: {version: v0.2.0, sha256: 9b85e7f3a4aeb5f723e5080a3270ab1c7446d2e319007162602ae499d61fa9bb}
     exclude: ["examples/**"]
   - name: openapi
     kind: sbom
     repository: sideways-works/pipelinegen-sbom-openapi
-    release: {version: v0.1.2-rc.4, sha256: c9854ead7c4d78985fff1f2dc4e55a8148bb9d8f284c828060da849b7688a737}
+    release: {version: v0.2.0, sha256: fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab}
     exclude: ["examples/**", "docs/**", ".github/**"]
   - name: api-uses
     kind: correlator
     repository: sideways-works/pipelinegen-correlator-oapi-codegen
-    release: {version: v0.1.5-rc.2, sha256: ad95aa58e261ebdd18711cf9d1ad4c7f439bda4ca746761efdfe6e27a4aa1bbe}
+    release: {version: v0.2.0, sha256: 155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce}
     exclude: ["examples/**"]
     config:
       documents:
@@ -1290,7 +1292,8 @@ through, the server set-up's own:
 ```
 
 The module `github.com/sideways-works/pipelinegen-correlator-go/cover` is
-pinned at `v0.1.8-rc.12` and is private while the plugins are. gavel's
+pinned at `v0.2.0` (its tag `cover/v0.2.0`) and is private while the
+plugins are. gavel's
 `go.mod` doesn't take it: Bazel's Go rules and the planner's `go mod
 download` would have to reach it too. The prepare step adds it to a copy
 of `go.mod` of its own (`go get -modfile`), writes the one-line file that
@@ -1346,16 +1349,15 @@ CI the set-up fetches it from the pinned release with the run's read
 token and checks it against its checksum.
 
 One more detail: Bazel's bundle of the web app ends with a
-`sourceMappingURL` that names `web.bundle.js.map`, a file that isn't
-there (the map is `bundle.js.map`), and its map leaves out the sources'
-text. The server answers the missing name with the app's `index.html`, so
-react-correlator would get HTML for a map. With v0.1.4-rc.14 its observe
-then failed on every spec; v0.1.4-rc.15 keeps no such answer as a map and
-says it couldn't tell what ran in that script, which is the whole app, so
-every change to the app would run every spec. A recording run therefore
-bundles the app once more, in `apps/web/dist` where the batches put it, so the map's paths to
-the sources hold there, with the esbuild of Bazel's own install of the
-app's packages and the macro's settings:
+`sourceMappingURL` that names `web.bundle.js.map`, a file that isn't there
+(the map is `bundle.js.map`), and its map leaves out the sources' text.
+The server answers the missing name with the app's `index.html`, so
+react-correlator would get HTML for a map. It keeps no such answer as a
+map and says it couldn't tell what ran in that script, which is the whole
+app, so every change to the app would run every spec. A recording run
+therefore bundles the app once more, in `apps/web/dist` where the batches
+put it, so the map's paths to the sources hold there, with the esbuild of
+Bazel's own install of the app's packages and the macro's settings:
 
 ```sh
 node_modules/esbuild/bin/esbuild src/main.tsx --bundle --minify --sourcemap \
@@ -1524,7 +1526,7 @@ concourse:
       tar -xzf "$f" -C /usr/local --strip-components=1 --no-same-owner "node-$v-linux-x64/bin/node" &&
       go mod download && (cd tools && go mod download)
     bootstrap:
-      release: {version: v0.1.13-rc.18, sha256: 1dcacdb41949c3a032966f0221f384c04ed854f2398c8a8771d0e8e830598c56}
+      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 ```
 
@@ -1571,7 +1573,7 @@ plugins:
   - name: concourse
     kind: runner
     repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.1.9-rc.10, sha256: bf8c8063ffafdaffaf1773db9fe19b9a85851a5bfff470053b97a871d9cf2ba2}
+    release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
     config:
       placement:
         default: [cloud-2]
@@ -1727,9 +1729,9 @@ by Bazel's graph alone, and with the plugins and the recordings.
 | [`3614f62`](https://github.com/gavelcode/gavel/commit/3614f62) | dependabot settings | 0 | 0 |
 | [`365aa7a`](https://github.com/gavelcode/gavel/commit/365aa7a) | a judge feature across 26 files, docs included | 76 | 54 (5 browser, 48 go, 1 go-db) + 4 |
 
-Measured with pipelinegen v0.1.13-rc.18 and the releases pinned in
-[gavel/pipelinegen.yaml](gavel/pipelinegen.yaml), react-correlator
-v0.1.4-rc.14 for the recordings. The replay's first commit holds the
+Measured with pipelinegen v0.1.13-rc.18 and the plugins' and drivers'
+last candidates, which the config pinned at the fork's `0bf224e`,
+react-correlator v0.1.4-rc.14 for the recordings. The replay's first commit holds the
 fork's conversion at `0bf224e`, with `glama.json` out of `untested` until
 `4730ed5` adds the file, and one change of this machine's own: gavel's
 database test helper names its container `gavel1116-database-test-…`, so
@@ -1764,10 +1766,11 @@ Three rows differ from the measurement with the earlier development build:
 - `5bae0d0` runs 28 test files where it ran 19. The change touches the
   finalize command's type, and the MCP tools hand values to the MCP SDK,
   an outside module that may call any method of what it is given:
-  go-correlator v0.1.8-rc.12 binds the tests of the MCP tools, and of the
-  installer, to that type through every method, and nine more test files
-  run. `pipelinegen why` names the path for each, such as "through
-  node:go:all-methods, node:go:handed-to:github.com/modelcontextprotocol/go-sdk/mcp".
+  go-correlator binds the tests of the MCP tools, and of the installer, to
+  that type through every method, and nine more test files run.
+  `pipelinegen why` names the path for each, such as "through
+  node:go:all-methods,
+  node:go:handed-to:github.com/modelcontextprotocol/go-sdk/mcp".
 - `4730ed5` adds `glama.json` and lists it under `untested` in the same
   commit. A change to what selects is planned under both commits' configs
   and the union runs, so a change never deselects its own tests; the
