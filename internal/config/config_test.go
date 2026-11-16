@@ -539,12 +539,44 @@ func TestASuitesCorrelatorsAreEntries(t *testing.T) {
 	}
 }
 
-// TestWrites: a failed write goes again at least ten times, the first
-// after a second, and on for ten minutes (half the steps' limit when that
-// is shorter), unless writes says otherwise; 0
-// tries once; more than MaxRetries, a negative count, a backoff or a
-// deadline that isn't a period, or a deadline as long as the steps' time
-// limit is refused.
+func TestCollectSeconds(t *testing.T) {
+	sum := strings.Repeat("a", 64)
+	plugins := `plugins:
+  - {name: go, kind: correlator, repository: o/go, release: {version: v1, sha256: ` + sum + `}}
+  - {name: sql, kind: correlator, repository: o/sql, release: {version: v1, sha256: ` + sum + `}, collect_seconds: 60}
+  - {name: pg, kind: sbom, repository: o/pg, release: {version: v1, sha256: ` + sum + `}}
+`
+	recorded := strings.Replace(example, "    tag: slice-backend\n", "    tag: slice-backend\n    bind: recorded\n", 1)
+
+	c, err := Parse([]byte(recorded + plugins))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range c.Plugins {
+		want := map[string]time.Duration{"go": 10 * time.Second, "sql": time.Minute, "pg": 10 * time.Second}[p.Name]
+		if p.CollectLimit() != want {
+			t.Errorf("%s: %s, want %s", p.Name, p.CollectLimit(), want)
+		}
+	}
+
+	for name, c := range map[string]struct{ from, to, want string }{
+		"negative":       {"collect_seconds: 60", "collect_seconds: -1", "plugin sql: collect_seconds must be a positive number of seconds"},
+		"not correlator": {"repository: o/pg,", "repository: o/pg, collect_seconds: 30,", "plugin pg: collect_seconds bounds a correlator's collect calls, and this entry's kind is sbom"},
+		"too long together": {"collect_seconds: 60", "collect_seconds: 85",
+			"suite backend: the collect calls of its correlators may take 95s together (go 10s, sql 85s), more than 90s"},
+	} {
+		_, err := Parse([]byte(recorded + strings.Replace(plugins, c.from, c.to, 1)))
+		if err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: %v, want %q", name, err, c.want)
+		}
+	}
+
+	if _, err := Parse([]byte(example + strings.Replace(plugins, "collect_seconds: 60", "collect_seconds: 85", 1))); err != nil {
+		t.Errorf("not recorded: %v", err)
+	}
+}
+
 func TestWrites(t *testing.T) {
 	c, err := Parse([]byte(withRuns))
 	if err != nil {

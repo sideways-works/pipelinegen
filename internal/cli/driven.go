@@ -480,6 +480,11 @@ func batchSliceRun(ctx context.Context, args []string, stdout io.Writer) (err er
 		deadline: taskDeadline(cfg, s.reporter.ID.Run, suite), commit: s.reporter.ID.Commit,
 	}
 
+	// a collect call also stops before the batch's own time limit.
+	if b.record {
+		s.reporter.Collectors = s.plugins.collectors(cfg, suite, b.deadline)
+	}
+
 	j := report.JournalIn(f.result)
 	h := &journalHooks{
 		r: s.reporter, j: j, suite: suite, root: s.root, result: f.result, rec: rec,

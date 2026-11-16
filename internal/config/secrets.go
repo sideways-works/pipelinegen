@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/plugin"
 )
@@ -93,8 +94,36 @@ func (c *Config) CorrelatorsFor(suite string) []string {
 	return out
 }
 
-// validateCorrelators refuses a suite's correlator that no entry is, and
-// warns of a correlator that observes no recorded suite.
+func (c *Config) validateCollectLimits(bad func(string, ...any)) {
+	byName := map[string]Plugin{}
+	for _, p := range c.Plugins {
+		byName[p.Name] = p
+	}
+
+	for _, name := range c.SuiteNames() {
+		if c.Suites[name].Bind != BindRecorded {
+			continue
+		}
+
+		var (
+			total time.Duration
+			each  []string
+		)
+
+		for _, n := range c.CorrelatorsFor(name) {
+			limit := byName[n].CollectLimit()
+			total += limit
+			each = append(each, fmt.Sprintf("%s %ds", n, int(limit.Seconds())))
+		}
+
+		if total > MaxCollectSeconds*time.Second {
+			bad("suite %s: the collect calls of its correlators may take %ds together (%s), more than %ds: "+
+				"a mark waits for each of them in turn, and the playwright driver's marks.mjs waits 120s for a mark; lower collect_seconds",
+				name, int(total.Seconds()), strings.Join(each, ", "), MaxCollectSeconds)
+		}
+	}
+}
+
 func (c *Config) validateCorrelators(bad func(string, ...any)) {
 	observes := map[string]bool{}
 

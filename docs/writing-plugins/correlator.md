@@ -101,8 +101,14 @@ reads: what start-up and seeding ran into the setup's directory, and what
 each slice ran into the slice's. A batch runs its slices one after another
 against one stack, so reading and resetting something global between
 slices (a log offset, a server's coverage counters) is safe. Keep
-`collect` fast: it is bounded, 10 seconds by default, and a failure errors
-the slice.
+`collect` fast: each call is bounded, 10 seconds by default, and a failure
+errors the slice. A call stopped by its limit says so, naming the call and
+the slice: `sql collect (slice-end of e2e/notes.spec.ts): stopped after
+10s, the limit for a collect call`. Note where the slice's part begins and
+ends, and leave reading it to `observe`, which runs once per slice after
+the batch and has no such limit. A repository whose collector needs longer
+gives it more with `collect_seconds` on its entry; a suite's correlators
+may take 90 seconds together, since a mark waits for each of them in turn.
 
 ## Narrowings
 

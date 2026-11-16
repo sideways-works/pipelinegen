@@ -424,7 +424,8 @@ func (s *step) open(ctx context.Context, name string, args []string, more func(*
 
 		s.plugins.claim(ctx, s.root, claimed)
 
-		s.reporter.Collectors = s.plugins.collectors(cfg, suite)
+		// a task file's own steps don't know their task's time limit.
+		s.reporter.Collectors = s.plugins.collectors(cfg, suite, time.Time{})
 
 		// planning binds through the plugins, so the recordings are theirs.
 		if usesPlugins(cfg) {

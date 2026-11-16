@@ -1089,7 +1089,9 @@ a direct child of the slice's coverage directory, so a collector may move
 the files it recognises from the parent into its own and must leave
 everything else where it is. `pipelinegen slice setup-end`, `slice start`
 and `slice end` call the `collect` of every correlator that observes the
-suite, in the config's order, each bounded (10 seconds by default):
+suite, in the config's order, each bounded by the entry's
+`collect_seconds` (10 by default) and, in a batch run by drivers, stopped
+30 seconds before the batch's time limit:
 
 ```json
 {"protocol": 1, "work": "/tmp/w", "config": {...},

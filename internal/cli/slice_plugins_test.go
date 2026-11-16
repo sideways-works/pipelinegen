@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
@@ -91,6 +92,10 @@ func fakeCorrelator() map[string]plugin.Handler {
 
 			if req.Config["fail"] == req.Action {
 				return nil, errFake
+			}
+
+			if req.Config["sleep"] == req.Action {
+				time.Sleep(10 * time.Second)
 			}
 
 			return struct{}{}, nil
@@ -408,6 +413,39 @@ func TestAFailingCollectorErrorsTheSliceAndNamesItself(t *testing.T) {
 	b = newPluginBatch(t, false, map[string]string{"broken": "{fail: setup-end}"})
 	if _, stderr, code := b.run(t, "slice", "setup-end", "-root", b.root); code == 0 || !strings.Contains(stderr, "broken collect") {
 		t.Fatalf("setup-end: %d %s", code, stderr)
+	}
+}
+
+func TestACollectStopsBeforeTheBatchsLimit(t *testing.T) {
+	t.Parallel()
+
+	b := newPluginBatch(t, false, map[string]string{"slow": "{sleep: slice-end}"})
+
+	data, err := os.ReadFile(filepath.Join(b.root, "pipelinegen.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := config.Parse(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pl, err := loadCorrelators(t.Context(), cfg, "e2e", filepath.Join(b.dir, "tools"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	began := time.Now()
+	cs := pl.collectors(cfg, "e2e", began.Add(collectMargin+time.Second))
+
+	err = cs[0].Collect(t.Context(), plugin.CollectSliceEnd, "e2e.a", filepath.Join(b.dir, "coverage", "e2e.a"))
+	if err == nil || !strings.Contains(err.Error(), "slow collect (slice-end of e2e.a): stopped after 1s, at the batch's time limit") {
+		t.Errorf("got %v", err)
+	}
+
+	if took := time.Since(began); took > 5*time.Second {
+		t.Errorf("stopped after %s", took)
 	}
 }
 

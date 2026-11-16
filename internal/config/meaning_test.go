@@ -145,9 +145,16 @@ func TestWhatThePlannerDoesntUnderstand(t *testing.T) {
 	}
 }
 
-// TestAProposedChangesTrustedStepsAreNoDifference: a proposed change runs
-// with the trusted steps, so its own edit of them is no difference in its
-// run; params aren't trusted and are one.
+func TestACollectLimitIsAChangedFile(t *testing.T) {
+	entry := "  - {name: sql, kind: correlator, repository: o/sql, release: {version: v1, sha256: " + sha + "}"
+
+	m := meaningOf(t, []string{"plugins:\n", "plugins:\n" + entry + "}\n"},
+		[]string{"plugins:\n", "plugins:\n" + entry + ", collect_seconds: 30}\n"})
+	if !m.Changed() || m.Understood() {
+		t.Errorf("changed %v, understood %v, parts %+v", m.Changed(), m.Understood(), m.Parts)
+	}
+}
+
 func TestAProposedChangesTrustedStepsAreNoDifference(t *testing.T) {
 	base, err := Parse([]byte(withSteps))
 	if err != nil {

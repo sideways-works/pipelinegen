@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/plugincache"
@@ -196,9 +197,7 @@ func (b *batchPlugins) collecting() []string {
 	return out
 }
 
-// collectors are the batch's correlators as the reporter calls them, for
-// the suite named.
-func (b *batchPlugins) collectors(cfg *config.Config, suite string) []report.Collector {
+func (b *batchPlugins) collectors(cfg *config.Config, suite string, deadline time.Time) []report.Collector {
 	if b == nil {
 		return nil
 	}
@@ -206,22 +205,34 @@ func (b *batchPlugins) collectors(cfg *config.Config, suite string) []report.Col
 	out := make([]report.Collector, 0, len(b.sets))
 
 	for _, c := range b.sets {
-		out = append(out, setCollector{c: c, stack: cfg.Suites[suite].Stack})
+		out = append(out, setCollector{c: c, stack: cfg.Suites[suite].Stack, deadline: deadline})
 	}
 
 	return out
 }
 
-// setCollector is one correlator's collect.
+// collectMargin stops a collect call this long before the batch's limit, so the batch still ends and
+// writes its journal.
+const collectMargin = 30 * time.Second
+
 type setCollector struct {
 	c     correlatorSet
 	stack bool
+	// deadline is zero when unknown, as in a task file's own steps.
+	deadline time.Time
 }
 
 // Collect asks the correlator to gather what ran into its own directory under dir.
 func (s setCollector) Collect(ctx context.Context, action, slice, dir string) error {
 	if s.c.err != nil {
 		return fmt.Errorf("collect: %w", s.c.err)
+	}
+
+	if !s.deadline.IsZero() {
+		var cancel context.CancelFunc
+
+		ctx, cancel = context.WithDeadline(ctx, s.deadline.Add(-collectMargin))
+		defer cancel()
 	}
 
 	if err := s.c.set.Collect(ctx, action, slice, dir, s.stack); err != nil {

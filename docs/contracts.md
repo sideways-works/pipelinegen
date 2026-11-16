@@ -263,8 +263,8 @@ loop (start, run, end, then the next slice) is the case of one part each.
 A test runner's hook may call `slice start` as the spec file changes and
 `slice end` for every slice once the run is over; each call writes only
 the journal, plus the collectors at a switch (each correlator's collect
-bounded at 10 seconds: one that takes longer fails that slice's recording,
-never the test). Neither ever reaches the network: they run on the clock
+bounded by its entry's `collect_seconds`, 10 by default: one that takes
+longer fails that slice's recording, never the test). Neither ever reaches the network: they run on the clock
 of the test that calls them.
 
 The journal goes out in a flush: one atomic push of every slice's ref

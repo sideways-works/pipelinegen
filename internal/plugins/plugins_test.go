@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -13,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/deps"
@@ -161,6 +163,10 @@ func fakes(kind string) map[string]plugin.Handler {
 				var req plugin.CollectRequest
 				if err := decode(in, &req); err != nil {
 					return nil, err
+				}
+
+				if req.Slice == "slow" {
+					time.Sleep(5 * time.Second)
 				}
 
 				if err := os.MkdirAll(req.Dir, 0o750); err != nil {
@@ -796,8 +802,40 @@ func readFileT(t *testing.T, p string) string {
 	return string(data)
 }
 
-// TestCollectOnlyWhatAPluginHandles: a plugin that declares only slice-end
-// is never started for the other collect actions.
+func TestACollectStoppedByItsLimitSaysSo(t *testing.T) {
+	s := newSetup(t, "observer")
+	s.cfg.Plugins[1].CollectSeconds = 1
+	set := s.set(t)
+
+	began := time.Now()
+	err := set.Collect(t.Context(), plugin.CollectSliceEnd, "slow", t.TempDir(), false)
+
+	if took := time.Since(began); took > 4*time.Second {
+		t.Errorf("stopped after %s", took)
+	}
+
+	for _, want := range []string{"uses collect (slice-end of slow): stopped after 1s, the limit for a collect call", "collect_seconds on the uses entry"} {
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("got %v, want %q", err, want)
+		}
+	}
+
+	if !errors.Is(err, plugin.ErrFailed) {
+		t.Errorf("%v isn't a failed call", err)
+	}
+
+	s.cfg.Plugins[1].CollectSeconds = 0
+	set = s.set(t)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+	defer cancel()
+
+	err = set.Collect(ctx, plugin.CollectSliceStart, "slow", t.TempDir(), false)
+	if err == nil || !strings.Contains(err.Error(), "uses collect (slice-start of slow): stopped after ") || !strings.Contains(err.Error(), "at the batch's time limit") {
+		t.Errorf("at the batch's limit: %v", err)
+	}
+}
+
 func TestCollectOnlyWhatAPluginHandles(t *testing.T) {
 	s := newSetup(t, "endonly")
 	set := s.set(t)

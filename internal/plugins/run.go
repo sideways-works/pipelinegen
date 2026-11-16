@@ -3,22 +3,19 @@ package plugins
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// CollectTimeout bounds each correlator's collect.
-const CollectTimeout = 10 * time.Second
-
-// Collect has every correlator that collects take its part of what a
-// batch's processes left behind, in the config's order: action is
-// setup-end, slice-start or slice-end, dir the slice's coverage directory
-// (each plugin works in <dir>/<plugin>), stack whether the suite runs
-// long-lived processes. The first failure stops it and names the plugin.
+// Collect has every correlator that collects take its part of what a batch's
+// processes left behind, in the config's order. Each call is bounded by its
+// entry's collect limit and by ctx's deadline; the first failure stops it.
 func (s *Set) Collect(ctx context.Context, action, slice, dir string, stack bool) error {
 	for _, l := range s.Plugins {
 		if !l.can(plugin.CallCollect) || !l.Desc.Handles(action) {
@@ -26,15 +23,44 @@ func (s *Set) Collect(ctx context.Context, action, slice, dir string, stack bool
 		}
 
 		p := l.P
-		p.Timeout = CollectTimeout
+		p.Timeout = 0
+
+		limit := l.Conf.CollectLimit()
+		cctx, cancel := context.WithTimeout(ctx, limit)
+		began := time.Now()
 
 		req := plugin.CollectRequest{Request: p.NewRequest(s.work()), Action: action, Slice: slice, Dir: filepath.Join(dir, l.Conf.Name), Stack: stack, Claimed: s.claimed[l.Conf.Name]}
-		if err := p.Call(ctx, plugin.CallCollect, req, nil); err != nil {
-			return err
+		err := p.Call(cctx, plugin.CallCollect, req, nil)
+
+		cancel()
+
+		if err != nil {
+			return collectStopped(ctx, cctx, l.Conf.Name, action, slice, limit, time.Since(began), err)
 		}
 	}
 
 	return nil
+}
+
+func collectStopped(batch, call context.Context, name, action, slice string, limit, took time.Duration, err error) error {
+	what := name + " collect (" + action
+	if slice != "" {
+		what += " of " + slice
+	}
+
+	what += ")"
+
+	switch {
+	case errors.Is(batch.Err(), context.DeadlineExceeded):
+		return fmt.Errorf("%w: %s: stopped after %s, at the batch's time limit, so that the batch can still end and keep what its slices did; "+
+			"give the suite more minutes, or fewer slices a batch", plugin.ErrFailed, what, took.Round(time.Second))
+	case batch.Err() == nil && errors.Is(call.Err(), context.DeadlineExceeded):
+		return fmt.Errorf("%w: %s: stopped after %s, the limit for a collect call; a collect that needs longer can be given more with "+
+			"collect_seconds on the %s entry of plugins in pipelinegen.yaml, up to %ds across a suite's correlators, or a release of %s that collects faster",
+			plugin.ErrFailed, what, limit, name, config.MaxCollectSeconds, name)
+	default:
+		return err
+	}
 }
 
 // Claims are each plugin's claims in the tree checked out at root, by

@@ -273,7 +273,8 @@ for:
 
 Each call returns once the running `pipelinegen slice run` has collected
 the stack's coverage for the slice that ended and noted the next one's
-start. It is bounded (the collectors' 10 seconds each, and a margin) and
+start. It is bounded (each collector's `collect_seconds`, 10 by default,
+and a margin) and
 fails loudly when nothing answers. The call that runs such a bundle, and
 no other call, also has `PIPELINEGEN_MARKS` in its environment: the
 bundle's marks directory, the request's `marks.dir`, made afresh for the

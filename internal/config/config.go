@@ -95,24 +95,38 @@ type FileUnits struct {
 // Plugin is one plugin executable, pinned by a release and its checksum or
 // by a commit to build.
 type Plugin struct {
-	Name string `yaml:"name"`
-	// Kind is correlator, sbom, runner or driver.
-	Kind       string   `yaml:"kind"`
-	Repository string   `yaml:"repository"`
-	Release    *Release `yaml:"release"`
-	Commit     string   `yaml:"commit"`
-	// Include and Exclude widen and narrow the files the plugin claims.
-	Include []string `yaml:"include"`
-	Exclude []string `yaml:"exclude"`
-	// Config is the plugin's own block, passed to it as it is.
-	Config map[string]any `yaml:"config"`
-	// Fill, false, keeps the local commands from filling the caches the
-	// plugin's describe says how to fill.
-	Fill *bool `yaml:"fill"`
+	Name           string         `yaml:"name"`
+	Kind           string         `yaml:"kind"`
+	Repository     string         `yaml:"repository"`
+	Release        *Release       `yaml:"release"`
+	Commit         string         `yaml:"commit"`
+	Include        []string       `yaml:"include"`
+	Exclude        []string       `yaml:"exclude"`
+	Config         map[string]any `yaml:"config"`
+	Fill           *bool          `yaml:"fill"`
+	CollectSeconds int            `yaml:"collect_seconds"`
 }
 
 // Fills tells whether the local commands fill the plugin's caches.
 func (p Plugin) Fills() bool { return p.Fill == nil || *p.Fill }
+
+// DefaultCollectSeconds bounds a correlator's collect call unless its
+// entry says otherwise: a collector that hangs must not hold its batch.
+const DefaultCollectSeconds = 10
+
+// MaxCollectSeconds is how long the collect calls of a suite's correlators
+// may take together: a mark waits for each in turn, and the playwright
+// driver's hook (marks.mjs) waits 120 seconds for a mark at most.
+const MaxCollectSeconds = 90
+
+// CollectLimit is how long each of the plugin's collect calls may take.
+func (p Plugin) CollectLimit() time.Duration {
+	if p.CollectSeconds > 0 {
+		return time.Duration(p.CollectSeconds) * time.Second
+	}
+
+	return DefaultCollectSeconds * time.Second
+}
 
 // The kinds of plugin.
 const (
@@ -872,6 +886,7 @@ func (c *Config) Validate() error {
 	c.validateTaskSecrets(bad)
 
 	c.validateCorrelators(bad)
+	c.validateCollectLimits(bad)
 	c.validateLimits(bad)
 	c.learnGoingAway()
 	c.oldMinutes()
@@ -1317,6 +1332,13 @@ func (c *Config) validatePlugins(bad func(string, ...any)) {
 		}
 
 		names[p.Name] = true
+
+		switch {
+		case p.CollectSeconds < 0:
+			bad("plugin %s: collect_seconds must be a positive number of seconds", p.Name)
+		case p.CollectSeconds > 0 && p.Kind != KindCorrelator:
+			bad("plugin %s: collect_seconds bounds a correlator's collect calls, and this entry's kind is %s", p.Name, p.Kind)
+		}
 
 		for _, g := range append(slices.Clone(p.Include), p.Exclude...) {
 			if err := checkGlob(g); err != nil {

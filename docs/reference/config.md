@@ -47,7 +47,7 @@ in the default branch's run once it is merged.
 | An sbom's or correlator's pin or `config` block | what the entry reaches, as [plugins](../how-to/plugins.md) says |
 | What selects (`tests`, `tag`, `exclude`, `owner`, `extra_deps`, `text_inputs`, `sample`, `sample_on`, `narrowing`, `follow`, `untested` and the like) | what either config selects: the change plans under both and runs the union, so it never deselects its own tests; a slice the head's config adds to a suite (a test file a pattern now matches) runs as a new slice, with the reason "the configuration adds it to the suite" |
 | Where results go, what is kept, how slices are dealt into batches and share machines (`github`, `git`, `store`, `keep`, `writes`, `connectors`, `limits`, `parallel`, `batches`, `batch_minutes`, `run_on`, a lock's name, slots and weight, the runs' triggers and reports) | nothing: no test can observe them |
-| Anything else: a time limit (`minutes`), a suite's `correlators`, the runner's entry or its placement, `bazel`, `concourse.include`, the pipelinegen pin in `concourse.planner.bootstrap`, a key this pipelinegen doesn't read in the base | the config is a changed file, as below |
+| Anything else: a time limit (`minutes`, a correlator's `collect_seconds`), a suite's `correlators`, the runner's entry or its placement, `bazel`, `concourse.include`, the pipelinegen pin in `concourse.planner.bootstrap`, a key this pipelinegen doesn't read in the base | the config is a changed file, as below |
 
 The slices a step's change selects run at every narrowing level, and no
 sample leaves them out. When the planner understood every part that
@@ -628,6 +628,7 @@ its checksum, or by a commit before the first release. See
 | `plugins[].exclude` | list of patterns | none | Files the plugin never claims, whatever it detects. |
 | `plugins[].commit` | 40 hex | | A commit to build, before the first release. |
 | `plugins[].config` | mapping | none | The plugin's own settings, passed to it in every call. A runner's holds its placement; see [Where steps run](#where-steps-run). |
+| `plugins[].collect_seconds` | integer | `10` | How long each of a correlator's `collect` calls may take before it is stopped and the slice's recording fails, saying so. In a batch run by drivers a call also stops 30 seconds before the batch's time limit, so the batch still ends. A recorded suite's correlators may take 90 seconds together: a mark waits for every one of them in turn, and the playwright driver's `marks.mjs` waits 120 seconds for a mark, so `check` refuses more, naming the suite and each correlator's seconds. A change to it is a changed file, as a time limit is. Only a correlator's entry takes it. |
 | `plugins[].fill` | boolean | `true` | Whether `affected`, `why` and `try` fill the caches this plugin reads before they plan on your machine, as its `describe` says. `false` leaves them as they are; `--no-fill` does the same for every plugin, for one command. A pipeline's steps never fill: there the planner's prepare does. |
 
 ### Where steps run

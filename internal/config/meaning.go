@@ -303,6 +303,10 @@ func (m *Meaning) pluginMeans(p []string) string {
 			return MeansEntry
 		case "include", "exclude", "fill", "repository", "name":
 			return MeansNothing
+		case "collect_seconds":
+			// a shorter limit can fail the recording of a slice that passed
+			// before, in any batch: no slice in particular
+			return MeansFile
 		}
 	case KindDriver:
 		switch key {
