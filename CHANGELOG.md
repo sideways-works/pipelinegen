@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-11-17
+
 ### Added
 
 - `pipelinegen run` plans a change as `affected` does and runs the slices it selects on this machine, as a pull request's run would: per suite, its prepare once and one batch of the selected slices, through its drivers or task files, then a summary of the slices that passed, failed and errored, exiting 1 when any did not pass. `--base` is required unless `--all`; uncommitted changes are neither planned nor run, and a line names them. `--record` records the suites bound by recording and attaches their lists to the head in the local store when every slice of the suite passed. It needs no token, host or `runs` section
@@ -14,6 +16,10 @@ minor version may change the config or the protocol.
 ### Changed
 
 - Config: `concourse.planner.bootstrap.bazelisk` is optional; without it the pipeline fetches bazelisk v1.30.0, checked against its pinned checksum
+
+### Fixed
+
+- Pull request runs: a change that plans every slice for a reason known before any tree is read (a changed `everything_on` file, among others) now records its base in the plan. Planning in two steps refused such a plan as "not of this change", and its suites could not merge the change
 
 ## [0.2.2] - 2026-11-17
 
