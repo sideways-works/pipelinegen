@@ -203,8 +203,8 @@ Other rules (a genrule, a `js_library`), a filegroup with an
 it), another repository's label and a label in the test file's own
 `pipelinegen:data` lines stay whole. A filegroup in which the slice gives
 up nothing, in either tree, stays one label, as before. A reason names
-the filegroups a file was found through: "`//db:0001_users.down.sql`
-changed, through `//db:migrations > //stack:stack`".
+the filegroups a file was found through, innermost first: "through
+//db:migrations > //stack:stack".
 
 A file with units added, removed or renamed in a filegroup is a change to
 what the files say as a whole: which tables exist, in what order the

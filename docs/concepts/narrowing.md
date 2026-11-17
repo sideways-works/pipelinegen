@@ -45,10 +45,12 @@ runs everything.
 ## Narrowings and levels
 
 Besides those two lists, pipelinegen and its plugins declare narrowings of
-their own. pipelinegen's own two are about the sample: a change to code
+their own. Two of pipelinegen's own are about the sample: a change to code
 that every recorded slice of a suite ran the same way, or to what every
 slice reaches only through that code, runs a sample of the suite rather
-than all of it. The plugins add theirs, each listed in its README;
+than all of it. Another, `build-files-by-targets`, keeps a BUILD file a
+slice's filegroups list from selecting the slice by itself: a change to a
+rule in it still selects through that rule. The plugins add theirs, each listed in its README;
 go-correlator, for example, binds what only a batch's setup ran to the
 suite's sample rather than to every slice.
 

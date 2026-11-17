@@ -24,7 +24,12 @@ exists in only one of them. The edit to `Words` changes one unit,
 
 Files that no plugin describes come from Bazel's side: bazel-diff says
 which targets changed, and a slice whose owner's data changed (a fixture,
-a config file the test reads) is reached that way.
+a config file the test reads) is reached that way. A filegroup in that
+data is opened down to its files first, so a file a plugin does describe
+(a migration, a message catalog) reaches the slice through its units even
+inside a filegroup, and a BUILD file a filegroup lists reaches it only
+through the rules it declares
+([narrowing](../how-to/narrowing.md#files-inside-filegroups)).
 
 ## The walk
 
