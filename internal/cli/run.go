@@ -483,9 +483,15 @@ func planChange(ctx context.Context, cfg *config.Config, ch runs.Change, store *
 		return nil, err
 	}
 
-	plan, err := planCommits(ctx, cfg, store, trigger, ch.Run, base, head, run.Select == config.SelectAll, cache, bdPath, pluginsDir())
+	rebase, notes := passedSinceBase(ctx, cfg, ch, store, trigger, base, head, cache, bdPath)
+
+	plan, err := planCommitsBy(ctx, cfg, store, trigger, ch.Run, base, head, run.Select == config.SelectAll, cache, bdPath, pluginsDir(), planExtra{rebase: rebase})
 	if err == nil && note != "" {
 		plan.Warnings = append(plan.Warnings, note)
+	}
+
+	if err == nil {
+		plan.Warnings = append(plan.Warnings, notes...)
 	}
 
 	return plan, err
@@ -502,12 +508,23 @@ func storeLists(ctx context.Context, store *gitstore.Store, trigger, base string
 
 // why plans this way too, so it explains the plan the planning job would make.
 func planCommits(ctx context.Context, cfg *config.Config, store *gitstore.Store, trigger, runName, base, head string, all bool, cache, bdPath, plugins string) (*affected.Plan, error) {
+	return planCommitsBy(ctx, cfg, store, trigger, runName, base, head, all, cache, bdPath, plugins, planExtra{})
+}
+
+// planExtra is what a run's own plan adds: the later bases of slices that passed since its base, or,
+// for a plan that only finds what a change reaches, no explanations.
+type planExtra struct {
+	rebase *affected.Rebase
+	reach  bool
+}
+
+func planCommitsBy(ctx context.Context, cfg *config.Config, store *gitstore.Store, trigger, runName, base, head string, all bool, cache, bdPath, plugins string, x planExtra) (*affected.Plan, error) {
 	// a named run whose store isn't a proposed change's: the default
 	// branch's own run (run.go sets Proposed for every other)
 	trusted := runName != "" && store != nil && !store.Proposed
 
 	p, err := withBaseConfig(ctx, cfg, trigger, runName, base, head, trusted, func(c *config.Config, everything string, meaning *config.Meaning) (*affected.Plan, error) {
-		return planWith(ctx, c, store, trigger, runName, base, head, all, everything, meaning, cache, bdPath, plugins)
+		return planWithBy(ctx, c, store, trigger, runName, base, head, all, everything, meaning, cache, bdPath, plugins, x)
 	})
 	if p != nil && runName != "" {
 		ofRun(p, cfg, runName)
@@ -788,6 +805,10 @@ func checkPlanned(ctx context.Context, cfg *config.Config, runName, trigger, bas
 }
 
 func planWith(ctx context.Context, cfg *config.Config, store *gitstore.Store, trigger, runName, base, head string, all bool, everything string, meaning *config.Meaning, cache, bdPath string, pluginsAt string) (*affected.Plan, error) {
+	return planWithBy(ctx, cfg, store, trigger, runName, base, head, all, everything, meaning, cache, bdPath, pluginsAt, planExtra{})
+}
+
+func planWithBy(ctx context.Context, cfg *config.Config, store *gitstore.Store, trigger, runName, base, head string, all bool, everything string, meaning *config.Meaning, cache, bdPath string, pluginsAt string, x planExtra) (*affected.Plan, error) {
 	pinPlanningToolchains(trigger, cache)
 
 	pc, err := checkPlanned(ctx, cfg, runName, trigger, base, head, all || everything != "", everything, cache, pluginsAt)
@@ -853,7 +874,8 @@ func planWith(ctx context.Context, cfg *config.Config, store *gitstore.Store, tr
 		Unlisted:     p.book.unlistedHook(),
 		Why:          p.book.whyHook(),
 		Reasons:      p.book.reasonsHook(),
-		ExplainLimit: cfg.ExplainLimitOrDefault(),
+		ExplainLimit: x.explainLimit(cfg),
+		Rebase:       x.rebase,
 		Sample:       sampleRule(cfg, p.set),
 		Written:      writtenHook(p.book),
 		Expect:       p.book.expectHook(),
