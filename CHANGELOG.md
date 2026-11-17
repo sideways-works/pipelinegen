@@ -7,6 +7,12 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-17
+
+### Fixed
+
+- Pull request runs: a planning build that ends without a plan (the run left the head out, as a draft, or its plan failed) removes the record that its planning began, in its write step (`plan --from`), so the run's sweep takes the head up after `missed_after`. The sweep left such a head to the ended build until `limits.plan` and ten minutes had passed, two hours and ten minutes by default
+
 ## [0.2.1] - 2026-11-16
 
 ### Added
