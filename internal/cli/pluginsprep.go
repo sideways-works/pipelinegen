@@ -139,9 +139,13 @@ func suiteBindSlices(ctx context.Context, cfg *config.Config, bzc *bazel.Client,
 
 	// A recorded slice's filegroups open into what they hold, so a file in one is judged as a file.
 	leaves, opened := data, (*bazel.Groups)(nil)
+
 	if !graph {
-		if leaves, opened, err = openedData(ctx, groups, data, declared); err != nil {
-			return nil, fmt.Errorf("filegroups of %s: %w", suite, err)
+		// unopened, each filegroup is one label: wider, never a miss
+		if l, g, err := openedData(ctx, groups, data, declared); err != nil {
+			set.Warnf("suite %s: its slices' filegroups can't be opened, so each stays one label: %v", suite, err)
+		} else {
+			leaves, opened = l, g
 		}
 	}
 
