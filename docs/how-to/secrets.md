@@ -99,7 +99,8 @@ in `images.registry`, and two vars may name its logins, each holding a
   builds a cached image. That job takes nothing from the repository but
   the config's version: it builds from the spec's packages on the pinned
   base. No suite job, planning job or task of the repository's holds it,
-  in any run, so a pull request can't push.
+  in any run, so a pull request can't push. A config whose suite or run
+  `secrets` name it, or one of its fields, is refused.
 - `images.pull_credentials`, a login that only pulls, reaches the step of
   a suite's job that fetches its cached image. That step runs in the
   registry resource's own image and runs none of the repository's code.
