@@ -63,6 +63,21 @@ machine, so a first full CI run is not needed to start narrow. Bazel's
 build graph covers every file the plugins don't understand. A nightly run
 runs everything and catches whatever a narrower run left out.
 
+```mermaid
+flowchart LR
+    change([a change]) --> plan
+    subgraph plan [plan]
+        direction TB
+        sbom[sbom plugins<br/>what changed in the code]
+        lists[recordings<br/>what each test executed]
+        bazel[Bazel's build graph<br/>everything else]
+    end
+    plan --> slices[the slices it reaches]
+    slices --> run[drivers run them<br/>in your CI or on your machine]
+    run -- correlators record --> lists
+    nightly([nightly: run everything]) --> run
+```
+
 ## What it needs
 
 - a [Bazel](https://bazel.build) workspace (the book walks you through
