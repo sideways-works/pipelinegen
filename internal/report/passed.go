@@ -68,34 +68,32 @@ func Passes(ctx context.Context, store *gitstore.Store, run, change string, comm
 
 	for name, ref := range refs {
 		c, _, _ := strings.Cut(strings.TrimPrefix(name, runs), "/")
-		if !tested[c] || !strings.HasPrefix(name, runs) {
+		if !strings.HasPrefix(name, runs) || !tested[c] {
 			continue
 		}
 
-		raw, ok := data[ref.Commit]
-		if !ok {
-			continue
+		key, p, ok := passOf(ID{Run: run, Change: change, Commit: full[c]}, name, data[ref.Commit])
+		if had, seen := out[key]; ok && (!seen || rank[c] < rank[short(had.Commit)]) {
+			out[key] = p
 		}
-
-		suite, slice, isState, err := ID{Run: run, Change: change, Commit: full[c]}.sliceOf(name)
-		if err != nil || !isState {
-			continue //nolint:nilerr // a name no slice has is no pass
-		}
-
-		var sf StateFile
-		if json.Unmarshal(raw, &sf) != nil || sf.State != Passed || sf.Tests != nil && *sf.Tests == 0 {
-			continue
-		}
-
-		key := suite + "/" + slice
-		if had, ok := out[key]; ok && rank[short(had.Commit)] <= rank[c] {
-			continue
-		}
-
-		out[key] = Pass{Commit: full[c], Label: sf.Label, At: sf.Updated}
 	}
 
 	return out, nil
+}
+
+// passOf reads one slice's state as a pass, keyed "<suite>/<slice>".
+func passOf(id ID, ref string, raw []byte) (string, Pass, bool) {
+	suite, slice, isState, err := id.sliceOf(ref)
+	if err != nil || !isState || raw == nil {
+		return "", Pass{}, false
+	}
+
+	var sf StateFile
+	if json.Unmarshal(raw, &sf) != nil || sf.State != Passed || sf.Tests != nil && *sf.Tests == 0 {
+		return "", Pass{}, false
+	}
+
+	return suite + "/" + slice, Pass{Commit: id.Commit, Label: sf.Label, At: sf.Updated}, true
 }
 
 // testedCommits are the commits whose plan tested the commit itself.
