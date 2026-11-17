@@ -231,14 +231,15 @@ type alsoTo struct {
 }
 
 type planFile struct {
-	Head      string      `json:"head"`
-	All       bool        `json:"all"`
-	Narrowing int         `json:"narrowing"`
-	Suites    []planSuite `json:"suites"`
-	Plugins   *Plugins    `json:"plugins,omitempty"`
-	Warnings  []string    `json:"warnings,omitempty"`
-	Rebuild   *Rebuild    `json:"rebuild,omitempty"`
-	Lists     *struct {
+	Head       string         `json:"head"`
+	All        bool           `json:"all"`
+	Narrowing  int            `json:"narrowing"`
+	Narrowings []NarrowingSet `json:"narrowings"`
+	Suites     []planSuite    `json:"suites"`
+	Plugins    *Plugins       `json:"plugins,omitempty"`
+	Warnings   []string       `json:"warnings,omitempty"`
+	Rebuild    *Rebuild       `json:"rebuild,omitempty"`
+	Lists      *struct {
 		CannotTell map[string][]recording.Mark `json:"cannot_tell"`
 	} `json:"lists,omitempty"`
 }
@@ -510,7 +511,7 @@ var noResult = Failure{Test: "(no result)", Tail: "the slice never reported how 
 var notRun = Failure{Test: "(not run)", Tail: "its batch ended before any slice started: the batch's setup failed"}
 
 func buildRun(id ID, snap snapshot, groups map[string]*regexp.Regexp) Run {
-	r := Run{Name: id.Run, Commit: id.Commit, Plugins: snap.plan.Plugins, All: snap.plan.All, PlanWarnings: snap.plan.Warnings, Rebuild: snap.plan.Rebuild}
+	r := Run{Name: id.Run, Commit: id.Commit, Plugins: snap.plan.Plugins, All: snap.plan.All, PlanWarnings: snap.plan.Warnings, Rebuild: snap.plan.Rebuild, Narrowings: snap.plan.Narrowings}
 	if snap.plan.Lists != nil {
 		r.Marked = snap.plan.Lists.CannotTell
 	}

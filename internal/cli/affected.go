@@ -28,6 +28,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitx"
 	"github.com/sideways-works/pipelinegen/internal/kit"
 	"github.com/sideways-works/pipelinegen/internal/lists"
+	"github.com/sideways-works/pipelinegen/internal/plugins"
 )
 
 func runAffected(ctx context.Context, args []string, stdout io.Writer) error {
@@ -286,10 +287,7 @@ func affectedPlanUnder(ctx context.Context, cfg *config.Config, root, base, head
 			return nil, err
 		}
 
-		if p.set != nil {
-			r := p.set.Report()
-			plan.Plugins = &r
-		}
+		setPlugins(plan, p.set)
 
 		plan.Warnings = append(plan.Warnings, warnings...)
 		plan.Warnings = append(plan.Warnings, correlatorWarnings(p, c)...)
@@ -482,4 +480,15 @@ func resolveRev(ctx context.Context, root, rev string) (string, error) {
 	}
 
 	return commit, nil
+}
+
+// setPlugins records in a plan what its plugins did and the narrowing levels the config set.
+func setPlugins(plan *affected.Plan, set *plugins.Set) {
+	if set == nil {
+		return
+	}
+
+	r := set.Report()
+	plan.Plugins = &r
+	plan.Narrowings = set.Overrides()
 }

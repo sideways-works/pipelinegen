@@ -23,15 +23,16 @@ import (
 )
 
 type whyPlan struct {
-	Base      string          `json:"base"`
-	Head      string          `json:"head"`
-	All       bool            `json:"all"`
-	Reason    string          `json:"reason"`
-	Narrowing int             `json:"narrowing"`
-	Suites    []whySuite      `json:"suites"`
-	Plugins   *report.Plugins `json:"plugins"`
-	Lists     *lists.Source   `json:"lists"`
-	Warnings  []string        `json:"warnings"`
+	Base       string                `json:"base"`
+	Head       string                `json:"head"`
+	All        bool                  `json:"all"`
+	Reason     string                `json:"reason"`
+	Narrowing  int                   `json:"narrowing"`
+	Narrowings []report.NarrowingSet `json:"narrowings"`
+	Suites     []whySuite            `json:"suites"`
+	Plugins    *report.Plugins       `json:"plugins"`
+	Lists      *lists.Source         `json:"lists"`
+	Warnings   []string              `json:"warnings"`
 }
 
 type whySuite struct {
@@ -562,6 +563,11 @@ func leftOut(p *whyPlan, sp whySuite, name, label string) []WhyReason {
 		}
 
 		r.Text += levelText(p.Narrowing, n.OffAt)
+
+		if lv, ok := report.SetBy(p.Narrowings, n.Narrowing); ok {
+			r.Text += "; " + lv.Text()
+		}
+
 		out = append(out, r)
 	}
 

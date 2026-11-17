@@ -44,17 +44,20 @@ type RootCause struct {
 // Plan is what a run runs: per suite, the slices it selected, why, and
 // those it left out.
 type Plan struct {
-	Base         string          `json:"base"`
-	Head         string          `json:"head"`
-	All          bool            `json:"all"`
-	Reason       string          `json:"reason"`
-	Suites       []SuitePlan     `json:"suites"`
-	Narrowing    int             `json:"narrowing,omitempty"`
-	Plugins      *plugins.Report `json:"plugins,omitempty"`
-	Lists        *lists.Source   `json:"lists,omitempty"`
-	Warnings     []string        `json:"warnings,omitempty"`
-	Rebuild      *Rebuild        `json:"rebuild,omitempty"`
-	Unobservable []Unobservable  `json:"unobservable,omitempty"`
+	Base      string      `json:"base"`
+	Head      string      `json:"head"`
+	All       bool        `json:"all"`
+	Reason    string      `json:"reason"`
+	Suites    []SuitePlan `json:"suites"`
+	Narrowing int         `json:"narrowing,omitempty"`
+	// Narrowings are the narrowings whose level the config sets in place
+	// of their declarer's.
+	Narrowings   []plugins.Override `json:"narrowings,omitempty"`
+	Plugins      *plugins.Report    `json:"plugins,omitempty"`
+	Lists        *lists.Source      `json:"lists,omitempty"`
+	Warnings     []string           `json:"warnings,omitempty"`
+	Rebuild      *Rebuild           `json:"rebuild,omitempty"`
+	Unobservable []Unobservable     `json:"unobservable,omitempty"`
 	// LabelGroups is how many groups of recorded slices Bazel was asked
 	// which of their impacted labels anything else that changed reaches.
 	LabelGroups      int       `json:"label_groups,omitempty"`

@@ -28,6 +28,28 @@ const keptPlan = `{"base": "b", "head": "h", "narrowing": 2, "suites": [{"suite"
 		{"kind": "narrowed", "narrowing": "fields", "off_at": 4, "reason": "api/orders#type:Order changed in a field it never reads", "reached": 3, "dropped": ["e2e.orders"]},
 		{"kind": "sampled", "narrowing": "sample", "off_at": 3, "reason": "ci/e2e.yml changed", "reached": 3, "dropped": ["e2e.wishlist"]}]}]}`
 
+func TestWhySaysTheConfigSetALevel(t *testing.T) {
+	root, _, store := runEnv(t)
+	commit := "0123456789abcdef0123456789abcdef01234567"
+
+	plan := strings.Replace(keptPlan, `"narrowing": 2,`, `"narrowing": 2, "narrowings": [{"name": "fields", "off_at": 4, "declared": 2, "by": "plugin go-correlator", "note": "every field read through reflection is declared"}],`, 1)
+	if err := report.WritePlan(t.Context(), store, report.ID{Run: "pr", Change: "pr-7", Commit: commit}, []byte(plan)); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, stderr, code := run(t, "why", "--root", root, "--run", "pr", "--change", "pr-7", "--slice", "e2e.orders")
+	if want := "e2e e2e.orders was left out in pr pr-7 at 0123456789ab:\n" +
+		"  the narrowing fields left it out: api/orders#type:Order changed in a field it never reads; it would have run at narrowing level 4 or above (the plan used 2); " +
+		"off from 4 by the config (narrowings.fields: every field read through reflection is declared); plugin go-correlator says 2\n"; code != 0 || stdout != want {
+		t.Fatalf("%d %s\n%s\nwant\n%s", code, stderr, stdout, want)
+	}
+
+	// a narrowing the config left at its declarer's level says nothing more
+	if stdout, _, _ := run(t, "why", "--root", root, "--run", "pr", "--change", "pr-7", "--slice", "e2e.wishlist"); strings.Contains(stdout, "by the config") {
+		t.Fatalf("the sample: %s", stdout)
+	}
+}
+
 func TestWhyReadsAKeptPlan(t *testing.T) {
 	root, _, store := runEnv(t)
 	commit := "0123456789abcdef0123456789abcdef01234567"

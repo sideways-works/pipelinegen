@@ -74,7 +74,7 @@ func render(r Run, format Format, tails bool) string {
 
 			for _, s := range r.Suites {
 				causes(&b, r, s, true)
-				narrowed(&b, s, true)
+				narrowed(&b, s, r.Narrowings, true)
 			}
 
 			reasonsList(&b, r)
@@ -268,7 +268,7 @@ func list(b *strings.Builder, r Run) {
 		}
 
 		causes(b, r, s, false)
-		narrowed(b, s, false)
+		narrowed(b, s, r.Narrowings, false)
 
 		for _, sl := range s.Slices {
 			if bad(sl.State) {
@@ -427,7 +427,7 @@ func reasonsList(b *strings.Builder, r Run) {
 
 // narrowed says plainly how a selection was made smaller, so a pass never
 // reads as a full one.
-func narrowed(b *strings.Builder, s Suite, named bool) {
+func narrowed(b *strings.Builder, s Suite, set []NarrowingSet, named bool) {
 	if len(s.Narrowed) == 0 {
 		return
 	}
@@ -471,6 +471,10 @@ func narrowed(b *strings.Builder, s Suite, named bool) {
 			fmt.Fprintf(b, "; they would run from narrowing level %d", n.OffAt)
 		}
 
+		if lv, ok := SetBy(set, n.Narrowing); ok {
+			fmt.Fprintf(b, ", %s", secret.Redact(lv.Text()))
+		}
+
 		b.WriteString(".")
 
 		// a reason may hold parentheses of its own (a sample_on pattern),
@@ -491,7 +495,13 @@ func net(b *strings.Builder, r Run) {
 	}
 
 	if level, ok := r.Net.Raise(); ok {
-		fmt.Fprintf(b, "**%d failures trace to narrowed changes: raise narrowing to %d.**\n\n", r.Net.Failing(), level)
+		fmt.Fprintf(b, "**%d failures trace to narrowed changes: raise narrowing to %d", r.Net.Failing(), level)
+
+		if set := r.Net.SetLevels(); len(set) > 0 {
+			fmt.Fprintf(b, ", or lower %s, which the config set", strings.Join(set, ", "))
+		}
+
+		b.WriteString(".**\n\n")
 	} else {
 		b.WriteString("Failures that trace to narrowed changes:\n\n")
 	}
@@ -502,8 +512,13 @@ func net(b *strings.Builder, r Run) {
 			who += " (" + t.Subject + ")"
 		}
 
-		fmt.Fprintf(b, "- `%s %s` first fails since %s, whose %s run left it out: %s by `%s`, off from level %d\n",
-			t.Suite, t.Slice, who, t.Run, t.Kind, t.Narrowing, t.OffAt)
+		off := fmt.Sprintf("off from level %d", t.OffAt)
+		if t.Set != nil {
+			off = secret.Redact(t.Set.Text())
+		}
+
+		fmt.Fprintf(b, "- `%s %s` first fails since %s, whose %s run left it out: %s by `%s`, %s\n",
+			t.Suite, t.Slice, who, t.Run, t.Kind, t.Narrowing, off)
 	}
 
 	b.WriteString("\n")

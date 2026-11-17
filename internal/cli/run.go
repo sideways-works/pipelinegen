@@ -874,10 +874,9 @@ func planWith(ctx context.Context, cfg *config.Config, store *gitstore.Store, tr
 		if err := conflictWarnings(p.set, p.set.Flush(ctx)); err != nil {
 			warnf(os.Stderr, "pipelinegen: the plugins' answers stay local: %v\n", err)
 		}
-
-		r := p.set.Report()
-		plan.Plugins = &r
 	}
+
+	setPlugins(plan, p.set)
 
 	if err := finishPlan(plan, p, cfg, runName, source, setupWarnings); err != nil {
 		return nil, err

@@ -241,11 +241,16 @@ func dropped(p planRef, failing map[string]bool) []Trace {
 
 	for _, sp := range p.plan.Suites {
 		for _, n := range sp.Narrowed {
+			var set *NarrowingSet
+			if lv, ok := SetBy(p.plan.Narrowings, n.Narrowing); ok {
+				set = &lv
+			}
+
 			for _, slice := range n.Dropped {
 				if failing[sp.Suite+"/"+slice] {
 					out = append(out, Trace{
 						Suite: sp.Suite, Slice: slice, Run: p.run, Commit: p.commit,
-						Kind: n.Kind, Narrowing: n.Narrowing, OffAt: n.OffAt,
+						Kind: n.Kind, Narrowing: n.Narrowing, OffAt: n.OffAt, Set: set,
 					})
 				}
 			}

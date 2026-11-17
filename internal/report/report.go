@@ -74,6 +74,32 @@ type Narrowed struct {
 	Dropped   []string `json:"dropped"`
 }
 
+// NarrowingSet is a narrowing whose level a plan's config set: OffAt in
+// force in place of Declared, the level its declarer (By) gives.
+type NarrowingSet struct {
+	Name     string `json:"name"`
+	OffAt    int    `json:"off_at"`
+	Declared int    `json:"declared"`
+	By       string `json:"by"`
+	Note     string `json:"note"`
+}
+
+// Text says where the level came from.
+func (n NarrowingSet) Text() string {
+	return fmt.Sprintf("off from %d by the config (narrowings.%s: %s); %s says %d",
+		n.OffAt, n.Name, strings.TrimSuffix(oneLine(n.Note), "."), n.By, n.Declared)
+}
+
+// SetBy finds a narrowing's level the config set among a plan's.
+func SetBy(set []NarrowingSet, narrowing string) (NarrowingSet, bool) {
+	i := slices.IndexFunc(set, func(n NarrowingSet) bool { return n.Name == narrowing })
+	if i < 0 {
+		return NarrowingSet{}, false
+	}
+
+	return set[i], true
+}
+
 // Trace ties a slice that failed in a run of everything to an earlier change
 // whose plan left it out.
 type Trace struct {
@@ -81,6 +107,9 @@ type Trace struct {
 	Run, Change, Commit, Subject string
 	Kind, Narrowing              string
 	OffAt                        int
+	// Set is the config's level of the narrowing in that plan, when it set
+	// one.
+	Set *NarrowingSet
 }
 
 // Net is what a run of everything says about failures earlier runs left
@@ -125,6 +154,22 @@ func (n *Net) Raise() (int, bool) {
 	return level, true
 }
 
+// SetLevels name the config's keys that set the level of a narrowing a
+// traced failure was left out by, sorted.
+func (n *Net) SetLevels() []string {
+	var out []string
+
+	for _, t := range n.Traces {
+		if t.Set != nil {
+			out = append(out, "`narrowings."+t.Narrowing+".off_at`")
+		}
+	}
+
+	slices.Sort(out)
+
+	return slices.Compact(out)
+}
+
 // Slice is one slice's result.
 type Slice struct {
 	// Name is how the slice is known (a test file's path); when empty, its
@@ -165,6 +210,7 @@ type Run struct {
 	Rebuild      *Rebuild                    `json:"rebuild,omitempty"`
 	All          bool                        `json:"all,omitempty"`
 	Marked       map[string][]recording.Mark `json:"marked,omitempty"`
+	Narrowings   []NarrowingSet              `json:"narrowings,omitempty"`
 	Now          time.Time                   `json:"-"`
 }
 
