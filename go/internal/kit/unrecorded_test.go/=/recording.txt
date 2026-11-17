@@ -1,0 +1,9 @@
+# observed
+go:internal/kit#func:passesUnrecorded
+go:internal/kit#func:recordingStep
+go:internal/kit#func:swallowedIn
+go:internal/kit#func:swallowedUnrecorded
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
