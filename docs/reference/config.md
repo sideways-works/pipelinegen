@@ -339,6 +339,7 @@ checked whole.
 | `concourse.mock` | string | `bundled` | Whether the Concourse has its bundled `mock` resource type, which a runner hands a connector's changes on with: `bundled`, or `missing`, which refuses a pipeline whose runs take a connector's changes before it is written. `fly -t <target> workers -d` lists each worker's types. |
 | `concourse.self_set` | bool | false | Lets the `pipeline` job set the pipeline when the config changes. Off, the job only regenerates the pipeline and fails when it differs from the one set ("the pipeline is stale: set it"), and a person sets it. On, the job sets it with secrets kept as `((name))` references, never their values, which works only when the Concourse resolves them itself (a credential manager or `var_sources`); with plain `fly set-pipeline -v` variables, leave it off. |
 | `concourse.serial_groups` | | | No longer read: no job is in a serial group. `check` names it; remove it. |
+| `concourse.serial_groups.<name>.per_run` | | | No longer read, with `concourse.serial_groups`. |
 | `concourse.planner` | mapping | | The image pipelinegen's own steps run in, and the tools they fetch. |
 | `concourse.planner.image` | mapping | (required with runs) | A `registry-image` source of a stock image with git and certificates, such as `{repository: golang, tag: 1.27.1}`. |
 | `concourse.planner.digest` | string | (required with runs) | The image's digest, `sha256:...`, so the image can't change under you. |
