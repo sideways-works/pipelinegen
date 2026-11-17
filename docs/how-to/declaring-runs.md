@@ -113,12 +113,11 @@ runs:
 ```
 
 A continuous run is made for the run of everything: instead of one a night,
-rounds back to back all day, one at a time, each of the newest commit.
-Every commit of the branch queues a build of the planning job. The runner
-runs those builds one after another when it declares it can (Concourse's
-does: its planning job is then serial, the one serial job of the
-pipeline), so one build decides at a time; without it, each build
-records its round instead (below). Each build first decides, in a step
+rounds back to back all day, one round at a time, each of the newest
+commit. Every commit of the branch starts a build of the planning job.
+The planning job is never serial: its builds run side by side, and each
+records its round in the run's records for the others to read (below).
+Each build first decides, in a step
 of its own before the planner's prepare command (`pipelinegen plan
 --decide`), and reads the branch's tip from the remote. A build whose
 commit is not the tip exits at once, green, with nothing prepared and
@@ -201,10 +200,9 @@ ended.
   `per: batch`, else for its whole build.
 - A rerun of an older round's suite job, started by hand, runs beside the
   round in progress: nothing stops it, and it starts no round of its own.
-- A runner that can't run the planning job's builds one at a time (one
-  that doesn't declare `serial_jobs`), and a CI system you drive yourself
-  without `PIPELINEGEN_SERIAL_PLAN=1`, runs those builds side by side.
-  Each build's plan step then records, as its first act once its commit
+- The planning job's builds run side by side, in every runner and in a
+  CI system you drive yourself. Each build's plan step records, as its
+  first act once its commit
   is the tip, that its round started, and, as the act that ends its wait,
   that its round plans; after each it reads the tip and the run's rounds
   again. Of two builds that decide at once each sees the other's record or

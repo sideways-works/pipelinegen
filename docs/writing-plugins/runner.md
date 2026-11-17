@@ -109,21 +109,17 @@ No job of the pipeline runs its builds one at a time, or behind other
 jobs, unless the spec asks for it: a suite's `serial_group` or
 `max_in_flight`. Builds of one job for two commits run side by side, each
 on records of its own commit, and the workers' own limits are the only
-bound. The one exception is a planning job whose run has `serial_plan`.
+bound. A planning job never runs its builds one at a time, a continuous
+run's included.
 
 A runner that declares the capability `continuous` builds a run whose
-trigger kind is `continuous`: every commit of the branch queues one build
-of the planning job (Concourse: `version: every`). A runner that also
-declares `serial_jobs` can run a job's builds one at a time, in the order
-they were queued, a queued one waiting without a container; the spec
-then sets `serial_plan` on the continuous run, and the runner makes that
-planning job, and no other, run its builds so (Concourse: a serial job),
-and gives its plan step `PIPELINEGEN_SERIAL_PLAN=1`. One build then
-decides at a time. A runner without `serial_jobs` builds the continuous
-run all the same: its planning job runs builds side by side, without the
-variable, and each plan step records its round's start and planning in
-the store for the others to read. A runner without `continuous` is
-refused a continuous run by `pipelinegen pipeline`.
+trigger kind is `continuous`: every commit of the branch starts one build
+of the planning job (Concourse: `version: every`). The builds run side
+by side, and each plan step records its round's start and planning in
+the store for the others to read: of two builds deciding at once, the
+older commit's exits and the newer one waits for its round. A runner
+without `continuous` is refused a continuous run by `pipelinegen
+pipeline`.
 
 A continuous run's planning task decides first, before the planner's
 prepare command: `pipelinegen plan --decide --gate <dir>` ends a
@@ -135,8 +131,7 @@ the prepare nor the plan. Otherwise the decision leaves `<dir>/decided.json`
 for the plan step, and the task runs the prepare and then `pipelinegen plan
 --gate <dir>`, which decides once more (recording no second start of the
 round) and plans. Give the decision the environment the plan gets, the
-planner's params and secrets left out, and `PIPELINEGEN_SERIAL_PLAN` when
-the job is serial. The task's time limit is `limits.plan` and the run's
+planner's params and secrets left out. The task's time limit is `limits.plan` and the run's
 `wait_minutes`; export `PIPELINEGEN_DEADLINE` (now plus `limits.plan`)
 and `PIPELINEGEN_LIMIT` (`limits.plan=<minutes>`) again once the decision
 has ended, so the prepare and the plan have `limits.plan` from there.
@@ -225,15 +220,15 @@ and what the repository's own tasks get in
 
 The kit checks the pipeline your runner writes for its fixture spec and
 its variants (locks on every suite, set by itself, tokens by purpose, a
-connector's changes, a continuous run, a continuous run without a queue
-and locks per batch, the last four only when the runner declares them; with locks per batch every lock must
+connector's changes, a continuous run and locks per batch, the last
+three only when the runner declares them; with locks per batch every lock must
 be taken around each batch and freed in that step's ensure, and its wait
 may not count against the batch's limit): every step must have a time
 limit, its own or one around it, a hook's steps their own; no job may be
 serial, in a serial group or bounded by `max_in_flight` unless the spec
-asks (`serial_plan`, which a continuous run's planning job must then
-honour, with `PIPELINEGEN_SERIAL_PLAN=1` on its plan step, and no other
-job may set that variable); a continuous run's suite jobs may trigger only
+asks (a suite's `serial_group` or `max_in_flight`), and a planning job
+never: a serial planning job, and a step that still sets
+`PIPELINEGEN_SERIAL_PLAN`, are refused; a continuous run's suite jobs may trigger only
 on what its planning job puts inside an `across` (the hand-off it puts
 when `plan --gate` opened its gate), never on the branch; a pull request
 run's suite jobs only on what its planning job or its sweep puts inside an

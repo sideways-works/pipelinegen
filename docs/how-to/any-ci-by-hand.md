@@ -15,11 +15,10 @@ second commit whose plan selects less. What it leaves out: pull requests
 <dir>`, so the change's code never runs where a credential that writes
 is, and their suites start only when `<dir>/gate.json` is open), locks,
 whole-suite checks, a suite's prepare steps (`slice prepare`), statuses and comments on a
-git host, and continuous runs. For a continuous run, either run its plan
-step one build at a time, a queue as Concourse's serial planning job is,
-and give it `PIPELINEGEN_SERIAL_PLAN=1`, or run its builds side by side
-without it: each then records its round for the others to read
-([continuous runs](declaring-runs.md#continuous-runs) says how). The [contracts](../contracts.md#commands-the-generated-pipeline-calls)
+git host, and continuous runs. For a continuous run, run its plan step's
+builds side by side, never one at a time: each records its round for the
+others to read ([continuous runs](declaring-runs.md#continuous-runs) says
+how). The [contracts](../contracts.md#commands-the-generated-pipeline-calls)
 list every step and every input of the generated pipeline; the [runner
 page](../writing-plugins/runner.md#what-the-pipeline-must-do) says what a
 complete pipeline must do.

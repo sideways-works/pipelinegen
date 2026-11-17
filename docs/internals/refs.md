@@ -16,7 +16,7 @@ refs/pipelinegen/batch/<run>/<change>/<c12>/<suite>/<batch>  a live batch's slic
 refs/pipelinegen/also-to/<run>/<change>                      more pull requests for a comment
 refs/pipelinegen/locks/<name>/<n>                            a lock's slot (lease.json); wait-<id> a waiter's mark
 refs/pipelinegen/superseded/<run>/<c12>                      a continuous run's build that found a newer commit and ran nothing (superseded.json), swept after 14 days
-refs/pipelinegen/rounds/<run>/<change>/<c12>/started         a continuous run's round a build began, when its builds aren't queued (round.json), create-only, swept after 14 days
+refs/pipelinegen/rounds/<run>/<change>/<c12>/started         a continuous run's round a build began (round.json), create-only, swept after 14 days
 refs/pipelinegen/rounds/<run>/<change>/<c12>/planning        the same round's build stopped waiting and plans (round.json)
 refs/pipelinegen/cache/<plugin>/<version>-<sha12>.<week>     one plugin release's answers used in an ISO week, by content
 refs/pipelinegen/replaced/<plugin>/<version>-<sha12>         the keys a cold rebuild replaced, each with the digest of what it left
