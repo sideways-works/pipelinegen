@@ -148,7 +148,12 @@ func (e *ends) End(_ context.Context, sl plugin.DriverSlice, ev *plugin.DriverEv
 		tests = strconv.Itoa(*ev.Tests)
 	}
 
-	e.got[sl.Name] = fmt.Sprintf("passed %v, tests %s, failures [%s]", ev.Passed && len(failed) == 0, tests, strings.Join(failed, " "))
+	files, problem := failureFiles(sl, ev)
+	if problem != "" {
+		e.errs = append(e.errs, sl.Name+": "+problem)
+	}
+
+	e.got[sl.Name] = fmt.Sprintf("passed %v, tests %s, failures [%s]%s", ev.Passed && len(failed) == 0, tests, strings.Join(failed, " "), files)
 
 	return nil
 }
@@ -165,6 +170,8 @@ func (k *kit) runFixture(ctx context.Context, f kitDriver, batch, record bool, m
 
 	for _, sl := range f.Slices {
 		sl.Extras = filepath.Join(k.work(), "extras")
+		sl.Files = filepath.Join(k.work(), "files")
+
 		if record {
 			sl.Recording = filepath.Join(coverage, filepath.FromSlash(sl.Name))
 		}
@@ -469,4 +476,41 @@ func copyTree(src, dst string) error {
 	}
 
 	return nil
+}
+
+// failureFiles checks the files an end names: only a slice that didn't
+// pass names any, and each is a regular file inside the slice's files
+// directory. It says how many, for the modes to compare.
+func failureFiles(sl plugin.DriverSlice, ev *plugin.DriverEvent) (string, string) {
+	if len(ev.Files) == 0 {
+		return "", ""
+	}
+
+	if ev.Passed && len(ev.Failures) == 0 {
+		return "", fmt.Sprintf("a passed slice names %d failure files", len(ev.Files))
+	}
+
+	root, err := os.OpenRoot(sl.Files)
+	if err != nil {
+		return "", fmt.Sprintf("names failure files, but its files directory can't be read: %v", err)
+	}
+
+	defer func() { _ = root.Close() }() //nolint:errcheck // only read
+
+	var bad []string
+
+	for _, f := range ev.Files {
+		fi, err := root.Lstat(filepath.FromSlash(f.Path))
+
+		switch {
+		case f.Path == "" || filepath.IsAbs(f.Path) || slices.Contains(strings.Split(f.Path, "/"), ".."):
+			bad = append(bad, fmt.Sprintf("%q is no path inside the slice's files directory", f.Path))
+		case err != nil:
+			bad = append(bad, fmt.Sprintf("%s: %v", f.Path, err))
+		case !fi.Mode().IsRegular():
+			bad = append(bad, f.Path+" is no regular file")
+		}
+	}
+
+	return fmt.Sprintf(", files %d", len(ev.Files)), strings.Join(bad, "; ")
 }

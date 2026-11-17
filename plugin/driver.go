@@ -135,16 +135,19 @@ type Marks struct {
 
 // DriverSlice is one slice a run request hands a driver: what to run
 // (Label and Target for a target, Sources and Tests for a test file) and
-// where its extras and recording go.
+// where its extras, failure files and recording go.
 type DriverSlice struct {
-	Name      string   `json:"name"`
-	Label     string   `json:"label,omitempty"`
-	Target    string   `json:"target,omitempty"`
-	Kind      string   `json:"kind,omitempty"`
-	Sources   []string `json:"sources,omitempty"`
-	Tests     []string `json:"tests,omitempty"`
-	Extras    string   `json:"extras,omitempty"`
-	Recording string   `json:"recording,omitempty"`
+	Name    string   `json:"name"`
+	Label   string   `json:"label,omitempty"`
+	Target  string   `json:"target,omitempty"`
+	Kind    string   `json:"kind,omitempty"`
+	Sources []string `json:"sources,omitempty"`
+	Tests   []string `json:"tests,omitempty"`
+	Extras  string   `json:"extras,omitempty"`
+	// Files is the directory a failed slice's files go into, those its end
+	// names in Files; empty, the core keeps none.
+	Files     string `json:"files,omitempty"`
+	Recording string `json:"recording,omitempty"`
 }
 
 // DriverEvent is one line of a run's stream. An end carries the slice's
@@ -159,6 +162,16 @@ type DriverEvent struct {
 	Seconds  float64   `json:"seconds,omitempty"`
 	Recorded bool      `json:"recorded,omitempty"`
 	Replayed bool      `json:"replayed,omitempty"`
+	// Files are what a failed slice left to show why (a screenshot, a
+	// trace), by their paths in the slice's Files directory.
+	Files []File `json:"files,omitempty"`
+}
+
+// File is one failure file: its path, relative and inside the directory
+// it is named from, and a short label.
+type File struct {
+	Path  string `json:"path"`
+	Label string `json:"label,omitempty"`
 }
 
 // Failure is one failing test and the end of its output.

@@ -194,3 +194,21 @@ func readLog(t *testing.T, p string) string {
 
 	return string(data)
 }
+
+func TestAStepNamesItsFailureFilesInItsResult(t *testing.T) {
+	c := &Command{Env: os.Environ(), Log: io.Discard}
+
+	script := `mkdir -p "$3/shots" && printf png > "$3/shots/a.png"
+printf '{"passed":false,"failures":[{"test":"t","tail":"no"}],"files":[{"path":"shots/a.png","label":"screenshot"}]}' > "$2"`
+	req := commandRequest(t, map[string]any{"each": []any{"sh", "-c", script, "sh", "{name}", "{result}", "{files}"}}, false, "a")
+	req.Slices[0].Files = filepath.Join(t.TempDir(), "files", "a")
+
+	got := ends(t, c, req)["a"]
+	if !slices.Equal(got.Files, []plugin.File{{Path: "shots/a.png", Label: "screenshot"}}) {
+		t.Fatalf("files: %+v", got.Files)
+	}
+
+	if data, err := os.ReadFile(filepath.Join(req.Slices[0].Files, "shots", "a.png")); err != nil || string(data) != "png" {
+		t.Fatalf("the file: %q %v", data, err)
+	}
+}

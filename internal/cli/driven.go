@@ -297,6 +297,7 @@ func (b *drivenBatch) driverSlices(list []batchSlice) []plugin.DriverSlice {
 		ds := plugin.DriverSlice{
 			Name: sl.Name, Label: sl.Label, Target: sl.Target, Kind: sl.Kind, Sources: sl.Sources, Tests: sl.Tests,
 			Extras: filepath.Join(b.result, filepath.FromSlash(sl.Name)),
+			Files:  report.FilesDir(b.result, sl.Name),
 		}
 
 		if b.record {
@@ -319,6 +320,13 @@ func writeResult(path string, ev *plugin.DriverEvent, why string) error {
 
 		for _, f := range ev.Failures {
 			r.Failures = append(r.Failures, report.Failure{Test: f.Test, Tail: f.Tail})
+		}
+
+		// the driver names them in the slice's files directory; the result
+		// names them from the result directory, where the check of each
+		// path refuses any that leaves it
+		for _, f := range ev.Files {
+			r.Files = append(r.Files, report.FailureFile{Path: report.FilesPrefix(ev.Slice) + f.Path, Label: f.Label})
 		}
 	}
 

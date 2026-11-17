@@ -124,8 +124,9 @@ its `tests`, and a target slice its `label`, `target` and `kind`.
   filtered slice of a rule kind whose filter syntax you don't know ends
   failed with that reason; never run it unfiltered.
   `extras` is the slice's directory for files a whole-suite check reads,
-  and `recording`, in a recording run only, the directory its recording
-  goes into.
+  `files` the directory for its failure files ([failure
+  files](#failure-files)), and `recording`, in a recording run only, the
+  directory its recording goes into.
 - Install what your tool needs yourself, in the batch's container, with
   its package cache under `cache`: the playwright driver runs `npm ci`
   when `node_modules` doesn't match the lockfile, unless a step sets
@@ -151,9 +152,9 @@ whose tests passed:
 ```
 
 A failed slice's `end` adds `failures`, each a `test` and the `tail` of
-its output; `seconds`, `recorded` and `replayed` say how long it took,
-whether it left a recording and whether the tool replayed it from its
-cache.
+its output, and may add `files`; `seconds`, `recorded` and `replayed` say
+how long it took, whether it left a recording and whether the tool
+replayed it from its cache.
 
 `start` is optional; every slice needs its `end`. What you write on stderr
 is the tests' output, and goes into the batch's log as `<driver> run:
@@ -223,6 +224,36 @@ The command driver can't read per-test events from a command it doesn't
 know. It is the one exception: it takes the result file the command
 wrote, or else the exit code, and says so in its description
 (`"results": "exit"`).
+
+## Failure files
+
+What a failed test leaves to show why, a screenshot or a trace, is lost
+with the batch's container unless your `end` names it. Copy it into the
+slice's `files` directory (create it; it may not exist) and name each
+file in the end's `files`, by its path in that directory, with a short
+label a person reads:
+
+```json
+{"slice":"e2e/checkout.spec.ts","event":"end","failures":[{"test":"checkout pays","tail":"..."}],
+ "files":[{"path":"checkout-pays/test-failed-1.png","label":"screenshot of checkout pays"}]}
+```
+
+pipelinegen keeps them with the slice's state when the slice failed or
+errored, within the caps of `keep.files`, and refuses a path with a `..`
+part, an absolute one, and one that reaches outside the directory through
+a symlink ([failure files](../contracts.md#failure-files)). Name files
+only for a slice that didn't pass, and only what helps a person see why:
+the kit refuses an end that names a file for a passed slice, or one that
+isn't a regular file inside the directory. A request without `files`
+comes from an older pipelinegen that keeps none: copy nothing then.
+
+The playwright driver names each failed test's `screenshot`,
+`error-context` and `trace` attachments, from Playwright's own JSON
+report. The go driver names none: a Go test's failure is its output,
+which the end's `tail` already holds, and a test that writes files of
+its own knows best which matter. The command driver passes the
+directory as `{files}`, and the result file a step writes names its
+files from there.
 
 ## One recording per slice
 

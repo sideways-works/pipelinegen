@@ -317,6 +317,7 @@ func sliceVals(req plugin.DriverRequest, sl plugin.DriverSlice, result string) m
 	v["tests"] = strings.Join(sl.Tests, ",")
 	v["result"] = result
 	v["extras"] = sl.Extras
+	v["files"] = sl.Files
 	v["recording"] = sl.Recording
 	v["label"] = sl.Label
 	v["target"] = sl.Target
@@ -474,13 +475,15 @@ func readResult(path, slice string) (plugin.DriverEvent, bool) {
 		Passed   bool             `json:"passed"`
 		Tests    *int             `json:"tests"`
 		Failures []plugin.Failure `json:"failures"`
+		// Files are named in the slice's {files} directory.
+		Files []plugin.File `json:"files"`
 	}
 
 	if json.Unmarshal(data, &r) != nil {
 		return plugin.DriverEvent{}, false
 	}
 
-	return plugin.DriverEvent{Slice: slice, Event: plugin.EventEnd, Passed: r.Passed && len(r.Failures) == 0, Tests: r.Tests, Failures: r.Failures}, true
+	return plugin.DriverEvent{Slice: slice, Event: plugin.EventEnd, Passed: r.Passed && len(r.Failures) == 0, Tests: r.Tests, Failures: r.Failures, Files: r.Files}, true
 }
 
 // Setup runs `run` to its end, when given, then starts `start` and waits
