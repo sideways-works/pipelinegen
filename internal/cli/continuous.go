@@ -15,7 +15,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/report"
 	"github.com/sideways-works/pipelinegen/internal/runs"
-	"github.com/sideways-works/pipelinegen/plugin"
 )
 
 // A continuous run runs its rounds back to back, each of the branch's newest commit. The deciding
@@ -129,13 +128,9 @@ func newestRound(ctx context.Context, store *gitstore.Store, cfg *config.Config,
 	return r, true, nil
 }
 
-// envSerialPlan is set by a runner that runs the planning job's builds one at a time; the step then
-// records nothing for others to read.
-const envSerialPlan = plugin.EnvSerialPlan
-
 // awaitRound runs the build when its commit is the branch's tip and no round is in progress, waiting
-// at most wait_minutes. When builds may decide at once, each records its round's start and planning and
-// reads the tip again after each, so of two builds deciding at once the older commit's exits.
+// at most wait_minutes. Builds may decide at once, so each records its round's start and planning and
+// reads the tip again after each: of two builds deciding at once the older commit's exits.
 func awaitRound(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger string, stdout io.Writer) (bool, error) {
 	run, _, err := decideRound(ctx, cfg, ch, store, trigger, stdout, nil)
 
@@ -158,7 +153,6 @@ func decideRound(ctx context.Context, cfg *config.Config, ch runs.Change, store 
 		auth:     readAuth(ctx, cfg, trigger),
 		idle:     time.Duration(cfg.IdleLength(ch.Run)) * roundUnit,
 		planning: time.Duration(cfg.PlanningLength()) * roundUnit,
-		records:  os.Getenv(envSerialPlan) == "",
 		dead:     map[string]bool{},
 	}
 
@@ -240,7 +234,6 @@ type decider struct {
 
 	// idle bounds a planned round's silence, planning an unplanned one's.
 	idle, planning time.Duration
-	records        bool
 
 	planned string
 	fresh   bool
@@ -266,7 +259,7 @@ func (d *decider) await(ctx context.Context) (bool, error) {
 			return false, err
 		}
 
-		if first && d.records && !d.started {
+		if first && !d.started {
 			if run, err := d.start(ctx); err != nil || !run {
 				return false, err
 			}
@@ -312,7 +305,7 @@ func (d *decider) await(ctx context.Context) (bool, error) {
 }
 
 func (d *decider) plans(ctx context.Context) (again, run bool, err error) {
-	if !d.records || d.fresh {
+	if d.fresh {
 		return false, true, say(d.stdout, "%s %s: the newest of %s, and no round in progress: planning\n", d.ch.Run, short12(d.ch.Commit), d.branch)
 	}
 
@@ -398,10 +391,6 @@ func (d *decider) inProgress(ctx context.Context) (busy, error) {
 		if err := d.sayDead(r.commit, quiet, d.idle, "has recorded nothing for"); err != nil {
 			return busy{}, err
 		}
-	}
-
-	if !d.records {
-		return busy{}, nil
 	}
 
 	return d.unplanned(ctx, r.last)
@@ -491,10 +480,6 @@ func (d *decider) sayWaiting(b busy) error {
 // planWithin bounds a recorded round's planning by limits.plan: past it and a margin the round counts as
 // dead, so its build never plans past it.
 func planWithin(ctx context.Context, cfg *config.Config) (context.Context, context.CancelFunc) {
-	if os.Getenv(envSerialPlan) != "" {
-		return ctx, func() {}
-	}
-
 	return context.WithTimeout(ctx, time.Duration(cfg.Limits.PlanMinutes())*roundUnit)
 }
 

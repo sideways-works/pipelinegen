@@ -155,8 +155,6 @@ func pipelineText(ctx context.Context, cfg *config.Config, root, runner, plugins
 		return nil, nil, err
 	}
 
-	serialPlans(&s, desc)
-
 	var ans plugin.PipelineAnswer
 	if err := p.Call(ctx, plugin.CallPipeline, plugin.PipelineRequest{Request: p.NewRequest(work), Spec: s, Root: absRoot}, &ans); err != nil {
 		return nil, nil, err
@@ -233,18 +231,6 @@ func runnerRunsContinuous(cfg *config.Config, runner string, desc plugin.Descrip
 	}
 
 	return nil
-}
-
-// serialPlans asks a runner that can to run a continuous run's planning builds one at a time; one that
-// can't runs them side by side, and each build records its round for the others to read.
-func serialPlans(s *plugin.Spec, desc plugin.Description) {
-	if !slices.Contains(desc.Capabilities, plugin.CapSerialJobs) {
-		return
-	}
-
-	for i, r := range s.Runs {
-		s.Runs[i].SerialPlan = r.Trigger.Kind == plugin.TriggerContinuous
-	}
 }
 
 // runnerLocksPerBatch refuses a lock per batch the runner can't take so: it would hold it for the whole build.

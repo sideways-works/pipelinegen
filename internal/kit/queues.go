@@ -11,17 +11,21 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
+// envSerialPlan is what runners once gave a serial planning job's plan
+// step; the tool reads it no more, and a pipeline that still sets it was
+// written for a serial planning job.
+const envSerialPlan = "PIPELINEGEN_SERIAL_PLAN"
+
 // serializedJobs are the jobs that run their builds one at a time, or behind
 // other jobs, though the spec asks for none of it: only a suite job whose
-// suite names a serial group or max_in_flight, and a planning job whose run
-// asks for it (SerialPlan), may.
+// suite names a serial group or max_in_flight may. A planning job never is.
 func serializedJobs(s plugin.Spec, text []byte) []string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(text, &doc); err != nil {
 		return []string{"the pipeline isn't YAML: " + err.Error()}
 	}
 
-	asked, queue, continuous := jobsAsked(s)
+	asked, planning, continuous := jobsAsked(s)
 
 	jobs, _ := doc["jobs"].([]any) //nolint:errcheck // a pipeline without jobs has none
 
@@ -36,24 +40,21 @@ func serializedJobs(s plugin.Spec, text []byte) []string {
 		name := fmt.Sprint(job["name"])
 
 		for _, key := range []string{"serial", "serial_groups", "max_in_flight"} {
-			if _, ok := job[key]; !ok || asked[name] || key == "serial" && queue[name] {
+			if _, ok := job[key]; !ok || asked[name] {
+				continue
+			}
+
+			if planning[name] {
+				out = append(out, fmt.Sprintf("job %s: a continuous run's planning job with %s: its builds would queue, though each decides beside the others from the run's records", name, key))
+
 				continue
 			}
 
 			out = append(out, fmt.Sprintf("job %s: %s, which nothing asks for", name, key))
 		}
 
-		if queue[name] && job["serial"] != true {
-			out = append(out, "job "+name+": a planning job the spec asks to be serial that isn't: a continuous run's builds would decide side by side")
-		}
-
-		// the plan step is told its builds queue exactly when they do: one
-		// told so wrongly would record nothing while another decides
-		switch told := saysSerialPlan(job); {
-		case queue[name] && !told:
-			out = append(out, "job "+name+": a serial planning job whose steps lack "+plugin.EnvSerialPlan+"=1: its plan step records its round for nothing")
-		case !queue[name] && told:
-			out = append(out, "job "+name+": "+plugin.EnvSerialPlan+" on a job the spec doesn't ask to be serial: its builds would decide side by side unrecorded")
+		if saysSerialPlan(job) {
+			out = append(out, "job "+name+": "+envSerialPlan+", which the tool no longer reads: the job was written for a serial planning job")
 		}
 
 		if continuous[name] && !slices.ContainsFunc(s.Suites, func(su plugin.SpecSuite) bool { return su.Lock != nil }) {
@@ -68,12 +69,13 @@ func serializedJobs(s plugin.Spec, text []byte) []string {
 	return out
 }
 
-func jobsAsked(s plugin.Spec) (asked, queue, continuous map[string]bool) {
-	asked, queue, continuous = map[string]bool{}, map[string]bool{}, map[string]bool{}
+// planning names a continuous run's planning job.
+func jobsAsked(s plugin.Spec) (asked, planning, continuous map[string]bool) {
+	asked, planning, continuous = map[string]bool{}, map[string]bool{}, map[string]bool{}
 
 	for _, r := range s.Runs {
 		cont := r.Trigger.Kind == plugin.TriggerContinuous
-		queue["plan-"+r.Name], continuous["plan-"+r.Name] = r.SerialPlan, cont
+		planning["plan-"+r.Name], continuous["plan-"+r.Name] = cont, cont
 
 		for _, rs := range r.Suites {
 			i := slices.IndexFunc(s.Suites, func(su plugin.SpecSuite) bool { return su.Name == rs.Suite })
@@ -87,7 +89,7 @@ func jobsAsked(s plugin.Spec) (asked, queue, continuous map[string]bool) {
 		}
 	}
 
-	return asked, queue, continuous
+	return asked, planning, continuous
 }
 
 func saysLock(job map[string]any) bool {
@@ -124,7 +126,7 @@ func saysSerialPlan(job map[string]any) bool {
 	found := false
 
 	walkJobs(job, "", func(x map[string]any, _ string) {
-		if fmt.Sprint(x[plugin.EnvSerialPlan]) == "1" {
+		if _, ok := x[envSerialPlan]; ok {
 			found = true
 		}
 	})

@@ -12,40 +12,34 @@ func TestNoJobIsSerializedUnlessTheSpecAsks(t *testing.T) {
 		Suites: []plugin.SpecSuite{{Name: "e2e", MaxInFlight: 2}, {Name: "go"}},
 		Runs: []plugin.SpecRun{
 			{Name: "main", Trigger: plugin.SpecTrigger{Kind: "branch"}, Suites: []plugin.SpecRunSuite{{Suite: "e2e"}, {Suite: "go"}}},
-			{Name: "full", Trigger: plugin.SpecTrigger{Kind: plugin.TriggerContinuous}, SerialPlan: true, Suites: []plugin.SpecRunSuite{{Suite: "go"}}},
+			{Name: "full", Trigger: plugin.SpecTrigger{Kind: plugin.TriggerContinuous}, Suites: []plugin.SpecRunSuite{{Suite: "go"}}},
 		},
 	}
+
+	planning := "- {name: plan-full, plan: [{task: plan}]}\n"
 
 	for want, text := range map[string]string{
 		"": `jobs:
 - {name: main-e2e, max_in_flight: 2, plan: []}
 - {name: main-go, plan: []}
-- {name: plan-full, serial: true, plan: [{task: plan, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}
+- {name: plan-full, plan: [{task: plan}]}
 - {name: full-go, plan: []}
 - {name: pipeline, plan: []}
 `,
-		"job main-go: max_in_flight, which nothing asks for":                              "jobs:\n- {name: main-go, max_in_flight: 1, plan: []}\n- {name: plan-full, serial: true, plan: [{task: plan, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n",
-		"job pipeline: serial, which nothing asks for":                                    "jobs:\n- {name: pipeline, serial: true, plan: []}\n- {name: plan-full, serial: true, plan: [{task: plan, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n",
-		"job full-go: serial_groups, which nothing asks for":                              "jobs:\n- {name: full-go, serial_groups: [x], plan: []}\n- {name: plan-full, serial: true, plan: [{task: plan, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n",
-		"job plan-full: a planning job the spec asks to be serial that isn't":             "jobs:\n- {name: plan-full, plan: []}\n",
-		"job plan-full: a serial planning job whose steps lack PIPELINEGEN_SERIAL_PLAN=1": "jobs:\n- {name: plan-full, serial: true, plan: [{task: plan}]}\n",
-		"job main-go: PIPELINEGEN_SERIAL_PLAN on a job the spec doesn't ask to be serial": "jobs:\n- {name: plan-full, serial: true, plan: [{task: plan, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n- {name: main-go, plan: [{task: x, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n",
-		"job full-go: a continuous run's job says lock":                                   "jobs:\n- {name: plan-full, serial: true, plan: [{task: plan, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n- {name: full-go, plan: [{task: lock, config: {}}]}\n",
+		"job main-go: max_in_flight, which nothing asks for":                                  "jobs:\n- {name: main-go, max_in_flight: 1, plan: []}\n" + planning,
+		"job pipeline: serial, which nothing asks for":                                        "jobs:\n- {name: pipeline, serial: true, plan: []}\n" + planning,
+		"job full-go: serial_groups, which nothing asks for":                                  "jobs:\n- {name: full-go, serial_groups: [x], plan: []}\n" + planning,
+		"job plan-main: serial, which nothing asks for":                                       "jobs:\n- {name: plan-main, serial: true, plan: []}\n" + planning,
+		"job plan-full: a continuous run's planning job with serial: its builds would queue":  "jobs:\n- {name: plan-full, serial: true, plan: [{task: plan}]}\n",
+		"job plan-full: a continuous run's planning job with max_in_flight: its builds would": "jobs:\n- {name: plan-full, max_in_flight: 1, plan: [{task: plan}]}\n",
+		"job plan-full: PIPELINEGEN_SERIAL_PLAN, which the tool no longer reads":              "jobs:\n- {name: plan-full, plan: [{task: plan, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n",
+		"job main-go: PIPELINEGEN_SERIAL_PLAN, which the tool no longer reads":                "jobs:\n" + planning + "- {name: main-go, plan: [{task: x, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n",
+		"job full-go: a continuous run's job says lock":                                       "jobs:\n" + planning + "- {name: full-go, plan: [{task: lock, config: {}}]}\n",
 	} {
 		got := strings.Join(serializedJobs(s, []byte(text)), "; ")
 		if (want == "") != (got == "") || !strings.Contains(got, want) {
 			t.Errorf("want %q, got %q", want, got)
 		}
-	}
-
-	s.Runs[1].SerialPlan = false
-
-	if got := serializedJobs(s, []byte("jobs:\n- {name: plan-full, plan: [{task: plan}]}\n")); len(got) != 0 {
-		t.Errorf("an unqueued continuous run: %v", got)
-	}
-
-	if got := strings.Join(serializedJobs(s, []byte("jobs:\n- {name: plan-full, serial: true, plan: [{task: plan}]}\n")), "; "); !strings.Contains(got, "job plan-full: serial, which nothing asks for") {
-		t.Errorf("a serial planning job nothing asks for: %q", got)
 	}
 }
 

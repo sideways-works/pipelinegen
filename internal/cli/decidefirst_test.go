@@ -203,25 +203,4 @@ func TestARoundsRecordsAreWrittenOnceAcrossTwoDecisions(t *testing.T) {
 	if planningNow.Commit == planning.Commit || after.Planning != planningNow.Commit {
 		t.Fatalf("the plan step's planning record: %s, then %s (it says %s)", planning.Commit, planningNow.Commit, after.Planning)
 	}
-
-	queued := newContinuousWorld(t)
-	t.Setenv(envSerialPlan, "1")
-
-	qgate := filepath.Join(t.TempDir(), "handoff")
-	if got := <-queued.decideFirst(t, queued.first, qgate); got.err != nil || !got.run {
-		t.Fatalf("the queued build's decision: %+v", got)
-	}
-
-	qprior, err := readDecided(qgate)
-	if err != nil || qprior == nil {
-		t.Fatalf("the queued build's decision left: %+v %v", qprior, err)
-	}
-
-	if run, _, err := decideRound(t.Context(), queued.cfg, queued.change(queued.first), queued.store, queued.trigger, &bytes.Buffer{}, qprior); err != nil || !run {
-		t.Fatalf("the queued build's plan step: %v %v", run, err)
-	}
-
-	if rounds, err := report.Rounds(t.Context(), queued.store, "full", "main"); err != nil || len(rounds) != 0 {
-		t.Fatalf("a queued build recorded its round: %+v %v", rounds, err)
-	}
 }

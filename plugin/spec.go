@@ -79,19 +79,15 @@ const LockWaitMinutes = 240
 const TriggerPullRequests = "pull_requests"
 
 // TriggerContinuous is the kind of a run whose every commit of the branch
-// queues a build of the planning job: the plan step of a commit that is
-// no longer the branch's tip ends at once, and the tip's waits while a
-// round of the run is in progress.
+// starts a build of the planning job. The builds run side by side, never
+// serial: the plan step of a commit that is no longer the branch's tip
+// ends at once, and the tip's records its round in the run's records and
+// waits while an older round is in progress.
 const TriggerContinuous = "continuous"
 
 // CapContinuous is a runner's capability to build a continuous run's
 // jobs: the planning job taking every commit of the branch.
 const CapContinuous = "continuous"
-
-// CapSerialJobs is a runner's capability to run a job's builds one at a
-// time, in the order they were queued, a queued one waiting without
-// running anything: SpecRun.SerialPlan asks it of a planning job.
-const CapSerialJobs = "serial_jobs"
 
 // CapLockPerBatch is a runner's capability to take a suite's lock around
 // each batch and each whole-suite check, freed in an ensure, for a lock
@@ -110,12 +106,6 @@ const CapSSHKeys = "ssh_keys"
 // CapConnectorChanges is a runner's capability to build the chain of a
 // run whose changes come from a connector.
 const CapConnectorChanges = "connector_changes"
-
-// EnvSerialPlan is the environment variable, set to 1, a runner gives the
-// plan step of a planning job it runs one build at a time (SpecRun's
-// SerialPlan): without it, a continuous run's plan step records its
-// round's start and planning, since two builds may decide at once.
-const EnvSerialPlan = "PIPELINEGEN_SERIAL_PLAN"
 
 // CapPlacement is a runner's capability to place the pipeline's steps on
 // workers by a placement block of its own config, in its own words. The
@@ -170,11 +160,6 @@ type SpecRun struct {
 	Trigger     SpecTrigger    `json:"trigger"`
 	Suites      []SpecRunSuite `json:"suites"`
 	WaitMinutes int            `json:"wait_minutes,omitempty"`
-	// SerialPlan asks the runner to run the planning job's builds one at a
-	// time, in the order queued (CapSerialJobs), and set EnvSerialPlan on
-	// the plan step. Nothing else of a pipeline is serialized unless a suite
-	// asks for it.
-	SerialPlan bool `json:"serial_plan,omitempty"`
 }
 
 // SpecTrigger is what starts a run: Kind is branch, pull_requests, timer

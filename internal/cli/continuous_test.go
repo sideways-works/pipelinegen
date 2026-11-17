@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -101,12 +102,16 @@ func newContinuousWorld(t *testing.T) *continuousWorld {
 		}
 	})
 
-	for k, v := range map[string]string{envGitURL: "", envToken: "", envJobURL: "", envPR: "", envAPIURL: "", envSerialPlan: ""} {
+	for k, v := range map[string]string{envGitURL: "", envToken: "", envJobURL: "", envPR: "", envAPIURL: "", serialPlanEnv: ""} {
 		t.Setenv(k, v)
 	}
 
 	return w
 }
+
+// serialPlanEnv is what a planning job written for serial builds still sets
+// on its plan step; the step reads it no more.
+const serialPlanEnv = "PIPELINEGEN_SERIAL_PLAN"
 
 func (w *continuousWorld) change(commit string) runs.Change {
 	return runs.Change{Run: "full", ID: "main", Commit: commit, Branch: "main"}
@@ -147,24 +152,19 @@ func TestAContinuousTriggerIsABranchsOwn(t *testing.T) {
 	}
 
 	if err := runnerRunsContinuous(cfg, "concourse", plugin.Description{Capabilities: []string{plugin.CapContinuous}}); err != nil {
-		t.Fatalf("a runner that can't run a job's builds one at a time: %v", err)
+		t.Fatalf("a runner of continuous runs: %v", err)
 	}
 
-	can := plugin.Description{Capabilities: []string{plugin.CapContinuous, plugin.CapSerialJobs}}
-	if err := runnerRunsContinuous(cfg, "concourse", can); err != nil {
+	// a runner that still says it runs a job's builds one at a time is asked
+	// for nothing of the kind
+	old := plugin.Description{Capabilities: []string{plugin.CapContinuous, "serial_jobs"}}
+	if err := runnerRunsContinuous(cfg, "concourse", old); err != nil {
 		t.Fatal(err)
 	}
 
-	serialPlans(&sp, plugin.Description{Capabilities: []string{plugin.CapContinuous}})
-
-	if sp.Runs[0].SerialPlan {
-		t.Fatal("a serial planning job asked of a runner that can't")
-	}
-
-	serialPlans(&sp, can)
-
-	if !sp.Runs[0].SerialPlan {
-		t.Fatal("the continuous run's planning job isn't asked to be serial")
+	data, err := json.Marshal(sp)
+	if err != nil || strings.Contains(string(data), "serial") {
+		t.Fatalf("the spec asks for a serial job: %s %v", data, err)
 	}
 }
 

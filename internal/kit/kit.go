@@ -435,7 +435,7 @@ func (k *kit) shapeChecks(perBatch []string, sh shapes) {
 	}
 
 	k.check("every step the pipeline runs has a time limit", strings.Join(firstFew(sh.limits), "; "))
-	k.check("no job is serialized unless the spec asks, but a continuous run's planning job, which is its queue", strings.Join(firstFew(sh.queues), "; "))
+	k.check("no job is serialized unless the spec asks, a planning job never", strings.Join(firstFew(sh.queues), "; "))
 
 	if k.can(plugin.CapContinuous) {
 		k.check("a continuous run's suite jobs start only for a commit its planning job planned, which decides before its prepare", strings.Join(firstFew(sh.follows), "; "))
@@ -480,7 +480,7 @@ func specVariants() []specVariant {
 
 	return []specVariant{
 		{"", Spec()}, {"with locks", locked}, {"set by itself", self}, {splitTokens, splitSpec()},
-		{connectorRun, connectorSpec()}, {continuousRun, continuousSpec(true)}, {continuousUnqueued, continuousSpec(false)}, {perBatchRun, perBatchSpec()},
+		{connectorRun, connectorSpec()}, {continuousRun, continuousSpec()}, {perBatchRun, perBatchSpec()},
 		{stepsRun, stepsSpec()},
 	}
 }
@@ -488,8 +488,6 @@ func specVariants() []specVariant {
 func (k *kit) builds(v specVariant) bool {
 	switch v.name {
 	case continuousRun:
-		return k.can(plugin.CapContinuous) && k.can(plugin.CapSerialJobs)
-	case continuousUnqueued:
 		return k.can(plugin.CapContinuous)
 	case perBatchRun:
 		return k.can(plugin.CapLockPerBatch)
@@ -543,15 +541,12 @@ func perBatchSpec() plugin.Spec {
 
 const continuousRun = "a continuous run"
 
-const continuousUnqueued = "a continuous run without a queue"
-
-func continuousSpec(queued bool) plugin.Spec {
+func continuousSpec() plugin.Spec {
 	s := Spec()
 
 	for i, r := range s.Runs {
 		if r.Trigger.Kind == "timer" {
 			s.Runs[i].Trigger = plugin.SpecTrigger{Kind: plugin.TriggerContinuous, Branch: r.Trigger.Branch}
-			s.Runs[i].SerialPlan = queued
 		}
 	}
 

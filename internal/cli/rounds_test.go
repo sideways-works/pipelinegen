@@ -552,16 +552,16 @@ func TestABuildThatDiedBeforeItsPlan(t *testing.T) {
 	}
 }
 
-func TestAQueuedBuildRecordsNothing(t *testing.T) {
+func TestABuildOfASerialJobRecordsItsRound(t *testing.T) {
 	w := newContinuousWorld(t)
-	t.Setenv(envSerialPlan, "1")
+	t.Setenv(serialPlanEnv, "1")
 
 	if got := <-w.decide(t, w.first); got.err != nil || !got.run {
 		t.Fatalf("the build: %+v", got)
 	}
 
-	if rounds, err := report.Rounds(t.Context(), w.store, "full", "main"); err != nil || len(rounds) != 0 {
-		t.Fatalf("a queued build recorded its round: %v %v", rounds, err)
+	if rounds, err := report.Rounds(t.Context(), w.store, "full", "main"); err != nil || len(rounds) != 1 {
+		t.Fatalf("a build of a planning job written serial recorded no round: %v %v", rounds, err)
 	}
 }
 
@@ -676,13 +676,13 @@ func TestARecordedRoundPlansWithinLimitsPlan(t *testing.T) {
 		t.Fatalf("a plan past its limit: %v", err)
 	}
 
-	t.Setenv(envSerialPlan, "1")
+	t.Setenv(serialPlanEnv, "1")
 
-	queued, stopQueued := planWithin(t.Context(), w.cfg)
-	defer stopQueued()
+	serial, stopSerial := planWithin(t.Context(), w.cfg)
+	defer stopSerial()
 
-	if _, ok := queued.Deadline(); ok {
-		t.Fatal("a queued build's plan got a deadline of its own")
+	if _, ok := serial.Deadline(); !ok {
+		t.Fatal("a build of a planning job written serial plans without limits.plan")
 	}
 }
 
