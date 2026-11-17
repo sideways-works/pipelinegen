@@ -55,6 +55,7 @@ func commands() []command {
 		{"why", "say why a slice ran for a change, or why it didn't", runWhy},
 		{"status", "say what the records hold about a commit's runs, one line each; exit 0 passed, 1 failed, 2 pending, 3 no run: <commit|branch>", runStatus},
 		{"try", "plan each of the last commits under the current config, as if pipelinegen had run all along: --last <n>", runTry},
+		{"run", "plan a change and run the slices it selects on this machine, as a pull request's run would; it plans and runs commits, so uncommitted changes are neither planned nor run: --base <commit> | --all", metered("run", runLocal)},
 		{"record", "record a suite's slices at HEAD on this machine, into a local store affected and why read", runRecord},
 		{"seed", "put HEAD's local recordings into the shared store as its lists, the base of the branch's first runs: [--dry-run] [--replace]", runSeed},
 		{"baseline", "declare HEAD good by hand as a run's base, so its first runs need not run everything: --run <run> [--dry-run]", runBaseline},
