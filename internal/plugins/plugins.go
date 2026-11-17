@@ -106,7 +106,7 @@ func Load(ctx context.Context, o Options) (*Set, error) {
 	s := &Set{o: o, offAt: map[string]int{}}
 
 	for _, conf := range o.Config.Plugins {
-		if conf.Kind == config.KindRunner || conf.Kind == config.KindDriver {
+		if conf.Kind == config.KindRunner || conf.Kind == config.KindDriver || conf.Kind == config.KindConnector {
 			continue
 		}
 

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/pipelinegen/plugin"
 )
 
 func TestFromFixture(t *testing.T) {
@@ -249,5 +250,49 @@ func TestTheRunnerLearnsTheDraftState(t *testing.T) {
 				t.Errorf("draft %q: the spec says %s, want %s", draft, got, want)
 			}
 		}
+	}
+}
+
+// A config's github section runs the pinned GitHub connector, so the spec
+// names it for the bootstrap to fetch; a plugins entry by its name pins
+// another in its place.
+func TestTheSpecFetchesTheConnector(t *testing.T) {
+	base, err := os.ReadFile("../../testdata/kit/pipelinegen.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectors := func(text string) []plugin.SpecTool {
+		cfg, err := config.Parse([]byte(text))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		s, err := From(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var out []plugin.SpecTool
+
+		for _, tool := range s.Tools {
+			if tool.Kind == config.KindConnector {
+				out = append(out, tool)
+			}
+		}
+
+		return out
+	}
+
+	pin := config.PinnedConnectors[config.ConnectorGitHub]
+	if got := connectors(string(base)); len(got) != 1 || got[0].Name != "github" || got[0].Repository != pin.Repository || got[0].Version != pin.Version {
+		t.Fatalf("%+v", got)
+	}
+
+	sum := strings.Repeat("cd", 32)
+	entry := "plugins:\n  - {name: github, kind: connector, repository: team/pipelinegen-connector-github, release: {version: v9.0.0, sha256: " + sum + "}}\n"
+
+	if got := connectors(strings.Replace(string(base), "plugins:\n", entry, 1)); len(got) != 1 || got[0].Version != "v9.0.0" || got[0].SHA256 != sum {
+		t.Fatalf("%+v", got)
 	}
 }

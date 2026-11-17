@@ -1325,8 +1325,13 @@ func (c *Config) validatePlugins(bad func(string, ...any)) {
 		switch {
 		case p.Name == "" || names[p.Name]:
 			bad("plugins: every plugin needs a name of its own")
-		case p.Kind != KindCorrelator && p.Kind != KindSBOM && p.Kind != KindRunner && p.Kind != KindDriver:
-			bad("plugin %s: kind must be correlator, sbom, runner or driver", p.Name)
+		case p.Kind != KindCorrelator && p.Kind != KindSBOM && p.Kind != KindRunner && p.Kind != KindDriver && p.Kind != KindConnector:
+			bad("plugin %s: kind must be correlator, sbom, runner, driver or connector", p.Name)
+		case p.Kind == KindConnector && p.Name != ConnectorGitHub && p.Name != ConnectorGit:
+			bad("plugin %s: a connector entry pins the %s or %s connector, by that name", p.Name, ConnectorGitHub, ConnectorGit)
+		case p.Kind == KindConnector && (p.Release == nil || len(p.Config) > 0):
+			bad("plugin %s: a connector entry needs a release (version and one of sha256 or sums), and takes no config: "+
+				"the github section and connectors say where the code lives", p.Name)
 		case p.Kind == KindDriver && p.Name == BuiltinCommand:
 			bad("plugin %s: %s is the driver built into pipelinegen; give the entry another name", p.Name, BuiltinCommand)
 		case p.Repository == "":

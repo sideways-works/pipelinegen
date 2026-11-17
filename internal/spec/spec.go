@@ -206,6 +206,19 @@ func tools(cfg *config.Config) []plugin.SpecTool {
 		out = append(out, t)
 	}
 
+	// the connectors the config uses without an entry of its own, so the
+	// bootstrap fetches them with the pipeline's read token
+	for _, name := range cfg.ConnectorsUsed() {
+		if slices.ContainsFunc(cfg.Plugins, func(p config.Plugin) bool { return p.Kind == config.KindConnector && p.Name == name }) {
+			continue
+		}
+
+		pin := cfg.ConnectorPin(name)
+		sum, _ := pin.SHA256.For(config.LinuxAMD64)
+
+		out = append(out, plugin.SpecTool{Name: name, Kind: config.KindConnector, Repository: pin.Repository, Version: pin.Version, SHA256: sum})
+	}
+
 	return out
 }
 

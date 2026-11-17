@@ -78,7 +78,7 @@ func TestThePlainGitConnectorIsRefusedWhatItCannotDo(t *testing.T) {
 		"once per ready":     {"{changes: {base: main}}", "{changes: {base: main, once_per_ready: true}}", "changes.once_per_ready needs a connector that tells ready_since"},
 		"a comment":          {"compare: merged_target", "compare: merged_target\n    report: {comment: {format: list}}", "a comment needs a connector that keeps one"},
 		"a status":           {"compare: merged_target", "compare: merged_target\n    report: {status: true}", "`pipelinegen status` reads the run's state"},
-		"another plugin":     {"plugin: git,", "plugin: gitlab,", `plugin "gitlab": only the built-in git connector`},
+		"another plugin":     {"plugin: git,", "plugin: gitlab,", `plugin "gitlab": connectors takes the git connector`},
 		"a bad name":         {"name: git,", "name: Git_1,", "name must be lower case"},
 		"a bad remote":       {"plugin: git,", "plugin: git, remote: \"https://u:p@example.test/r.git\",", "no credential"},
 		"bad links":          {"plugin: git,", "plugin: git, links: \"cgit/{commit}\",", "links must be an http(s) URL"},
@@ -100,5 +100,38 @@ func TestThePlainGitConnectorIsRefusedWhatItCannotDo(t *testing.T) {
 	twice := withGit + "  - {name: git, plugin: git, changes: {branches: [\"x/*\"]}}\n"
 	if _, err := Parse([]byte(twice)); err == nil || !strings.Contains(err.Error(), "another connector has this name") {
 		t.Errorf("two connectors named alike: %v", err)
+	}
+}
+
+func TestAConnectorIsPinnedLikeAPlugin(t *testing.T) {
+	c, err := Parse([]byte(withGit))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if pin := c.ConnectorPin(ConnectorGit); !reflect.DeepEqual(pin, PinnedConnectors[ConnectorGit]) {
+		t.Fatalf("the default: %+v", pin)
+	}
+
+	sum := strings.Repeat("ab", 32)
+	entry := "plugins:\n  - {name: git, kind: connector, repository: team/pipelinegen-connector-git, release: {version: v0.3.0, sha256: " + sum + "}}\n"
+
+	c, err = Parse([]byte(withGit + entry))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if pin := c.ConnectorPin(ConnectorGit); pin.Repository != "team/pipelinegen-connector-git" || pin.Version != "v0.3.0" || pin.SHA256[anyPlatform] != sum {
+		t.Fatalf("the entry's: %+v", pin)
+	}
+
+	for text, want := range map[string]string{
+		strings.Replace(entry, "name: git", "name: gitlab", 1):                                                       "pins the github or git connector",
+		strings.Replace(entry, "release: {version: v0.3.0, sha256: "+sum+"}", "commit: "+strings.Repeat("a", 40), 1): "needs a release",
+		strings.Replace(entry, "}}", "}, config: {api: \"https://elsewhere.test\"}}", 1):                             "takes no config",
+	} {
+		if _, err := Parse([]byte(withGit + text)); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("want %q, got %v", want, err)
+		}
 	}
 }

@@ -11,7 +11,7 @@ import (
 )
 
 // Connector is a place the code, or its proposed changes, live: for now
-// the built-in plain git connector, for a git server with no host API.
+// the plain git connector, for a git server with no host API.
 type Connector struct {
 	Name string `json:"name" yaml:"name"`
 
@@ -29,8 +29,81 @@ type ConnectorChanges struct {
 	Branches []string `json:"branches" yaml:"branches"`
 }
 
-// ConnectorGit is the built-in plain git connector.
-const ConnectorGit = "git"
+// The connectors a config uses by name: git under connectors, github for
+// the github section.
+const (
+	ConnectorGit    = "git"
+	ConnectorGitHub = "github"
+)
+
+// KindConnector is a plugins entry that pins the git or github connector.
+const KindConnector = plugin.KindConnector
+
+// ConnectorPin is a connector's release: the repository whose GitHub
+// release holds it, its version, and its binaries' checksums by platform,
+// or the checksum of the release's SHA256SUMS.
+type ConnectorPin struct {
+	Name       string
+	Repository string
+	Version    string
+	SHA256     Checksums
+	Sums       string
+	// URL overrides where it is fetched from; %s is replaced by the
+	// repository, the version and the file's name, in that order.
+	URL string
+}
+
+// unreleased stands for a checksum the release isn't out to give yet: no
+// binary matches it, so nothing runs until it is filled in.
+const unreleased = "TODO"
+
+// PinnedConnectors are the connector releases a config uses unless a
+// plugins entry of kind connector by the same name pins another.
+var PinnedConnectors = map[string]ConnectorPin{
+	ConnectorGitHub: {
+		Name: ConnectorGitHub, Repository: "sideways-works/pipelinegen-connector-github", Version: "v0.1.0",
+		SHA256: Checksums{LinuxAMD64: unreleased, LinuxARM64: unreleased, DarwinAMD64: unreleased, DarwinARM64: unreleased},
+	},
+	ConnectorGit: {
+		Name: ConnectorGit, Repository: "sideways-works/pipelinegen-connector-git", Version: "v0.1.0",
+		SHA256: Checksums{LinuxAMD64: unreleased, LinuxARM64: unreleased, DarwinAMD64: unreleased, DarwinARM64: unreleased},
+	},
+}
+
+// ConnectorsUsed names the connectors the config runs: github for the
+// github section, git for a connector under connectors.
+func (c *Config) ConnectorsUsed() []string {
+	var out []string
+
+	if c.Reports() {
+		out = append(out, ConnectorGitHub)
+	}
+
+	if c.ChangesFromConnector() {
+		out = append(out, ConnectorGit)
+	}
+
+	return out
+}
+
+// ConnectorPin is the release of the connector named name the config
+// runs: its plugins entry's, or the pinned one.
+func (c *Config) ConnectorPin(name string) ConnectorPin {
+	for _, p := range c.Plugins {
+		if p.Kind != KindConnector || p.Name != name || p.Release == nil {
+			continue
+		}
+
+		pin := ConnectorPin{Name: name, Repository: p.Repository, Version: p.Release.Version, Sums: p.Release.Sums}
+		if p.Release.SHA256 != "" {
+			pin.SHA256 = Checksums{anyPlatform: p.Release.SHA256}
+		}
+
+		return pin
+	}
+
+	return PinnedConnectors[name]
+}
 
 var connectorCapabilities = map[string][]string{
 	ConnectorGit: {plugin.CapChanges},
@@ -73,7 +146,7 @@ func (c *Config) validateConnectors(bad func(string, ...any)) {
 		seen[cn.Name] = true
 
 		if cn.Plugin != ConnectorGit {
-			bad("%s: plugin %q: only the built-in git connector is in this release", where, cn.Plugin)
+			bad("%s: plugin %q: connectors takes the git connector in this release; GitHub is the github section", where, cn.Plugin)
 
 			continue
 		}

@@ -15,6 +15,14 @@ type Checksums map[string]string
 
 const anyPlatform = "*"
 
+// The platforms releases are built for.
+const (
+	LinuxAMD64  = "linux-amd64"
+	LinuxARM64  = "linux-arm64"
+	DarwinAMD64 = "darwin-amd64"
+	DarwinARM64 = "darwin-arm64"
+)
+
 var (
 	platformName = regexp.MustCompile(`^[a-z0-9]+-[a-z0-9]+$`)
 	errChecksums = errors.New("a checksum, or one per platform")

@@ -53,9 +53,9 @@ var Pinned = BazelDiff{
 	Version: "v67.0.3",
 	// the release publishes no checksum list, and no build for Intel Macs
 	SHA256: Checksums{
-		"linux-amd64":  "98d71d5ffc6e03dbe14f6b7f7b132bb6c5704b189065b3fa45915bad001e8e4e",
-		"linux-arm64":  "8a3235f10b5823400d7757a390df466637837a167a6bbcc6b0d10502123b29db",
-		"darwin-arm64": "649e623a05ddf8008f069983de153dc8bc524aec70a17d6035b926751b0cfbed",
+		LinuxAMD64:  "98d71d5ffc6e03dbe14f6b7f7b132bb6c5704b189065b3fa45915bad001e8e4e",
+		LinuxARM64:  "8a3235f10b5823400d7757a390df466637837a167a6bbcc6b0d10502123b29db",
+		DarwinARM64: "649e623a05ddf8008f069983de153dc8bc524aec70a17d6035b926751b0cfbed",
 	},
 }
 
