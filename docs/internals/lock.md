@@ -12,7 +12,9 @@ What is left, for one release:
 - `suites.<name>.lock` still loads, and `check` says it is no longer read.
   Its `minutes` is still read as the old spelling of the suite's `minutes`.
 - `pipelinegen lock` and `pipelinegen unlock` do nothing and exit 0, so a
-  pipeline generated before keeps running its lock steps. `lock acquire
+  lock step that runs this release passes. A pipeline runs the pipelinegen
+  it was generated with, so one generated before keeps its working locks
+  until it is set again. `lock acquire
   --started <dir>` still stamps the directory, for that pipeline's batch
   end to judge the batch's time limit by.
 - The one-step plan of a trusted run (`planAfter` in `internal/cli`)
