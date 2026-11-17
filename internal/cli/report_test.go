@@ -229,7 +229,7 @@ func writeFile(tb testing.TB, p, body string) {
 		tb.Fatal(err)
 	}
 
-	if err := os.WriteFile(p, []byte(body), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Clean(p), []byte(body), 0o600); err != nil {
 		tb.Fatal(err)
 	}
 }
