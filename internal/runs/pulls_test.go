@@ -149,14 +149,18 @@ func TestOncePerReady(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			p := pull(false)
 			p.ReadySince = &c.ready
+			p.HeadBranch = "feat/no*tes"
 			host := &listed{changes: []plugin.Change{p}}
 
-			ok, why, err := Admit(t.Context(), host, prConfig(config.PullRequests{OncePerReady: true}), change, ran)
+			ch := change
+			ch.Branch = p.HeadBranch
+
+			ok, why, err := Admit(t.Context(), host, prConfig(config.PullRequests{OncePerReady: true}), ch, ran)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if ok != c.admit || !host.asked[0].Filters.ReadySince {
+			if ok != c.admit || !host.asked[0].Filters.ReadySince || host.asked[0].Filters.Head != `feat/no\*tes` {
 				t.Errorf("admitted %v (%s), want %v; asked %+v", ok, why, c.admit, host.asked)
 			}
 		})

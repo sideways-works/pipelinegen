@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
@@ -20,6 +21,9 @@ type Changes interface {
 }
 
 var errReady = errors.New("ready since")
+
+// globEscaper makes a branch name a pattern that matches only itself.
+var globEscaper = strings.NewReplacer(`\`, `\\`, `*`, `\*`, `?`, `\?`, `[`, `\[`)
 
 func changesArgs(pr *config.PullRequests, ready bool) plugin.ChangesArgs {
 	return plugin.ChangesArgs{Base: pr.Base, Filters: plugin.ChangesFilters{
@@ -39,7 +43,13 @@ func Admit(ctx context.Context, host Changes, cfg *config.Config, ch Change, ran
 		return true, "", nil
 	}
 
-	changes, err := host.Changes(ctx, changesArgs(pr, pr.OncePerReady))
+	args := changesArgs(pr, pr.OncePerReady)
+	if pr.OncePerReady && ch.Branch != "" {
+		// a timeline costs a request a pull request: ask after this one's
+		args.Filters.Head = globEscaper.Replace(ch.Branch)
+	}
+
+	changes, err := host.Changes(ctx, args)
 	if err != nil {
 		return false, "", err
 	}
