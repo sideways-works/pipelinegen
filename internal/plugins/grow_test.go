@@ -5,6 +5,7 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strconv"
+	"syscall"
 	"testing"
 	"time"
 
@@ -77,31 +78,30 @@ func TestBindingGrowsWithTheClosureNotItsSquare(t *testing.T) {
 		best := time.Duration(1<<63 - 1)
 
 		for range 3 {
-			start := time.Now()
+			start := cpuTime(t)
 
 			if _, err := set.Bind(t.Context(), t.TempDir(), tree, sl); err != nil {
 				t.Fatal(err)
 			}
 
-			best = min(best, time.Since(start))
+			best = min(best, cpuTime(t)-start)
 		}
 
 		return best
 	}
 
-	// a ratio of two sizes measured back to back, a few times over: a busy
-	// machine slows one measurement more than the other now and then, a
-	// square in the code slows the large one every time
-	var small, large time.Duration
+	// the process's CPU time, which a busy machine barely moves, as its
+	// wall clock it does; four times the units is about four times the
+	// work, and a square would be sixteen
+	small, large := time.Duration(1<<63-1), time.Duration(1<<63-1)
 
-	for range 3 {
-		small, large = took(5000), took(20000)
-		if large <= 8*small {
-			return
-		}
+	for range 5 {
+		small, large = min(small, took(5000)), min(large, took(20000))
 	}
 
-	t.Fatalf("a closure of 20000 units took %v, of 5000 %v: %.1f times, want about 4", large, small, float64(large)/float64(small))
+	if large > 10*small {
+		t.Fatalf("a closure of 20000 units took %v, of 5000 %v: %.1f times, want about 4", large, small, float64(large)/float64(small))
+	}
 }
 
 func TestABoundSliceHoldsEachUnitOnce(t *testing.T) {
@@ -164,4 +164,16 @@ func TestABoundSliceHoldsEachUnitOnce(t *testing.T) {
 			t.Fatalf("%s %s bound %d units: the test binds too little", d.Name, d.Width, len(seen))
 		}
 	}
+}
+
+// cpuTime is the CPU time this process has used so far.
+func cpuTime(t *testing.T) time.Duration {
+	t.Helper()
+
+	var ru syscall.Rusage
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &ru); err != nil {
+		t.Fatal(err)
+	}
+
+	return time.Duration(ru.Utime.Nano() + ru.Stime.Nano())
 }
