@@ -107,8 +107,10 @@ ran at e756ea760d06:
 First comes the plan, then each suite with a selected slice runs: its
 prepare once, then one batch of its selected slices, through its drivers
 or its task files. The last lines sum up each suite. The tests' own
-output, and why a slice failed, go to stderr. A failed slice is named in
-the summary, and `run` exits 1:
+output, and why a slice failed, go to stderr; without `--work`, the
+failures are said there in full, as the run's records go with its
+temporary directory. A failed slice is named in the summary, and `run`
+exits 1:
 
 ```
 ran at 9dc1d1f84ba1:

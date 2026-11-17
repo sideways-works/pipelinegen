@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"os"
 	"slices"
 	"strings"
 
@@ -20,6 +21,10 @@ const (
 	whyBytes     = 6000
 )
 
+// envInFull asks for every failure the store holds and no ref to read them at, for a store that is gone
+// by the time the output is read.
+const envInFull = "PIPELINEGEN_FAILURES_IN_FULL"
+
 // whyNotPassed groups the slices that failed alike, capped; only, when set, names the slices to look at.
 func whyNotPassed(ctx context.Context, store *gitstore.Store, id report.ID, suite string, only []string) string {
 	files, err := report.StateFiles(ctx, store, id, suite)
@@ -32,7 +37,12 @@ func whyNotPassed(ctx context.Context, store *gitstore.Store, id report.ID, suit
 		return ""
 	}
 
-	text, cut := renderWhy(groups)
+	full := os.Getenv(envInFull) != ""
+
+	text, cut := renderWhy(groups, full)
+	if full {
+		return text
+	}
 
 	where := "the full text of each: its state.json in the store, " + id.Prefix() + suite + "/<slice>/="
 	if cut {
@@ -84,13 +94,13 @@ func failedAlike(files map[string]report.StateFile, only []string) []*whyGroup {
 	return groups
 }
 
-func renderWhy(groups []*whyGroup) (string, bool) {
+func renderWhy(groups []*whyGroup, full bool) (string, bool) {
 	var b strings.Builder
 
 	cut := false
 
 	for _, g := range groups {
-		if b.Len() > whyBytes {
+		if !full && b.Len() > whyBytes {
 			return b.String(), true
 		}
 

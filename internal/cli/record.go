@@ -443,6 +443,8 @@ type localBuild struct {
 	box *imageBox
 	// out takes the tasks' output; nil is stderr.
 	out io.Writer
+	// storeGoes says the run's store is removed when it ends, so a failure is said in full.
+	storeGoes bool
 }
 
 // findPlugins puts in b.plugins the drivers and correlators the suite's batch runs, fetching those
@@ -903,6 +905,10 @@ func (b *localBuild) finish(ctx context.Context) error {
 		cmd.Dir = b.dir
 		cmd.Env = b.env(nil)
 		cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
+
+		if b.storeGoes {
+			cmd.Env = append(cmd.Env, envInFull+"=true")
+		}
 
 		if err := cmd.Run(); err != nil {
 			if !b.cfg.Records(localRun, b.suite) {

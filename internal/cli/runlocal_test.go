@@ -83,8 +83,9 @@ func TestRunSaysWhichSliceFailed(t *testing.T) {
 		}
 	}
 
-	if !strings.Contains(stderr, "broke") {
-		t.Errorf("the failure's tail isn't said:\n%s", stderr)
+	// the run's store goes with its temporary directory, so the failure is said in full, with no ref to it.
+	if !strings.Contains(stderr, "failed, 1 slice: e2e/bad.spec.ts\n") || !strings.Contains(stderr, "broke") || strings.Contains(stderr, "refs/pipelinegen/") {
+		t.Errorf("the failure isn't said in full, or names a ref in a store that is gone:\n%s", stderr)
 	}
 }
 

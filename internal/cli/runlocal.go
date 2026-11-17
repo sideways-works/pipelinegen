@@ -163,7 +163,7 @@ func (f *localRunFlags) run(ctx context.Context, cfg *config.Config, head string
 		defer os.RemoveAll(work) //nolint:errcheck // a temporary directory
 	}
 
-	r := &localSuiteRun{data: data, src: src, root: f.root, work: work, plugins: f.lp.plugins, head: head, out: stdout, images: f.images}
+	r := &localSuiteRun{data: data, src: src, root: f.root, work: work, temp: f.work == "", plugins: f.lp.plugins, head: head, out: stdout, images: f.images}
 
 	var tallies []suiteTally
 
@@ -328,6 +328,8 @@ type localSuiteRun struct {
 	head                     string
 	out                      io.Writer
 	images                   imageFlags
+	// temp says work is removed when the run ends.
+	temp bool
 }
 
 type suiteTally struct {
@@ -370,6 +372,7 @@ func (r *localSuiteRun) suite(ctx context.Context, sp affected.SuitePlan, record
 	b := &localBuild{
 		cfg: derived, cfgPath: cfgPath, root: r.root, dir: filepath.Join(dir, "build"),
 		suite: sp.Suite, ch: ch, plugins: r.plugins, out: r.out, box: &imageBox{flags: r.images},
+		storeGoes: r.temp && !record,
 	}
 
 	if err := b.findPlugins(ctx); err != nil {

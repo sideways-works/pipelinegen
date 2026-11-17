@@ -907,7 +907,7 @@ never ran, or the run itself failed; 2 for a command line it can't read,
 | `--bazel-diff` | the pinned release | A bazel-diff binary to run instead of downloading one. |
 | `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, one executable per name: the sbom and correlator plugins planning asks, and the drivers the batches run. A plugin it lacks, and a driver there that isn't the build its pin names, is [fetched](#plugins-a-command-fetches) from its pinned release. A driver must be the build its pin names, as on CI. |
 | `--no-fill` | `false` | Doesn't fill the caches the plugins read before planning, as `affected --no-fill`. |
-| `--work` | a temporary directory, removed after | Where the builds go, one directory per suite (`<work>/<suite>/build`, with the run's records in `<work>/<suite>/store.git` when it doesn't record). A directory used before is reused as `record --work` reuses it, which keeps Bazel's output base warm. |
+| `--work` | a temporary directory, removed after | Where the builds go, one directory per suite (`<work>/<suite>/build`, with the run's records in `<work>/<suite>/store.git` when it doesn't record). A directory used before is reused as `record --work` reuses it, which keeps Bazel's output base warm. Without it the records go with the directory, so why a slice failed is said in full on stderr, with no ref to read the rest at. |
 | `--no-image` | `false` | Runs the suites' steps on this machine instead of in the images the config names. |
 | `--container-tool` | `docker`, else `podman`, whichever is on `PATH` | The tool that runs the steps in their images. |
 | `--as-me` | `false` | Runs the steps in their images as you, not as root as CI does; a privileged suite runs as root either way. |

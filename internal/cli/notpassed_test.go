@@ -94,6 +94,22 @@ func TestASuitesEndSaysWhyItDidNotPass(t *testing.T) {
 	}
 }
 
+// In full, every group is said: the store the rest would be read from is gone.
+func TestWhyInFullSaysEveryGroup(t *testing.T) {
+	var groups []*whyGroup
+	for i := range 10 {
+		groups = append(groups, &whyGroup{State: report.Failed, Failures: []report.Failure{{Test: fmt.Sprintf("t%d", i), Tail: strings.Repeat("x", 1000)}}, slices: []string{fmt.Sprintf("s%d", i)}})
+	}
+
+	if text, cut := renderWhy(groups, false); !cut || strings.Contains(text, "t9\n") {
+		t.Fatalf("capped: cut %t\n%s", cut, text)
+	}
+
+	if text, cut := renderWhy(groups, true); cut || !strings.Contains(text, "t9\n") {
+		t.Fatalf("in full: cut %t\n%s", cut, text)
+	}
+}
+
 func TestWhyIsCapped(t *testing.T) {
 	var long []string
 	for i := range 40 {
