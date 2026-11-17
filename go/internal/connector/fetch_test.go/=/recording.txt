@@ -1,0 +1,12 @@
+# observed
+go:internal/config#func:Platform
+go:internal/config#method:Checksums.For
+go:internal/connector#func:Fetch
+go:internal/connector#func:Program
+go:internal/connector#func:asset
+go:internal/connector#func:download
+go:internal/connector#func:fileSum
+go:internal/connector#func:hexSum
+go:internal/connector#func:pinnedSum
+go:internal/testenv#var:cp
+go:plugin#func:Program
