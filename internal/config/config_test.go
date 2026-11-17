@@ -749,14 +749,14 @@ func TestRunsNeedNoHost(t *testing.T) {
 
 func TestWithoutAHostWhatNeedsOneIsRefused(t *testing.T) {
 	cases := map[string][3]string{
-		"pull requests":       {"trigger: {branch: main}", "trigger: {pull_requests: {base: main}}", "needs a host or a connector that lists them"},
-		"statuses asked for":  {"compare: last_passed\n", "compare: last_passed\n    report: {status: true}\n", "report.status needs a host"},
-		"a password":          {"git://example.test/r.git", "https://u:p@example.test/r.git", "without a user, password"},
-		"a user":              {"git://example.test/r.git", "https://u@example.test/r.git", "without a user, password"},
-		"ssh":                 {"git://example.test/r.git", "ssh://git@example.test/r.git", "an ssh remote needs git.ssh_key"},
-		"scp form":            {"git://example.test/r.git", "git@example.test:r.git", "an ssh remote needs git.known_hosts"},
-		"a query":             {"git://example.test/r.git", "https://example.test/r.git?token=x", "query"},
-		"no path":             {"git://example.test/r.git", "https://example.test/", "https, http, git or file URL"},
+		"pull requests":      {"trigger: {branch: main}", "trigger: {pull_requests: {base: main}}", "needs a host or a connector that lists them"},
+		"statuses asked for": {"compare: last_passed\n", "compare: last_passed\n    report: {status: true}\n", "report.status needs a host"},
+		"a password":         {"git://example.test/r.git", "https://u:p@example.test/r.git", "without a user, password"},
+		"a user":             {"git://example.test/r.git", "https://u@example.test/r.git", "without a user, password"},
+		"ssh":                {"git://example.test/r.git", "ssh://git@example.test/r.git", "an ssh remote needs git.ssh_key"},
+		"scp form":           {"git://example.test/r.git", "git@example.test:r.git", "an ssh remote needs git.known_hosts"},
+		"a query":            {"git://example.test/r.git", "https://example.test/r.git?token=x", "query"},
+		"no path":            {"git://example.test/r.git", "https://example.test/", "https, http, git or file URL"},
 	}
 
 	for name, c := range cases {
