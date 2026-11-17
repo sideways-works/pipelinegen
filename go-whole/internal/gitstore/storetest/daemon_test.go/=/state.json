@@ -1,0 +1,12 @@
+{
+  "label": "internal/gitstore/storetest/daemon_test.go",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go-whole",
+  "updated": "2026-11-17T17:36:31.782770905Z",
+  "failures": [
+    {
+      "test": "(not run)",
+      "tail": "batch 1 stopped before its first slice started, 4 minutes after the suite began: not its time limit of 120 minutes (suites.go-whole.minutes); its task died: the build log says why"
+    }
+  ]
+}
