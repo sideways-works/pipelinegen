@@ -3,6 +3,8 @@ package plugins
 import (
 	"fmt"
 	"math/rand/v2"
+	"runtime"
+	"runtime/debug"
 	"slices"
 	"strconv"
 	"syscall"
@@ -77,7 +79,13 @@ func TestBindingGrowsWithTheClosureNotItsSquare(t *testing.T) {
 		sl := []BindSlice{{Suite: "s", Name: "a_test.go", List: []string{"go:p#func:F000000"}, HasList: true}}
 		best := time.Duration(1<<63 - 1)
 
+		// the collector's work grows with the heap and runs on other cores:
+		// off while measuring, the binding's own work is what is counted
+		defer debug.SetGCPercent(debug.SetGCPercent(-1))
+
 		for range 3 {
+			runtime.GC()
+
 			start := cpuTime(t)
 
 			if _, err := set.Bind(t.Context(), t.TempDir(), tree, sl); err != nil {
