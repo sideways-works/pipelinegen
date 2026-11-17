@@ -38,9 +38,7 @@ whose checksum fails.
 
 ## From source (any platform)
 
-With Go 1.27 or newer, and, while the repository is private, a git login
-that can read it and `GOPRIVATE=github.com/sideways-works/*` set, so Go
-fetches it directly instead of through the public module proxy:
+With Go 1.27 or newer:
 
 ```sh
 go install github.com/sideways-works/pipelinegen/cmd/pipelinegen@latest

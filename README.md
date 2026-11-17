@@ -126,9 +126,7 @@ Releases are static binaries for Linux and macOS, on amd64 and arm64,
 with a `SHA256SUMS` file, on the repository's releases page (macOS since
 v0.2.0); [install](docs/tutorial/install.md) shows how to check
 them. On other platforms, build from source with Go: `go install
-github.com/sideways-works/pipelinegen/cmd/pipelinegen@latest`. While the
-repository is private, that needs a git login that can read it and
-`GOPRIVATE=github.com/sideways-works/*`.
+github.com/sideways-works/pipelinegen/cmd/pipelinegen@latest`.
 
 ## Status
 
