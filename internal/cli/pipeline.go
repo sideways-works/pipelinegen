@@ -124,14 +124,20 @@ func pipelineText(ctx context.Context, cfg *config.Config, root, runner, plugins
 		runner = filepath.Join(plugins, conf.Name)
 	}
 
-	s, err := spec.From(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	absRoot, err := filepath.Abs(root)
 	if err != nil {
 		return nil, nil, fmt.Errorf("pipeline: %w", err)
+	}
+
+	// the runner reads the same file from the same tree
+	var include []byte
+	if f := cfg.Concourse.Include; f != "" {
+		include, _ = os.ReadFile(filepath.Join(absRoot, filepath.Clean(f))) //nolint:errcheck,gosec // the root pipeline file the config names; the runner says when it's missing
+	}
+
+	s, err := spec.FromInclude(cfg, include)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	work, err := os.MkdirTemp("", "pipelinegen-runner-")
@@ -169,7 +175,18 @@ func pipelineText(ctx context.Context, cfg *config.Config, root, runner, plugins
 		return nil, nil, fmt.Errorf("%w: %w", errRunner, err)
 	}
 
-	return text, noticeLines(ans.Notices), nil
+	return text, noticeLines(append(ans.Notices, runnerInstalls(cfg, conf.Name, desc)...)), nil
+}
+
+// runnerInstalls says when the config declares packages and the runner can't install them: the
+// pipeline it wrote still runs, without them.
+func runnerInstalls(cfg *config.Config, runner string, desc plugin.Description) []string {
+	if !cfg.HasPackages() || slices.Contains(desc.Capabilities, plugin.CapPackages) {
+		return nil
+	}
+
+	return []string{fmt.Sprintf("packages: %s %s installs no packages and builds no cached image, so the steps run without what "+
+		"packages declares: update it", runner, desc.Version)}
 }
 
 func sayNotices(w io.Writer, runner string, notices []string) {

@@ -47,7 +47,75 @@ type Spec struct {
 	// Limits are the time limits, in minutes, of the steps that aren't a
 	// suite's own tasks; every step a runner generates has one.
 	Limits SpecLimits `json:"limits"`
+	// PlannerPackages are what pipelinegen's own steps need in the planner
+	// image (CapPackages). They are installed by each step, never baked
+	// into a cached image: those steps hold the tokens that write, and a
+	// cached image is pulled by a tag that whoever can push may move.
+	PlannerPackages *SpecPackages `json:"planner_packages,omitempty"`
+	// Images is where cached images are kept and which to build, when the
+	// config names a registry.
+	Images *SpecImages `json:"images,omitempty"`
 }
+
+// CapPackages is a runner's capability to install the packages of
+// SpecSuite.Packages and Spec.PlannerPackages, and to build and use the
+// cached images of Spec.Images. A runner without it writes a pipeline
+// that installs nothing, which pipelinegen says.
+const CapPackages = "packages"
+
+// SpecPackages are what a set of steps needs installed.
+type SpecPackages struct {
+	// Names are the packages as a person reads them.
+	Names []string `json:"names"`
+	// Install is a POSIX shell script, run as root before a task's own
+	// command in the task's container, that installs the packages the
+	// image lacks with its package manager and does nothing when it has
+	// them all. It runs in a subshell and fails the task when a package
+	// can't be installed. EnvPackageCache names the directory, of the
+	// task's cache, the manager keeps its downloads in.
+	Install string `json:"install"`
+	// Images maps each registry-image resource the steps run in that has
+	// a cached image to that image's key in Images.Builds; the steps run
+	// in it, where Install finds everything there.
+	Images map[string]string `json:"images,omitempty"`
+}
+
+// SpecImages are the cached images: a base image with a suite's packages
+// installed, built once and pushed to Registry tagged with its key.
+type SpecImages struct {
+	Registry string `json:"registry"`
+	// Credentials is the var of the username and password that push to
+	// Registry, given to the job that builds the images and to nothing
+	// else; PullCredentials, when set, the var of a login that only pulls,
+	// which every step that pulls a cached image gets in its place. A
+	// step that runs a change's code never gets either.
+	Credentials     string `json:"credentials,omitempty"`
+	PullCredentials string `json:"pull_credentials,omitempty"`
+	// Builds are the images to build, one per key.
+	Builds []SpecImageBuild `json:"builds,omitempty"`
+}
+
+// SpecImageBuild is one cached image: Install run as root on Base, a
+// registry-image resource of the root pipeline file, at Digest, and
+// pushed as Registry:Key when no image has that tag yet. The key is the
+// tool's, from the digest, the packages and the install script: a runner
+// never works it out.
+type SpecImageBuild struct {
+	Key     string   `json:"key"`
+	Base    string   `json:"base"`
+	Digest  string   `json:"digest"`
+	Names   []string `json:"names"`
+	Install string   `json:"install"`
+}
+
+// The install script's environment: EnvPackageCache is a directory,
+// relative to the task's working directory or absolute, the package
+// manager keeps its downloads in; EnvPackageClean, set, removes its
+// indexes and downloads afterwards, for an image that is kept.
+const (
+	EnvPackageCache = "PIPELINEGEN_PACKAGE_CACHE"
+	EnvPackageClean = "PIPELINEGEN_PACKAGE_CLEAN"
+)
 
 // SpecLimits are the time limits of the pipeline's own steps, in minutes.
 type SpecLimits struct {
@@ -236,6 +304,11 @@ type SpecSuite struct {
 	// Steps, for a suite run by drivers, replaces Prepare and RunSlice:
 	// the runner writes the suite's tasks itself (CapSteps).
 	Steps *SpecSteps `json:"steps,omitempty"`
+	// Packages are what the suite's steps need installed (CapPackages):
+	// a runner installs them in the tasks it writes, and runs the
+	// suite's tasks in their cached images where Packages.Images names
+	// one.
+	Packages *SpecPackages `json:"packages,omitempty"`
 }
 
 // SpecSteps is what a runner needs of a suite run by drivers. Its batch

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/pipelinegen/plugin"
 )
 
 // Manager is a package manager the install looks for, and the family whose
@@ -33,13 +34,8 @@ var Managers = []Manager{
 
 // The install script's environment.
 const (
-	// EnvCache is a directory the manager keeps what it downloads in,
-	// relative to the step's working directory or absolute; unset, it
-	// keeps nothing.
-	EnvCache = "PIPELINEGEN_PACKAGE_CACHE"
-	// EnvClean, set, removes the manager's indexes and downloads after
-	// installing, for an image that is kept.
-	EnvClean = "PIPELINEGEN_PACKAGE_CLEAN"
+	EnvCache = plugin.EnvPackageCache
+	EnvClean = plugin.EnvPackageClean
 )
 
 // Script is a POSIX shell script that installs the packages ps the image

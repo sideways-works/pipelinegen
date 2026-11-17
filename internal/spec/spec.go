@@ -8,19 +8,27 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 
 	"go.yaml.in/yaml/v3"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/gitssh"
+	"github.com/sideways-works/pipelinegen/internal/packages"
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
 // ErrSpec wraps a config a spec can't be made from.
 var ErrSpec = errors.New("spec")
 
-// From makes the spec of a config.
-func From(cfg *config.Config) (plugin.Spec, error) {
+// From makes the spec of a config whose root pipeline file isn't at hand:
+// it names no cached image.
+func From(cfg *config.Config) (plugin.Spec, error) { return FromInclude(cfg, nil) }
+
+// FromInclude makes the spec of a config; include is the root pipeline
+// file's text (concourse.include), whose registry-image resources are the
+// bases of the cached images.
+func FromInclude(cfg *config.Config, include []byte) (plugin.Spec, error) {
 	// only a pipeline links to Concourse: no other command needs its
 	// address, so a missing one fails here and nowhere else
 	if len(cfg.Runs) > 0 && cfg.Concourse.URL == "" {
@@ -77,6 +85,8 @@ func From(cfg *config.Config) (plugin.Spec, error) {
 	for _, name := range cfg.SuiteNames() {
 		s.Suites = append(s.Suites, suite(cfg, name))
 	}
+
+	withPackages(&s, cfg, include)
 
 	for _, name := range cfg.RunNames() {
 		s.Runs = append(s.Runs, run(cfg, name))
@@ -235,4 +245,58 @@ func asMap(v any) (map[string]any, error) {
 	}
 
 	return m, nil
+}
+
+// withPackages adds what the steps need installed, and the cached images
+// that bring it, one build per key.
+func withPackages(s *plugin.Spec, cfg *config.Config, include []byte) {
+	if ps := cfg.Concourse.Planner.Packages; len(ps) > 0 {
+		s.PlannerPackages = &plugin.SpecPackages{Names: packages.Names(ps), Install: packages.Script(ps)}
+	}
+
+	if i := cfg.Images; i.Registry != "" {
+		s.Images = &plugin.SpecImages{Registry: i.Registry, Credentials: i.Credentials, PullCredentials: i.PullCredentials}
+	}
+
+	var bases map[string]packages.Base
+	if len(include) > 0 {
+		bases, _ = packages.Bases(include)
+	}
+
+	uses := packages.Uses(cfg, bases)
+	built := map[string]bool{}
+
+	for i, su := range s.Suites {
+		ps := cfg.PackagesFor(su.Name)
+		if len(ps) == 0 {
+			continue
+		}
+
+		sp := &plugin.SpecPackages{Names: packages.Names(ps), Install: packages.Script(ps)}
+
+		for _, u := range uses {
+			if u.Suite != su.Name || u.Key == "" {
+				continue
+			}
+
+			if sp.Images == nil {
+				sp.Images = map[string]string{}
+			}
+
+			sp.Images[u.Image] = u.Key
+
+			if !built[u.Key] {
+				built[u.Key] = true
+				s.Images.Builds = append(s.Images.Builds, plugin.SpecImageBuild{
+					Key: u.Key, Base: u.Image, Digest: u.Base.Digest, Names: sp.Names, Install: sp.Install,
+				})
+			}
+		}
+
+		s.Suites[i].Packages = sp
+	}
+
+	if s.Images != nil {
+		slices.SortFunc(s.Images.Builds, func(a, b plugin.SpecImageBuild) int { return strings.Compare(a.Key, b.Key) })
+	}
 }
