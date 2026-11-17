@@ -726,6 +726,13 @@ its `describe` answer.
   passed at one of them and that the change from there doesn't reach. A
   slice without such a pass, the sample's targets and a suite whose checks
   of the whole suite run keep the run's base.
+- **build-files-by-targets** (the core): a recorded slice's filegroups are
+  opened down to their files, and a `BUILD`, `BUILD.bazel` or `.bzl` file
+  among them is no data file of the slice. A change to a rule still
+  reaches it through that rule, whose hash bazel-diff takes from its
+  attributes and the Starlark it loads, and a change to a filegroup's
+  members as files added or removed. A test that reads such files as text
+  is declared with `text_inputs` and keeps them.
 - **unreached-new** (go-correlator): a new declaration or file
   unit nothing reaches selects nothing by itself: whatever starts using it
   changed too and selects its own slices. A new method is not new in this
@@ -788,6 +795,7 @@ that switches each off:
 | plugin-entry | 4 | a correlator's entry changes what is recorded and bound, not what runs, and an sbom's entry how units are listed and digested, not the code: a sample checks the new entry on each suite it reaches, a unit that really changed still selects on its own, and the nightly runs and records the rest; off, what the entry reaches runs, beside any `sample_on` sample |
 | unobservable-edits | 4 | it rests on an sbom's parse being complete and on the tests that read a file's text being declared; level 4 is where a repository takes neither from its plugins |
 | passed-since | 4 | a slice that passed in the same run at a commit newer than the run's base was tested on every change up to it, so only what came since needs it; it rests on that one pass, a flaky one included, and the nightly runs the rest |
+| build-files-by-targets | 5 | a BUILD file's rules reach a slice through those rules, which bazel-diff hashes, and the members it lists show as files added to or removed from a filegroup; it rests only on the tests that read such a file's text being declared, so it stays on up to the level that binds everything by declaration |
 
 Each plugin declares its own narrowings in its `describe` answer, each with
 the level that switches it off, and lists them with the reason for each

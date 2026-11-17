@@ -44,13 +44,23 @@ type BindSlice struct {
 	// Declared are the labels among Data the test file names in its own
 	// pipelinegen:data lines, which no narrowing takes away.
 	Declared []string
-	Setup    bool
+	// Tops are the data labels as the slice names them, and Groups the
+	// filegroups among them opened: Data then holds what they stand for.
+	Tops   []string
+	Groups *bazel.Groups
+	Setup  bool
 	// Graph marks a slice of a suite bound by the Bazel graph: it never
 	// records, so it depends on its own files' units and its data.
 	Graph bool
 }
 
 const setupSlice = "_setup"
+
+// InGroup tells a data label found inside one of the slice's filegroups
+// from one the slice names itself.
+func (sl BindSlice) InGroup(label string) bool {
+	return sl.Groups != nil && !slices.Contains(sl.Tops, label)
+}
 
 func (sl BindSlice) answerName() string {
 	if sl.Setup {
@@ -74,7 +84,7 @@ func (s *Set) Bind(ctx context.Context, root string, t *deps.Tree, slices []Bind
 	g := newLinkGraph(OwnFiles(root, t, slices))
 	out := make([]deps.Slice, 0, 2*len(slices))
 
-	bound, recorded := make([]map[string]*deps.Slice, len(slices)), RecordedSBOMs(t, slices)
+	bound, leaves := make([]map[string]*deps.Slice, len(slices)), NewLeaves(s.config(), t, slices)
 
 	for i, sl := range slices {
 		bound[i] = map[string]*deps.Slice{}
@@ -84,7 +94,7 @@ func (s *Set) Bind(ctx context.Context, root string, t *deps.Tree, slices []Bind
 				Suite: sl.Suite, Name: sl.Name, Width: width, Why: map[string]deps.Why{}, Everything: !sl.HasList && !sl.Graph,
 				Dropped: map[string][]string{}, DroppedGroups: map[string][]string{},
 			}
-			d.Data = data(t, sl, recorded[sl.Suite])
+			d.Data = data(leaves, sl)
 
 			switch {
 			case sl.HasList:
@@ -442,15 +452,13 @@ func roots(t *deps.Tree, sl BindSlice) map[string]deps.Why {
 	return out
 }
 
-// data is a slice's data labels. A label of a file with units is dropped for
-// a slice with a list when its suite's recordings hold units of the file's
-// sbom: the units it touched are roots already.
-func data(t *deps.Tree, sl BindSlice, recorded map[string]bool) []string {
+// data is a slice's data labels less those Leaves judges replaced: a file
+// whose units the slice touched are roots already, and a BUILD file.
+func data(f *Leaves, sl BindSlice) []string {
 	var out []string
 
 	for _, label := range sl.Data {
-		path, ok := bazel.LabelPath(label)
-		if units, hasUnits := t.FileUnits[path]; ok && hasUnits && sl.HasList && recorded[ProviderOf(t, units)] {
+		if j := f.Judge(sl, label, sl.InGroup(label)); j == LeafUnits || j == LeafBuild {
 			continue
 		}
 

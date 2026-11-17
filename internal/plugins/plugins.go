@@ -225,6 +225,10 @@ const (
 	// NarrowPassedSince compares a slice of a last_passed run from where it
 	// last passed in that run, when that is newer than the run's base.
 	NarrowPassedSince = "passed-since"
+
+	// NarrowBuildFiles leaves BUILD and .bzl files out of a recorded
+	// slice's data: a change to a rule reaches it through that rule.
+	NarrowBuildFiles = "build-files-by-targets"
 )
 
 // CoreNarrowings are the core's own narrowings with the level that
@@ -241,6 +245,8 @@ var CoreNarrowings = []plugin.Narrowing{
 		"runs as it did; it rests on the sbom's parse being complete and on the tests that read the file's text being declared (text_inputs)"},
 	{Name: NarrowPassedSince, OffAt: 4, Note: "a slice that passed at a later commit than the run's base was tested on everything up to it; " +
 		"it rests on that one pass, so a flaky pass moves its base too; the nightly runs it"},
+	{Name: NarrowBuildFiles, OffAt: 5, Note: "a BUILD or .bzl file a recorded slice's filegroups hold reaches it through the rules it declares, " +
+		"which bazel-diff hashes, and through the members it lists; it rests on the tests that read such a file's text being declared (text_inputs)"},
 }
 
 // CoreOffAt is the level from which a core narrowing is off.

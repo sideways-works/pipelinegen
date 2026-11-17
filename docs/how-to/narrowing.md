@@ -23,6 +23,7 @@ The core declares these itself:
 | `plugin-entry` | a changed plugin entry (a pin, a checksum, its config block) runs a sample of each suite it reaches; what it left out is named under it | 4 |
 | `unobservable-edits` | a changed file whose sbom covers it whole, with every unit as it was, runs no slice of a recorded suite, only the checks that read its text | 4 |
 | `passed-since` | on a `last_passed` run, a slice is compared from the newer of the run's base and the commit where it last passed in that run, so a change it passed with doesn't run it again while another slice keeps the run red | 4 |
+| `build-files-by-targets` | a BUILD or `.bzl` file a recorded slice's filegroups hold is no data file of it: a changed rule reaches the slice through that rule, a changed member list as files added or removed | 5 |
 
 Each plugin declares its own narrowings, each with the level it is off
 from, in its `describe` answer, and its README lists them in a section
@@ -176,6 +177,47 @@ suites:
       - tests: ["internal/docscheck/*_test.go"]
         paths: ["**/*.go", "docs/**"]
 ```
+
+## Files inside filegroups
+
+A recorded slice's data is often a filegroup that holds a whole app or
+stack: an e2e spec's owner names `//e2e:stack`, which holds the app's
+shell, which holds the migrations. Planning opens such filegroups, and the
+filegroups inside them, down to their files (an alias to what it names),
+and judges each file on its own:
+
+- a file whose sbom lists units for it, and whose claim names an anchor
+  the slice's list holds, is replaced by the units the slice touched;
+- such a file without an anchor is replaced in a suite whose recordings
+  hold units its sbom lists for files of the same directory (a migrations
+  directory, say);
+- a `BUILD`, `BUILD.bazel` or `.bzl` file is no data file at all, while
+  `build-files-by-targets` is on: a change to a rule it declares reaches
+  the slice through that rule, and a change to a member list as files
+  added or removed;
+- every other file stays a label of its own: a down migration with no
+  units, a font, a template.
+
+Other rules (a genrule, a `js_library`), a filegroup with an
+`output_group` or a `select()`, a generated file (as the rule that makes
+it), another repository's label and a label in the test file's own
+`pipelinegen:data` lines stay whole. A filegroup in which the slice gives
+up nothing, in either tree, stays one label, as before. A reason names
+the filegroups a file was found through: "`//db:0001_users.down.sql`
+changed, through `//db:migrations > //stack:stack`".
+
+A file with units added, removed or renamed in a filegroup is a change to
+what the files say as a whole: which tables exist, in what order the
+migrations run. Added or removed, it reaches the suite's setup part where
+the setup list holds units its sbom lists for that directory and the
+setup split is on, and the suite runs its sample; otherwise it stays a
+label of every slice that holds it, so they all run. A file renamed (one
+removed beside one added in the same directory) stays a label of every
+slice that holds it.
+
+A test that lists such a directory or reads its files as text sees what
+units don't hold: declare it with `text_inputs` or a `pipelinegen:data`
+line, which keeps the files whole for it.
 
 ## The alarm
 
