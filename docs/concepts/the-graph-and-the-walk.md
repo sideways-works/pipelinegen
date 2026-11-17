@@ -41,11 +41,12 @@ flowchart RL
   t1["api/create_test.go"] -. executed .-> validate
   s1["e2e/create.spec.ts<br/>(through the server)"] -. executed .-> validate
   s2["e2e/search.spec.ts<br/>untouched"]
-  classDef changed fill:#ffe0b2,stroke:#e65100,color:#000
-  classDef slice fill:#d9f2d9,stroke:#2e7d32,color:#000
-  classDef out fill:#eeeeee,stroke:#9e9e9e,color:#000
-  class validate changed
-  class t1,s1 slice
+  classDef default fill:#FFF4E2,stroke:#15110D,color:#15110D
+  classDef key fill:#FFD23F,stroke:#15110D,color:#15110D,stroke-width:2px
+  classDef runs fill:#5BB8F0,stroke:#15110D,color:#15110D,stroke-width:2px
+  classDef out fill:#EEEEEE,stroke:#9E9E9E,color:#57606A,stroke-dasharray:4 4
+  class validate key
+  class t1,s1 runs
   class s2 out
 ```
 

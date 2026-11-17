@@ -35,6 +35,12 @@ flowchart TD
   report --> github[("GitHub API")]
   gitstore --> remote[("the repository's refs")]
   cli -. "pipeline" .-> runner["the runner plugin<br/>the generated pipeline"]
+  classDef default fill:#FFF4E2,stroke:#15110D,color:#15110D
+  classDef key fill:#FFD23F,stroke:#15110D,color:#15110D,stroke-width:2px
+  classDef runs fill:#5BB8F0,stroke:#15110D,color:#15110D,stroke-width:2px
+  classDef out fill:#EEEEEE,stroke:#9E9E9E,color:#57606A,stroke-dasharray:4 4
+  class cli key
+  class github,remote,runner runs
 ```
 
 `internal/batch` deals selected slices into batches and

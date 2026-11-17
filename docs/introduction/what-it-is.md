@@ -34,8 +34,11 @@ flowchart LR
   handler -. "called over HTTP by" .-> s2["address-book.spec.ts<br/>runs"]
   s3["search.spec.ts<br/>left out"]
   s4["settings.spec.ts<br/>left out"]
-  classDef runs fill:#d9f2d9,stroke:#2e7d32,color:#000
-  classDef out fill:#eeeeee,stroke:#9e9e9e,color:#000
+  classDef default fill:#FFF4E2,stroke:#15110D,color:#15110D
+  classDef key fill:#FFD23F,stroke:#15110D,color:#15110D,stroke-width:2px
+  classDef runs fill:#5BB8F0,stroke:#15110D,color:#15110D,stroke-width:2px
+  classDef out fill:#EEEEEE,stroke:#9E9E9E,color:#57606A,stroke-dasharray:4 4
+  class change key
   class s1,s2 runs
   class s3,s4 out
 ```
