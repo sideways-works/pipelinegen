@@ -1,0 +1,15 @@
+go:internal/config#method:Plugin.Program
+go:internal/config#method:Release.Pin
+go:internal/plugincache#method:Key.Hash
+go:internal/plugins#func:FileSHA256
+go:internal/plugins#func:PinnedSum
+go:internal/plugins#func:binarySum
+go:internal/plugins#func:build
+go:internal/plugins#func:sumFor
+go:internal/plugins#method:Loaded.key
+go:internal/plugins#method:Loaded.version
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
+go:plugin#func:Program

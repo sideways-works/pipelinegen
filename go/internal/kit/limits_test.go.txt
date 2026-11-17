@@ -1,0 +1,15 @@
+go:internal/kit#func:appendNew
+go:internal/kit#func:lockCalls
+go:internal/kit#func:names
+go:internal/kit#func:stepKind
+go:internal/kit#func:stringList
+go:internal/kit#func:taskCalls
+go:internal/kit#func:taskLockCalls
+go:internal/kit#func:unlimited
+go:internal/kit#func:unlimitedSteps
+go:internal/kit#func:waitBoundWithBatch
+go:internal/kit#func:walkJobs
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
