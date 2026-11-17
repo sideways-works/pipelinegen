@@ -66,7 +66,7 @@ runs everything and catches whatever a narrower run left out.
 ```mermaid
 flowchart LR
     pr([a pull request]) --> plan
-    continuous([continuous: each push to main,<br/>one round at a time]) --> plan
+    continuous([optional: continuous,<br/>each push to main]) -.-> plan
     subgraph plan [plan]
         direction TB
         sbom[sbom plugins<br/>what changed in the code]
@@ -76,7 +76,9 @@ flowchart LR
     plan --> slices[the slices it reaches]
     slices --> run[drivers run them<br/>in your CI or on your machine]
     run -- correlators record --> lists
-    nightly([nightly: run everything]) --> run
+    nightly([optional: nightly,<br/>run everything]) -.-> run
+    classDef optional stroke-dasharray: 5 5
+    class continuous,nightly optional
 ```
 
 ## What it needs
