@@ -334,7 +334,8 @@ func Commit(ctx context.Context, tool, name, base, ref string, log io.Writer) er
 	}
 
 	c := exec.CommandContext(ctx, tool, append(args, name, ref)...) //nolint:gosec // the container this run kept, and the tag pipelinegen gives it
-	c.Stdout, c.Stderr = log, log
+	// stdout is only the new image's ID
+	c.Stderr = log
 
 	if err := c.Run(); err != nil {
 		return fmt.Errorf("%w %s: %s commit: %w", ErrImage, ref, filepath.Base(tool), err)
