@@ -296,7 +296,7 @@ func (p *planner) plan(ctx context.Context, label, base, head string, why bool) 
 	}
 
 	if code != 0 {
-		return fmt.Errorf("%w: affected %s: exit status %d", errPlan, label, code)
+		return fmt.Errorf("%w: affected %s: exit status %d%s", errPlan, label, code, lastLines(out+".err", 3))
 	}
 
 	if err := p.walkplan(ctx, label, base, head, ""); err != nil {
@@ -658,4 +658,29 @@ func or(s, otherwise string) string {
 	}
 
 	return s
+}
+
+func lastLines(path string, n int) string {
+	b, err := os.ReadFile(path) //nolint:gosec // the proof's own work file
+	if err != nil {
+		return ""
+	}
+
+	var keep []string
+
+	for l := range strings.SplitSeq(strings.TrimRight(string(b), "\n"), "\n") {
+		if strings.TrimSpace(l) != "" {
+			keep = append(keep, l)
+		}
+	}
+
+	if len(keep) > n {
+		keep = keep[len(keep)-n:]
+	}
+
+	if len(keep) == 0 {
+		return ""
+	}
+
+	return "\n  " + strings.Join(keep, "\n  ")
 }

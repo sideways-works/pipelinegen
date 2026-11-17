@@ -198,7 +198,9 @@ table, and the log lists the rows it broke. The `newest` run, an hour
 after the nightly, runs it with `--newest`, which plans with each piece's
 newest release, checked against that release's `SHA256SUMS`. No branch
 rule requires its status, so a release that breaks the table shows up
-there before anyone pins it. A param on the suite picks the mode:
+there before anyone pins it. Once a release passes there,
+`ci/proof/pins` moves to it: the nightly plans with the pins against
+today's table, so a row added after an old pin fails the nightly. A param on the suite picks the mode:
 `PROOF_TOOL: source` on the `pr` and `main` runs, `PROOF_NEWEST: "true"`
 on `newest`. The suite's step refuses both at once. The log's last line names the
 tool the run planned with and how many rows differ from the table.
@@ -206,7 +208,7 @@ tool the run planned with and how many rows differ from the table.
 Planning walks outward. In every mode the proof also builds the tool
 from its own checkout binding forward, as planning did before the walk
 (the `pipelinegen_forward` build tag; the released tool has no such
-switch). It plans each of the 87 plans again with that build, on a cache
+switch). It plans each of the 92 plans again with that build, on a cache
 of its own, and compares the two plans: the slices selected and what
 each narrowing left out. A plan that fails one way must fail the other
 way too. The table's last column says "same" or how the forward binding

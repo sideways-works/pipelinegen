@@ -1,18 +1,18 @@
 # Converting gavel to pipelinegen
 
-> Where the conversion stands: made with v0.2.0. gavel's config pins
-> pipelinegen v0.2.0 and the v0.2.0 releases of its runner, plugins and
+> Where the conversion stands: made with v0.2.1. gavel's config pins
+> pipelinegen v0.2.1 and the v0.2.0 releases of its runner, plugins and
 > drivers, and all five suites name steps run by drivers, with no batch
 > script left. The numbers on this page were measured with the last
-> candidate, v0.1.13-rc.18, whose code v0.2.0's tool is plus the fixes
-> listed in the changelog's 0.2.0 entry; none of them changes what a plan
-> selects. On a developer's machine, with those releases: the `go` suite was recorded whole (289 of
-> 289 test files passed), the `go-db` suite's 18 files passed, the `web`
+> candidate, v0.1.13-rc.18, whose code v0.2.1's tool is plus the fixes
+> listed in the changelog's 0.2.0 and 0.2.1 entries; none of them changes
+> what a plan selects. On a developer's machine, with those releases: the
+> `go` suite was recorded whole (289 of 289 test files passed), the `go-db` suite's 18 files passed, the `web`
 > suite's 2 checks and the `vitest` suite's 56 files passed, and the 5
 > browser specs passed, both run plainly and recorded. The pipeline runs
-> on a fork of gavel, green on 2026-11-16 at its commit `6c20a55`: there
-> the go, go-db, web and vitest suites pass and record, and the browser
-> specs pass but don't record yet (step 10 says why).
+> on a fork of gavel, green on 2026-11-16 at its commit `6c20a55`, and
+> from v0.2.1 all five suites record there (step 10 says why the browser
+> suite couldn't before).
 > The table of fifteen commits and the three changes at the top were
 > measured again with v0.1.13-rc.18, and so were step 4's check and step
 > 5's plans.
@@ -248,7 +248,7 @@ bazelisk on your `PATH`. The config beside this page pins:
 
 ```
 $ pipelinegen version
-v0.2.0
+v0.2.1
 ```
 
 First make sure the project's own tests pass on your machine, so that a
@@ -1258,8 +1258,11 @@ and the specs talk to it one at a time. The steps:
    recording run it builds the server with Go's coverage
    (`go build -cover -covermode=atomic -coverpkg=github.com/usegavel/gavel/...`)
    and go-correlator's `cover` package (below), and bundles the app once
-   more with esbuild (below). What it makes goes into `prepared`, which
-   every batch reads.
+   more with esbuild (below), and copies its own Go into `prepared`:
+   the batches observe each spec with go-correlator, which needs Go, and
+   the Playwright image has none, so the set-up links that Go into the
+   task's `PATH`. What it makes goes into `prepared`, which every batch
+   reads.
 2. The first set-up, once per batch in the Playwright image: start a
    Docker daemon of the batch's own when none answers, and PostgreSQL in
    it; install the app's packages with pnpm; put the built app into
@@ -1429,7 +1432,7 @@ holds the conversion.
 
 A *run* says what starts it, what a change is compared with, and which
 suites it covers. The fork declares a run per commit of the branch and a
-nightly, and for now a run of the browser specs of its own:
+nightly:
 
 ```yaml
 runs:
@@ -1437,40 +1440,37 @@ runs:
     trigger: {branch: pipelinegen}
     compare: last_passed
     select: affected
-    suites: {go: {}, go-db: {}, web: {}, vitest: {}}
+    suites:
+      go: {}
+      go-db: {}
+      web: {}
+      vitest: {}
+      browser:
+        secrets:
+          prepare: {GITHUB_TOKEN: github_read_token}
+          batch: {GITHUB_TOKEN: github_read_token}
     record: true
-  browser:     # the browser specs on every commit, recording nothing yet
-    trigger: {branch: pipelinegen}
-    compare: last_passed
-    select: affected
-    suites: {browser: {}}
-    record: false
   nightly:     # everything, once a night
     trigger:
       timer: {start: "3:00", stop: "4:00"}
       branch: pipelinegen
     compare: none
     select: all
-    suites: {go: {}, go-db: {}, web: {}, vitest: {}}
+    suites: {...}                      # the same, secrets included
     record: true
 ```
 
 The recording runs keep the lists fresh: each passing run of a branch
 commit attaches what its slices ran to that commit.
 
-The browser specs don't record on the pipeline yet. A recording's last
-step, which asks the correlators what each slice touched, runs in the
-planner's image (`golang`), which has no Node for react-correlator, and
-no key of the config reaches that step: the planner's `prepare`, which
-gives the planning job its Node, runs in planning only. On the fork the
-specs passed and every slice then ended "errored" with "observe: plugin
-failed: react observe: exit status 127: env: 'node': No such file or
-directory". Since recording is a run's setting, not a suite's, the specs
-have a run of their own that doesn't record: they run and pass on every
-commit, and without lists every change that reaches them through the
-graph runs all of them. They go back into `main` and the nightly, with
-the read token for their prepare and batches, once the tool runs the
-planner's `prepare` in that step too.
+Until v0.2.1 the browser suite could not record on the pipeline: the step
+that asks the correlators what each slice touched ran after the batch, in
+the planner's image, which has no Node for react-correlator, and every
+slice ended "errored" with "env: 'node': No such file or directory", so
+the specs ran in a run of their own that didn't record. From v0.2.1 a
+batch run by drivers observes its slices in its own task, in the suite's
+image: the Playwright image has Node (24.15), and Go comes from the
+prepare step (step 9).
 
 The third, a run per ready pull request, came once the branch's runs
 passed, and is set up so that none of its tasks holds a secret:
@@ -1526,7 +1526,7 @@ concourse:
       tar -xzf "$f" -C /usr/local --strip-components=1 --no-same-owner "node-$v-linux-x64/bin/node" &&
       go mod download && (cd tools && go mod download)
     bootstrap:
-      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
+      release: {version: v0.2.1, sha256: 69557cdf885d5e60dcbeb6bbc402cf2ff742cce0b68618ccfd47024a3e91fb36}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 ```
 
@@ -1690,8 +1690,7 @@ whatever its task holds.
 
 gavel's config follows from that. The read token that fetches the
 `cover` module and react-correlator's fixture is declared for the browser
-suite under the branch's recording runs only (none while the browser specs
-don't record on the pipeline). The pull request run
+suite under the branch's recording runs only. The pull request run
 records nothing (`record: false`), so its prepare builds the server
 without coverage and fetches no module, and its set-up fetches no
 fixture: no task of a pull request's run holds a secret. Its recordings
@@ -1966,11 +1965,10 @@ a test file of a suite bound by the graph that has no `owner` and that no
 Bazel target holds (the vitest suite of step 9 without its owner); a past
 commit is planned with the plugins' claims whether or not it is checked
 out (the `4dc9451` row); and a plan warns when a plugin's needs are
-missing from its `PATH`. Still open: `try` can't plan history from before
-a conversion's own BUILD changes, which is why the fifteen commits are a
-replay; and a step of the tool's own that runs plugins outside planning,
-a recording's observe step, gets neither the planner's `prepare` nor an
-image of the repository's choosing (step 10).
+missing from its `PATH`; and from v0.2.1 a recording batch run by drivers
+observes its slices in its own task, in the suite's image (step 10). Still
+open: `try` can't plan history from before a conversion's own BUILD
+changes, which is why the fifteen commits are a replay.
 
 ## Do the same for your project
 

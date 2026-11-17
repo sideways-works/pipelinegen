@@ -137,6 +137,10 @@ with the commands run in a checkout of pipelinegen's `main`:
 8. Download the release into an empty directory, run
    `sha256sum -c SHA256SUMS` there, and compare its `SHA256SUMS` with the
    build's.
+9. After a release of pipelinegen, go-sbom or the Go correlator, and once
+   the `newest` proof has passed with it, move
+   [ci/proof/pins](../ci/proof/pins) to it (see
+   [the proof](proof.md)).
 
 A pushed tag is never moved or deleted, and a published release is never
 changed. A wrong release gets a new version.

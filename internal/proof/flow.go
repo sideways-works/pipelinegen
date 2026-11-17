@@ -1034,7 +1034,7 @@ func (r *run) summary() error {
 
 		newer := "none newer than the pins"
 		if moved != "" {
-			newer = moved + "from the pins"
+			newer = moved + " from the pins"
 		}
 
 		fmt.Fprintf(&out, "newest releases: pipelinegen %s, %s (%s): %d rows differ from the table%s\n", r.pins["pipelinegen"].version, used, newer, len(rows), walkline)

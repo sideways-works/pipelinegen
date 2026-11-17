@@ -42,7 +42,7 @@ concourse:
       tar -xzf "$f" -C /usr/local --strip-components=1 --no-same-owner "node-$v-linux-x64/bin/node" &&
       go mod download && (cd tools && go mod download)
     bootstrap:
-      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
+      release: {version: v0.2.1, sha256: 69557cdf885d5e60dcbeb6bbc402cf2ff742cce0b68618ccfd47024a3e91fb36}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 
 plugins:
@@ -331,6 +331,10 @@ suites:
               --target=es2020 --platform=browser --jsx=automatic --loader:.css=empty \
               --define:import.meta.env.DEV=false --tsconfig=tsconfig.app.json --outfile=dist/bundle.js)
             cp apps/web/dist/bundle.js apps/web/dist/bundle.js.map "$d/"
+            # the batches observe what each spec ran with go-correlator,
+            # which needs Go, and the Playwright image has none: this
+            # image's Go goes along with what the prepare made
+            cp -R "$(go env GOROOT)" "$PIPELINEGEN_PREPARED/go"
             w=$PIPELINEGEN_WORK/cover
             mkdir -p "$w"
             cp go.mod go.sum "$w/"
@@ -399,6 +403,11 @@ suites:
             cp -R "$PIPELINEGEN_PREPARED/dist" apps/web/dist
             mkdir -p "$w/runfiles"
             ln -sfn "$PIPELINEGEN_TREE" "$w/runfiles/_main"
+            # the Go the prepare brought, in a recording run: on the task's
+            # own PATH, where pipelinegen runs go-correlator
+            if [ -d "$PIPELINEGEN_PREPARED/go" ] && ! command -v go >/dev/null; then
+              ln -s "$PIPELINEGEN_PREPARED/go/bin/go" /usr/local/bin/go
+            fi
             {
               echo "PATH=$w/bin:$PATH"
               echo "RUNFILES_DIR=$w/runfiles"
@@ -503,22 +512,19 @@ runs:
     trigger: {branch: pipelinegen}
     compare: last_passed
     select: affected
-    suites: {go: {}, go-db: {}, web: {}, vitest: {}}
+    suites:
+      go: {}
+      go-db: {}
+      web: {}
+      vitest: {}
+      # the read token fetches go-correlator's cover package and
+      # react-correlator's fixture, which a recording needs; only a
+      # branch's runs get it, never a pull request's
+      browser:
+        secrets:
+          prepare: {GITHUB_TOKEN: github_read_token}
+          batch: {GITHUB_TOKEN: github_read_token}
     record: true
-
-  # The browser specs on every commit of the branch, recording nothing yet:
-  # a recording's observe step runs in the planner's image, which has no
-  # Node for react-correlator, and no key of this file reaches that step.
-  # The specs run and pass; without lists they run on every change. They
-  # record again in main and the nightly once the tool runs the planner's
-  # prepare in that step. A recording is per run, so they have a run of
-  # their own meanwhile.
-  browser:
-    trigger: {branch: pipelinegen}
-    compare: last_passed
-    select: affected
-    suites: {browser: {}}
-    record: false
 
   # Once a night, everything: the net under every narrowing.
   nightly:
@@ -527,7 +533,15 @@ runs:
       branch: pipelinegen
     compare: none
     select: all
-    suites: {go: {}, go-db: {}, web: {}, vitest: {}}
+    suites:
+      go: {}
+      go-db: {}
+      web: {}
+      vitest: {}
+      browser:
+        secrets:
+          prepare: {GITHUB_TOKEN: github_read_token}
+          batch: {GITHUB_TOKEN: github_read_token}
     record: true
 
 # The web app's BUILD file calls web_project, a macro from gavel's own

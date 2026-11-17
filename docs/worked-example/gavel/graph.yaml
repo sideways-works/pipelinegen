@@ -216,6 +216,10 @@ suites:
               --target=es2020 --platform=browser --jsx=automatic --loader:.css=empty \
               --define:import.meta.env.DEV=false --tsconfig=tsconfig.app.json --outfile=dist/bundle.js)
             cp apps/web/dist/bundle.js apps/web/dist/bundle.js.map "$d/"
+            # the batches observe what each spec ran with go-correlator,
+            # which needs Go, and the Playwright image has none: this
+            # image's Go goes along with what the prepare made
+            cp -R "$(go env GOROOT)" "$PIPELINEGEN_PREPARED/go"
             w=$PIPELINEGEN_WORK/cover
             mkdir -p "$w"
             cp go.mod go.sum "$w/"
@@ -284,6 +288,11 @@ suites:
             cp -R "$PIPELINEGEN_PREPARED/dist" apps/web/dist
             mkdir -p "$w/runfiles"
             ln -sfn "$PIPELINEGEN_TREE" "$w/runfiles/_main"
+            # the Go the prepare brought, in a recording run: on the task's
+            # own PATH, where pipelinegen runs go-correlator
+            if [ -d "$PIPELINEGEN_PREPARED/go" ] && ! command -v go >/dev/null; then
+              ln -s "$PIPELINEGEN_PREPARED/go/bin/go" /usr/local/bin/go
+            fi
             {
               echo "PATH=$w/bin:$PATH"
               echo "RUNFILES_DIR=$w/runfiles"
