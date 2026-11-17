@@ -126,3 +126,49 @@ func TestNoMeminfoIsNoReading(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 }
+
+func TestMeasureACgroupsUse(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, map[string]string{
+		"proc/meminfo":                 meminfo,
+		"proc/pressure/memory":         "some avg10=12.50 avg60=3.00 avg300=1.00 total=99\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
+		"proc/self/cgroup":             "0::/\n",
+		"sys/fs/cgroup/cpu.stat":       "usage_usec 2500000\nuser_usec 2000000\n",
+		"sys/fs/cgroup/memory.current": "3145728000\n",
+		"sys/fs/cgroup/memory.peak":    "5242880000\n",
+		"sys/fs/cgroup/memory.stat":    "inactive_file 1048576000\n",
+		"sys/fs/cgroup/memory.events":  "low 0\nhigh 0\nmax 2\noom 1\noom_kill 1\n",
+	})
+
+	u, err := Measure(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if u.CPU != 2.5 || u.Set != 2000 || u.Peak != 4000 || u.OOM != 1 || u.Free != 8000 || u.Pressure != 12.5 {
+		t.Fatalf("%+v", u)
+	}
+
+	write(t, root, map[string]string{"proc/pressure/memory": ""})
+
+	if p := Pressure(root); p != -1 {
+		t.Fatalf("no pressure: %v", p)
+	}
+}
+
+func TestPredictTakesTheNinetiethPercentileAndATenthMore(t *testing.T) {
+	for _, tc := range []struct {
+		peaks []int64
+		want  int64
+	}{
+		{nil, 0},
+		{[]int64{1000}, 1100},
+		{[]int64{100, 200, 300, 400, 500, 600, 700, 800, 900, 5000}, 990},
+		{[]int64{5000, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000}, 1100},
+		{[]int64{3000, 1000, 2000}, 3300},
+	} {
+		if got := Predict(tc.peaks); got != tc.want {
+			t.Errorf("%v: %d, want %d", tc.peaks, got, tc.want)
+		}
+	}
+}
