@@ -32,8 +32,8 @@ func TestTheCommandLineMountsPassesTheEnvironmentAndPullsByDigest(t *testing.T) 
 		"--privileged", "--user", "1000:1000",
 		"--volume", "/w/unit:/w/unit", "--volume", "/repo/.git:/repo/.git:ro",
 		"--env", "A=1", "--env", "B=2", "--env", "PIPELINEGEN_SUITE=unit",
-		"busybox@sha256:" + strings.Repeat("ab", 32),
-		"/w/unit/build/tools/pipelinegen", "slice", "run",
+		"--entrypoint", "/w/unit/build/tools/pipelinegen", "busybox@sha256:" + strings.Repeat("ab", 32),
+		"slice", "run",
 	}
 
 	if !slices.Equal(got, want) {
@@ -52,11 +52,11 @@ func TestBeforeAndAfterRunInTheSameContainer(t *testing.T) {
 	}
 
 	i := slices.Index(got, "alpine:3")
-	if i < 0 || !slices.Equal(got[i+1:i+3], []string{"sh", "-c"}) || !slices.Equal(got[i+4:], []string{"sh", "make", "test"}) {
+	if i < 2 || !slices.Equal(got[i-2:i], []string{"--entrypoint", "sh"}) || got[i+1] != "-c" || !slices.Equal(got[i+3:], []string{"sh", "make", "test"}) {
 		t.Fatalf("args: %q", got)
 	}
 
-	if script := got[i+3]; !strings.Contains(script, "set -e\napk add git\nset +e\n\"$@\"\nrc=$?\necho done\nexit $rc") {
+	if script := got[i+2]; !strings.Contains(script, "set -e\napk add git\nset +e\n\"$@\"\nrc=$?\necho done\nexit $rc") {
 		t.Fatalf("script: %q", script)
 	}
 }
@@ -81,8 +81,9 @@ func TestFindTakesTheNamedTool(t *testing.T) {
 	}
 }
 
-// One container from a light image, when docker or podman runs here: the mounted directory is
-// written as this machine's user, and only the environment given reaches it.
+// One container from a light image, when docker or podman runs here: it runs as root, as a CI task
+// does, what it wrote is this machine's user's once handed back, and only the environment given
+// reaches it.
 func TestATinySuiteRunsInBusybox(t *testing.T) {
 	tool, err := Find("")
 	if err != nil || !Reachable(t.Context(), tool) {
@@ -103,31 +104,37 @@ func TestATinySuiteRunsInBusybox(t *testing.T) {
 	r := Run{
 		Tool: tool, Image: "busybox:1.37.0", Name: Name("test"), Dir: dir,
 		Mounts: []Mount{{Host: dir, At: dir}}, Env: map[string]string{"GREETING": "hello"}, User: user, UserNS: userns,
-		Cmd: []string{"sh", "-c", `echo "$GREETING ${SECRET_TOKEN:-unset}" > out.txt`},
-	}
-
-	if handBack {
-		r.After = HandBack(dir)
+		Cmd: []string{"sh", "-c", `mkdir sub && echo "$GREETING ${SECRET_TOKEN:-unset} $(id -u)" > sub/out.txt`},
 	}
 
 	t.Setenv("SECRET_TOKEN", "never-passed")
 
-	cmd, err := r.Command(ctx)
-	if err != nil {
-		t.Fatal(err)
+	for _, run := range []Run{r, HandBack(r, dir)} {
+		if run.Name != r.Name && !handBack {
+			continue
+		}
+
+		cmd, err := run.Command(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%s: %v\n%s", run.Name, err, out)
+		}
 	}
 
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("%v\n%s", err, out)
-	}
-
-	data, err := os.ReadFile(filepath.Join(dir, "out.txt"))
-	if err != nil || string(data) != "hello unset\n" {
+	data, err := os.ReadFile(filepath.Join(dir, "sub", "out.txt"))
+	if err != nil || string(data) != "hello unset 0\n" {
 		t.Fatalf("out.txt: %q %v", data, err)
 	}
 
-	// the test's directory goes after: the file must be this user's to remove
-	if err := os.Remove(filepath.Join(dir, "out.txt")); err != nil {
+	// the test's directory goes after: the file and its directory must be this user's to remove
+	if err := os.WriteFile(filepath.Join(dir, "sub", "mine.txt"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.RemoveAll(filepath.Join(dir, "sub")); err != nil {
 		t.Fatal(err)
 	}
 

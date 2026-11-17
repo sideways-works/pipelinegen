@@ -117,16 +117,21 @@ func (r Run) Args() ([]string, error) {
 		args = append(args, "--env", k+"="+r.Env[k])
 	}
 
-	args = append(args, r.Image)
-
-	if len(r.Before) == 0 && len(r.After) == 0 {
-		return append(args, r.Cmd...), nil
+	// the command runs as given, as a CI task's does, whatever entrypoint the image names
+	cmd := r.Cmd
+	if len(r.Before) > 0 || len(r.After) > 0 {
+		script := "set -e\n" + strings.Join(r.Before, "\n") + "\nset +e\n\"$@\"\nrc=$?\n" + strings.Join(r.After, "\n") + "\nexit $rc\n"
+		cmd = append([]string{"sh", "-c", script, "sh"}, r.Cmd...)
 	}
 
-	script := "set -e\n" + strings.Join(r.Before, "\n") + "\nset +e\n\"$@\"\nrc=$?\n" + strings.Join(r.After, "\n") + "\nexit $rc\n"
+	if len(cmd) == 0 {
+		return nil, errNoCommand
+	}
 
-	return append(append(args, "sh", "-c", script, "sh"), r.Cmd...), nil
+	return append(append(args, "--entrypoint", cmd[0], r.Image), cmd[1:]...), nil
 }
+
+var errNoCommand = errors.New("a container needs a command")
 
 // Command is the tool running r. Stopping ctx kills the container itself:
 // stopping only the tool's process would leave it running.
@@ -193,43 +198,43 @@ func platform(ctx context.Context, tool, ref string) (string, error) {
 	return p, nil
 }
 
-// Owner is how a container writes files this machine's user owns: on
-// Linux, rootful docker runs as the user (user), rootless podman maps root
-// to them (userns); elsewhere the tool's own file sharing does. root says
-// the container's processes are root, whose files on a rootful Linux tool
-// then need handing back.
-func Owner(ctx context.Context, tool string, root bool) (user, userns string, handBack bool) {
+// Owner says how what a container writes comes to be this machine's user's. Its processes are root by
+// default, as a CI task's are: on a rootful Linux tool what they write is then root's, and handBack
+// says to give it back once the container ends; rootless docker or podman maps root to the user
+// already. asMe runs them as the user instead: --user on a rootful tool, --userns keep-id with
+// rootless podman. Elsewhere than Linux the tool's file sharing gives the user what they write.
+func Owner(ctx context.Context, tool string, asMe bool) (user, userns string, handBack bool) {
 	if runtime.GOOS != "linux" {
 		return "", "", false
 	}
 
-	id := strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())
-
 	if rootless(ctx, tool) {
-		if isPodman(tool) && !root {
+		if asMe && isPodman(tool) {
 			return "", "keep-id", false
 		}
 
 		return "", "", false
 	}
 
-	if root {
-		return "", "", true
+	if asMe {
+		return strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()), "", false
 	}
 
-	return id, "", false
+	return "", "", true
 }
 
-// HandBack are the lines that give the user back what root wrote under dirs.
-func HandBack(dirs ...string) []string {
-	id := strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())
-
-	out := make([]string, 0, len(dirs))
+// HandBack is the container that gives this machine's user back what r's root wrote under dirs: run
+// once r has ended, however it ended, in r's image, which has chown as any image with a shell does.
+func HandBack(r Run, dirs ...string) Run {
+	mounts := make([]Mount, 0, len(dirs))
 	for _, d := range dirs {
-		out = append(out, "chown -R "+id+" '"+strings.ReplaceAll(d, "'", `'\''`)+"' 2>/dev/null || true")
+		mounts = append(mounts, Mount{Host: d, At: d})
 	}
 
-	return out
+	return Run{
+		Tool: r.Tool, Image: r.Image, Name: r.Name + "-chown", Dir: "/", Mounts: mounts,
+		Cmd: append([]string{"chown", "-R", strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())}, dirs...),
+	}
 }
 
 func isPodman(tool string) bool { return strings.Contains(baseName(tool), "podman") }

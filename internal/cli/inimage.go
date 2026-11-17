@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"maps"
-	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -39,14 +38,15 @@ const (
 // imageFlags say where a local build's steps run: in the images the config names, as CI runs them,
 // or on this machine.
 type imageFlags struct {
-	noImage bool
-	tool    string
+	noImage, asMe bool
+	tool          string
 }
 
 func (f *imageFlags) register(fs *flag.FlagSet) {
 	fs.BoolVar(&f.noImage, "no-image", false, "run the suites' steps on this machine, not in the images the config names")
 	textVar(fs, &f.tool, "container-tool", "", "the container tool that runs the steps in their images, docker or podman "+
 		"(default whichever is on PATH, docker first); the containers are on the default bridge network")
+	fs.BoolVar(&f.asMe, "as-me", false, "run the steps in their images as you, not as root as CI does (a privileged suite runs as root either way)")
 }
 
 // imageBox is how a local build runs its steps in their images; nil runs them on this machine.
@@ -188,7 +188,7 @@ func (b *localBuild) inImage(ctx context.Context, img taskImage, kind, dir strin
 	// the steps after, report batch-end among them, run here and read the tools as this machine's
 	defer b.keepHostTools()()
 
-	r, err := b.containerRun(ctx, img, kind, dir, cmd, params, platformOf(platform))
+	r, back, err := b.containerRun(ctx, img, kind, dir, cmd, params, platformOf(platform))
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,33 @@ func (b *localBuild) inImage(ctx context.Context, img taskImage, kind, dir strin
 
 	warnf(os.Stderr, "pipelinegen: suite %s's %s runs in %s (%s), with %s\n", b.suite, kind, img.ref, img.named, filepath.Base(b.box.tool))
 
-	return c.Run() //nolint:wrapcheck // the caller says which task
+	err = c.Run()
+
+	if back != nil {
+		handBack(ctx, *back)
+	}
+
+	return err //nolint:wrapcheck // the caller says which task
+}
+
+// handBack gives the user what a root container wrote, however it ended: failed, or stopped.
+func handBack(ctx context.Context, r container.Run) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+	defer cancel()
+
+	c, err := r.Command(ctx)
+	if err == nil {
+		var out []byte
+
+		if out, err = c.CombinedOutput(); err != nil {
+			err = fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+		}
+	}
+
+	if err != nil {
+		warnf(os.Stderr, "pipelinegen: what the steps wrote as root in %s stays root's (%v): sudo chown -R %d:%d %s\n",
+			strings.Join(r.Cmd[3:], " "), err, os.Getuid(), os.Getgid(), strings.Join(r.Cmd[3:], " "))
+	}
 }
 
 // keepHostTools notes where the build's tools link to on this machine, and returns what links them
@@ -226,19 +252,21 @@ func (b *localBuild) keepHostTools() func() {
 	}
 }
 
-// containerRun is the container a task of the build runs in, on an image of platform plat.
-func (b *localBuild) containerRun(ctx context.Context, img taskImage, kind, dir string, cmd []string, params map[string]string, plat string) (container.Run, error) {
+// containerRun is the container a task of the build runs in, on an image of platform plat, and the one
+// that hands back what it wrote as root, if any.
+func (b *localBuild) containerRun(ctx context.Context, img taskImage, kind, dir string, cmd []string, params map[string]string, plat string) (container.Run, *container.Run, error) {
 	if !strings.HasPrefix(plat, "linux-") {
-		return container.Run{}, fmt.Errorf("%w: %s is a %s image; pipelinegen runs in Linux images", errImage, img.ref, plat)
+		return container.Run{}, nil, fmt.Errorf("%w: %s is a %s image; pipelinegen runs in Linux images", errImage, img.ref, plat)
 	}
 
 	mounts, err := b.imageTools(ctx, plat)
 	if err != nil {
-		return container.Run{}, err
+		return container.Run{}, nil, err
 	}
 
+	// a privileged suite starts its own container engine, which needs root
 	privileged := b.cfg.Suites[b.suite].Privileged
-	user, userns, handBack := container.Owner(ctx, b.box.tool, privileged)
+	user, userns, handBack := container.Owner(ctx, b.box.tool, b.box.flags.asMe && !privileged)
 
 	// layered as on CI: the params, then pipelinegen's own, which nothing overrides
 	env := map[string]string{}
@@ -261,11 +289,13 @@ func (b *localBuild) containerRun(ctx context.Context, img taskImage, kind, dir 
 		Mounts: mounts, Env: env, User: user, UserNS: userns, Privileged: privileged, Cmd: cmd,
 	}
 
-	if handBack {
-		r.After = container.HandBack(filepath.Dir(b.dir))
+	if !handBack {
+		return r, nil, nil
 	}
 
-	return r, nil
+	back := container.HandBack(r, filepath.Dir(b.dir))
+
+	return r, &back, nil
 }
 
 // imageTools links the build's tools to builds for the image's platform and mounts what the build
@@ -395,9 +425,7 @@ func (b *localBuild) findLinuxTool(ctx context.Context, plat string) (string, er
 		pin.SHA256 = config.Checksums{config.LinuxAMD64: boot.Release.SHA256}
 	}
 
-	f := fetch.Fetcher{Client: &http.Client{Timeout: 5 * time.Minute}, Cache: defaultCache(), Under: "releases"}
-
-	got, err := f.Fetch(ctx, pin, plat)
+	got, err := releases().Fetch(ctx, pin, plat)
 	if err != nil {
 		return "", fmt.Errorf("%w: the image is %s, and this pipelinegen isn't a static build for it: the pinned release: %w; "+
 			"build one with CGO_ENABLED=0, or pass --no-image", errImage, plat, err)

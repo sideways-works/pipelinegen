@@ -91,8 +91,9 @@ func argPairs(args []string, flag string) []string {
 
 // The suite's image is its resource of the root pipeline file, by the digest the resource pins; its
 // prepare runs in the prepare step's. The build's directory, the git directory (read only) and the
-// tool are mounted where the build has them, and the environment is the task's: no token.
-func TestASuiteRunsInItsImageWithTheTasksEnvironment(t *testing.T) {
+// tool are mounted where the build has them, and the environment is the task's: no token. It runs as
+// root with the image's own HOME, as on CI, and what it wrote is handed back to this user after.
+func TestASuiteRunsInItsImageAsCIRunsIt(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("the user a container runs as is Linux's question")
 	}
@@ -108,7 +109,7 @@ func TestASuiteRunsInItsImageWithTheTasksEnvironment(t *testing.T) {
 		t.Fatalf("prepare image: %+v %v", prep, err)
 	}
 
-	r, err := b.containerRun(t.Context(), img, "batch", b.dir, []string{filepath.Join(b.dir, "tools", "pipelinegen"), "slice", "run"}, nil, config.Platform())
+	r, back, err := b.containerRun(t.Context(), img, "batch", b.dir, []string{filepath.Join(b.dir, "tools", "pipelinegen"), "slice", "run"}, nil, config.Platform())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,19 +119,21 @@ func TestASuiteRunsInItsImageWithTheTasksEnvironment(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if slices.Contains(args, "--privileged") || !slices.Equal(argPairs(args, "--user"), []string{strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())}) {
+	if slices.Contains(args, "--privileged") || slices.Contains(args, "--user") {
 		t.Fatalf("args: %q", args)
 	}
 
 	env := argPairs(args, "--env")
-	for _, want := range []string{"GREETING=hello", "HOME=/tmp", "PIPELINEGEN_SUITE=unit", "PIPELINEGEN_RUN=local", "PIPELINEGEN_CONFIG=" + b.cfgPath,
+	for _, want := range []string{"GREETING=hello", "GIT_CONFIG_KEY_0=safe.directory", "PIPELINEGEN_SUITE=unit", "PIPELINEGEN_RUN=local", "PIPELINEGEN_CONFIG=" + b.cfgPath,
 		"PIPELINEGEN_RUN_FILE=" + filepath.Join(b.dir, "batches", runs.RunFile)} {
 		if !slices.Contains(env, want) {
 			t.Errorf("no %s in %q", want, env)
 		}
 	}
 
-	if slices.ContainsFunc(env, func(kv string) bool { return strings.Contains(kv, "TOKEN") || strings.HasPrefix(kv, "PATH=") }) {
+	if slices.ContainsFunc(env, func(kv string) bool {
+		return strings.Contains(kv, "TOKEN") || strings.HasPrefix(kv, "PATH=") || strings.HasPrefix(kv, "HOME=")
+	}) {
 		t.Errorf("this machine's environment: %q", env)
 	}
 
@@ -149,23 +152,27 @@ func TestASuiteRunsInItsImageWithTheTasksEnvironment(t *testing.T) {
 	if link, err := os.Readlink(filepath.Join(b.dir, "tools", "pipelinegen")); err != nil || link != b.box.linux[config.Platform()] {
 		t.Errorf("tools/pipelinegen: %s %v", link, err)
 	}
+
+	if back == nil || back.Image != r.Image || !slices.Equal(back.Cmd, []string{"chown", "-R", strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid()), filepath.Dir(b.dir)}) {
+		t.Errorf("hand back: %+v", back)
+	}
 }
 
-// A privileged suite runs privileged and as root, as on CI; what it wrote is handed back to this user
-// when it ends, and git takes the user's checkout as root's.
-func TestAPrivilegedSuiteRunsAsRootAndHandsItsFilesBack(t *testing.T) {
+// --as-me runs the steps as this user, whose home the image lacks; nothing needs handing back.
+func TestAsMeRunsTheStepsAsThisUser(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("the user a container runs as is Linux's question")
 	}
 
-	b := imageBuild(t, true)
+	b := imageBuild(t, false)
+	b.box.flags.asMe = true
 
 	img, err := b.image(t.Context(), "batch", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	r, err := b.containerRun(t.Context(), img, "batch", b.dir, []string{"true"}, nil, config.Platform())
+	r, back, err := b.containerRun(t.Context(), img, "batch", b.dir, []string{"true"}, nil, config.Platform())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,9 +182,39 @@ func TestAPrivilegedSuiteRunsAsRootAndHandsItsFilesBack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !slices.Contains(args, "--privileged") || slices.Contains(args, "--user") || len(r.After) != 1 ||
-		!strings.HasPrefix(r.After[0], "chown -R "+strconv.Itoa(os.Getuid())) || !slices.Contains(argPairs(args, "--env"), "GIT_CONFIG_KEY_0=safe.directory") {
-		t.Fatalf("args: %q, after %q", args, r.After)
+	if !slices.Equal(argPairs(args, "--user"), []string{strconv.Itoa(os.Getuid()) + ":" + strconv.Itoa(os.Getgid())}) ||
+		!slices.Contains(argPairs(args, "--env"), "HOME=/tmp") || back != nil {
+		t.Fatalf("args: %q, hand back %+v", args, back)
+	}
+}
+
+// A privileged suite runs privileged and as root, as on CI, even with --as-me: it starts its own
+// container engine. What it wrote is handed back when it ends.
+func TestAPrivilegedSuiteRunsAsRootAndHandsItsFilesBack(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("the user a container runs as is Linux's question")
+	}
+
+	b := imageBuild(t, true)
+	b.box.flags.asMe = true
+
+	img, err := b.image(t.Context(), "batch", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, back, err := b.containerRun(t.Context(), img, "batch", b.dir, []string{"true"}, nil, config.Platform())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	args, err := r.Args()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !slices.Contains(args, "--privileged") || slices.Contains(args, "--user") || back == nil {
+		t.Fatalf("args: %q, hand back %+v", args, back)
 	}
 }
 
