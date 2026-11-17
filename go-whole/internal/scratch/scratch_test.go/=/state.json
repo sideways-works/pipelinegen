@@ -1,12 +1,6 @@
 {
   "label": "internal/scratch/scratch_test.go",
-  "state": "not run",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go-whole",
-  "updated": "2026-11-17T17:36:32.566560036Z",
-  "failures": [
-    {
-      "test": "(not run)",
-      "tail": "batch 2 stopped before its first slice started, 4 minutes after the suite began: not its time limit of 120 minutes (suites.go-whole.minutes); its task died: the build log says why"
-    }
-  ]
+  "state": "passed",
+  "updated": "2026-11-17T19:26:05.296198257Z",
+  "seconds": 0.19
 }
