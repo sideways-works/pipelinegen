@@ -189,3 +189,17 @@ func TestAConnectorsPinMeansNothing(t *testing.T) {
 		}
 	}
 }
+
+// A narrowing's level decides what a change selects: the change plans under
+// both configs, so lowering one can't leave out its own tests.
+func TestANarrowingsLevelIsASelection(t *testing.T) {
+	set := `pipeline: shop
+narrowings: {document-units: {off_at: 2, note: "every reader declared"}}
+`
+	m := meaningOf(t, []string{"pipeline: shop\n", set},
+		[]string{"pipeline: shop\n", strings.Replace(set, "off_at: 2", "off_at: 3", 1)})
+
+	if !m.Understood() || !slices.Equal(m.Parts, []Part{{Path: "narrowings.document-units.off_at", Means: MeansSelection}}) {
+		t.Fatalf("parts %+v", m.Parts)
+	}
+}

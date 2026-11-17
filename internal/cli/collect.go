@@ -60,6 +60,8 @@ func loadCorrelators(ctx context.Context, cfg *config.Config, suite, tools, kept
 
 		one := *cfg
 		one.Plugins = []config.Plugin{p}
+		// the config's narrowing levels may name the other plugins', and a collect narrows nothing
+		one.Narrowings = nil
 
 		set, err := plugins.Load(ctx, plugins.Options{
 			Config: &one, Dir: filepath.Join(tools, "plugins"), Described: described, Log: os.Stderr,

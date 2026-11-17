@@ -862,3 +862,23 @@ func TestTheBootstrapFetchesTheDefaultBazelisk(t *testing.T) {
 		t.Errorf("bazelisk = %+v, want the default %+v", got, DefaultBazelisk)
 	}
 }
+
+func TestANarrowingsLevelNeedsANoteAndALevel(t *testing.T) {
+	for entry, want := range map[string]string{
+		`{off_at: 3, note: "every reader declared"}`: "",
+		`{off_at: 1, note: "every reader declared"}`: "",
+		`{off_at: 3}`:            "narrowings.document-units: needs a note",
+		`{off_at: 3, note: " "}`: "narrowings.document-units: needs a note",
+		`{off_at: 0, note: "x"}`: "narrowings.document-units: off_at must be 1 to 5",
+		`{off_at: 6, note: "x"}`: "narrowings.document-units: off_at must be 1 to 5",
+	} {
+		c, err := Parse([]byte(strings.Replace(withRuns, "pipeline: shop\n", "pipeline: shop\nnarrowings: {document-units: "+entry+"}\n", 1)))
+
+		switch {
+		case want == "" && (err != nil || c.Narrowings["document-units"].OffAt == 0):
+			t.Errorf("%s: %v", entry, err)
+		case want != "" && (err == nil || !strings.Contains(err.Error(), want)):
+			t.Errorf("%s: %v, want %q", entry, err, want)
+		}
+	}
+}

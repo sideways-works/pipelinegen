@@ -64,6 +64,9 @@ type Config struct {
 	// most, 5 least (default 3); suites may override it.
 	Narrowing      int `yaml:"narrowing"`
 	NarrowingAlarm int `yaml:"narrowing_alarm"`
+	// Narrowings set, by name, the level a plugin's narrowing or the core's
+	// is switched off at, in place of the level its declarer gives.
+	Narrowings map[string]NarrowingLevel `yaml:"narrowings"`
 	// RebuildCheck is what a difference between the cached graph and the
 	// nightly's cold rebuild does to the run: error (the default) turns it
 	// red, warning only warns.
@@ -407,6 +410,13 @@ func MacroKey(key string) (module, name string, ok bool) {
 	}
 
 	return module, name, true
+}
+
+// NarrowingLevel is the level the config switches one narrowing off at, and
+// why.
+type NarrowingLevel struct {
+	OffAt int    `yaml:"off_at"`
+	Note  string `yaml:"note"`
 }
 
 // The narrowing levels: 1 narrows every change most, MaxNarrowing least.
@@ -1309,6 +1319,18 @@ func (c *Config) validateSerialGroups(bad func(string, ...any)) {
 func (c *Config) validateNarrowing(bad func(string, ...any)) {
 	if c.Narrowing < 1 || c.Narrowing > MaxNarrowing || c.NarrowingAlarm < 0 {
 		bad("narrowing must be 1 to %d, narrowing_alarm 0 or more", MaxNarrowing)
+	}
+
+	for _, name := range slices.Sorted(maps.Keys(c.Narrowings)) {
+		n := c.Narrowings[name]
+
+		if n.OffAt < 1 || n.OffAt > MaxNarrowing {
+			bad("narrowings.%s: off_at must be 1 to %d", name, MaxNarrowing)
+		}
+
+		if strings.TrimSpace(n.Note) == "" {
+			bad("narrowings.%s: needs a note, why the narrowing holds up to that level", name)
+		}
 	}
 
 	for _, p := range c.SampleOn {

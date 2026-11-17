@@ -170,6 +170,8 @@ var fileSHA256 = plugins.FileSHA256
 func sbomClaimed(ctx context.Context, cfg *config.Config, cache, dir, root, head string) (map[string]string, error) {
 	only := *cfg
 	only.Plugins = slices.DeleteFunc(slices.Clone(cfg.Plugins), func(p config.Plugin) bool { return p.Kind != config.KindSBOM })
+	// the config's narrowing levels may name the correlators', left out here, and claims narrow nothing
+	only.Narrowings = nil
 
 	if len(only.Plugins) == 0 {
 		return nil, nil //nolint:nilnil // no sbom, nothing claimed

@@ -205,7 +205,7 @@ var (
 	// pass beside any other, in any batch, so none of it is observable.
 	suiteNothing = []string{"run_on", "parallel", "batches", "batch_minutes", "empty_recordings"}
 	topSelection = append([]string{
-		"everything_on", "untested", "macros", "uncovered", "narrowing_alarm", "explain_limit", "rebuild_check",
+		"everything_on", "untested", "macros", "uncovered", "narrowing_alarm", "narrowings", "explain_limit", "rebuild_check",
 	}, sharedSelection...)
 	topNothing = []string{"pipeline", "github", "git", "store", "keep", "writes", "connectors", "generated", "learn", "limits", "bazel_diff"}
 )

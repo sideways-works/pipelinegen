@@ -73,6 +73,7 @@ type Set struct {
 	o       Options
 	Plugins []*Loaded
 	offAt   map[string]int
+	set     []Override
 
 	mu     sync.Mutex
 	report Report
@@ -142,14 +143,63 @@ func Load(ctx context.Context, o Options) (*Set, error) {
 		s.Plugins = append(s.Plugins, l)
 	}
 
+	declarer := map[string]string{}
+
+	for _, l := range s.Plugins {
+		for _, n := range l.Desc.Narrowings {
+			declarer[n.Name] = "plugin " + l.Conf.Name
+		}
+	}
+
 	for _, n := range CoreNarrowings {
 		if _, ok := s.offAt[n.Name]; !ok {
 			s.offAt[n.Name] = n.OffAt
+			declarer[n.Name] = ByCore
 		}
+	}
+
+	if err := s.override(o.Config.Narrowings, declarer); err != nil {
+		return nil, err
 	}
 
 	return s, nil
 }
+
+// ByCore is the declarer of the core's own narrowings.
+const ByCore = "the core"
+
+// Override is a narrowing whose level the config sets: OffAt in force, and
+// Declared the level its declarer (By) gives.
+type Override struct {
+	Name     string `json:"name"`
+	OffAt    int    `json:"off_at"`
+	Declared int    `json:"declared"`
+	By       string `json:"by"`
+	Note     string `json:"note"`
+}
+
+// override puts the config's levels in place of the declarers': a name no
+// configured plugin and not the core declares is refused, since it would
+// narrow nothing and the config would only seem to.
+func (s *Set) override(levels map[string]config.NarrowingLevel, declarer map[string]string) error {
+	for _, name := range sortedKeys(levels) {
+		lv := levels[name]
+
+		declared, ok := s.offAt[name]
+		if !ok {
+			return fmt.Errorf("%w: narrowings.%s: no configured plugin declares the narrowing, and the core has none of that name (%s)",
+				ErrPlugins, name, strings.Join(sortedKeys(s.offAt), ", "))
+		}
+
+		s.offAt[name] = lv.OffAt
+		s.set = append(s.set, Override{Name: name, OffAt: lv.OffAt, Declared: declared, By: declarer[name], Note: lv.Note})
+	}
+
+	return nil
+}
+
+// Overrides are the narrowings whose level the config sets, by name.
+func (s *Set) Overrides() []Override { return slices.Clone(s.set) }
 
 // NarrowSetupSplit keeps what ran during a batch's setup out of its
 // slices' lists, binding the suite's setup target instead.
