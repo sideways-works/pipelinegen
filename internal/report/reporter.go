@@ -205,7 +205,10 @@ func (r *Reporter) Slices(ctx context.Context, evs []SliceEvent) (map[string]Sta
 
 	message := fmt.Sprintf("%s%d slices", r.ID.Prefix(), len(ups))
 
+	restore := filesUntil(r.Store, ends, time.Now())
 	_, err = r.Store.Write(ctx, message, ups...)
+
+	restore()
 	if err != nil && ctx.Err() == nil && withFiles(ends) {
 		// the states matter more than the files: the store may refuse
 		// their size, or be too slow for it

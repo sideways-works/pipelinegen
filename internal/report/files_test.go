@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
@@ -394,5 +395,35 @@ func TestADriversFilesAreKeptByTheirOwnPaths(t *testing.T) {
 
 	if got := FilesCommand("pr", "pr-7", commit, "e2e/it's.spec.ts"); got != `pipelinegen report files --run pr --change pr-7 --commit 0123456789ab --slice 'e2e/it'\''s.spec.ts' --out failure-files` {
 		t.Errorf("command: %s", got)
+	}
+}
+
+func TestAWriteWithFilesRetriesForHalfTheTime(t *testing.T) {
+	store := &gitstore.Store{RetryFor: 10 * time.Minute}
+	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	with := []*ending{{found: []candidate{{}}}}
+
+	restore := filesUntil(store, with, now)
+	if want := now.Add(5 * time.Minute); !store.Until.Equal(want) {
+		t.Fatalf("until %v, want %v", store.Until, want)
+	}
+
+	restore()
+
+	if !store.Until.IsZero() {
+		t.Fatalf("not put back: %v", store.Until)
+	}
+
+	store.Until = now.Add(time.Minute)
+	filesUntil(store, with, now)()
+
+	if !store.Until.Equal(now.Add(time.Minute)) {
+		t.Fatalf("a nearer bound moved: %v", store.Until)
+	}
+
+	filesUntil(store, nil, now)
+
+	if !store.Until.Equal(now.Add(time.Minute)) {
+		t.Fatalf("a write without files moved it: %v", store.Until)
 	}
 }

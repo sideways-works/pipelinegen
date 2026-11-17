@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
@@ -351,6 +352,31 @@ func (e *ending) dropAll(why string) {
 
 	e.found = nil
 }
+
+// filesUntil ends the retries of a write that carries failure files at
+// half the store's retry time, so a slow store leaves the write without
+// them time of its own within the step's limit. It bounds the retries, never
+// a git process under way: one killed could leave a lock that fails the
+// write without them too. It returns what puts the store's bound back.
+func filesUntil(store *gitstore.Store, ends []*ending, now time.Time) func() {
+	if !withFiles(ends) {
+		return func() {}
+	}
+
+	half := store.RetryFor / 2
+	if half <= 0 {
+		half = filesWriteFor
+	}
+
+	was := store.Until
+	if until := now.Add(half); was.IsZero() || until.Before(was) {
+		store.Until = until
+	}
+
+	return func() { store.Until = was }
+}
+
+const filesWriteFor = 5 * time.Minute
 
 func withFiles(ends []*ending) bool {
 	return slices.ContainsFunc(ends, func(e *ending) bool { return len(e.found) > 0 })
