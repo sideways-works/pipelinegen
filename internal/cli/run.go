@@ -1510,6 +1510,10 @@ func runBatches(ctx context.Context, args []string, stdout io.Writer) (err error
 		return err
 	}
 
+	if err := writePredictions(ctx, store, out, b.suite, dealt, os.Stderr); err != nil {
+		return err
+	}
+
 	return say(stdout, "%s %s: %d slices of %s in %d batches\n", ch.Run, ch.ID, len(todo), b.suite, len(dealt))
 }
 

@@ -277,7 +277,7 @@ func (f *recordFlags) record(ctx context.Context, root string, stdout io.Writer)
 		suite: f.suite, ch: ch, plugins: f.plugins, box: &imageBox{flags: f.images},
 	}
 
-	if err := b.findPlugins(ctx); err != nil {
+	if err := b.ready(ctx, &f.common, names(todo)); err != nil {
 		return err
 	}
 

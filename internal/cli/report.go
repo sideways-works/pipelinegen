@@ -700,6 +700,15 @@ func reportBatchEnd(ctx context.Context, args []string) (err error) {
 	// the stamps tell: its time limit, or not.
 	stop := markStopped(s.reporter, evs, flushed, batch, batches, begun)
 
+	// a batch that found the worker short of memory started nothing, and says so for each slice.
+	if short := shortOfMemoryIn(result); short != "" {
+		stop = short
+
+		for i := range evs {
+			evs[i].Short = "not run: " + short
+		}
+	}
+
 	states, err := s.reporter.Close(ctx, evs)
 	if err != nil {
 		return unwritten(batch, evs, err)
@@ -846,6 +855,7 @@ func runSlice(ctx context.Context, args []string, stdout io.Writer) error {
 		{"start", "mark a slice of the running batch as running: <name>", func(ctx context.Context, args []string) error { return sliceStep(ctx, args, true, stdout) }},
 		{"end", "end a slice of the running batch: its result, recording and final state: <name>", func(ctx context.Context, args []string) error { return sliceStep(ctx, args, false, stdout) }},
 		{"list", "print the running batch's slices, one per line", func(ctx context.Context, args []string) error { return runSliceList(ctx, args, stdout) }},
+		{"memory", "wait, before the batch's setup, until the worker has the memory the batch should use, or leave the batch's slices not run", sliceMemory},
 		{"setup-end", "close what the batch's setup ran, once before its first slice", func(ctx context.Context, args []string) error { return sliceSetupEnd(ctx, args, stdout) }},
 		{"flush", "write the starts and ends the batch's journal holds", func(ctx context.Context, args []string) error { return sliceFlush(ctx, args, stdout) }},
 		{"run", "run the batch's slices through the suite's steps, or a suite's slices on this machine: [--suite <s>] [--slice <name>]...", func(ctx context.Context, args []string) error { return sliceRun(ctx, args, stdout) }},
@@ -899,6 +909,10 @@ func sliceStep(ctx context.Context, args []string, start bool, stdout io.Writer)
 
 	ev := sliceEvent(suite, list[i], s.root, result, rec)
 	j := report.JournalIn(result)
+
+	if s.reporter.ID.Run != localRun {
+		s.reporter.Meter = cgroupMeter()
+	}
 
 	if start {
 		if err := checkPlanOnce(ctx, s.reporter, result); err != nil {

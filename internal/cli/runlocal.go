@@ -163,7 +163,7 @@ func (f *localRunFlags) run(ctx context.Context, cfg *config.Config, head string
 		defer os.RemoveAll(work) //nolint:errcheck // a temporary directory
 	}
 
-	r := &localSuiteRun{data: data, src: src, root: f.root, work: work, temp: f.work == "", plugins: f.lp.plugins, head: head, out: stdout, images: f.images}
+	r := &localSuiteRun{data: data, src: src, root: f.root, work: work, temp: f.work == "", plugins: f.lp.plugins, head: head, out: stdout, images: f.images, common: &f.common}
 
 	var tallies []suiteTally
 
@@ -328,6 +328,7 @@ type localSuiteRun struct {
 	head                     string
 	out                      io.Writer
 	images                   imageFlags
+	common                   *common
 	// temp says work is removed when the run ends.
 	temp bool
 }
@@ -337,6 +338,8 @@ type suiteTally struct {
 	slices              []string
 	states              map[string]report.State
 	recording, attached bool
+	// short is why the suite's batch didn't start: this machine was short of memory.
+	short string
 }
 
 // suite runs one batch of the suite's selected slices in a build of its own. Without recording its
@@ -375,7 +378,9 @@ func (r *localSuiteRun) suite(ctx context.Context, sp affected.SuitePlan, record
 		storeGoes: r.temp && !record,
 	}
 
-	if err := b.findPlugins(ctx); err != nil {
+	if err := b.ready(ctx, r.common, names(sp.Selected)); errors.Is(err, errNoMemoryHere) {
+		return suiteTally{suite: sp.Suite, slices: names(sp.Selected), short: err.Error()}, nil
+	} else if err != nil {
 		return suiteTally{}, err
 	}
 
@@ -453,6 +458,14 @@ func localSummary(w io.Writer, head string, tallies []suiteTally, dirty bool) er
 	fmt.Fprintf(&b, "ran at %s:\n", short12(head))
 
 	for _, t := range tallies {
+		if t.short != "" {
+			bad = true
+
+			fmt.Fprintf(&b, "  %s: %d not run: %s\n", t.suite, len(t.slices), t.short)
+
+			continue
+		}
+
 		passed, failed, errored := t.count(report.Passed), t.count(report.Failed), t.count(report.Errored)
 		fmt.Fprintf(&b, "  %s: %d passed, %d failed, %d errored", t.suite, passed, failed, errored)
 

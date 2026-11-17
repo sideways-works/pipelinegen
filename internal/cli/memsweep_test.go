@@ -28,10 +28,11 @@ func endedShort(t *testing.T, h handed, state map[string]report.State) {
 	for name, st := range state {
 		ev := report.SliceEvent{Suite: "e2e", Slice: name, Label: "@pipelinegen_deps//slices:" + name, Result: filepath.Join(t.TempDir(), "none.json")}
 
-		switch st {
-		case report.NotRun:
+		if st == report.NotRun {
 			ev.NotRun, ev.Short = true, "not run: the worker had 3120 MB free of 6600 MB needed"
-		case report.Passed:
+		}
+
+		if st == report.Passed {
 			ev.Result = filepath.Join(t.TempDir(), "passed.json")
 			writeFile(t, ev.Result, `{"passed": true, "tests": 1}`)
 		}

@@ -413,6 +413,22 @@ func sliceRun(ctx context.Context, args []string, stdout io.Writer) error {
 	return batchSliceRun(ctx, args, stdout)
 }
 
+// startBatch empties the batch's outputs, as a CI system's start, so an earlier batch's results, journal
+// and coverage never count as this one's; checks its plan; and waits for its memory.
+func (s *step) startBatch(ctx context.Context, f drivenFlags, batch, suite string) (stop func(), err error) {
+	for _, d := range []string{f.result, f.coverage, f.work} {
+		if err := emptyDir(d); err != nil {
+			return nil, fmt.Errorf("%w: %s holds what an earlier batch left and can't be emptied: %w", errSteps, d, err)
+		}
+	}
+
+	if err := checkPlanOnce(ctx, s.reporter, f.result); err != nil {
+		return nil, err
+	}
+
+	return s.admit(ctx, f, batch, suite)
+}
+
 type drivenFlags struct {
 	batches, result, coverage, prepared, work, cache string
 }
@@ -454,17 +470,12 @@ func batchSliceRun(ctx context.Context, args []string, stdout io.Writer) (err er
 		return err
 	}
 
-	// The batch's outputs start empty, as a CI system's do; otherwise an earlier batch's results, journal
-	// and coverage would count as this one's.
-	for _, d := range []string{f.result, f.coverage, f.work} {
-		if err := emptyDir(d); err != nil {
-			return fmt.Errorf("%w: %s holds what an earlier batch left and can't be emptied: %w", errSteps, d, err)
-		}
-	}
-
-	if err := checkPlanOnce(ctx, s.reporter, f.result); err != nil {
+	stop, err := s.startBatch(ctx, f, batch, suite)
+	if err != nil {
 		return err
 	}
+
+	defer stop()
 
 	rec := ""
 	if cfg.Records(s.reporter.ID.Run, suite) {
