@@ -152,8 +152,9 @@ A pull request run's planning job begins with `pipelinegen plan --begin`,
 in a step that runs none of the change's code and holds the credential
 that writes the store, before the plan's first step: it records that the
 build plans its head, and the run's sweep then leaves the head to that
-build for the plan's limit instead of planning it beside a slow plan. A
-pipeline without the step works, and its sweep plans a head whose plan
+build for the plan's limit instead of planning it beside a slow plan;
+the plan's write step (`--from`) removes the record when it leaves the
+head without a plan. A pipeline without the step works, and its sweep plans a head whose plan
 outlasts `missed_after` once more.
 
 A pull request run's planning job hands a head on the same way. It plans

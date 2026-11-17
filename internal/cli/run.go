@@ -253,6 +253,10 @@ func planBegin(out, from, gate string, decide, begin bool) error {
 
 func planFromGated(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, from, gate string, stdout io.Writer) error {
 	handOn, err := planFrom(ctx, cfg, ch, store, trigger, from, stdout)
+	if !handOn {
+		endPlanning(ctx, ch, store, stdout)
+	}
+
 	if err != nil || !handOn || gate == "" {
 		return err
 	}

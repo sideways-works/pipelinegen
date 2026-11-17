@@ -292,3 +292,31 @@ func beginPlanning(ctx context.Context, ch runs.Change, store *gitstore.Store, s
 
 	return say(stdout, "%s %s: planning %s begun\n", ch.Run, ch.ID, short12(ch.Commit))
 }
+
+// endPlanning drops the planning record of a head that still has no plan, so the sweep takes it up
+// after missed_after. Like the record, removing it is a convenience: a store error only warns.
+func endPlanning(ctx context.Context, ch runs.Change, store *gitstore.Store, stdout io.Writer) {
+	if !ch.Proposed() {
+		return
+	}
+
+	id := reportID(ch)
+
+	if _, planned, err := readPlan(ctx, store, id); err != nil || planned {
+		return
+	}
+
+	ref, ok, err := store.First(ctx, []string{id.RoundRef(report.RoundStarted)})
+	if err == nil && ok {
+		_, err = store.Write(ctx, "planning ended "+ch.ID, gitstore.Update{Ref: ref.Name, Old: ref.Commit, Delete: true})
+	}
+
+	switch {
+	case errors.Is(err, gitstore.ErrStale):
+		// another build began planning the head since: its record stays.
+	case err != nil:
+		warnf(os.Stderr, "pipelinegen plan: %s %s: the record that its planning began isn't removed, so the sweep leaves the head until the plan's limit has passed: %v\n", ch.Run, ch.ID, err)
+	case ok:
+		_ = say(stdout, "%s %s: planning ended without a plan; the sweep may take the head up\n", ch.Run, ch.ID) //nolint:errcheck // the log is for people
+	}
+}

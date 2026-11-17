@@ -548,7 +548,7 @@ build's planning began. A continuous run's build decides first, with
 | `--out` | | Plan into this directory instead: `plan.json`, or `failed.txt` with why there is no plan; the store is read only and no status is set. The first of a proposed change's two steps, the one that runs the change's code. |
 | `--from` | | Write the plan `--out` left in this directory: the commit under test and the base are worked out again from the trigger, a plan of anything else is refused and shown as a failed plan; then the plan ref, the statuses and the comment, as a plan in one step. The second step, which runs none of the change's code. A head planned already is judged as the sweep judges it (see `unplanned`): handed on again only when none of its suites began after `missed_after` and no sweep or build took it up lately, and then marked as the sweep marks it; a head the sweep gave up on is handed on all the same. |
 | `--gate` | | Write `gate.json` here, open (`["1"]`) only when this build hands the change on to its suite jobs, else `[]`. A branch's run opens it only when this step wrote the run's plan, and also writes `version` (`<run> <commit>`), the hand-off its suite jobs follow: a build that exited (superseded, or nothing changed) hands nothing on, so no suite job starts for its commit. The plan step reads here the decision `--decide` left. With `--from` (a pull request's second step) the gate is written shut before anything else and opened only when the step wrote the plan, or found it planned and stalled as the sweep would hand it on again; a head planned with a suite begun or on its way, one the run leaves out, one the first step left no plan for, a superseded change and a failed plan all leave it shut. Not with `--out`, which hands nothing on. |
-| `--begin` | | A pull request's planning build, in a step of its own before the first (`--out`), which runs none of the change's code: record that the build plans its head (the round's start record, written over an older one), so the run's sweep leaves the head to this build until `limits.plan` and ten minutes have passed, however slow the plan. A head planned already gets no record. A store that can't be read or written costs a warning on stderr and nothing else: the step exits 0 and the plan goes on. Takes none of `--out`, `--from`, `--gate`, `--decide`. |
+| `--begin` | | A pull request's planning build, in a step of its own before the first (`--out`), which runs none of the change's code: record that the build plans its head (the round's start record, written over an older one), so the run's sweep leaves the head to this build until `limits.plan` and ten minutes have passed, however slow the plan, or until the build's `--from` step ends without a plan, which removes the record. A head planned already gets no record. A store that can't be read or written costs a warning on stderr and nothing else: the step exits 0 and the plan goes on. Takes none of `--out`, `--from`, `--gate`, `--decide`. |
 | `--decide` | | A continuous run's build, before the planner's prepare: decide whether it plans, waiting while a round of the run is in progress, and plan nothing. A build that won't plan writes the closed gate into `--gate` (required), as an exited plan step does, and the task stops before the prepare; one that will writes `decided.json` there, and the plan step after the prepare decides once more without recording a second start of the round. It exits 0 either way, and 1 when it waited `wait_minutes` for a round that didn't end. |
 
 ## `pipelinegen unplanned`
@@ -582,9 +582,15 @@ have passed since, however long `missed_after` is: a cold plan on new
 plugin versions can take most of an hour, and planning the head again
 beside it would only slow both. It prints `#<n> <commit>: its planning
 began <time> ago: left to its build`. Once that time has passed the build
-is taken for dead and the head counts as missed, as before; a planning
-build that failed early counts the same, so start the planning job again
-to plan such a head sooner. A head the sweep plans gets the same record,
+is taken for dead and the head counts as missed, as before. A planning
+build whose write step (`--from`) leaves the head without a plan (the run
+leaves it out, as a draft, or its plan failed) removes the record as it
+ends, so the sweep takes the head up after `missed_after` as if no build
+had begun. It removes the record whichever build of the head wrote it:
+the sweep may then plan a head beside a second build of it, and the first
+plan written stands. A build that never reaches its write step (its first
+step failed, or it was stopped) leaves the record until the time has
+passed, so start the planning job again to plan such a head sooner. A head the sweep plans gets the same record,
 in the same write as its mark.
 
 A head it lists gets a mark in the store

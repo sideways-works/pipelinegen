@@ -10,6 +10,7 @@ import (
 
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/report"
+	"github.com/sideways-works/pipelinegen/internal/runs"
 )
 
 func missedHead(t *testing.T) (string, *gitstore.Store, report.ID) {
@@ -78,9 +79,85 @@ func sweepLeavesAHeadBeingPlanned(t *testing.T) {
 	}
 }
 
-// TestTheSweepHandsAPlannedHeadOnAgainWhatever: the record that planning
-// began counts only for a head with no plan; a planned head none of whose
-// suites began goes to the suites again as before.
+func TestTheSweepTakesUpAHeadWhosePlanningEnded(t *testing.T) { sweepTakesUpEndedPlanning(t) }
+
+func TestTheSweepTakesUpAHeadWhosePlanningEndedOnABranch(t *testing.T) {
+	onBranch(t, sweepTakesUpEndedPlanning)
+}
+
+func sweepTakesUpEndedPlanning(t *testing.T) {
+	t.Helper()
+
+	root, s, id := missedHead(t)
+
+	if _, err := report.RecordRound(t.Context(), s, id, report.RoundStarted, "", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	var said strings.Builder
+
+	endPlanning(t.Context(), runs.Change{Run: id.Run, ID: id.Change, Commit: id.Commit, PR: id.PR}, s, &said)
+
+	if said.String() != "pr pr-7: planning ended without a plan; the sweep may take the head up\n" {
+		t.Fatalf("ending: %q", said.String())
+	}
+
+	stdout, out := sweepOnce(t, root, t.TempDir())
+	if !strings.Contains(stdout, "#7 "+id.Commit[:12]+": no plan: plan it\n") {
+		t.Fatalf("a head whose planning ended:\n%s", stdout)
+	}
+
+	if _, err := os.Stat(filepath.Join(out, "plan", "7")); err != nil {
+		t.Fatalf("no checkout to plan: %v", err)
+	}
+}
+
+func TestAPlanningBuildThatEndsWithoutAPlanLetsTheHeadGo(t *testing.T) {
+	_, s, trigger, ch, _ := gatedChange(t)
+	id := reportID(ch)
+
+	begin := func() {
+		t.Helper()
+
+		if _, _, code := run(t, "plan", "-run", "pr", "-trigger", trigger, "-begin", "-cache", t.TempDir()); code != 0 {
+			t.Fatalf("begin: %d", code)
+		}
+	}
+
+	recorded := func() bool {
+		t.Helper()
+
+		_, ok, err := s.First(t.Context(), []string{id.RoundRef(report.RoundStarted)})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return ok
+	}
+
+	begin()
+
+	stdout, code, gate := secondStep(t, trigger, t.TempDir())
+	if code != 0 || gate == gateOpen || !strings.Contains(stdout, "pr pr-7: planning ended without a plan") || recorded() {
+		t.Fatalf("an empty first step: %d %s %q, record kept: %v", code, gate, stdout, recorded())
+	}
+
+	begin()
+
+	failed := t.TempDir()
+	writeFile(t, filepath.Join(failed, planFailedOut), "the change doesn't merge\n")
+
+	if stdout, code, _ := secondStep(t, trigger, failed); code == 0 || recorded() {
+		t.Fatalf("a failed plan: %d %q, record kept: %v", code, stdout, recorded())
+	}
+
+	begin()
+
+	if stdout, code, gate := secondStep(t, trigger, ownPlanDir(t, s, trigger, ch)); code != 0 || gate != gateOpen || strings.Contains(stdout, "planning ended") || !recorded() {
+		t.Fatalf("a plan written: %d %s %q, record kept: %v", code, gate, stdout, recorded())
+	}
+}
+
 func TestTheSweepHandsAPlannedHeadOnAgainWhatever(t *testing.T) {
 	root, s, head, _ := stalledHead(t)
 
