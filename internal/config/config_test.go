@@ -190,22 +190,20 @@ func TestParseRejectsRuns(t *testing.T) {
 	}
 }
 
-func TestSerialGroups(t *testing.T) {
+func TestLockKeysAreNoLongerRead(t *testing.T) {
 	text := strings.Replace(withRuns, "run_on: {max_in_flight: 2}", "run_on: {max_in_flight: 2, serial_group: proof}", 1)
-	ok := strings.Replace(text, `concourse: {url: "https://ci",`, `concourse: {serial_groups: {proof: {per_run: true}}, url: "https://ci",`, 1)
+	text = strings.Replace(text, `concourse: {url: "https://ci",`, `concourse: {serial_groups: {proof: {per_run: true}}, url: "https://ci",`, 1)
 
-	c, err := Parse([]byte(ok))
+	c, err := Parse([]byte(text))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !c.Concourse.SerialGroups["proof"].PerRun {
-		t.Fatalf("serial groups %v", c.Concourse.SerialGroups)
-	}
-
-	typo := strings.Replace(text, `concourse: {url: "https://ci",`, `concourse: {serial_groups: {prof: {per_run: true}}, url: "https://ci",`, 1)
-	if _, err := Parse([]byte(typo)); err == nil || !strings.Contains(err.Error(), "serial_groups.prof") {
-		t.Fatalf("a group no suite names: %v", err)
+	said := strings.Join(c.Notices, "\n")
+	for _, key := range []string{"run_on.serial_group is no longer read", "run_on.max_in_flight is no longer read", "concourse.serial_groups is no longer read"} {
+		if !strings.Contains(said, key) {
+			t.Errorf("no notice %q in %q", key, said)
+		}
 	}
 }
 

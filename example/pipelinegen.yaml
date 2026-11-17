@@ -85,8 +85,6 @@ suites:
           export: {WORDS: "http://127.0.0.1:8080"}
       - run: shell
         with: {functions: test_}
-    # Two changes that both reach smoke take turns.
-    run_on: {serial_group: smoke}
 
 runs:
   # Ready pull requests into main: the change merged into main's tip, compared

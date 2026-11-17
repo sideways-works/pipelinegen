@@ -95,7 +95,6 @@ func suite(cfg *config.Config, name string) plugin.SpecSuite {
 
 	out := plugin.SpecSuite{
 		Name: name, Prepare: su.Prepare, RunSlice: su.RunSlice, Image: su.Image,
-		SerialGroup: su.RunOn.SerialGroup, MaxInFlight: su.RunOn.MaxInFlight,
 		Parallel: parallel, Privileged: su.Privileged,
 	}
 

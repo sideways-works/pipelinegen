@@ -138,6 +138,21 @@ func (c *Config) validateLimits(bad func(string, ...any)) {
 }
 
 func (c *Config) oldMinutes() {
+	for _, name := range c.SuiteNames() {
+		ro := c.Suites[name].RunOn
+		if ro.SerialGroup != "" {
+			c.Notices = append(c.Notices, fmt.Sprintf("suites.%s.run_on.serial_group is no longer read: a suite's builds run side by side; remove it", name))
+		}
+
+		if ro.MaxInFlight != 0 {
+			c.Notices = append(c.Notices, fmt.Sprintf("suites.%s.run_on.max_in_flight is no longer read: a suite's builds run side by side; remove it", name))
+		}
+	}
+
+	if len(c.Concourse.SerialGroups) > 0 {
+		c.Notices = append(c.Notices, "concourse.serial_groups is no longer read: no job is in a serial group; remove it")
+	}
+
 	for _, run := range c.RunNames() {
 		if c.Runs[run].TurnMinutes != 0 {
 			c.Notices = append(c.Notices, fmt.Sprintf("runs.%s.turn_minutes is no longer read: a round of the run counts as dead after runs.%s.idle_minutes (%d by default here); remove turn_minutes", run, run, c.IdleLength(run)))

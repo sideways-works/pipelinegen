@@ -772,7 +772,7 @@ record again).
 
 Concourse's serial groups hold only inside one pipeline, so a suite that
 needs a machine shared with another repository's pipeline takes a lease
-instead; inside one repository, `run_on.serial_group` is enough.
+instead.
 
 ```yaml
 suites:

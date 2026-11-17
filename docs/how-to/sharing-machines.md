@@ -38,22 +38,11 @@ block takes effect once it is merged; the change's plan says so.
 
 ## Inside one repository
 
-Each change is one build of each suite job. Builds of different changes
-queue or run side by side as the suite's `run_on` says:
-
-```yaml
-suites:
-  e2e:
-    run_on:
-      max_in_flight: 2           # at most two e2e builds at once
-      serial_group: browsers     # or: one at a time with every job of the group
-```
-
-`max_in_flight` bounds the suite's own builds. `serial_group` queues them
-behind every other build in the group, including jobs of your own that you
-include from `concourse.include` and that use the same machines. Inside a
-build, every batch runs at once, so `parallel` (or `batches`) says how
-many run together.
+Each change is one build of each suite job, and builds of different
+changes run side by side: nothing queues them. Inside a build every batch
+runs at once, so `parallel` (or `batches`) says how many run together.
+Concourse's per-worker task limit is what keeps a machine from taking more
+than it can.
 
 ## Between repositories: the lock
 

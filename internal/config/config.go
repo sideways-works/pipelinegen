@@ -887,7 +887,6 @@ func (c *Config) Validate() error {
 	c.validateKeep(bad)
 	c.validateNarrowing(bad)
 	c.validateImages(bad)
-	c.validateSerialGroups(bad)
 	c.validateWrites(bad)
 	c.validatePlugins(bad)
 
@@ -1298,21 +1297,6 @@ func (c *Config) validateImages(bad func(string, ...any)) {
 
 	if img := c.Concourse.Planner.PrepareImage; img != "" && !resourceName.MatchString(img) {
 		bad("concourse.planner.prepare_image must name a resource of the root pipeline file")
-	}
-}
-
-// validateSerialGroups refuses a setting for a serial group no suite names,
-// which would otherwise be a silent typo.
-func (c *Config) validateSerialGroups(bad func(string, ...any)) {
-	named := map[string]bool{}
-	for _, s := range c.Suites {
-		named[s.RunOn.SerialGroup] = true
-	}
-
-	for _, g := range slices.Sorted(maps.Keys(c.Concourse.SerialGroups)) {
-		if g == "" || !named[g] {
-			bad("concourse.serial_groups.%s: no suite's run_on.serial_group names it", g)
-		}
 	}
 }
 

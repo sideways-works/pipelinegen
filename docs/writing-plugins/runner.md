@@ -108,8 +108,7 @@ A branch's recording run attaches its lists by itself, in `report suite`
 once its last suite has ended; the pipeline adds no step for it.
 
 No job of the pipeline runs its builds one at a time, or behind other
-jobs, unless the spec asks for it: a suite's `serial_group` or
-`max_in_flight`. Builds of one job for two commits run side by side, each
+jobs. Builds of one job for two commits run side by side, each
 on records of its own commit, and the workers' own limits are the only
 bound. A planning job never runs its builds one at a time, a continuous
 run's included.
@@ -227,9 +226,8 @@ three only when the runner declares them; with locks per batch every lock must
 be taken around each batch and freed in that step's ensure, and its wait
 may not count against the batch's limit): every step must have a time
 limit, its own or one around it, a hook's steps their own; no job may be
-serial, in a serial group or bounded by `max_in_flight` unless the spec
-asks (a suite's `serial_group` or `max_in_flight`), and a planning job
-never: a serial planning job, and a step that still sets
+serial, in a serial group or bounded by `max_in_flight`, a planning job
+included: a serial planning job, and a step that still sets
 `PIPELINEGEN_SERIAL_PLAN`, are refused; a continuous run's suite jobs may trigger only
 on what its planning job puts inside an `across` (the hand-off it puts
 when `plan --gate` opened its gate), never on the branch; a pull request

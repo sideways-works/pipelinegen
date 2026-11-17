@@ -97,8 +97,8 @@ func TestExampleConfig(t *testing.T) {
 		t.Fatal("unit and smoke must be bound by the graph")
 	}
 
-	if cfg.Suites["smoke"].RunOn.SerialGroup == "" {
-		t.Fatal("smoke has no serial group")
+	if len(cfg.Notices) != 0 {
+		t.Fatalf("the example's config draws notices: %q", cfg.Notices)
 	}
 
 	for _, s := range cfg.Suites {
