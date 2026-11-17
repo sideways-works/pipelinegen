@@ -147,7 +147,7 @@ suites:
             esac
             go run ./ci/proof "${mode[@]}" "$PIPELINEGEN_WORK/proof"
   go:
-    tests: ["connectors/**/*_test.go", "internal/**/*_test.go", "plugin/**/*_test.go"]
+    tests: ["internal/**/*_test.go", "plugin/**/*_test.go"]
     owner: "//:code"
     # each test file runs when code it ran, or what that code needs,
     # changed; a test that runs the tool in a child process records the

@@ -43,14 +43,14 @@ const KindConnector = plugin.KindConnector
 // release holds it, its version, and its binaries' checksums by platform,
 // or the checksum of the release's SHA256SUMS.
 type ConnectorPin struct {
-	Name       string
-	Repository string
-	Version    string
-	SHA256     Checksums
-	Sums       string
+	Name       string    `json:"name"`
+	Repository string    `json:"repository"`
+	Version    string    `json:"version"`
+	SHA256     Checksums `json:"sha256,omitempty"`
+	Sums       string    `json:"sums,omitempty"`
 	// URL overrides where it is fetched from; %s is replaced by the
 	// repository, the version and the file's name, in that order.
-	URL string
+	URL string `json:"url,omitempty"`
 }
 
 // unreleased stands for a checksum the release isn't out to give yet: no

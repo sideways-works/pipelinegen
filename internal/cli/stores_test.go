@@ -45,7 +45,7 @@ func TestTheStoreIsTheCodeRemote(t *testing.T) {
 		t.Fatalf("a repository with no host reports to %T", host(own))
 	}
 
-	if _, ok := host(gh).(*report.Client); !ok {
+	if _, ok := host(gh).(*gitHubHost); !ok {
 		t.Fatalf("a github repository reports to %T", host(gh))
 	}
 }
@@ -65,7 +65,7 @@ func TestATokenIsReadForItsPurpose(t *testing.T) {
 		t.Fatalf("split: store %q read %q", tokenFor(split, "store"), tokenFor(split, "read"))
 	}
 
-	if c, ok := host(split).(*report.Client); !ok || c.Token != "" {
+	if c, ok := host(split).(*gitHubHost); !ok || c.tokens["report"] != "" {
 		t.Fatalf("the report token is its own variable's, unset here: %+v", host(split))
 	}
 }

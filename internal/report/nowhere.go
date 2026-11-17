@@ -19,17 +19,8 @@ func (Nowhere) SetStatus(context.Context, string, CommitStatus) error { return n
 // Statuses has none.
 func (Nowhere) Statuses(context.Context, string) ([]CommitStatus, error) { return nil, nil }
 
-// Comments has none.
-func (Nowhere) Comments(context.Context, int) ([]IssueComment, error) { return nil, nil }
-
-// CreateComment keeps nothing.
-func (Nowhere) CreateComment(context.Context, int, string) error { return nil }
-
-// UpdateComment keeps nothing.
-func (Nowhere) UpdateComment(context.Context, int64, string) error { return nil }
-
-// DeleteComment keeps nothing.
-func (Nowhere) DeleteComment(context.Context, int64) error { return nil }
+// Comment keeps nothing.
+func (Nowhere) Comment(context.Context, int, string, string) error { return nil }
 
 // CommitSubject is unknown: the commit's id names it.
 func (Nowhere) CommitSubject(context.Context, string) (string, error) { return "", nil }

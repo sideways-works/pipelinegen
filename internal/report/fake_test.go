@@ -101,20 +101,16 @@ func (f *fakeGitHub) status(sha, ctx string) (CommitStatus, bool) {
 	return all[len(all)-1], true
 }
 
-func (f *fakeGitHub) Comments(_ context.Context, pr int) ([]IssueComment, error) {
-	f.wait()
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	f.calls++
-	if f.fail != nil {
-		return nil, f.fail
-	}
-
-	return slices.Clone(f.comments[pr]), nil
+// IssueComment is one comment the fake keeps on a pull request.
+type IssueComment struct {
+	ID        int64
+	Body      string
+	UpdatedAt time.Time
 }
 
-func (f *fakeGitHub) CreateComment(_ context.Context, pr int, body string) error {
+// Comment keeps one comment as the GitHub connector does: the oldest that
+// starts with the marker, the others removed.
+func (f *fakeGitHub) Comment(_ context.Context, pr int, marker, body string) error {
 	f.wait()
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -124,50 +120,33 @@ func (f *fakeGitHub) CreateComment(_ context.Context, pr int, body string) error
 		return f.fail
 	}
 
-	f.nextID++
-	f.posts++
-	f.comments[pr] = append(f.comments[pr], IssueComment{ID: f.nextID, Body: body, UpdatedAt: time.Now()})
+	normal := func(s string) string { return strings.TrimRight(strings.ReplaceAll(s, "\r\n", "\n"), " \n\t") }
 
-	return nil
-}
+	var mine []int64
 
-func (f *fakeGitHub) UpdateComment(_ context.Context, id int64, body string) error {
-	f.wait()
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	f.calls++
-	if f.fail != nil {
-		return f.fail
-	}
-
-	for pr, cs := range f.comments {
-		for i := range cs {
-			if cs[i].ID == id {
-				f.comments[pr][i].Body = body
-				f.comments[pr][i].UpdatedAt = time.Now()
-				f.posts++
-
-				return nil
-			}
+	for _, c := range f.comments[pr] {
+		if b := normal(c.Body); strings.HasPrefix(b, marker+"\n") || b == marker {
+			mine = append(mine, c.ID)
 		}
 	}
 
-	return errFake
-}
+	slices.Sort(mine)
 
-func (f *fakeGitHub) DeleteComment(_ context.Context, id int64) error {
-	f.wait()
-	f.mu.Lock()
-	defer f.mu.Unlock()
+	if len(mine) == 0 {
+		f.nextID++
+		f.posts++
+		f.comments[pr] = append(f.comments[pr], IssueComment{ID: f.nextID, Body: body, UpdatedAt: time.Now()})
 
-	f.calls++
-	if f.fail != nil {
-		return f.fail
+		return nil
 	}
 
-	for pr, cs := range f.comments {
-		f.comments[pr] = slices.DeleteFunc(cs, func(c IssueComment) bool { return c.ID == id })
+	f.comments[pr] = slices.DeleteFunc(f.comments[pr], func(c IssueComment) bool { return c.ID != mine[0] && slices.Contains(mine, c.ID) })
+
+	for i := range f.comments[pr] {
+		if c := &f.comments[pr][i]; c.ID == mine[0] && normal(c.Body) != normal(body) {
+			c.Body, c.UpdatedAt = body, time.Now()
+			f.posts++
+		}
 	}
 
 	return nil

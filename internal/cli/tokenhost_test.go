@@ -8,7 +8,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/sideways-works/pipelinegen/internal/report"
 	"github.com/sideways-works/pipelinegen/internal/runs"
 	"github.com/sideways-works/pipelinegen/plugin"
 )
@@ -136,7 +135,7 @@ func TestTheOtherWaysATokenLeavesStayOnTheirHost(t *testing.T) {
 	// config's.
 	t.Setenv(envAPIURL, "https://api.example.test")
 
-	if c, ok := host(cfg).(*report.Client); !ok || c.API != "https://api.example.test" {
+	if c, ok := host(cfg).(*gitHubHost); !ok || c.api != "https://api.example.test" || c.remote != "https://api.example.test/"+cfg.GitHub.Repository+".git" {
 		t.Errorf("report client %+v", host(cfg))
 	}
 

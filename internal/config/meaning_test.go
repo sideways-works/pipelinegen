@@ -176,3 +176,16 @@ func TestAProposedChangesTrustedStepsAreNoDifference(t *testing.T) {
 		t.Errorf("parts %+v", m.Parts)
 	}
 }
+
+func TestAConnectorsPinMeansNothing(t *testing.T) {
+	entry := func(version string) string {
+		return "plugins:\n  - {name: github, kind: connector, repository: o/pipelinegen-connector-github, release: {version: " + version + ", sha256: " + sha + "}}\n"
+	}
+
+	for _, base := range [][]string{nil, {"plugins:\n", entry("v1")}} {
+		m := meaningOf(t, base, []string{"plugins:\n", entry("v2")})
+		if !m.Understood() || len(runs(m, "go", "a_test.go")) != 0 || len(m.Drivers("go", RoutedSlice{Name: "a_test.go"})) != 0 {
+			t.Errorf("from %v: %+v", base, m.Parts)
+		}
+	}
+}

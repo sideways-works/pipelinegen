@@ -117,8 +117,7 @@ func postBaseline(ctx context.Context, cfg *config.Config, run, commit string, d
 		return fmt.Errorf("%w: the report credential isn't in the environment (%s); a baseline posts the run's status", errSeedRefused, tokenEnv(cfg, plugin.PurposeReport))
 	}
 
-	client := &report.Client{API: os.Getenv(envAPIURL), Repository: cfg.GitHub.Repository, Token: token}
-	if err := client.SetStatus(ctx, commit, st); err != nil {
+	if err := host(cfg).SetStatus(ctx, commit, st); err != nil {
 		return err
 	}
 

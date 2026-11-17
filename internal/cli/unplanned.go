@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/connector/plaingit"
+	"github.com/sideways-works/pipelinegen/internal/connector"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/report"
 	"github.com/sideways-works/pipelinegen/internal/runs"
@@ -60,7 +60,7 @@ func runUnplanned(ctx context.Context, args []string, stdout io.Writer) (err err
 	}
 
 	pr := r.Trigger.PullRequests
-	gh := &runs.GitHub{API: os.Getenv(envAPIURL), Repository: cfg.GitHub.Repository, Token: tokenFor(cfg, plugin.PurposeChanges)}
+	gh := sweepHost(cfg)
 
 	heads, err := openHeads(ctx, cfg, gh, pr)
 	if err != nil {
@@ -101,6 +101,17 @@ func runUnplanned(ctx context.Context, args []string, stdout io.Writer) (err err
 	}
 
 	return writeMarks(ctx, store, run, goneMarks(run, heads, marks))
+}
+
+// sweepHost posts a head's last word with the token the sweep lists with
+// when the sweep holds no report token of its own.
+func sweepHost(cfg *config.Config) *gitHubHost {
+	gh := newGitHubHost(cfg)
+	if gh.tokens[plugin.PurposeReport] == "" {
+		gh.tokens[plugin.PurposeReport] = gh.tokens[plugin.PurposeChanges]
+	}
+
+	return gh
 }
 
 // Of two sweeps taking a head up at once only the first mark written stands, and a planning build that
@@ -233,7 +244,7 @@ func goneMarks(run string, heads []runs.Head, marks map[string]swept) []gitstore
 
 type sweep struct {
 	cfg    *config.Config
-	gh     *runs.GitHub
+	gh     *gitHubHost
 	refs   map[string]gitstore.Ref
 	marks  map[string]swept
 	out    string
@@ -285,7 +296,7 @@ func (sw sweep) take(ctx context.Context, run string, h runs.Head) ([]gitstore.U
 		}
 	case !planned:
 		var admitted bool
-		if admitted, err = planHead(ctx, sw.cfg, sw.gh, id, h, filepath.Join(sw.out, sweepPlanDir, dir), sw.stdout); err != nil || !admitted {
+		if admitted, err = sw.planHead(ctx, id, h, filepath.Join(sw.out, sweepPlanDir, dir)); err != nil || !admitted {
 			// a head the run leaves out is marked too: Admit asks GitHub
 			// a lot, and its answer rarely changes within missed_after.
 			return []gitstore.Update{sw.marked(markRef, mark)}, err == nil, err
@@ -358,7 +369,7 @@ func (sw sweep) giveUp(ctx context.Context, run string, h runs.Head, planned boo
 		why = fmt.Sprintf("planned, but no suite began after %d hand-offs: see the suite jobs", maxTakes)
 	}
 
-	var gh report.GitHub = &report.Client{API: sw.gh.API, Repository: sw.gh.Repository, Token: sw.gh.Token}
+	var gh report.GitHub = sw.gh
 	if sw.byConnector {
 		// a plain git server has no status to post: the line below and
 		// `pipelinegen status` say it.
@@ -378,7 +389,7 @@ func (sw sweep) marked(ref string, last swept) gitstore.Update {
 	return gitstore.Update{Ref: ref, Old: last.commit, Files: map[string][]byte{sweptFile: data}}
 }
 
-func openHeads(ctx context.Context, cfg *config.Config, gh *runs.GitHub, pr *config.PullRequests) ([]runs.Head, error) {
+func openHeads(ctx context.Context, cfg *config.Config, gh runs.Changes, pr *config.PullRequests) ([]runs.Head, error) {
 	if !cfg.ChangesFromConnector() {
 		return runs.OpenHeads(ctx, gh, pr)
 	}
@@ -386,10 +397,23 @@ func openHeads(ctx context.Context, cfg *config.Config, gh *runs.GitHub, pr *con
 	cc := cfg.CodeConnector()
 	remote := connectorRemote(cfg)
 
-	// listing a plain git server's branches is reading it.
+	// listing a plain git server's branches is reading it: git does, with
+	// the read credential, and the connector picks the changes among them.
 	env := runs.AuthEnv(runs.Auth{Scope: httpsScope(remote), Token: tokenFor(cfg, plugin.PurposeRead), Env: sshEnv(cfg, plugin.PurposeRead)})
 
-	changes, err := plaingit.Changes(ctx, remote, env, pr.Base, cc.Changes.Branches)
+	branches, err := runs.Branches(ctx, remote, env)
+	if err != nil {
+		return nil, err
+	}
+
+	host, err := openConnector(ctx, cfg, config.ConnectorGit, connector.Options{
+		Config: map[string]any{"branches": cc.Changes.Branches, "heads": branches, "links": cc.Links}, Remote: remote,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	changes, err := host.Changes(ctx, plugin.ChangesArgs{Base: pr.Base, Filters: plugin.ChangesFilters{Head: pr.Head}})
 	if err != nil {
 		return nil, err
 	}
@@ -397,6 +421,11 @@ func openHeads(ctx context.Context, cfg *config.Config, gh *runs.GitHub, pr *con
 	var heads []runs.Head
 
 	for _, c := range changes {
+		// a change runs only at a branch git listed, at the commit git saw
+		if !connector.Admit(c) || c.HeadBranch == pr.Base || branches[c.HeadBranch] != c.Head {
+			continue
+		}
+
 		if pr.Head != "" {
 			if ok, err := path.Match(pr.Head, c.HeadBranch); err != nil || !ok {
 				continue
@@ -461,10 +490,11 @@ func headID(run string, h runs.Head) report.ID {
 	return report.ID{Run: run, Change: h.ID(), Commit: h.Commit, PR: h.PR}
 }
 
-func planHead(ctx context.Context, cfg *config.Config, gh *runs.GitHub, id report.ID, h runs.Head, dir string, stdout io.Writer) (bool, error) {
+func (sw sweep) planHead(ctx context.Context, id report.ID, h runs.Head, dir string) (bool, error) {
+	cfg, stdout := sw.cfg, sw.stdout
 	ch := runs.Change{Run: id.Run, ID: id.Change, Commit: h.Commit, PR: h.PR, Branch: h.Branch, Base: cfg.Runs[id.Run].Trigger.PullRequests.Base}
 
-	admitted, why, err := runs.Admit(ctx, gh, cfg, ch, report.RunContext(cfg, id.Run))
+	admitted, why, err := runs.Admit(ctx, sw.gh, cfg, ch, plannedSince(sw.refs, id))
 	if err != nil {
 		return false, err
 	}

@@ -27,7 +27,9 @@ type Options struct {
 	// takes requests whether or not describe declares it.
 	API    string
 	Tokens map[string]string
-	// Work holds each call's files, removed when the call ends.
+	// Work holds each call's files, in a directory of the call's own that
+	// only this user can open, removed when the call ends: the responses
+	// in it decide what the connector answers.
 	Work string
 	HTTP *http.Client
 }
@@ -40,7 +42,7 @@ func Open(ctx context.Context, o Options) (*Host, error) {
 
 	p := plugin.Plugin{Name: o.Name, Path: o.Path, Config: o.Config}
 
-	work, err := os.MkdirTemp(o.Work, "describe-*")
+	work, err := os.MkdirTemp(o.Work, "pipelinegen-connector-describe-*")
 	if err != nil {
 		return nil, fmt.Errorf("connector %s: %w", o.Name, err)
 	}
@@ -79,7 +81,7 @@ func Open(ctx context.Context, o Options) (*Host, error) {
 func (h *Host) Description() plugin.Description { return h.ex.Desc }
 
 func (h *Host) call(ctx context.Context, call string, args, answer any) error {
-	work, err := os.MkdirTemp(h.work, call+"-*")
+	work, err := os.MkdirTemp(h.work, "pipelinegen-connector-"+call+"-*")
 	if err != nil {
 		return fmt.Errorf("connector %s %s: %w", h.ex.Plugin.Name, call, err)
 	}

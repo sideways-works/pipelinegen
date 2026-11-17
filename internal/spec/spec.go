@@ -209,7 +209,9 @@ func tools(cfg *config.Config) []plugin.SpecTool {
 	// the connectors the config uses without an entry of its own, so the
 	// bootstrap fetches them with the pipeline's read token
 	for _, name := range cfg.ConnectorsUsed() {
-		if slices.ContainsFunc(cfg.Plugins, func(p config.Plugin) bool { return p.Kind == config.KindConnector && p.Name == name }) {
+		// an entry by its name, of any kind, has the plugins directory's
+		// file of that name
+		if slices.ContainsFunc(cfg.Plugins, func(p config.Plugin) bool { return p.Name == name }) {
 			continue
 		}
 

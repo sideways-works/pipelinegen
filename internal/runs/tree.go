@@ -123,6 +123,27 @@ func BranchTip(ctx context.Context, remote, branch string, auth Auth) (string, e
 	return strings.TrimSpace(sha), nil
 }
 
+// Branches lists a remote's branches and the commit each points at, with
+// git's extra environment env (the remote's credential, an ssh command):
+// what a plain git connector picks its changes from.
+func Branches(ctx context.Context, remote string, env []string) (map[string]string, error) {
+	out, err := gitEnv(ctx, "", env, "ls-remote", "--heads", "--", remote)
+	if err != nil {
+		return nil, err
+	}
+
+	heads := map[string]string{}
+
+	for line := range strings.SplitSeq(out, "\n") {
+		sha, ref, ok := strings.Cut(line, "\t")
+		if branch, isHead := strings.CutPrefix(ref, "refs/heads/"); ok && isHead {
+			heads[branch] = sha
+		}
+	}
+
+	return heads, nil
+}
+
 // ErrNoBranch is a branch the remote doesn't have.
 var ErrNoBranch = errors.New("no such branch on the remote")
 

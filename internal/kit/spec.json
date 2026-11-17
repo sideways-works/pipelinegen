@@ -180,6 +180,13 @@
       "kind": "correlator",
       "repository": "owner/go-correlator",
       "commit": "0123456789abcdef0123456789abcdef01234567"
+    },
+    {
+      "name": "github",
+      "kind": "connector",
+      "repository": "sideways-works/pipelinegen-connector-github",
+      "version": "v0.1.0",
+      "sha256": "TODO"
     }
   ],
   "config_files": [

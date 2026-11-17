@@ -45,7 +45,7 @@ Before:
 ```yaml
 suites:
   go:
-    tests: ["connectors/**/*_test.go", "internal/**/*_test.go", "plugin/**/*_test.go"]
+    tests: ["internal/**/*_test.go", "plugin/**/*_test.go"]
     owner: "//:code"
     bind: recorded
     run_slice: ci/go-test.yml
@@ -61,7 +61,7 @@ plugins:
     release: {version: <tag>, sha256: <the release's checksum>}
 suites:
   go:
-    tests: ["connectors/**/*_test.go", "internal/**/*_test.go", "plugin/**/*_test.go"]
+    tests: ["internal/**/*_test.go", "plugin/**/*_test.go"]
     owner: "//:code"
     bind: recorded
     image: golang

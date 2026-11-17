@@ -1,13 +1,13 @@
 package runs
 
 import (
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/pipelinegen/plugin"
 )
 
 const (
@@ -15,130 +15,149 @@ const (
 	olderSHA = "2222222222222222222222222222222222222222"
 )
 
-func fakeGitHub(t *testing.T, answers map[string]any) *GitHub {
-	t.Helper()
-
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/")
-
-		body, ok := answers[path]
-		if !ok {
-			if strings.HasSuffix(path, "/statuses") || strings.HasSuffix(path, "/timeline") {
-				body = []any{}
-			} else {
-				http.NotFound(w, r)
-
-				return
-			}
-		}
-
-		if err := json.NewEncoder(w).Encode(body); err != nil {
-			t.Error(err)
-		}
-	}))
-	t.Cleanup(srv.Close)
-
-	return &GitHub{API: srv.URL, Repository: "o/r"}
+type listed struct {
+	changes []plugin.Change
+	asked   []plugin.ChangesArgs
 }
 
-func pullJSON(draft bool, labels ...string) map[string]any {
-	ls := []any{}
-	for _, l := range labels {
-		ls = append(ls, map[string]any{"name": l})
-	}
+func (l *listed) Changes(_ context.Context, a plugin.ChangesArgs) ([]plugin.Change, error) {
+	l.asked = append(l.asked, a)
 
-	return map[string]any{
-		"number": 7, "state": "open", "draft": draft, "created_at": "2026-01-01T10:00:00Z",
-		"head":   map[string]any{"sha": headSHA, "ref": "feat/notes"},
-		"labels": ls,
+	return l.changes, nil
+}
+
+func pull(draft bool, labels ...string) plugin.Change {
+	ready := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+
+	return plugin.Change{
+		ID: "pr-7", Number: 7, Base: "main", Head: headSHA, HeadBranch: "feat/notes", Draft: draft, Labels: labels,
+		From: plugin.FromSame, ReadySince: &ready,
 	}
 }
 
 func prConfig(pr config.PullRequests) *config.Config {
+	pr.Base = "main"
+
 	return &config.Config{Runs: map[string]config.Run{"pr": {Trigger: config.Trigger{PullRequests: &pr}}}}
 }
 
 var change = Change{Run: "pr", ID: "pr-7", Commit: headSHA, PR: 7}
 
+func noneRan(time.Time) (string, error) { return "", nil }
+
 func TestAdmitFilters(t *testing.T) {
 	cases := []struct {
 		name  string
 		pr    config.PullRequests
-		pull  map[string]any
+		pull  plugin.Change
 		admit bool
 	}{
-		{"by default ready only, a draft", config.PullRequests{}, pullJSON(true), false},
-		{"by default ready only, ready", config.PullRequests{}, pullJSON(false), true},
-		{"ready only, a draft", config.PullRequests{Draft: config.DraftsReady}, pullJSON(true), false},
-		{"drafts only, a draft", config.PullRequests{Draft: config.DraftsOnly}, pullJSON(true), true},
-		{"drafts only, ready", config.PullRequests{Draft: config.DraftsOnly}, pullJSON(false), false},
-		{"any, a draft", config.PullRequests{Draft: config.DraftsAny}, pullJSON(true), true},
-		{"any, ready", config.PullRequests{Draft: config.DraftsAny}, pullJSON(false), true},
-		{"needs a label", config.PullRequests{Labels: []string{"ci"}}, pullJSON(false), false},
-		{"has the label", config.PullRequests{Labels: []string{"ci"}}, pullJSON(false, "ci"), true},
-		{"label excluded", config.PullRequests{LabelsWithout: []string{"wip"}}, pullJSON(false, "wip"), false},
-		{"head matches", config.PullRequests{Head: "feat/*"}, pullJSON(false), true},
-		{"head doesn't", config.PullRequests{Head: "fix/*"}, pullJSON(false), false},
+		{"by default ready only, a draft", config.PullRequests{}, pull(true), false},
+		{"by default ready only, ready", config.PullRequests{}, pull(false), true},
+		{"ready only, a draft", config.PullRequests{Draft: config.DraftsReady}, pull(true), false},
+		{"drafts only, a draft", config.PullRequests{Draft: config.DraftsOnly}, pull(true), true},
+		{"drafts only, ready", config.PullRequests{Draft: config.DraftsOnly}, pull(false), false},
+		{"any, a draft", config.PullRequests{Draft: config.DraftsAny}, pull(true), true},
+		{"any, ready", config.PullRequests{Draft: config.DraftsAny}, pull(false), true},
+		{"needs a label", config.PullRequests{Labels: []string{"ci"}}, pull(false), false},
+		{"has the label", config.PullRequests{Labels: []string{"ci"}}, pull(false, "ci"), true},
+		{"label excluded", config.PullRequests{LabelsWithout: []string{"wip"}}, pull(false, "wip"), false},
+		{"head matches", config.PullRequests{Head: "feat/*"}, pull(false), true},
+		{"head doesn't", config.PullRequests{Head: "fix/*"}, pull(false), false},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			gh := fakeGitHub(t, map[string]any{"repos/o/r/pulls/7": c.pull})
+			host := &listed{changes: []plugin.Change{c.pull}}
 
-			ok, why, err := Admit(t.Context(), gh, prConfig(c.pr), change, "ci/pr")
+			ok, why, err := Admit(t.Context(), host, prConfig(c.pr), change, noneRan)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			if ok != c.admit {
 				t.Errorf("admitted %v (%s), want %v", ok, why, c.admit)
+			}
+
+			if a := host.asked[0]; a.Base != "main" || a.Filters.Head != c.pr.Head {
+				t.Errorf("asked %+v", a)
 			}
 		})
 	}
 }
 
 func TestAdmitSkipsAHeadThatMovedOn(t *testing.T) {
-	p := pullJSON(false)
-	p["head"] = map[string]any{"sha": olderSHA, "ref": "feat/notes"}
-	gh := fakeGitHub(t, map[string]any{"repos/o/r/pulls/7": p})
+	p := pull(false)
+	p.Head = olderSHA
 
-	ok, why, err := Admit(t.Context(), gh, prConfig(config.PullRequests{}), change, "ci/pr")
-	if err != nil || ok {
+	ok, why, err := Admit(t.Context(), &listed{changes: []plugin.Change{p}}, prConfig(config.PullRequests{}), change, noneRan)
+	if err != nil || ok || !strings.Contains(why, "moved on") {
 		t.Fatalf("admitted %v (%s) %v", ok, why, err)
 	}
 }
 
+func TestAdmitSkipsAClosedPullRequest(t *testing.T) {
+	ok, why, err := Admit(t.Context(), &listed{}, prConfig(config.PullRequests{}), change, noneRan)
+	if err != nil || ok || !strings.Contains(why, "is closed") {
+		t.Fatalf("admitted %v (%s) %v", ok, why, err)
+	}
+}
+
+// A change the connector can't tell comes from the repository itself is a
+// fork's, whatever else it says.
+func TestAdmitNeverTakesAFork(t *testing.T) {
+	for _, from := range []string{plugin.FromFork, plugin.FromUnknown, ""} {
+		p := pull(false)
+		p.From = from
+
+		ok, why, err := Admit(t.Context(), &listed{changes: []plugin.Change{p}}, prConfig(config.PullRequests{}), change, noneRan)
+		if err != nil || ok || !strings.Contains(why, "fork") {
+			t.Fatalf("%q: admitted %v (%s) %v", from, ok, why, err)
+		}
+
+		heads, err := OpenHeads(t.Context(), &listed{changes: []plugin.Change{p}}, &config.PullRequests{Base: "main"})
+		if err != nil || len(heads) != 0 {
+			t.Fatalf("%q: heads %+v %v", from, heads, err)
+		}
+	}
+}
+
 func TestOncePerReady(t *testing.T) {
-	commits := []any{map[string]any{"sha": olderSHA}, map[string]any{"sha": headSHA}}
-	ranOlder := []any{map[string]any{"context": "ci/pr", "created_at": "2026-01-02T10:00:00Z"}}
+	ready := time.Date(2026, 1, 3, 10, 0, 0, 0, time.UTC)
+	planned := time.Date(2026, 1, 2, 10, 0, 0, 0, time.UTC)
+
+	ran := func(since time.Time) (string, error) {
+		if planned.After(since) {
+			return olderSHA, nil
+		}
+
+		return "", nil
+	}
 
 	cases := []struct {
-		name     string
-		timeline []any
-		admit    bool
+		name  string
+		ready time.Time
+		admit bool
 	}{
-		// the older head ran after the opening: a push to a ready pull request
-		{"push after a run", []any{}, false},
-		// marked ready again after the older head ran
-		{"ready again", []any{map[string]any{"event": "ready_for_review", "created_at": "2026-01-03T10:00:00Z"}}, true},
+		// the older head was planned after the opening: a push to a ready pull request
+		{"push after a run", time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC), false},
+		// marked ready again after the older head was planned
+		{"ready again", ready, true},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			gh := fakeGitHub(t, map[string]any{
-				"repos/o/r/pulls/7":                           pullJSON(false),
-				"repos/o/r/pulls/7/commits":                   commits,
-				"repos/o/r/issues/7/timeline":                 c.timeline,
-				"repos/o/r/commits/" + olderSHA + "/statuses": ranOlder,
-			})
+			p := pull(false)
+			p.ReadySince = &c.ready
+			host := &listed{changes: []plugin.Change{p}}
 
-			ok, why, err := Admit(t.Context(), gh, prConfig(config.PullRequests{OncePerReady: true}), change, "ci/pr")
+			ok, why, err := Admit(t.Context(), host, prConfig(config.PullRequests{OncePerReady: true}), change, ran)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if ok != c.admit {
-				t.Errorf("admitted %v (%s), want %v", ok, why, c.admit)
+			if ok != c.admit || !host.asked[0].Filters.ReadySince {
+				t.Errorf("admitted %v (%s), want %v; asked %+v", ok, why, c.admit, host.asked)
 			}
 		})
 	}

@@ -308,6 +308,9 @@ func (m *Meaning) pluginMeans(p []string) string {
 			// before, in any batch: no slice in particular
 			return MeansFile
 		}
+	case KindConnector:
+		// where results go and which changes run: no test can observe it
+		return MeansNothing
 	case KindDriver:
 		switch key {
 		case "", "release", "commit", "repository", "name", "kind":

@@ -805,7 +805,8 @@ func (r *Reporter) throttled(sc scope, updated time.Time) bool {
 }
 
 func (r *Reporter) show(ctx context.Context, sc scope, statuses []CommitStatus, body string, alsoTo []int) error {
-	if err := r.setStatuses(ctx, sc, statuses); err != nil {
+	last, err := r.setStatuses(ctx, sc, statuses)
+	if err != nil {
 		return err
 	}
 
@@ -813,10 +814,22 @@ func (r *Reporter) show(ctx context.Context, sc scope, statuses []CommitStatus, 
 		return nil
 	}
 
+	// the comment goes with the run's statuses: within the throttle of
+	// their last write, it waits for a later report too
+	if sc.throttle && len(statuses) == 0 {
+		if last, err = r.lastStatus(ctx); err != nil {
+			return err
+		}
+	}
+
+	if r.throttled(sc, last) {
+		return nil
+	}
+
 	var errs []error
 
 	for _, pr := range r.commentTargets(alsoTo) {
-		if err := r.writeComment(ctx, sc, pr, body); err != nil {
+		if err := r.GitHub.Comment(ctx, pr, Marker(r.ID.Run, r.ID.PR), body); err != nil {
 			errs = append(errs, fmt.Errorf("comment on #%d: %w", pr, err))
 		}
 	}
@@ -826,15 +839,17 @@ func (r *Reporter) show(ctx context.Context, sc scope, statuses []CommitStatus, 
 
 // setStatuses posts the statuses that differ from what the commit shows; a
 // change of state always goes, a new count of a pending suite may wait
-// for the next report.
-func (r *Reporter) setStatuses(ctx context.Context, sc scope, statuses []CommitStatus) error {
+// for the next report. It returns when the commit last got one of them.
+func (r *Reporter) setStatuses(ctx context.Context, sc scope, statuses []CommitStatus) (time.Time, error) {
+	var last time.Time
+
 	if len(statuses) == 0 {
-		return nil
+		return last, nil
 	}
 
 	current, err := r.GitHub.Statuses(ctx, r.ID.Commit)
 	if err != nil {
-		return fmt.Errorf("statuses: %w", err)
+		return last, fmt.Errorf("statuses: %w", err)
 	}
 
 	have := map[string]CommitStatus{}
@@ -844,6 +859,10 @@ func (r *Reporter) setStatuses(ctx context.Context, sc scope, statuses []CommitS
 
 	for _, st := range statuses {
 		old, ok := have[st.Context]
+		if ok && old.UpdatedAt != nil && old.UpdatedAt.After(last) {
+			last = *old.UpdatedAt
+		}
+
 		if ok && old.State == st.State && old.Description == st.Description && old.TargetURL == st.TargetURL {
 			continue
 		}
@@ -853,11 +872,31 @@ func (r *Reporter) setStatuses(ctx context.Context, sc scope, statuses []CommitS
 		}
 
 		if err := r.GitHub.SetStatus(ctx, r.ID.Commit, st); err != nil {
-			return fmt.Errorf("status %s: %w", st.Context, err)
+			return last, fmt.Errorf("status %s: %w", st.Context, err)
 		}
 	}
 
-	return nil
+	return last, nil
+}
+
+// lastStatus is when the commit last got one of the run's statuses.
+func (r *Reporter) lastStatus(ctx context.Context) (time.Time, error) {
+	var last time.Time
+
+	current, err := r.GitHub.Statuses(ctx, r.ID.Commit)
+	if err != nil {
+		return last, fmt.Errorf("statuses: %w", err)
+	}
+
+	own := RunContext(r.Config, r.ID.Run)
+
+	for _, st := range current {
+		if (st.Context == own || strings.HasPrefix(st.Context, own+"/")) && st.UpdatedAt != nil && st.UpdatedAt.After(last) {
+			last = *st.UpdatedAt
+		}
+	}
+
+	return last, nil
 }
 
 func (r *Reporter) commentTargets(alsoTo []int) []int {
@@ -870,72 +909,4 @@ func (r *Reporter) commentTargets(alsoTo []int) []int {
 	}
 
 	return out
-}
-
-// writeComment finds the run's comment by its marker, makes it when missing
-// and replaces its body. Two writers that both made one leave a pair; the
-// newer ones are removed.
-func (r *Reporter) writeComment(ctx context.Context, sc scope, pr int, body string) error {
-	marker := Marker(r.ID.Run, r.ID.PR)
-
-	mine, err := r.marked(ctx, pr, marker)
-	if err != nil {
-		return err
-	}
-
-	if len(mine) == 0 {
-		if err := r.GitHub.CreateComment(ctx, pr, body); err != nil {
-			return err
-		}
-
-		if mine, err = r.marked(ctx, pr, marker); err != nil {
-			return err
-		}
-	}
-
-	for _, extra := range mine[min(1, len(mine)):] {
-		if err := r.GitHub.DeleteComment(ctx, extra.ID); err != nil {
-			return err
-		}
-	}
-
-	if len(mine) == 0 || normal(mine[0].Body) == normal(body) || r.throttled(sc, mine[0].UpdatedAt) {
-		return nil
-	}
-
-	return r.GitHub.UpdateComment(ctx, mine[0].ID, body)
-}
-
-// normal is a comment's body as GitHub may give it back: line ends and
-// trailing space aside.
-func normal(body string) string {
-	return strings.TrimRight(strings.ReplaceAll(body, "\r\n", "\n"), " \n\t")
-}
-
-func (r *Reporter) marked(ctx context.Context, pr int, marker string) ([]IssueComment, error) {
-	all, err := r.GitHub.Comments(ctx, pr)
-	if err != nil {
-		return nil, err
-	}
-
-	var out []IssueComment
-
-	for _, c := range all {
-		if strings.HasPrefix(c.Body, marker+"\n") || c.Body == marker {
-			out = append(out, c)
-		}
-	}
-
-	slices.SortFunc(out, func(a, b IssueComment) int {
-		switch {
-		case a.ID < b.ID:
-			return -1
-		case a.ID > b.ID:
-			return 1
-		default:
-			return 0
-		}
-	})
-
-	return out, nil
 }

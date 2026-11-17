@@ -52,14 +52,14 @@ func TestAConnectorsChangeIsSupersededByANewerHead(t *testing.T) {
 
 	var said strings.Builder
 
-	if ok, err := admitted(t.Context(), cfg, ch, &said); err != nil || !ok {
+	if ok, err := admitted(t.Context(), cfg, ch, nil, &said); err != nil || !ok {
 		t.Fatalf("the head: %v %v %s", ok, err, said.String())
 	}
 
 	// other content, so the newer head is another commit even within a second.
 	second := pushBranch(t, s.Remote, "review/cart", "a newer head\n")
 
-	if ok, err := admitted(t.Context(), cfg, ch, &said); err != nil || ok ||
+	if ok, err := admitted(t.Context(), cfg, ch, nil, &said); err != nil || ok ||
 		!strings.Contains(said.String(), "superseded, not run: review/cart is at "+second[:12]) {
 		t.Fatalf("after a push: %v %v %s", ok, err, said.String())
 	}

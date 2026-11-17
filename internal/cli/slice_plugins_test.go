@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/pipelinegen/internal/connectortest"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/recording"
 	"github.com/sideways-works/pipelinegen/internal/report"
@@ -25,6 +26,12 @@ import (
 // TestMain doubles as the fake correlators: with FAKE set, the test binary
 // serves the call it was started with.
 func TestMain(m *testing.M) {
+	// the connectors download from a server of the test's, as a release
+	if _, err := connectortest.Serve(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
 	if kind := os.Getenv("FAKE_PLUGIN"); kind != "" {
 		testenv.ExitChild(m, plugin.Serve(os.Args[1:], os.Stdin, os.Stdout, os.Stderr, fakePlugin(kind)))
 	}

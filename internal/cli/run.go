@@ -30,7 +30,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/recording"
 	"github.com/sideways-works/pipelinegen/internal/report"
 	"github.com/sideways-works/pipelinegen/internal/runs"
-	"github.com/sideways-works/pipelinegen/plugin"
 )
 
 const (
@@ -333,9 +332,7 @@ func planAfter(ctx context.Context, cfg *config.Config, ch runs.Change, store *g
 	}
 
 	if ch.PR != 0 {
-		gh := &runs.GitHub{API: os.Getenv(envAPIURL), Repository: cfg.GitHub.Repository, Token: tokenFor(cfg, plugin.PurposeChanges)}
-
-		admitted, why, err := runs.Admit(ctx, gh, cfg, ch, report.RunContext(cfg, ch.Run))
+		admitted, why, err := runs.Admit(ctx, newGitHubHost(cfg), cfg, ch, plannedSinceIn(ctx, store, id))
 		if err != nil {
 			return err
 		}
@@ -1016,10 +1013,10 @@ func lastPassed(ctx context.Context, cfg *config.Config, ch runs.Change, store *
 		})
 	}
 
-	statuses := &runs.Statuses{API: os.Getenv(envAPIURL), Repository: cfg.GitHub.Repository, Token: tokenFor(cfg, plugin.PurposeReport)}
+	gh := host(cfg)
 
 	return baseAmong(commits, func(c string) (string, error) {
-		all, err := statuses.All(ctx, c)
+		all, err := statusesOf(ctx, gh, c)
 		if err != nil {
 			return "", err
 		}
@@ -1094,9 +1091,7 @@ func ownBaseline(ctx context.Context, cfg *config.Config, ch runs.Change, store 
 		return seeded != "", err
 	}
 
-	statuses := &runs.Statuses{API: os.Getenv(envAPIURL), Repository: cfg.GitHub.Repository, Token: tokenFor(cfg, plugin.PurposeReport)}
-
-	all, err := statuses.All(ctx, ch.Commit)
+	all, err := statusesOf(ctx, host(cfg), ch.Commit)
 	if err != nil {
 		return false, err
 	}

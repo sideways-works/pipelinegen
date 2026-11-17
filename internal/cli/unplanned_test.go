@@ -80,10 +80,18 @@ func (o openPulls) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// openPull is a pull request onto main of o/r, whose repository id is 1:
+// a head in another repository has another id.
 func openPull(number int, sha string, updated time.Time, draft bool, repo string) map[string]any {
+	id := 1
+	if repo != "o/r" {
+		id = 2
+	}
+
 	return map[string]any{
 		"number": number, "state": "open", "draft": draft, "updated_at": updated, "created_at": updated,
-		"head": map[string]any{"sha": sha, "ref": fmt.Sprintf("topic-%d", number), "repo": map[string]any{"full_name": repo}},
+		"head": map[string]any{"sha": sha, "ref": fmt.Sprintf("topic-%d", number), "repo": map[string]any{"id": id, "full_name": repo}},
+		"base": map[string]any{"ref": "main", "repo": map[string]any{"id": 1, "full_name": "o/r"}},
 	}
 }
 

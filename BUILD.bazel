@@ -9,7 +9,6 @@ filegroup(
     srcs = glob(
         [
             "cmd/**/*.go",
-            "connectors/**/*.go",
             "internal/**/*.go",
             "plugin/**/*.go",
         ],
@@ -39,7 +38,6 @@ filegroup(
     ] + glob(
         [
             "cmd/**/*_test.go",
-            "connectors/**/*_test.go",
             "internal/**/*_test.go",
             "plugin/**/*_test.go",
         ],

@@ -108,6 +108,19 @@ func (g *githubAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		g.next++
 		g.comments[pr][g.next] = body.Body
+	case r.Method == http.MethodDelete:
+		var id int64
+		if _, err := fmt.Sscanf(r.URL.Path, "/repos/o/r/issues/comments/%d", &id); err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+
+			return
+		}
+
+		for _, cs := range g.comments {
+			delete(cs, id)
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	case r.Method == http.MethodPatch:
 		var id int64
 		if _, err := fmt.Sscanf(r.URL.Path, "/repos/o/r/issues/comments/%d", &id); err != nil {

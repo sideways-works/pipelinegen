@@ -50,7 +50,7 @@ func planOut(ctx context.Context, cfg *config.Config, ch runs.Change, store *git
 		return err
 	}
 
-	if admitted, err := admittedFirst(ctx, cfg, ch, stdout); err != nil || !admitted {
+	if admitted, err := admittedFirst(ctx, cfg, ch, store, stdout); err != nil || !admitted {
 		return err
 	}
 
@@ -86,7 +86,7 @@ func planOut(ctx context.Context, cfg *config.Config, ch runs.Change, store *git
 	return say(stdout, "%s %s: %s (for the next step to write)\n", ch.Run, ch.ID, summary(plan))
 }
 
-func admitted(ctx context.Context, cfg *config.Config, ch runs.Change, stdout io.Writer) (bool, error) {
+func admitted(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, stdout io.Writer) (bool, error) {
 	if ch.Connector != "" {
 		return stillTheHead(ctx, cfg, ch, stdout)
 	}
@@ -95,9 +95,7 @@ func admitted(ctx context.Context, cfg *config.Config, ch runs.Change, stdout io
 		return true, nil
 	}
 
-	gh := &runs.GitHub{API: os.Getenv(envAPIURL), Repository: cfg.GitHub.Repository, Token: tokenFor(cfg, plugin.PurposeChanges)}
-
-	ok, why, err := runs.Admit(ctx, gh, cfg, ch, report.RunContext(cfg, ch.Run))
+	ok, why, err := runs.Admit(ctx, newGitHubHost(cfg), cfg, ch, plannedSinceIn(ctx, store, reportID(ch)))
 	if err != nil || ok {
 		return ok, err
 	}
@@ -123,24 +121,11 @@ func stillTheHead(ctx context.Context, cfg *config.Config, ch runs.Change, stdou
 	return true, nil
 }
 
-// The first step may hold the read token alone, so it plans even when GitHub won't answer it; the
-// second step asks again with the changes token.
-func admittedFirst(ctx context.Context, cfg *config.Config, ch runs.Change, stdout io.Writer) (bool, error) {
+// The first step may hold the read token alone, which no connector call carries: it plans without
+// asking, and the second step asks with the changes token.
+func admittedFirst(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, stdout io.Writer) (bool, error) {
 	if ch.PR == 0 || tokenFor(cfg, plugin.PurposeChanges) != "" {
-		return admitted(ctx, cfg, ch, stdout)
-	}
-
-	gh := &runs.GitHub{API: os.Getenv(envAPIURL), Repository: cfg.GitHub.Repository, Token: tokenFor(cfg, plugin.PurposeRead)}
-
-	ok, why, err := runs.Admit(ctx, gh, cfg, ch, report.RunContext(cfg, ch.Run))
-	if err != nil {
-		warnf(os.Stderr, "pipelinegen plan: can't ask whether the run takes %s with the read token, planned all the same: %v\n", ch.ID, err)
-
-		return true, nil
-	}
-
-	if !ok {
-		return false, say(stdout, "%s %s: not planned: %s\n", ch.Run, ch.ID, why)
+		return admitted(ctx, cfg, ch, store, stdout)
 	}
 
 	return true, nil
@@ -159,7 +144,7 @@ func planFrom(ctx context.Context, cfg *config.Config, ch runs.Change, store *gi
 		return handAgain(ctx, cfg, ch, store, stdout)
 	}
 
-	if admitted, err := admitted(ctx, cfg, ch, stdout); err != nil || !admitted {
+	if admitted, err := admitted(ctx, cfg, ch, store, stdout); err != nil || !admitted {
 		return false, err
 	}
 

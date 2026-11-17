@@ -237,7 +237,7 @@ func host(cfg *config.Config) report.GitHub { //nolint:ireturn // the config cho
 		return report.Nowhere{}
 	}
 
-	return &report.Client{API: os.Getenv(envAPIURL), Repository: cfg.GitHub.Repository, Token: tokenFor(cfg, plugin.PurposeReport)}
+	return newGitHubHost(cfg)
 }
 
 // storeSeed keeps the store's scratch repository between plans on this machine, so a plan fetches only

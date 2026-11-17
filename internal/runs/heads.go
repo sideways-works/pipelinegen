@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -24,41 +23,23 @@ type Head struct {
 	Updated time.Time
 }
 
-type openPull struct {
-	pull
-
-	UpdatedAt time.Time `json:"updated_at"`
-	Head      struct {
-		SHA  string `json:"sha"`
-		Ref  string `json:"ref"`
-		Repo *struct {
-			FullName string `json:"full_name"`
-		} `json:"repo"`
-	} `json:"head"`
-}
-
 // OpenHeads lists the heads of the open pull requests into a run's base
-// that pass its filters, from the repository itself: the pull request
-// resource leaves forks out.
-func OpenHeads(ctx context.Context, g *GitHub, pr *config.PullRequests) ([]Head, error) {
-	pulls, err := pages[openPull](ctx, g, fmt.Sprintf("repos/%s/pulls?state=open&base=%s", g.Repository, url.QueryEscape(pr.Base)))
+// that pass its filters and come from the repository itself: the pull
+// request resource leaves forks out.
+func OpenHeads(ctx context.Context, host Changes, pr *config.PullRequests) ([]Head, error) {
+	changes, err := host.Changes(ctx, changesArgs(pr, false))
 	if err != nil {
 		return nil, err
 	}
 
 	var heads []Head
 
-	for _, p := range pulls {
-		if p.Head.Repo == nil || p.Head.Repo.FullName != g.Repository {
+	for _, c := range changes {
+		if filtered(c, pr, c.Head) != "" {
 			continue
 		}
 
-		p.pull.Head.SHA, p.pull.Head.Ref = p.Head.SHA, p.Head.Ref
-		if filtered(p.pull, pr, p.Head.SHA) != "" {
-			continue
-		}
-
-		heads = append(heads, Head{PR: p.Number, Commit: p.Head.SHA, Branch: p.Head.Ref, Updated: p.UpdatedAt})
+		heads = append(heads, Head{PR: c.Number, Commit: c.Head, Branch: c.HeadBranch, Updated: c.Updated})
 	}
 
 	return heads, nil
