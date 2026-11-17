@@ -23,8 +23,9 @@ var recordingSteps = []string{"report batch-end", "report suite"}
 // swallowedUnrecorded are the tasks that run a recording step where its exit
 // 4 can't fail the job: inside a try, or in a script that doesn't end with 4
 // when the tool does. Each script is run with a stand-in for the tool that
-// exits 4 for a report.
-func swallowedUnrecorded(ctx context.Context, text []byte) []string {
+// exits 4 for a report, and with the installs of the spec's packages, which
+// would run on this machine, taken out.
+func swallowedUnrecorded(ctx context.Context, text []byte, installs ...string) []string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(text, &doc); err != nil {
 		return []string{"the pipeline isn't YAML: " + err.Error()}
@@ -43,19 +44,19 @@ func swallowedUnrecorded(ctx context.Context, text []byte) []string {
 		name := fmt.Sprint(job["name"])
 
 		for _, k := range append([]string{"plan"}, hookKeys...) {
-			out = append(out, swallowedIn(ctx, job[k], name, false)...)
+			out = append(out, swallowedIn(ctx, job[k], name, false, installs)...)
 		}
 	}
 
 	return out
 }
 
-func swallowedIn(ctx context.Context, v any, job string, tried bool) []string {
+func swallowedIn(ctx context.Context, v any, job string, tried bool, installs []string) []string {
 	switch x := v.(type) {
 	case []any:
 		out := make([]string, 0, len(x))
 		for _, e := range x {
-			out = append(out, swallowedIn(ctx, e, job, tried)...)
+			out = append(out, swallowedIn(ctx, e, job, tried, installs)...)
 		}
 
 		return out
@@ -70,7 +71,7 @@ func swallowedIn(ctx context.Context, v any, job string, tried bool) []string {
 				case tried:
 					out = append(out, where+": inside a try, which lets its exit 4 pass")
 				default:
-					if problem := passesUnrecorded(ctx, run); problem != "" {
+					if problem := passesUnrecorded(ctx, run, installs); problem != "" {
 						out = append(out, where+": "+problem)
 					}
 				}
@@ -82,7 +83,7 @@ func swallowedIn(ctx context.Context, v any, job string, tried bool) []string {
 				continue
 			}
 
-			out = append(out, swallowedIn(ctx, c, job, tried || k == "try")...)
+			out = append(out, swallowedIn(ctx, c, job, tried || k == "try", installs)...)
 		}
 
 		return out
@@ -115,7 +116,7 @@ func recordingStep(task map[string]any) (string, map[string]any) {
 
 const standIn = "#!/bin/sh\n[ \"$1\" = report ] && exit 4\nexit 0\n"
 
-func passesUnrecorded(ctx context.Context, run map[string]any) string {
+func passesUnrecorded(ctx context.Context, run map[string]any, installs []string) string {
 	dir, err := os.MkdirTemp("", "kit-unrecorded-")
 	if err != nil {
 		return err.Error()
@@ -137,7 +138,12 @@ func passesUnrecorded(ctx context.Context, run map[string]any) string {
 
 	if a, ok := run["args"].([]any); ok {
 		for _, x := range a {
-			args = append(args, fmt.Sprint(x))
+			arg := fmt.Sprint(x)
+			for _, in := range installs {
+				arg = gostrings.ReplaceAll(arg, in, ":\n")
+			}
+
+			args = append(args, arg)
 		}
 	}
 

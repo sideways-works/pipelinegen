@@ -426,7 +426,7 @@ func (sh *shapes) add(ctx context.Context, v specVariant, text []byte) {
 	sh.queues = appendLabelled(sh.queues, v, serializedJobs(v.spec, text))
 	sh.follows = appendLabelled(sh.follows, v, append(unplannedStarts(v.spec, text), undecidedPrepares(v.spec, text)...))
 	sh.handed = appendLabelled(sh.handed, v, unhandedStarts(v.spec, text))
-	sh.unrecorded = appendLabelled(sh.unrecorded, v, swallowedUnrecorded(ctx, text))
+	sh.unrecorded = appendLabelled(sh.unrecorded, v, swallowedUnrecorded(ctx, text, installsOf(v.spec)...))
 }
 
 func (k *kit) shapeChecks(perBatch []string, sh shapes) {

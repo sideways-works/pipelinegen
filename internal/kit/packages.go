@@ -177,3 +177,20 @@ func walkSteps(v any, f func(map[string]any)) {
 		}
 	}
 }
+
+// installsOf are the spec's install scripts.
+func installsOf(s plugin.Spec) []string {
+	var out []string
+
+	if s.PlannerPackages != nil {
+		out = append(out, s.PlannerPackages.Install)
+	}
+
+	for _, su := range s.Suites {
+		if su.Packages != nil {
+			out = append(out, su.Packages.Install)
+		}
+	}
+
+	return out
+}
