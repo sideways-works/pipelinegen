@@ -19,6 +19,7 @@ import (
 
 	"github.com/sideways-works/pipelinegen/internal/buildfile"
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/pipelinegen/plugin"
 )
 
 // The kinds of finding.
@@ -563,9 +564,50 @@ func floodingBatches(cfg *config.Config) []Finding {
 				Fix: "set batches to the most batch tasks one build may run at once",
 			})
 		}
+
+		if f, ok := lockQueue(cfg, name); ok {
+			out = append(out, f)
+		}
 	}
 
 	return out
+}
+
+// lockQueue warns of a suite whose batches take its lock one by one and are
+// dealt more than parallel: every batch asks for a slot at once, and the
+// last waits behind all the others, past the lock's wait if they take long.
+// It counts this build's batches alone; another holder of the lock only
+// adds to the wait.
+func lockQueue(cfg *config.Config, name string) (Finding, bool) {
+	s := cfg.Suites[name]
+
+	perBatch := s.Lock.PerBatch()
+	for _, r := range cfg.RunNames() {
+		perBatch = perBatch || s.Lock != nil && cfg.Runs[r].Trigger.Continuous && cfg.RunCovers(r, name)
+	}
+
+	if !perBatch || s.Batches <= s.ParallelOrDefault() {
+		return Finding{}, false
+	}
+
+	holders := max(max(s.Lock.Slots, 1)/max(s.Lock.Weight, 1), 1)
+
+	each := s.BatchMinutes
+	if each == 0 {
+		each = cfg.SuiteMinutes("", name)
+	}
+
+	wait := ((s.Batches+holders-1)/holders - 1) * each
+	if wait <= plugin.LockWaitMinutes {
+		return Finding{}, false
+	}
+
+	return Finding{
+		Kind: KindBadConfig, Path: config.FileName, Warning: true,
+		Problem: fmt.Sprintf("suite %s: its %d batches ask for lock %s at once, %d at a time hold it, and the last may wait %d minutes, past the lock's wait of %d: that batch then errors",
+			name, s.Batches, s.Lock.Name, holders, wait, plugin.LockWaitMinutes),
+		Fix: "lower batches toward the lock's slots, or deal shorter batches with batch_minutes",
+	}, true
 }
 
 // unrun reports each suite no run lists: a run plans only the suites it
