@@ -64,7 +64,9 @@ It takes the same version (`passed: [plan-<run>]`), then:
 5. `pipelinegen batches`: deals the plan's selected slices into at most
    `parallel` batches by duration, leaving out those that already passed
    for this change;
-6. `across` the batches, without fail fast, one batch task each. An
+6. `across` the batches, all at once (`max_in_flight: all`; Concourse's
+   own default runs them one at a time), without fail fast, one batch task
+   each. An
    `ensure` inside each iteration runs `report batch-end`, which writes
    what the batch's journal still holds and closes the batch's slices left
    without a result (on the `across` step itself it couldn't see the

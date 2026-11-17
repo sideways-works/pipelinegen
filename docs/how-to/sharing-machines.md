@@ -52,7 +52,8 @@ suites:
 `max_in_flight` bounds the suite's own builds. `serial_group` queues them
 behind every other build in the group, including jobs of your own that you
 include from `concourse.include` and that use the same machines. Inside a
-build, `parallel` says how many batches run at once.
+build, every batch runs at once, so `parallel` (or `batches`) says how
+many run together.
 
 ## Between repositories: the lock
 

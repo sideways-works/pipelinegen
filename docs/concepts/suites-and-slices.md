@@ -73,8 +73,9 @@ Running each slice in a CI task of its own would pay for the task's setup
 (a checkout, a compile, a database, a started server) once per test file.
 So pipelinegen deals the selected slices of a suite into a few batches,
 and each batch sets up once and runs its slices one after the other. A
-suite's `parallel` setting caps the number of batches (4 by default), and
-the slices are balanced by how long each took before.
+suite's `parallel` setting caps the number of batches (4 by default), the
+batches of a build run at once, and the slices are balanced by how long
+each took before.
 
 When the edit to `Words` selects three slices, they go into up to three
 batches; when a one-line fix selects one slice, one batch runs and pays

@@ -100,7 +100,7 @@ suites:
     prepare: ci/tasks/e2e-prepare.yml
     run_slice: ci/tasks/e2e-batch.yml
     lock: {name: browsers, minutes: 120}
-    parallel: 3                   # batches at once
+    parallel: 3                   # batches dealt, all run at once
     durations: ci/durations/e2e.json
     whole_suite:
       - name: money-reconciliation
@@ -264,8 +264,8 @@ nothing (the gate is an `across` over an empty list, so nothing runs and
 nothing fails). Otherwise: the tree under test, the lease (between
 repositories only), the prepare step, then the batches: a pipelinegen step
 deals the plan's selected slices of the suite into batches (at most
-`parallel`, by duration), and `across` runs one batch task per batch without
-fail fast. Each batch task reports every slice as it starts and ends, so the
+`parallel`, by duration), and `across` runs one batch task per batch, all
+at once (`max_in_flight: all`), without fail fast. Each batch task reports every slice as it starts and ends, so the
 comment moves slice by slice; an `ensure` on it closes slices left without a
 result. Whole-suite checks follow when selected. The suite's status and the
 run's aggregate are set last, in the job's `ensure`. A suite with nothing
