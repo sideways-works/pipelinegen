@@ -53,20 +53,18 @@ type ConnectorPin struct {
 	URL string `json:"url,omitempty"`
 }
 
-// unreleased stands for a checksum the release isn't out to give yet: no
-// binary matches it, so nothing runs until it is filled in.
-const unreleased = "TODO"
-
 // PinnedConnectors are the connector releases a config uses unless a
 // plugins entry of kind connector by the same name pins another.
 var PinnedConnectors = map[string]ConnectorPin{
 	ConnectorGitHub: {
 		Name: ConnectorGitHub, Repository: "sideways-works/pipelinegen-connector-github", Version: "v0.1.0",
-		SHA256: Checksums{LinuxAMD64: unreleased, LinuxARM64: unreleased, DarwinAMD64: unreleased, DarwinARM64: unreleased},
+		SHA256: Checksums{LinuxAMD64: "94d20cc9a5b3c2f342da32b0f6786d847f05b4973e7126590116ca7bf5c5a72c", LinuxARM64: "75722982d60d0d002b5675dd64362d01a8349c1a421966930ea67afa694bcedc",
+			DarwinAMD64: "5ede86132301c8b438efa0a7fc4b3ece5be5464bb928849303e1d60e2bc05cd4", DarwinARM64: "b881a86ce48243abbece72813ca149f0a14d36bc260c191df483e82132d8dbae"},
 	},
 	ConnectorGit: {
 		Name: ConnectorGit, Repository: "sideways-works/pipelinegen-connector-git", Version: "v0.1.0",
-		SHA256: Checksums{LinuxAMD64: unreleased, LinuxARM64: unreleased, DarwinAMD64: unreleased, DarwinARM64: unreleased},
+		SHA256: Checksums{LinuxAMD64: "5192041fd8508f768ff0a988ebc467490e068c64b1fa64b9beb36da676065e74", LinuxARM64: "47f2def136ad1156ca83416eed2664f654efd0ed246c042b4c190677f712f959",
+			DarwinAMD64: "51c1aa9a3ad5d6d6265ce761570540a7701e564b4684461084bc7d4f8074970a", DarwinARM64: "e46908311b4052a59850e6b05950076760126722203b60ae2b59773e3610d93a"},
 	},
 }
 
