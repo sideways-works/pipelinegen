@@ -73,8 +73,16 @@ flowchart LR
     plan{{plan: which tests<br/>can this change reach?}} --> run[drivers run<br/>only those tests]
     nightly([every night<br/><i>optional: nightly</i>]) -.->|all tests| run
     run -->|correlators record| recordings
-    classDef optional stroke-dasharray: 5 5
+    classDef source fill:#FFF4E2,stroke:#15110D,color:#15110D
+    classDef trigger fill:#FFF4E2,stroke:#15110D,color:#15110D,stroke-width:2px
+    classDef optional fill:#FFF4E2,stroke:#15110D,color:#15110D,stroke-dasharray: 5 5
+    classDef plan fill:#FFD23F,stroke:#15110D,color:#15110D,stroke-width:2px
+    classDef run fill:#5BB8F0,stroke:#15110D,color:#15110D,stroke-width:2px
+    class bazel,code,recordings source
+    class pr trigger
     class continuous,nightly optional
+    class plan plan
+    class run run
 ```
 
 ## What it needs
