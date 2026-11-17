@@ -241,7 +241,6 @@ func TestSubcommandsDescribeThemselves(t *testing.T) {
 		"report batch-end": {"batch", "batches"}, "report suite": {"root"},
 		"report finish": {"root"}, "report collect": {"suite", "out"},
 		"slice start": {"batches"}, "slice end": {"coverage"}, "slice list": {"batches"},
-		"lock acquire": {"wait"}, "lock release": {"root"},
 		"lists attach": {"run", "change", "commit", "to"}, "lists show": {"commit", "suite", "slice"},
 	} {
 		flags, ok := subs[name]

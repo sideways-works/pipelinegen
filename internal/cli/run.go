@@ -310,6 +310,8 @@ func planAfter(ctx context.Context, cfg *config.Config, ch runs.Change, store *g
 		return fmt.Errorf("%w: %s %s is a proposed change: plan it in two steps, --out then --from", errUsage, ch.Run, ch.ID)
 	}
 
+	sweepOldLeases(ctx, cfg, store, os.Stderr)
+
 	if done, err := ranAlready(ctx, cfg, ch, store, stdout); done || err != nil {
 		return err
 	}
@@ -317,8 +319,6 @@ func planAfter(ctx context.Context, cfg *config.Config, ch runs.Change, store *g
 	id := reportID(ch)
 
 	if isContinuous(cfg, ch.Run) {
-		sweepOldRounds(ctx, cfg, ch.Run, os.Stderr)
-
 		if run, _, err := decideRound(ctx, cfg, ch, store, trigger, stdout, prior); err != nil || !run {
 			return err
 		}

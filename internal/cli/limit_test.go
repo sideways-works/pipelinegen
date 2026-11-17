@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"testing"
@@ -10,23 +11,22 @@ import (
 )
 
 func TestAStepEndsBeforeItsTimeLimitAndSaysWhich(t *testing.T) {
-	root, _, _ := runEnv(t)
-
-	if _, stderr, code := run(t, "lock", "acquire", "browsers", "-root", root); code != 0 {
-		t.Fatalf("acquire: %d %s", code, stderr)
-	}
-
-	t.Setenv(envBatch, "2")
 	t.Setenv(plugin.EnvLimit, "limits.steps=20")
 	// the script stamped the step's end: the margin from now on is a second.
 	t.Setenv(plugin.EnvDeadline, strconv.FormatInt(time.Now().Add(limitMargin+time.Second).Unix(), 10))
 
 	start := time.Now()
 
-	_, stderr, code := run(t, "lock", "acquire", "browsers", "-root", root)
-	if code != 1 || !strings.Contains(stderr, "pipelinegen lock: stopped at its step's time limit of 20 minutes (limits.steps), 2 minutes before the step would be killed") ||
-		!strings.Contains(stderr, "raise limits.steps") {
-		t.Fatalf("acquire at its limit: %d %s", code, stderr)
+	var stderr strings.Builder
+
+	err := runLimited(t.Context(), "batches", func(ctx context.Context) error {
+		<-ctx.Done()
+
+		return ctx.Err()
+	}, &stderr)
+	if err == nil || !strings.Contains(stderr.String(), "pipelinegen batches: stopped at its step's time limit of 20 minutes (limits.steps), 2 minutes before the step would be killed") ||
+		!strings.Contains(stderr.String(), "raise limits.steps") {
+		t.Fatalf("a step at its limit: %v %s", err, stderr.String())
 	}
 
 	if took := time.Since(start); took > time.Minute {

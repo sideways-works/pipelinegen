@@ -40,7 +40,6 @@ func TestEveryFlagSaysWhetherItNamesAPath(t *testing.T) {
 		{"report collect", "out", "slices", toolcalls.Writes},
 		{"pipeline", "out", "", toolcalls.Writes | toolcalls.File},
 		{"slice setup-end", "coverage", "coverage", toolcalls.Writes},
-		{"lock acquire", "wait", "4h0m0s", 0},
 	} {
 		if f := cmds[c.cmd].Flags[c.flag]; f.Use != c.use || f.Default != c.def {
 			t.Errorf("%s -%s: %+v, want use %d default %q", c.cmd, c.flag, f, c.use, c.def)

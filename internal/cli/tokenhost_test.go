@@ -67,7 +67,6 @@ func TestAChangeCannotSendTheTokenElsewhere(t *testing.T) {
 		"plan, one step (store)":    {"plan", "-run", "pr", "-trigger", trigger, "-cache", t.TempDir()},
 		"tree (store)":              {"tree", "-run", "pr", "-suite", "e2e", "-trigger", trigger, "-out", t.TempDir(), "-gate", t.TempDir()},
 		"report suite (store)":      {"report", "suite", "-root", trigger},
-		"lock (store)":              {"lock", "acquire", "browsers", "-root", trigger},
 	}
 
 	t.Setenv(envTrigger, trigger)
@@ -137,11 +136,5 @@ func TestTheOtherWaysATokenLeavesStayOnTheirHost(t *testing.T) {
 
 	if c, ok := host(cfg).(*gitHubHost); !ok || c.api != "https://api.example.test" || c.remote != "https://api.example.test/"+cfg.GitHub.Repository+".git" {
 		t.Errorf("report client %+v", host(cfg))
-	}
-
-	// the lock's store: on its own repository only with lock.repository,
-	// which names a repository on the trusted host.
-	if l, err := openLock(cfg, "browsers"); err != nil || l.Store.Token != "" {
-		t.Errorf("lock store token %q (%v)", l.Store.Token, err)
 	}
 }

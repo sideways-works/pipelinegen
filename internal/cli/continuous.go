@@ -519,20 +519,6 @@ func supersede(ctx context.Context, ch runs.Change, store *gitstore.Store, tip s
 	return say(stdout, "%s %s: superseded by %s: not run, the newer commit's run covers it\n", ch.Run, short12(ch.Commit), short12(tip))
 }
 
-// sweepOldRounds removes refs/pipelinegen/locks/continuous-<run>/ (also on the branch store's own
-// branch), which nothing reads.
-func sweepOldRounds(ctx context.Context, cfg *config.Config, run string, stderr io.Writer) {
-	l := lockAt(cfg, "continuous-"+run, "")
-	l.Log = nil
-
-	_, err := l.Unlock(ctx, 0)
-	closeLock(l, &err)
-
-	if err != nil {
-		warnf(stderr, "pipelinegen plan: the records an older pipelinegen kept of %s's rounds stay until the next plan step\n", run)
-	}
-}
-
 const supersededKeep = 14 * 24 * time.Hour
 
 func sweepSuperseded(ctx context.Context, store *gitstore.Store, now time.Time) error {

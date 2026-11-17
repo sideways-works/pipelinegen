@@ -658,7 +658,7 @@ func reportBatchEnd(ctx context.Context, args []string) (err error) {
 		pathVar(fs, &batches, "batches", "batches", "the directory of the run's batches", reads)
 		pathVar(fs, &result, "result", "result", "the batch's result directory", reads)
 		pathVar(fs, &coverage, "coverage", "", "the batch's coverage directory (recording runs)", reads)
-		pathVar(fs, &begun, "started", "", "the directory the batch's lock step stamped when it took its slot (a lock taken per batch)", reads)
+		pathVar(fs, &begun, "started", "", "the directory an older pipeline's lock step stamped when the batch's work began", reads)
 	}); err != nil {
 		return err
 	}
@@ -1144,16 +1144,6 @@ func isNumber(s string) bool {
 	_, err := strconv.Atoi(s)
 
 	return err == nil
-}
-
-func configFor(cfg *config.Config, name string) (*config.Lock, bool) {
-	for _, s := range cfg.SuiteNames() {
-		if l := cfg.Suites[s].Lock; l != nil && l.Name == name {
-			return l, true
-		}
-	}
-
-	return nil, false
 }
 
 // planChecked marks that the job found its plan: one read a job.

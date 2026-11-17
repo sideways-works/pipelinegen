@@ -27,11 +27,11 @@ func writeStarted(dir string, now time.Time) error {
 		return fmt.Errorf("started: %w", err)
 	}
 
-	if err := os.MkdirAll(dir, 0o750); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil { //nolint:gosec // the step's own output directory
 		return fmt.Errorf("started: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(dir, startedFile), append(data, '\n'), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, startedFile), append(data, '\n'), 0o600); err != nil { //nolint:gosec // the step's own output directory
 		return fmt.Errorf("started: %w", err)
 	}
 

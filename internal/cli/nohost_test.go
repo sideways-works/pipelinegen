@@ -24,7 +24,6 @@ suites:
   e2e:
     tag: slice-e2e
     run_slice: ci/tasks/e2e-slice.yml
-    lock: {name: browsers, minutes: 90, slots: 1}
 git: {remote: "REMOTE"}
 concourse: {url: "https://ci", repository: {uri: x}, planner: {image: {repository: p}, digest: "sha256:x", bootstrap: {release: {version: v1, sha256: 0000000000000000000000000000000000000000000000000000000000000000}, bazelisk: {version: v1, sha256: 0000000000000000000000000000000000000000000000000000000000000000}}}}
 runs:
@@ -101,10 +100,6 @@ func branchRunNeedsNoHost(t *testing.T) {
 		t.Fatalf("start: %d %s", code, stderr)
 	}
 
-	if stdout, stderr, code := run(t, "lock", "acquire", "browsers", "-root", root); code != 0 || !strings.Contains(stdout, "lock browsers: slot 1 until") {
-		t.Fatalf("acquire: %d %s %s", code, stdout, stderr)
-	}
-
 	t.Chdir(t.TempDir())
 	writeFile(t, "batches/1/slices.json", `[{"name": "e2e.a", "label": "//e2e:a"}, {"name": "e2e.b", "label": "//e2e:b"}]`)
 
@@ -120,7 +115,7 @@ func branchRunNeedsNoHost(t *testing.T) {
 		}
 	}
 
-	for _, step := range [][]string{{"report", "batch-end"}, {"report", "suite"}, {"lock", "release", "browsers"}, {"report", "finish"}} {
+	for _, step := range [][]string{{"report", "batch-end"}, {"report", "suite"}, {"report", "finish"}} {
 		if stdout, stderr, code := run(t, append(step, "-root", root)...); code != 0 {
 			t.Fatalf("%v: %d %s %s", step, code, stdout, stderr)
 		}

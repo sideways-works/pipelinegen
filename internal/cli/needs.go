@@ -29,11 +29,6 @@ var stepNeeds = map[string]toolcalls.Command{
 	"slice end":       {Named: true, Needs: sliceNeeds()},
 	"slice setup-end": {Needs: sliceNeeds()},
 	"slice flush":     {Needs: sliceNeeds()},
-	// lockStep takes the lock's name first; holder learns the run.
-	"lock acquire": {Named: true, Needs: toolcalls.Needs{RunFromEnv: true, Token: toolcalls.TokenRequired}},
-	"lock release": {Named: true, Needs: toolcalls.Needs{RunFromEnv: true, Token: toolcalls.TokenRequired}},
-	// runUnlock takes a name and maybe a slot's number.
-	"unlock": {Words: true, Needs: toolcalls.Needs{Token: toolcalls.TokenRequired}},
 	// runPipeline needs Concourse's address (config.EnvConcourseURL when the config leaves it out).
 	"pipeline": {Needs: toolcalls.Needs{ConcourseURL: true}},
 	// runGitAuth takes the variable's name first.

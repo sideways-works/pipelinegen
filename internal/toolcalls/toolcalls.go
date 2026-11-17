@@ -80,7 +80,7 @@ type Needs struct {
 // Command is one command or subcommand ("report batch-end").
 type Command struct {
 	Flags map[string]Flag
-	// Named commands take a name before their flags (lock acquire <name>).
+	// Named commands take a name before their flags (slice start <name>).
 	Named bool
 	// Words: it takes words of its own among its flags (a slot's number,
 	// pull requests' numbers).
@@ -112,7 +112,7 @@ func PurposeEnv(purpose string) string {
 // the contracts' table of steps.
 var Steps = []string{
 	"plan", "tree", "batches", "report batch-end", "report whole", "report collect",
-	"report suite", "lock acquire", "lock release", "pipeline", "git-auth",
+	"report suite", "pipeline", "git-auth",
 }
 
 var errUnset = errors.New("which the step doesn't set")

@@ -23,8 +23,8 @@ func fixture() Commands {
 		"report batch-end": {Flags: common(".", map[string]Flag{
 			"batch": {}, "batches": {Default: "batches", Use: Reads}, "result": {Default: "result", Use: Reads},
 		}), Needs: Needs{Reads: []string{"source"}, Recording: []string{"coverage"}, RunFromEnv: true, Token: TokenRequired}},
-		"lock acquire": {Named: true, Flags: common(".", map[string]Flag{"wait": {}}), Needs: Needs{RunFromEnv: true, Token: TokenRequired}},
-		"pipeline":     {Flags: common(".", map[string]Flag{"out": {Use: Writes | File}}), Needs: Needs{ConcourseURL: true}},
+		"slice start": {Named: true, Flags: common(".", map[string]Flag{"batches": {}}), Needs: Needs{RunFromEnv: true, Token: TokenRequired}},
+		"pipeline":    {Flags: common(".", map[string]Flag{"out": {Use: Writes | File}}), Needs: Needs{ConcourseURL: true}},
 	}
 }
 
@@ -32,8 +32,8 @@ func TestACallParsesAsTheToolReadsIt(t *testing.T) {
 	cs := fixture()
 
 	for _, bad := range [][]string{
-		{"lock", "acquire", "--root", "source"},
-		{"lock", "acquire", "browsers", "--minutes", "90"},
+		{"slice", "start", "--root", "source"},
+		{"slice", "start", "a", "--minutes", "90"},
 		{"report", "batch-end", "--root"},
 		{"report", "nothing"},
 		{"plan", "stray"},
@@ -53,7 +53,7 @@ func TestACallParsesAsTheToolReadsIt(t *testing.T) {
 		t.Fatalf("%+v", c)
 	}
 
-	if c, err := cs.Parse([]string{"lock", "acquire", "db", "--wait", "1h"}); err != nil || c.Name != "db" {
+	if c, err := cs.Parse([]string{"slice", "start", "db", "--batches", "b"}); err != nil || c.Name != "db" {
 		t.Fatalf("%+v %v", c, err)
 	}
 }
@@ -98,7 +98,7 @@ func TestACallReadsWhatItsFlagsDefaultsAndEnvironmentName(t *testing.T) {
 	}
 
 	for args, want := range map[string][]string{
-		"lock acquire db":                   {"reads the build's own directory", "no way to learn its run", "without GITHUB_TOKEN"},
+		"slice start db":                    {"reads the build's own directory", "no way to learn its run", "without GITHUB_TOKEN"},
 		"pipeline --root $REPO":             {"$REPO, which the step doesn't set"},
 		"report batch-end --root source":    {"no way to learn its run"},
 		"plan --run main --trigger ${TRIG}": {"$TRIG"},
@@ -110,14 +110,14 @@ func TestACallReadsWhatItsFlagsDefaultsAndEnvironmentName(t *testing.T) {
 			}
 		}
 
-		if strings.HasPrefix(args, "lock") && !strings.Contains(p, EnvConcourseURL) {
+		if strings.HasPrefix(args, "slice") && !strings.Contains(p, EnvConcourseURL) {
 			t.Errorf("%s: an address it doesn't need went unnoticed: %q", args, p)
 		}
 	}
 
 	// a step given the store's own token, the token split by purpose,
 	// writes as one given the one token
-	if _, _, p := mounts("lock acquire db --root source", map[string]string{PurposeEnv("store"): "", EnvRunFile: "batches/run.json"}, false); strings.Contains(p, "without") {
+	if _, _, p := mounts("slice start db --root source", map[string]string{PurposeEnv("store"): "", EnvRunFile: "batches/run.json"}, false); strings.Contains(p, "without") {
 		t.Errorf("the store's own token: %s", p)
 	}
 

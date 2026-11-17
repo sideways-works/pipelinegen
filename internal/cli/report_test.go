@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/branchstore"
 	"github.com/sideways-works/pipelinegen/internal/config"
@@ -350,39 +349,6 @@ func reportsThroughItsCommands(t *testing.T) {
 	}
 }
 
-func TestLockCommands(t *testing.T) { lockCommands(t) }
-
-func TestLockCommandsOnABranch(t *testing.T) { onBranch(t, lockCommands) }
-
-func lockCommands(t *testing.T) {
-	t.Helper()
-
-	root, _, _ := runEnv(t)
-
-	stdout, stderr, code := run(t, "lock", "acquire", "browsers", "-root", root)
-	if code != 0 || !strings.Contains(stdout, "lock browsers: slot 1 until") {
-		t.Fatalf("acquire: %d %s %s", code, stdout, stderr)
-	}
-
-	t.Setenv(envBatch, "2")
-
-	if _, stderr, code := run(t, "lock", "acquire", "browsers", "-wait", "100ms", "-root", root); code != 1 || !strings.Contains(stderr, "o/r pr pr-7 0123456789ab e2e batch 1") {
-		t.Fatalf("second acquire: %d %s", code, stderr)
-	}
-
-	if stdout, _, code := run(t, "lock", "release", "browsers", "-root", root); code != 0 || !strings.Contains(stdout, "0 slots freed") {
-		t.Fatalf("release by another: %d %s", code, stdout)
-	}
-
-	if stdout, _, code := run(t, "unlock", "browsers", "1", "-root", root); code != 0 || !strings.Contains(stdout, "slot 1 freed, held by o/r pr pr-7 0123456789ab e2e batch 1") {
-		t.Fatalf("unlock: %d %s", code, stdout)
-	}
-
-	if _, _, code := run(t, "lock", "acquire", "nope", "-root", root); code != 2 {
-		t.Fatalf("unknown lock: %d", code)
-	}
-}
-
 func TestARecordingBatchEndsItsSetupFirst(t *testing.T) {
 	root, _, s := runEnv(t)
 	writeFile(t, filepath.Join(root, "pipelinegen.yaml"), strings.Replace(
@@ -447,48 +413,6 @@ func TestAStackNeedsACollector(t *testing.T) {
 
 	if _, stderr, code := run(t, "slice", "start", "e2e.a", "-root", root); code != 0 {
 		t.Fatalf("start with a collector: %d %s", code, stderr)
-	}
-}
-
-func TestALeaseLastsTheRunsLockMinutes(t *testing.T) {
-	t.Parallel()
-
-	for _, c := range []struct {
-		run     string
-		minutes int
-	}{
-		{"{e2e: {}}", 90},
-		{"{e2e: {lock_minutes: 600}}", 600},
-	} {
-		root, _, _, env := runEnvFor(t)
-		writeFile(t, filepath.Join(root, "pipelinegen.yaml"), strings.Replace(reportConfig, "    suites: {e2e: {}}\n", "    suites: "+c.run+"\n", 1))
-
-		before := time.Now()
-
-		stdout, stderr, code := runIn(t, root, env, "lock", "acquire", "browsers", "-root", root)
-		if code != 0 {
-			t.Fatalf("acquire: %d %s", code, stderr)
-		}
-
-		_, until, ok := strings.Cut(strings.TrimSpace(stdout), " until ")
-		if !ok {
-			t.Fatalf("acquire said %q", stdout)
-		}
-
-		expires, err := time.Parse(time.RFC3339, until)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		want := before.Add(time.Duration(c.minutes)*time.Minute + leaseMargin)
-		if d := expires.Sub(want); d < -time.Minute || d > time.Minute {
-			t.Errorf("run suites %s: the lease ends %s, want about %s", c.run, expires, want)
-		}
-
-		env[envBatch] = "2"
-		if _, stderr, code := runIn(t, root, env, "lock", "acquire", "browsers", "-wait", "100ms", "-root", root); code != 1 {
-			t.Errorf("run suites %s: a second holder took the lock: %d %s", c.run, code, stderr)
-		}
 	}
 }
 
