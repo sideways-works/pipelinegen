@@ -66,7 +66,10 @@ falls back to the strict rule.
 | 5 | every narrowing: binding by declaration and by file with the full closure, and following dependents in every suite |
 
 The [narrowing guide](../how-to/narrowing.md) lists each narrowing with
-the level it is off from.
+the level it is off from. A repository may set one narrowing's level
+itself, under `narrowings`, with a note saying why; plans, `why` and the
+nightly's alarm then name the config as the level's source, beside the
+level its plugin gives.
 
 ## The alarm
 

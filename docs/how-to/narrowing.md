@@ -53,6 +53,30 @@ below it, and a narrowing that is off falls back to the wide rule.
 - Level 5 binds by declaration and by file with the full closure, and
   follows dependents in every suite.
 
+## Setting one narrowing's level
+
+A narrowing's "off from" is its declarer's judgement for repositories in
+general. When yours makes a narrowing safer or riskier than that, set its
+level under `narrowings`, with a note that says why:
+
+```yaml
+narrowings:
+  document-units: {off_at: 3, note: "every contract's readers and per_operation declared"}
+```
+
+`off_at` is from 1 to 5 and may raise or lower the declarer's level:
+here `document-units`, off from 2 by openapi-sbom, stays on at level 2
+too. Only a narrowing a configured plugin declares, or one of the core's
+four, may be named; planning refuses any other name, and a note is
+required. Every plan records the levels the config set, and the
+narrowing's line in the plan, `pipelinegen why` for a slice it left out,
+and the nightly's alarm all say it: `off from 3 by the config
+(narrowings.document-units: every contract's readers and per_operation
+declared); plugin openapi-sbom says 2`. A change to `narrowings` plans
+under both configs and runs what either selects, as a change to
+`narrowing` does, so lowering a level in a pull request never leaves out
+that pull request's own tests.
+
 ## The sample
 
 A sampled change runs `sample` slices of the suite (default its
@@ -124,7 +148,9 @@ Every plan records its level and what each narrowing dropped. The nightly
 counts its failing slices that a narrowing dropped from the branch's runs
 since the last nightly that passed. When the count is above
 `narrowing_alarm` (default 2), its report opens with those changes and
-recommends raising the level to the narrowing's "off from". A slice that
+recommends raising the level to the narrowing's "off from", and, for a
+narrowing whose level the config set, lowering its `narrowings` entry
+instead. A slice that
 several narrowings left out of one run is listed under each, and the
 level it asks for is the lowest of theirs, the first that runs it. Nothing
 changes until someone edits the config, and the report never recommends a
