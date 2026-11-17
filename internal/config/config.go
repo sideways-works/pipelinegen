@@ -156,6 +156,41 @@ type Keep struct {
 	// newest lists of each branch are kept whatever this says.
 	Lists ListsRetention `yaml:"lists"`
 	Cache Size           `yaml:"cache"`
+	// Files caps what a failed slice's failure files keep in the store.
+	Files KeepFiles `yaml:"files"`
+}
+
+// KeepFiles caps the failure files a run keeps: each slice's, and the
+// whole run's. 0 keeps none.
+type KeepFiles struct {
+	Slice Size `yaml:"slice"`
+	Run   Size `yaml:"run"`
+}
+
+// The defaults of keep.files.slice and keep.files.run.
+const (
+	DefaultFilesSlice = Size("2MB")
+	DefaultFilesRun   = Size("50MB")
+)
+
+// maxFilesSlice is GitHub's largest file: a slice's cap above it would let
+// one file fail every push of the run's records.
+const maxFilesSlice = 100 << 20
+
+// FilesCaps are keep.files.slice and keep.files.run in bytes, with their
+// defaults.
+func (c *Config) FilesCaps() (slice, run int64) {
+	return c.Keep.Files.Slice.or(DefaultFilesSlice), c.Keep.Files.Run.or(DefaultFilesRun)
+}
+
+func (s Size) or(def Size) int64 {
+	if n, ok := s.Bytes(); ok {
+		return n
+	}
+
+	n, _ := def.Bytes()
+
+	return n
 }
 
 // DefaultCacheBudget is keep.cache's default: a worker holds one cache per
@@ -841,6 +876,19 @@ func (c *Config) validateKeep(bad func(string, ...any)) {
 
 	if _, ok := c.Keep.Cache.Bytes(); c.Keep.Cache != "" && !ok {
 		bad("keep.cache needs a size such as 8GB or 500MB, or 0 for no cap")
+	}
+
+	for _, k := range []struct {
+		key string
+		v   Size
+	}{{"keep.files.slice", c.Keep.Files.Slice}, {"keep.files.run", c.Keep.Files.Run}} {
+		if _, ok := k.v.Bytes(); k.v != "" && !ok {
+			bad("%s needs a size such as 2MB or 500KB, or 0 to keep none", k.key)
+		}
+	}
+
+	if n, _ := c.Keep.Files.Slice.Bytes(); n > maxFilesSlice {
+		bad("keep.files.slice is %s, over 100MB, the largest file GitHub takes", c.Keep.Files.Slice)
 	}
 }
 

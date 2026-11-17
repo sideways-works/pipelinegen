@@ -381,6 +381,71 @@ slice's ref. A whole-suite check takes `source`, `prepared` and `slices`
 --suite <s> --out slices` before it), and writes `result/result.json` the
 same way.
 
+### Failure files
+
+What a failed test leaves to show why (a screenshot, Playwright's
+`error-context.md`, a trace) is gone with the task's container unless the
+result names it. A result's `files` lists such files, each by its path
+from the result directory (the directory holding `result/<name>.json`,
+or a whole-suite check's `result.json`) with a short label:
+
+```json
+{
+  "passed": false,
+  "failures": [{"test": "checkout pays with a card", "tail": "..."}],
+  "files": [
+    {"path": "shots/checkout/test-failed-1.png", "label": "screenshot"},
+    {"path": "shots/checkout/trace.zip", "label": "trace"}
+  ]
+}
+```
+
+When the slice ends failed or errored, its ref keeps the files beside
+`state.json`, under `files/`, and its state lists each with its size; a
+passed slice keeps none, whatever its result names. Keep them out of
+`result/<name>/`, whose extras every slice keeps for whole-suite checks.
+pipelinegen refuses a path that is absolute, has a `..`, `.` or empty
+part or a `.git` part, holds a backslash or a control character, or
+reaches outside the result directory through a symlink; it reads regular
+files only, through the result directory as a root, never a FIFO, a
+device or a directory. At most 20 files are read per slice.
+
+Two caps hold what they keep ([`keep.files`](reference/config.md#keep)):
+`keep.files.slice`, 2 MB by default, for each slice's files together, and
+`keep.files.run`, 50 MB by default, for all of a run's. Over a cap the
+largest files go first. A file larger than the slice's cap is never
+read. The slice's state lists every file it dropped and why ("over
+keep.files.slice: 2 MB", "no such file", "not a plain path inside the
+result directory"), and so does `pipelinegen report files`. When the
+store refuses a write with the files, or it fails for another reason,
+the states are written again without them, each file noted as dropped
+with the store's answer: a slice's state never waits on its files. The
+files go with the run's records when `keep.runs` sweeps them.
+
+A file that reads as text (valid UTF-8 with no NUL byte) is masked for
+known secrets as the slice's failures are. A binary file is kept as it
+is: masking would break a screenshot or a zipped trace, and a pattern
+can't find a secret inside them anyway. So a failure file can hold
+whatever a test printed or a page showed, a secret included. It goes
+only into the run's records in the repository's own store, which has the
+same readers as the code: never into the pull request's comment, the
+statuses, a log, or a whole-suite check's `slices` (`report collect`
+leaves them out). The comment and `pipelinegen why --run` say how many
+files a failed slice kept and the command that writes them out:
+
+```sh
+pipelinegen report files --run pr --change pr-12 --out failure-files
+```
+
+A suite with steps gets the same from its drivers: each slice of a run
+request carries `files`, a directory for its failure files in the
+batch's result directory (`result/.pipelinegen/files/<name>/`), and a
+driver's `end` names them in `files` by their paths in it
+([writing a driver](writing-plugins/driver.md#running-slices)). The
+playwright driver names a failed test's screenshot, error context and
+trace by itself. The command driver passes the directory as `{files}`,
+and a step's result file names its files from there.
+
 ## (b) Coverage, the correlators' input
 
 A suite says how its slices are bound: `bind: graph` (the default: the Bazel

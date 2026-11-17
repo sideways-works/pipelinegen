@@ -171,43 +171,61 @@ func (r *Reporter) Slices(ctx context.Context, evs []SliceEvent) (map[string]Sta
 	}
 
 	states := map[string]State{}
-	ups := make([]gitstore.Update, 0, len(evs))
 	sc := scope{throttle: true}
+	ends := make([]*ending, 0, len(evs))
 
 	for _, ev := range evs {
 		if err := errors.Join(checkName("suite", ev.Suite), checkSlice(ev.Slice)); err != nil {
 			return nil, err
 		}
 
-		sf := StateFile{Label: ev.Label, State: Running, URL: ev.JobURL, Updated: r.now()}
-		files := map[string][]byte{}
+		e := &ending{ev: ev, sf: StateFile{Label: ev.Label, State: Running, URL: ev.JobURL, Updated: r.now()}, files: map[string][]byte{}}
 
 		if !ev.Running {
-			r.ended(ctx, ev, &sf, files)
+			e.found = r.ended(ctx, ev, &e.sf, e.files)
 
 			if !slices.Contains(sc.suites, ev.Suite) {
 				sc.suites = append(sc.suites, ev.Suite)
 			}
 		}
 
-		data, err := encode(sf)
-		if err != nil {
-			return nil, err
-		}
-
-		files[stateFile] = data
-		states[ev.Suite+"/"+ev.Slice] = sf.State
-
-		// only this slice's steps write its ref, one after another
-		ups = append(ups, gitstore.Update{Ref: r.ID.StateRef(ev.Suite, ev.Slice), Any: true, Files: files})
+		ends = append(ends, e)
 	}
 
-	if len(ups) == 0 {
+	if len(ends) == 0 {
 		return states, nil
 	}
 
-	if _, err := r.Store.Write(ctx, fmt.Sprintf("%s%d slices", r.ID.Prefix(), len(ups)), ups...); err != nil {
+	r.capRun(ctx, ends)
+
+	ups, err := updates(r.ID, ends)
+	if err != nil {
 		return nil, err
+	}
+
+	message := fmt.Sprintf("%s%d slices", r.ID.Prefix(), len(ups))
+
+	_, err = r.Store.Write(ctx, message, ups...)
+	if err != nil && ctx.Err() == nil && withFiles(ends) {
+		// the states matter more than the files: the store may refuse
+		// their size, or be too slow for it
+		r.warnf("report %d slices: writing them with their failure files: %v; writing them without", len(ends), err)
+
+		for _, e := range ends {
+			e.dropAll(capFileText("the store refused the write with them: "+err.Error(), maxWhy))
+		}
+
+		if ups, err = updates(r.ID, ends); err == nil {
+			_, err = r.Store.Write(ctx, message, ups...)
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _, e := range ends {
+		states[e.ev.Suite+"/"+e.ev.Slice] = e.sf.State
 	}
 
 	// the states are safe in their refs; GitHub catches up with the next
@@ -268,7 +286,11 @@ func (r *Reporter) Close(ctx context.Context, evs []SliceEvent) (map[string]Stat
 	return states, nil
 }
 
-func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, files map[string][]byte) {
+// ended reads how a slice ended into its state and its ref's files, and
+// returns the failure files of a slice that failed or errored, read and
+// within the slice's cap; the run's cap is applied to every slice of a
+// write together.
+func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, files map[string][]byte) []candidate {
 	if ev.NotRun {
 		f := notRun
 		if ev.Stopped != "" {
@@ -277,7 +299,7 @@ func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, file
 
 		sf.State, sf.Failures = NotRun, []Failure{f}
 
-		return
+		return nil
 	}
 
 	sf.State, sf.Failures = readResult(ev.Result, secret.Redact)
@@ -337,6 +359,32 @@ func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, file
 	}
 
 	r.scrub(sf, files)
+
+	if sf.State != Failed && sf.State != Errored {
+		return nil
+	}
+
+	// failure files are masked as they are read, text only: scrub would
+	// break a binary one
+	return r.failureFiles(ev, sf)
+}
+
+func (r *Reporter) failureFiles(ev SliceEvent, sf *StateFile) []candidate {
+	list := resultFiles(ev.Result)
+	if len(list) == 0 {
+		return nil
+	}
+
+	sliceCap, _ := r.Config.FilesCaps()
+	if sliceCap == 0 {
+		return nil
+	}
+
+	got, dropped := readFailureFiles(resultRoot(ev), ev.Slice, list, sliceCap)
+	got, over := capFiles(got, sliceCap, errOverSlice)
+	sf.Dropped = append(append(sf.Dropped, dropped...), over...)
+
+	return got
 }
 
 func (r *Reporter) scrub(sf *StateFile, files map[string][]byte) {

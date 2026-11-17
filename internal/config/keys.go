@@ -31,6 +31,8 @@ var defaults = map[string]string{
 	"keep.lists.for":                         "90d",
 	"keep.lists.commits":                     strconv.Itoa(DefaultListsCommits),
 	"keep.cache":                             string(DefaultCacheBudget),
+	"keep.files.slice":                       string(DefaultFilesSlice),
+	"keep.files.run":                         string(DefaultFilesRun),
 	"writes.retries":                         strconv.Itoa(DefaultRetries),
 	"writes.backoff":                         DefaultBackoff.String(),
 	"writes.deadline":                        "10m, or half of limits.steps when that is shorter",

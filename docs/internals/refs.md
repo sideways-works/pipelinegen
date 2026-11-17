@@ -29,7 +29,7 @@ it was a ref of its own:
 
 ```
 refs/pipelinegen/plans/<run>/<change>/<c12>                  the plan (plan.json): _plan/ in the run's ref
-refs/pipelinegen/runs/<run>/<change>/<c12>/<suite>/<slice>/=  a slice's state.json, recording.txt and extras: <suite>/<slice>/=/
+refs/pipelinegen/runs/<run>/<change>/<c12>/<suite>/<slice>/=  a slice's state.json, recording.txt, extras and failure files: <suite>/<slice>/=/
 refs/pipelinegen/runs/<run>/<change>/<c12>/_end/<suite>      a suite's end mark (end.json): _end/<suite>/
 refs/pipelinegen/runs/<run>/<change>/<c12>/_began/<suite>    the newest start of a build of the suite (began.json): _began/<suite>/
 ```

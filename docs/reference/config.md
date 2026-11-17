@@ -559,11 +559,15 @@ both, whatever either keeps. A period is a number and a unit: `12h`, `5d`,
 | `keep.lists.for` | period | `90d` | Lists made within this period. |
 | `keep.lists.commits` | integer | `200` | The lists of the default branch's last this many first-parent commits are kept whatever their age, and those of its older commits are removed whatever their age. A plan looks this many first parents back for its base's lists. When the planning job's checkout is shallow, or holds no ref of the default branch, only `last` and `for` apply. |
 | `keep.cache` | size | `8GB` | How much a planning step's cache (`--cache`) may hold when the step ends: a whole number with `B`, `KB`, `MB`, `GB` or `TB`, or `0` for no cap. Over it, the step drops what is cheapest to get back first and Bazel's output last ([disk on the planning workers](../how-to/sharing-machines.md#disk-on-the-planning-workers)). Whatever the cap, the step drops the Go modules' sources extracted beside their zips and the repositories Bazel extracted from its repository cache's archives, which come back from those archives without the network. |
+| `keep.files` | mapping | | How much the failure files of failed and errored slices may keep in the store ([failure files](../contracts.md#failure-files)). Over a cap the largest files go first, and the slice's state names each dropped file and why. They go with their run's records under `keep.runs`. |
+| `keep.files.slice` | size | `2MB` | What one slice's failure files may hold, together, as a size like `keep.cache`'s; `0` keeps none. At most `100MB`, the largest file GitHub takes. A file larger than the cap is never read. |
+| `keep.files.run` | size | `50MB` | What a run's failure files may hold, all slices together; `0` keeps none. Batches write side by side, so a run can pass it by what the batches writing at the same moment keep. |
 
 ```yaml
 keep:
   runs: {for: 5d}
   lists: {last: 500, for: 30d}
+  files: {slice: 4MB, run: 100MB}
 ```
 
 ## writes

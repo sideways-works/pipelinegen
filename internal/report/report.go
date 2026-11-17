@@ -186,6 +186,8 @@ type Slice struct {
 	NoTests    bool             `json:"no_tests,omitempty"`
 	Recorded   bool             `json:"recorded,omitempty"`
 	CannotTell []recording.Mark `json:"cannot_tell,omitempty"`
+	// Files is how many failure files the slice's ref keeps.
+	Files int `json:"files,omitempty"`
 }
 
 // Suite is one suite's part of a run.
@@ -202,6 +204,7 @@ type Suite struct {
 // Run is a whole run's state.
 type Run struct {
 	Name         string                      `json:"name"`
+	Change       string                      `json:"change,omitempty"`
 	Commit       string                      `json:"commit"`
 	URL          string                      `json:"url,omitempty"`
 	Suites       []Suite                     `json:"suites"`
@@ -293,6 +296,9 @@ type ResultFile struct {
 	// Error says why the slice has no result of its own, for a slice its
 	// driver ran and never reported; such a slice is errored.
 	Error string `json:"error,omitempty"`
+	// Files are what a failed slice left to show why, kept with its state
+	// when it failed or errored.
+	Files []FailureFile `json:"files,omitempty"`
 }
 
 // ErrResult wraps a result file that can't be read.
@@ -349,6 +355,20 @@ func testsRan(p string) int {
 	}
 
 	return *r.Tests
+}
+
+func resultFiles(p string) []FailureFile {
+	data, err := os.ReadFile(p) //nolint:gosec // the task's own output
+	if err != nil {
+		return nil
+	}
+
+	var r ResultFile
+	if json.Unmarshal(data, &r) != nil {
+		return nil
+	}
+
+	return r.Files
 }
 
 // RanNoTests tells whether a result file says the slice ran no tests at

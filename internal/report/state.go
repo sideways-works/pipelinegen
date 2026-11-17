@@ -219,6 +219,10 @@ type StateFile struct {
 	Tests      *int             `json:"tests,omitempty"`
 	Recorded   bool             `json:"recorded,omitempty"`
 	CannotTell []recording.Mark `json:"cannot_tell,omitempty"`
+	// Files are the failure files the ref holds under files/, Dropped
+	// those the result named that it doesn't, with why.
+	Files   []KeptFile    `json:"files,omitempty"`
+	Dropped []DroppedFile `json:"dropped_files,omitempty"`
 }
 
 type endMark struct {
@@ -511,7 +515,7 @@ var noResult = Failure{Test: "(no result)", Tail: "the slice never reported how 
 var notRun = Failure{Test: "(not run)", Tail: "its batch ended before any slice started: the batch's setup failed"}
 
 func buildRun(id ID, snap snapshot, groups map[string]*regexp.Regexp) Run {
-	r := Run{Name: id.Run, Commit: id.Commit, Plugins: snap.plan.Plugins, All: snap.plan.All, PlanWarnings: snap.plan.Warnings, Rebuild: snap.plan.Rebuild, Narrowings: snap.plan.Narrowings}
+	r := Run{Name: id.Run, Change: id.Change, Commit: id.Commit, Plugins: snap.plan.Plugins, All: snap.plan.All, PlanWarnings: snap.plan.Warnings, Rebuild: snap.plan.Rebuild, Narrowings: snap.plan.Narrowings}
 	if snap.plan.Lists != nil {
 		r.Marked = snap.plan.Lists.CannotTell
 	}
@@ -532,7 +536,7 @@ func buildRun(id ID, snap snapshot, groups map[string]*regexp.Regexp) Run {
 
 			sl := Slice{Name: it.name, Label: it.label, Group: groupOf(groups[sp.Suite], it.name), State: sf.State, URL: sf.URL, Failures: sf.Failures, Reasons: sp.Reasons[it.label]}
 			sl.NoTests = sf.State == Passed && sf.Tests != nil && *sf.Tests == 0
-			sl.Recorded, sl.CannotTell = sf.Recorded, sf.CannotTell
+			sl.Recorded, sl.CannotTell, sl.Files = sf.Recorded, sf.CannotTell, len(sf.Files)
 
 			if over && (sl.State == Pending || sl.State == Running) && !sf.Updated.After(ended) {
 				f := noResult
@@ -639,7 +643,8 @@ func Collect(ctx context.Context, store *gitstore.Store, id ID, suite, out strin
 			continue
 		}
 
-		files, err := store.Files(ctx, ref.Commit)
+		// failure files are for people, not the check: never fetched
+		files, err := store.FilesBut(ctx, ref.Commit, filesDir)
 		if err != nil {
 			return n, err
 		}

@@ -696,7 +696,7 @@ func noTests(b *strings.Builder, r Run) {
 }
 
 func failures(b *strings.Builder, r Run, tails bool) {
-	wrote := false
+	wrote, files := false, false
 
 	for _, s := range r.Suites {
 		// slices their batch never started are told once, not each
@@ -721,7 +721,12 @@ func failures(b *strings.Builder, r Run, tails bool) {
 				wrote = true
 			}
 
-			fmt.Fprintf(b, "- %s %s\n", stateWord(sl.State), link(s.Name+" "+sl.display(), sl.URL))
+			kept := ""
+			if sl.Files > 0 {
+				kept, files = " ("+plural(sl.Files, "failure file")+")", true
+			}
+
+			fmt.Fprintf(b, "- %s %s%s\n", stateWord(sl.State), link(s.Name+" "+sl.display(), sl.URL), kept)
 
 			for _, f := range sl.Failures {
 				fmt.Fprintf(b, "  - `%s`\n", strings.ReplaceAll(f.Test, "`", "'"))
@@ -735,6 +740,12 @@ func failures(b *strings.Builder, r Run, tails bool) {
 
 	if wrote {
 		b.WriteString("\n")
+	}
+
+	// the files themselves stay in the store: a test may have printed a
+	// secret into one, and the comment has other readers
+	if cmd := FilesCommand(r.Name, r.Change, r.Commit, ""); files && r.Change != "" && !strings.Contains(cmd, "`") {
+		fmt.Fprintf(b, "Failure files are kept with the run's records: `%s` writes them out (`--slice` for one slice's).\n\n", cmd)
 	}
 }
 
