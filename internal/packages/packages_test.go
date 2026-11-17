@@ -19,7 +19,7 @@ func TestScriptPerManager(t *testing.T) {
 		"elif command -v dnf >/dev/null 2>&1; then pg_m=dnf pg_want='git jq postgresql-client' pg_none=''",
 		"elif command -v microdnf >/dev/null 2>&1; then pg_m=microdnf pg_want='git jq postgresql-client' pg_none=''",
 		"elif command -v yum >/dev/null 2>&1; then pg_m=yum pg_want='git jq postgresql-client' pg_none=''",
-		"no package manager pipelinegen knows (apt-get, apk, dnf, microdnf, yum) is in this image to install git jq postgresql-client",
+		"pipelinegen: this image has none of the package managers apt-get, apk, dnf, microdnf, yum to install git jq postgresql-client",
 	} {
 		if !strings.Contains(s, line) {
 			t.Errorf("no line %q in\n%s", line, s)

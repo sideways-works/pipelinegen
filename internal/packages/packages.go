@@ -68,7 +68,8 @@ func Script(ps config.Packages) string {
 		commands = append(commands, m.Command)
 	}
 
-	fmt.Fprintf(&b, "else\n  echo \"pipelinegen: no package manager pipelinegen knows (%s) is in this image to install %s\" >&2\n  exit 1\nfi\n",
+	// a message names pipelinegen only as its prefix: the kit reads "pipelinegen <word>" as a call of the tool
+	fmt.Fprintf(&b, "else\n  echo \"pipelinegen: this image has none of the package managers %s to install %s\" >&2\n  exit 1\nfi\n",
 		strings.Join(commands, ", "), strings.Join(names(ps), " "))
 	b.WriteString(scriptBody)
 
