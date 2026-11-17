@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/affected"
+	"github.com/sideways-works/pipelinegen/internal/bazel"
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/gitx"
 	"github.com/sideways-works/pipelinegen/internal/report"
@@ -29,7 +30,7 @@ type localRunFlags struct {
 	images imageFlags
 
 	base, head, work            string
-	suites                      []string
+	suites, slices              []string
 	all, record, noLists, local bool
 }
 
@@ -39,6 +40,11 @@ func (f *localRunFlags) register(fs *flag.FlagSet) {
 	textVar(fs, &f.head, "head", "HEAD", "the commit to plan and run: uncommitted changes are neither planned nor run")
 	fs.Func("suite", "only this suite (repeatable; default every suite)", func(s string) error {
 		f.suites = append(f.suites, s)
+
+		return nil
+	})
+	fs.Func("slice", "only this slice, by its name or label (repeatable); one the plan didn't select runs too", func(s string) error {
+		f.slices = append(f.slices, s)
 
 		return nil
 	})
@@ -82,6 +88,10 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	if err := writeAffected(stdout, plan, false); err != nil {
+		return err
+	}
+
+	if err := f.only(plan); err != nil {
 		return err
 	}
 
@@ -190,6 +200,62 @@ func (f *localRunFlags) dirty(ctx context.Context, head string) (bool, error) {
 	warnf(os.Stderr, "pipelinegen run: uncommitted changes are neither planned nor run; this tests %s as committed, without:\n  %s\n", short12(head), fileList(files))
 
 	return true, nil
+}
+
+// only keeps the slices --slice names, by name or label, in every suite that has them. One the plan
+// didn't select runs too, as asked, and a line says so.
+func (f *localRunFlags) only(plan *affected.Plan) error {
+	if len(f.slices) == 0 {
+		return nil
+	}
+
+	named := func(sl bazel.Slice) bool {
+		return slices.Contains(f.slices, sl.Name) || slices.Contains(f.slices, sl.Label)
+	}
+	found := map[string]bool{}
+
+	var kept []affected.SuitePlan
+
+	for _, sp := range plan.Suites {
+		var keep []bazel.Slice
+
+		for _, sl := range slices.Concat(sp.Selected, sp.Slices()) {
+			if !named(sl) || slices.ContainsFunc(keep, func(k bazel.Slice) bool { return k.Label == sl.Label }) {
+				continue
+			}
+
+			found[sl.Name], found[sl.Label] = true, true
+
+			if !slices.ContainsFunc(sp.Selected, func(s bazel.Slice) bool { return s.Label == sl.Label }) {
+				warnf(os.Stderr, "pipelinegen run: suite %s's slice %s wasn't selected by the plan; it runs as --slice names it\n", sp.Suite, sl.Name)
+			}
+
+			keep = append(keep, sl)
+		}
+
+		if len(keep) > 0 {
+			sp.Selected, sp.WholeSuite = keep, nil
+			kept = append(kept, sp)
+		}
+	}
+
+	if missing := slices.DeleteFunc(slices.Clone(f.slices), func(n string) bool { return found[n] }); len(missing) > 0 {
+		where := "no suite has"
+		if len(f.suites) > 0 {
+			where = "no suite of --suite " + strings.Join(f.suites, ", ") + " has"
+		}
+
+		what := "a slice"
+		if len(missing) > 1 {
+			what = "the slices"
+		}
+
+		return fmt.Errorf("%w: %s %s %s at %s", errUsage, where, what, strings.Join(missing, ", "), short12(plan.Head))
+	}
+
+	plan.Suites = kept
+
+	return nil
 }
 
 func (f *localRunFlags) runnable(cfg *config.Config, plan *affected.Plan) ([]affected.SuitePlan, error) {

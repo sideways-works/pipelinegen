@@ -98,6 +98,10 @@ type SuitePlan struct {
 	slices []bazel.Slice
 }
 
+// Slices are the suite's slices at the head, selected or not. A plan that selected every slice may not
+// keep them: Selected holds them all.
+func (sp SuitePlan) Slices() []bazel.Slice { return sp.slices }
+
 // Narrowed is a selection made smaller than what the change reaches: sampled
 // or narrowed. The nightly traces its failures to it.
 type Narrowed struct {

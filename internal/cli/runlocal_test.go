@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -137,6 +138,28 @@ func TestRunNamesTheChangesItLeavesOut(t *testing.T) {
 	}
 }
 
+func TestRunRunsOnlyTheSlicesNamed(t *testing.T) {
+	f := drivenRepo(t, "[{run: stub, batch: true, with: {log: LOG}}]", false)
+
+	stdout, stderr, code := runAll(t, f, "--slice", "e2e/pay.spec.ts")
+	if code != 0 || !strings.Contains(stdout, "slice e2e/pay.spec.ts: passed\n") || strings.Contains(stdout, "slice e2e/cart.spec.ts:") ||
+		!strings.Contains(stdout, "  e2e: 1 passed, 0 failed, 0 errored\n") {
+		t.Fatalf("run --slice: %d %s\n%s", code, stdout, stderr)
+	}
+
+	if got := drivenLog(t, f.driverLog); len(got) != 1 || !strings.HasSuffix(got[0], " e2e/pay.spec.ts") {
+		t.Fatalf("driver calls: %q", got)
+	}
+
+	if _, stderr, code := runAll(t, f, "--slice", "e2e/pay.spec.ts", "--slice", "e2e/gone.spec.ts"); code != 2 || !strings.Contains(stderr, "no suite has a slice e2e/gone.spec.ts at ") {
+		t.Fatalf("a slice no suite has: %d %s", code, stderr)
+	}
+
+	if got := drivenLog(t, f.driverLog); len(got) != 1 {
+		t.Fatalf("the driver ran for a slice no suite has: %q", got)
+	}
+}
+
 // exampleRun is the example's repository with its unit suite run by the stub driver, which fails a
 // slice whose name holds "bad".
 type exampleRun struct {
@@ -197,11 +220,11 @@ func newExampleRun(t *testing.T) *exampleRun {
 	return e
 }
 
-func (e *exampleRun) run(t *testing.T, base string) (string, string, int) {
+func (e *exampleRun) run(t *testing.T, base string, more ...string) (string, string, int) {
 	t.Helper()
 
-	return runIn(t, e.r.Dir, e.env, "run", "--no-image", "--base", base, "--suite", "unit", "--root", e.r.Dir,
-		"--cache", e.cache, "--bazel-diff", e.diff, "--plugins", e.plugins)
+	return runIn(t, e.r.Dir, e.env, slices.Concat([]string{"run", "--no-image", "--base", base, "--suite", "unit", "--root", e.r.Dir,
+		"--cache", e.cache, "--bazel-diff", e.diff, "--plugins", e.plugins}, more)...)
 }
 
 func (e *exampleRun) calls(t *testing.T) []string {
@@ -253,6 +276,17 @@ func TestRunRunsWhatTheChangeSelects(t *testing.T) {
 
 	if got := e.calls(t); len(got) != 1 {
 		t.Fatalf("the driver ran for a change that selects nothing: %q", got)
+	}
+
+	// a slice the plan left out runs when named, and a line says it wasn't selected.
+	stdout, stderr, code = e.run(t, one, "--slice", "calc/mul_test.sh")
+	if code != 0 || !strings.Contains(stdout, "slice calc/mul_test.sh: passed\n") || !strings.Contains(stdout, "  unit: 1 passed, 0 failed, 0 errored\n") ||
+		!strings.Contains(stderr, "suite unit's slice calc/mul_test.sh wasn't selected by the plan") {
+		t.Fatalf("a named slice the plan left out: %d\n%s\n%s", code, stdout, stderr)
+	}
+
+	if got := e.calls(t); len(got) != 2 || !strings.HasSuffix(got[1], " calc/mul_test.sh") {
+		t.Fatalf("driver calls: %q", got)
 	}
 
 	e.r.Write("calc/bad_test.sh", ". ./lib.sh\n\ntest_bad() {\n\tfail bad\n}\n")

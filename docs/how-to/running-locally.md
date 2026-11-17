@@ -118,7 +118,9 @@ ran at 9dc1d1f84ba1:
 
 `--base` is required, so a forgotten flag doesn't run every suite whole.
 `--all` runs every slice instead, and `--suite` limits the run to one
-suite (repeat it for more). With changes in your working tree, `run`
+suite (repeat it for more). `--slice` limits it to one slice, by name or
+label (repeat it for more): with `--all`, any slice; otherwise one the plan
+didn't select runs too, and a line on stderr says it wasn't selected. With changes in your working tree, `run`
 still runs, and its last line on stderr names what it left out:
 
 ```
@@ -181,8 +183,8 @@ runs ([start without a full first run](starting-narrow.md)).
 
 ## Run one slice's tests directly
 
-`run` runs what the plan selects, and has no flag to pick a slice. To
-debug a failure, run the test runner on the slice's file yourself.
+`run --slice` runs one slice through its suite's steps, as CI would. To
+debug a failure faster, run the test runner on the slice's file yourself.
 `pipelinegen slices --suite go --json` lists the tests of each Go test
 file, which `go test -run` takes. On the notes service:
 

@@ -889,7 +889,7 @@ Its output, on stdout:
 It exits 0 when every slice passed, and when the plan selects nothing
 (`nothing selected: no slice to run`); 1 when a slice failed, errored or
 never ran, or the run itself failed; 2 for a command line it can't read,
-`--base` and `--all` both missing among them.
+`--base` and `--all` both missing among them, and a `--slice` no suite has.
 
 | Flag | Default | What it does |
 |---|---|---|
@@ -898,6 +898,7 @@ never ran, or the run itself failed; 2 for a command line it can't read,
 | `--base` | none | The commit to compare with. Required unless `--all`. |
 | `--head` | `HEAD` | The commit to plan and run. |
 | `--suite` | every suite | Only this suite; repeat it for more. |
+| `--slice` | every selected slice | Only this slice, by its name (a test file's path, or a tagged target's name) or its label, in every suite that has it; repeat it for more. With `--all`, only the slices named. A slice the plan didn't select runs too, and a line on stderr says it wasn't selected: you named it. A name no suite has (of those `--suite` names) exits 2 and names it, before anything runs. |
 | `--all` | `false` | Runs every slice, not only those the change selects. |
 | `--record` | `false` | Records the suites bound by recording, as `record` does, and attaches their lists to `--head` in the local store, each suite's only when every slice of it that ran passed. A suite not bound by recording runs without, and a line on stderr says so. |
 | `--local` | `false` | Plans with the lists of the local store, as `affected --local`. |
