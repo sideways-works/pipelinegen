@@ -265,6 +265,7 @@ PIPELINEGEN_PR=12 PIPELINEGEN_SUITE=unit PIPELINEGEN_BATCH=1 \
 What a suite's batch task calls around each of its slices, in order:
 
 ```sh
+tools/pipelinegen slice memory                    # first, before the setup: wait for room
 tools/pipelinegen slice start calc/add_test.sh    # noted in the batch's journal
 # ... run the slice's tests, write result/calc/add_test.sh.json ...
 tools/pipelinegen slice end calc/add_test.sh      # its result, recording and final state
@@ -279,8 +280,21 @@ doesn't, naming each and where it came from: a slice reported under a
 change no plan was made for would lose its recording. It reads once a
 job, and a store it can't read is reported as that.
 
+`slice memory` waits, before the batch's setup, until the worker has the
+memory the batch should use (`<batches>/<n>/memory.json`, which `batches`
+predicts from the suite's measured peaks) free and the memory pressure is
+below 10%, for at most 5 minutes or a tenth of the suite's minutes. It
+logs what it read either way. A batch still short then exits 1, leaving
+`<result>/.pipelinegen/memory.json`, and the batch's end marks its slices
+`not run` with the figures; a suite without measured peaks starts at once.
+`slice run` does the same before its set-up steps. On this machine, where
+`run` and `record` checked before the batch, it does nothing. See [sharing
+machines](../how-to/sharing-machines.md#memory-a-batch-waits-for-room).
+
 Starts and ends go into the batch's journal,
-`<result>/.pipelinegen/journal.jsonl`. `slice end` takes the slice's
+`<result>/.pipelinegen/journal.jsonl`, each with a reading of the task's
+cgroup; a slice's state gets the CPU it used and the batch's memory peak
+while it ran (`cpu_seconds`, `peak_mb`). `slice end` takes the slice's
 coverage counters at once and never reaches the network: the batch's end,
 or a background `slice flush --every`, writes the journal out. `slice end` prints `slice <name>: <state>` and exits 0 whatever
 the state, so the batch goes on to its next slice; the batch's end reports
@@ -584,7 +598,15 @@ filters, no forks) and lists two kinds, each once it has waited the run's
   `pipelinegen plan --trigger <out>/plan/<number>` plans it unchanged;
 - a planned head none of whose suites began (its run has no suite build's
   start record, no slice record and no suite's end): the resource's files
-  alone in `<out>/handoff/<number>`, to hand to the suites again.
+  alone in `<out>/handoff/<number>`, to hand to the suites again;
+- a planned head whose run ended with slices not run for want of memory,
+  and no other gap: every slice passed but those whose batches found the
+  worker short of memory or that crashed out of memory, every suite build
+  that began has ended, none began or ended since the run's mark of it,
+  and nobody ended the run by hand. It is handed to the suites again the
+  same way, and their builds run only the slices that didn't pass. A run
+  with a failed slice is left to a person, so no failing test runs again
+  unasked.
 
 A suite build counts as begun from the moment its start step opens its
 gate (`pipelinegen tree` writes the build's start record then), not from
@@ -670,7 +692,10 @@ the slices that already passed for the change, so a rerun of the build runs
 exactly what didn't pass. Writes `batches/batches.json` (the batch numbers
 the `across` step runs over, as strings: Concourse puts each into a task's
 `args` and `params`, which take strings only), `batches/<n>/slices.json`
-and `batches/run.json`.
+and `batches/run.json`. From the suite's measured memory peaks
+(`refs/pipelinegen/peaks/<suite>`) it also writes `batches/<n>/memory.json`,
+the peak the batch should reach, which the batch waits for before it starts;
+a suite with no peaks gets none.
 
 | Flag | Default | What it does |
 |---|---|---|
@@ -893,6 +918,14 @@ them, as `record` does.
 `--base` has no default. Without one, `affected` plans every slice
 ("nothing to compare with"); `run` asks for `--base`, or for `--all` to
 run every slice, so a forgotten flag doesn't run the whole suite.
+
+Before a suite's batch, it reads the suite's memory peaks from the store
+the config names, as CI's batches predict them, and when this machine has
+less free than the batch should use it runs none of that suite's slices,
+says so with the figures (`e2e: 12 not run: not enough free memory: ...`)
+and exits 1 at the end. Nothing waits: close what you can spare and run it
+again. Without a store or peaks, it doesn't check. `record` does the same
+and refuses.
 
 Its output, on stdout:
 

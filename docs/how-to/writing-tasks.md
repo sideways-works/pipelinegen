@@ -76,6 +76,14 @@ entries carry `label` and `target` (the target to build or run) instead.
 `tools/pipelinegen slice list` prints the same, one slice per line,
 tab-separated, for a task in plain shell.
 
+First, before its setup, the task calls `tools/pipelinegen slice
+memory`: it waits, for a few minutes at most, until the worker has the
+memory the batch should use by its slices' recent peaks, and when it
+still hasn't, it says why and exits 1, so the task stops and the batch's
+end marks its slices not run, to run again later ([sharing
+machines](sharing-machines.md#memory-a-batch-waits-for-room)). A suite with
+no peaks yet starts at once.
+
 Once the batch's setup is done (the stack started, the data seeded), and
 before its first slice, the task calls `tools/pipelinegen slice
 setup-end`. In a recording run that takes what the setup executed into
@@ -124,6 +132,7 @@ A batch task in outline:
 
 ```sh
 set -u
+tools/pipelinegen slice memory || exit 1   # wait for the room the batch should need
 start_stack            # database, server: once per batch
 trap stop_stack EXIT   # stop cleanly, so coverage is written
 tools/pipelinegen slice setup-end

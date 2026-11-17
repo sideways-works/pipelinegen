@@ -237,6 +237,23 @@ parents), so a test may read it.
 
 ### Steps
 
+First, before its setup, the task runs `tools/pipelinegen slice memory`
+(`slice run` does the same itself). It logs what the worker has free (the
+machine's `MemAvailable`, and what the tightest cgroup limit above the
+task leaves), the memory pressure (`/proc/pressure/memory`, `some
+avg10`) and the batch's predicted peak, `batches/<n>/memory.json`
+(`{"predicted_mb", "why"}`, written by `batches`; none for a suite with no
+measured peaks, whose batches start at once). It returns once the worker
+has the prediction free and the pressure is below 10%, reading every 5
+seconds for at most 5 minutes or a tenth of the suite's minutes. A batch
+still short then writes `result/.pipelinegen/memory.json` (`{"free_mb",
+"predicted_mb", "psi", "waited_seconds", "reading"}`) and exits 1 without
+starting anything; `report batch-end` reads it and closes every slice of
+the batch `not run` with the failure `(memory)`, "not run: the worker had
+N MB free of M MB predicted, after waiting ...". A prediction above the
+most the worker could ever have (its memory, or a cgroup limit below it)
+starts the batch at once, and says so.
+
 Once, after its setup and before its first slice, the task runs
 `tools/pipelinegen slice setup-end`. In a recording run it calls every
 correlator's `collect` with `setup-end`, which closes what the setup ran
@@ -260,7 +277,17 @@ first, so a batch its timeout killed loses no slice that ended.
 A slice's start and end go into the batch's journal,
 `result/.pipelinegen/journal.jsonl`, one JSON line each, appended and
 synced before the command returns; nothing is written to the repository or
-GitHub per slice.
+GitHub per slice. Each line carries a reading of the task's cgroup (CPU
+used, working set, OOM kills), and a slice's end what the slice used
+across its parts: its state gets `cpu_seconds` and `peak_mb`, the most
+memory the batch held while it ran. `slice run` samples the working set
+every 250 ms, so its slices' peaks are their own; a task file's peak is
+the batch's up to the slice's end (`memory.peak` less the file cache). A
+run on this machine measures nothing. A slice during which the OOM killer
+killed a process of the task (`oom_kill` in `memory.events` rose), or
+one that failed naming `SIGKILL` while the pressure was 10% or more,
+errors with the failure `(out of memory)` first, and its `peak_mb` is at
+least the room the batch had at its start.
 
 A slice may run in parts: a browser batch runs its spec files once per
 project, so each comes round several times. `slice start` on a slice that
@@ -553,8 +580,15 @@ covering.
 ## (d) Run state: temporary refs
 
 pipelinegen keeps no state store and no state branch. What outlives a job
-is refs: the lists, a run's live state, the locks (below) and the plugins'
-answer cache ([plugins.md](plugins.md#caching-by-content)).
+is refs: the lists, a run's live state, the locks (below), the suites'
+memory peaks and the plugins' answer cache
+([plugins.md](plugins.md#caching-by-content)).
+
+A suite's recent memory peaks are `refs/pipelinegen/peaks/<suite>`, a
+parentless commit holding `peaks.json`: `{"slices": {"<slice>": [{"mb",
+"commit"}]}}`, the last 10 per slice, oldest first. Only a trusted run's
+suite end writes it, one sample per slice and commit, with a push that
+names the value it read; `batches` reads it. The sweep never prunes it.
 
 The lists of what slices touched hang off the branch's commits as
 `refs/pipelinegen/lists/<full commit id>`, each a parentless commit whose
@@ -622,10 +656,17 @@ ref anew, which readers read and the next compaction or the sweep takes.
 Nothing is downloaded for these writes but trees. A run planned before
 this layout, whose plan is a ref of its own, keeps one ref per record
 until the sweep removes it. Suite names start with a letter, so `_end`,
-`_began` and `_plan` never clash. A suite build's start step writes
+`_began`, `_short` and `_plan` never clash. A suite build's start step writes
 `_began/<suite>` (`began.json`: the suite, when the build started, the
 job's link) as soon as its gate opens, over the one before, so a suite
-counts as begun from its build's start, not from its first batch's end. A slice's state:
+counts as begun from its build's start, not from its first batch's end.
+A suite's end writes `_short` (`short.json`: when) when every slice of
+the run has ended and passed but those whose batches found the worker
+short of memory or that crashed out of memory, one at least: the sweep
+hands such a head on again once no suite build began or ended after the
+mark, every build that began has ended, nobody ended the run by hand and
+`missed_after` has passed, by the same rule as a head whose suites never
+began. A slice's state:
 
 ```json
 {
@@ -634,11 +675,14 @@ counts as begun from its build's start, not from its first batch's end. A slice'
   "url": "https://concourse.example/teams/t/pipelines/p/jobs/pr-e2e",
   "updated": "2026-11-13T09:12:44Z",
   "failures": [{"test": "checkout pays with a card", "tail": "..."}],
-  "seconds": 41.3
+  "seconds": 41.3,
+  "cpu_seconds": 63.8,
+  "peak_mb": 5120
 }
 ```
 
-`state` is one of `pending`, `running`, `passed`, `failed`, `errored`; a
+`state` is one of `pending`, `running`, `passed`, `failed`, `errored`,
+`not run`; a
 slice without a ref is pending, and one still without a final state when
 its suite's end marker exists had no result. The plan is written once,
 create-only, by the planning job before the suite jobs start (it is too big to
@@ -831,9 +875,11 @@ and `pipelinegen why --run R --change C --commit X --suite S --slice N`
 (a kept plan; `--commit` and `--suite` may be left out), or `pipelinegen
 why --base B --head H --slice N` (planning again) says why a slice did
 or didn't run. The sweep
-prunes by `keep` (above). Backups and mirrors must include
+prunes by `keep` (above); it leaves `refs/pipelinegen/peaks/`, which only
+grows by a sample per slice and commit and keeps 10. Backups and mirrors must include
 `refs/pipelinegen/*`; losing them is safe (runs select everything until they
-record again).
+record again, and batches start without waiting for memory until their
+suite is measured again).
 
 ## Locks between runs
 
@@ -942,7 +988,8 @@ The change and its commit come from the trigger's input (`--trigger <dir>`).
 | continuous run's planning job, before the prepare | `tools/pipelinegen plan --decide --run <run> --trigger trigger --root trigger --cache plan-cache --gate handoff`: decides whether the build plans, waiting while a round of the run is in progress, and plans nothing; writes the closed `handoff/gate.json` for a build that won't plan (the task then ends, without the prepare) and `handoff/decided.json` for one that will, which the plan step after the prepare reads | `tools`, `trigger`, `plan-cache` | `plan-cache`, `handoff` | `GITHUB_TOKEN`, `PIPELINEGEN_BAZELISK` |
 | planning job's prepare | `tools/pipelinegen git-auth <ENV_NAME>`: the lines that have git read a declared token (see (a)) | `tools` | none | none |
 | suite job, first | `tools/pipelinegen tree --run <run> --trigger trigger --out source`: the tree under test, from the plan (a git work tree whose HEAD is the tested commit); `gate/gate.json` is `["1"]` with a plan for this suite and `[]` without; with the gate open it first writes the suite build's start record (`_began/<suite>` among the run's records), for which it needs the store's token, though a refused write only warns; every list a step writes for `load_var` holds strings, because Concourse puts a loaded value into task `args` and `params`, which take strings only | `tools`, `trigger` | `source`, `gate` | `GITHUB_TOKEN` |
-| suite job, before the batches | `tools/pipelinegen batches --run <run> --suite <s> --trigger trigger --out batches --root source`: deals the plan's selected slices of the suite, leaving out those already passed for this change (a rerun) | `tools`, `trigger`, `source` | `batches` | `GITHUB_TOKEN` |
+| suite job, before the batches | `tools/pipelinegen batches --run <run> --suite <s> --trigger trigger --out batches --root source`: deals the plan's selected slices of the suite, leaving out those already passed for this change (a rerun), and writes each batch's predicted memory peak beside its slices (`batches/<n>/memory.json`) from the suite's peaks | `tools`, `trigger`, `source` | `batches` | `GITHUB_TOKEN` |
+| the batch task, before its setup | `tools/pipelinegen slice memory` | see (a) | see (a) | see (a) |
 | the batch task, after its setup | `tools/pipelinegen slice setup-end` | see (a) | see (a) | see (a) |
 | the batch task, per slice | `tools/pipelinegen slice start <name>`, `tools/pipelinegen slice end <name>` | see (a) | see (a) | see (a) |
 | a suite with steps: the prepare task | `tools/pipelinegen slice prepare`: runs the suite's prepare steps | see (a) | see (a) | see (a) |

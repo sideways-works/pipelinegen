@@ -12,7 +12,13 @@ slices started or left a result: its setup failed. The batch's end says so
 in one line ("batch 2 recorded nothing: its setup failed before any slice
 ran"), asks no correlator, and the suite's status counts those slices as
 not run (`1 of 4 slices ran, 2 not run (a batch's setup failed)`), not as
-failed. A rerun runs them. A recording batch whose slices ran but left no
+failed. A rerun runs them. A batch that found the worker short of memory
+(`slice memory`, or `slice run` before its set-up) is not run the same
+way, with the failure `(memory)` and the figures, and the status counts
+those apart: `2 not run (worker short of memory)`. A suite's end that
+finds the run's only gaps are such slices, or slices that crashed out of
+memory, writes the run's `_short` mark, by which the sweep hands the head
+on again. A recording batch whose slices ran but left no
 coverage at all is told once too, and none of its slices is observed.
 A slice's state comes from its result file: `passed` only when the file
 says so and lists no failure, `failed` otherwise, `errored` when the file is
