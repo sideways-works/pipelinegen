@@ -1,0 +1,13 @@
+{
+  "label": "//:lint",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-lint",
+  "updated": "2026-11-17T23:07:31.51690136Z",
+  "failures": [
+    {
+      "test": ".lint",
+      "tail": "/tmp/build/4bb24efc/work/shell/golangci-lint-2.14.0-linux-amd64.tar.gz: OK\ninternal/cli/report_test.go:232:24: G703: Path traversal via taint analysis (gosec)\n\tif err := os.WriteFile(filepath.Clean(p), []byte(body), 0o600); err != nil {\n\t                      ^\n1 issues:\n* gosec: 1"
+    }
+  ],
+  "seconds": 170.898627719
+}
