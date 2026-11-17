@@ -1428,8 +1428,12 @@ pipeline` refuses a suite with steps for a runner without the capability
 
 ## Connectors
 
-Not in a release yet. The core calls no connector yet: its GitHub
-support is built in.
+Not in a release yet: the core calls its connectors as plugins. The GitHub
+connector ([pipelinegen-connector-github](https://github.com/sideways-works/pipelinegen-connector-github))
+serves a config's `github` section, and the git connector
+([pipelinegen-connector-git](https://github.com/sideways-works/pipelinegen-connector-git))
+a plain git server under `connectors`. The core pins a release of each and
+fetches the one a config uses, checked by its checksum.
 
 A connector tells pipelinegen where the code lives. It lists the proposed
 changes a run tests, reports commit statuses and keeps a comment on each
@@ -1478,8 +1482,10 @@ every change as `unknown`.
 
 `state` is one of the core's four: `pending`, `success`, `failure` and
 `error`. The connector maps them to its host's names. `comment` keeps one
-comment per change: it updates the one whose body holds `marker`, creates
-it when there is none, and deletes any duplicates.
+comment per change: it updates the oldest one whose body starts with
+`marker` (on a line of its own, or alone), creates it when there is none,
+and deletes the others that start with it. A comment that only quotes the
+marker further down is someone else's and stays.
 
 ### Rounds
 
@@ -1508,7 +1514,14 @@ and answers either with requests:
 
 or with `{"done": <the call's answer>}`. The `config` is the connector's
 own block of the config, with the code's remote added as `remote`, so
-every call knows which repository it is about. A connector keeps no state between
+every call knows which repository it is about. The core fills that block
+from the trusted config and the step's environment: the GitHub connector's
+`api` is `PIPELINEGEN_GITHUB_API`, or GitHub's own. A plain git server has
+no API to ask, so for the git connector the core lists the remote's
+branches with git and its read credential, and puts them in the block as
+`heads` (branch name to commit), beside the config's `branches` patterns
+and `links`; the git connector answers from them without a request. The
+core runs a change only at a branch git listed, at the commit git saw. A connector keeps no state between
 rounds, so every round carries the call's arguments again, along with every
 response from every round before it, in order. A body is a file in the
 call's work directory, which every round shares, named by `body_file`. Following pages is just more
@@ -1570,8 +1583,7 @@ A connector's `describe` adds these to the common fields:
 ### What the core refuses
 
 The core checks every request before it sends anything, and fails the call
-on the first one that breaks a rule. A connector built into pipelinegen
-runs its rounds in the same process and goes through the same checks:
+on the first one that breaks a rule:
 
 - The URL is `https` (or `http` only for a host the config names), with no
   user name or password in it. Its scheme and host (with port) are the code

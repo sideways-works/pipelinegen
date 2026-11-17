@@ -106,6 +106,20 @@ or a mismatch fails the step. Every later helper step of the job takes
 `tools` and runs `tools/pipelinegen ...`. The token must be able to read the
 pipelinegen repository.
 
+Not in a release yet: the bootstrap also fetches the connector the config
+uses into `tools/plugins/<name>`, `github` for the `github` section and
+`git` for a plain git server, as pipelinegen pins it or a `plugins` entry
+of kind `connector` does. The steps that talk to the host (`plan`, the
+sweep, the reports, `baseline`) run it from there once it matches its pin.
+A step that finds no matching copy downloads the pinned release from its
+repository's GitHub release into pipelinegen's cache (the user cache
+directory, `$XDG_CACHE_HOME/pipelinegen` or `~/.cache/pipelinegen`), which
+needs github.com from the step and works only while the connector's
+repository is public. The connector runs as any plugin does: with no token
+and none of the step's secrets in its environment. The core sends its
+requests, with the token of each call's purpose, only to the host the step
+names (`PIPELINEGEN_GITHUB_API`, or GitHub's own).
+
 ### Setup in the repository
 
 None. Planning needs no `local_repository` named `pipelinegen_deps` in
@@ -1005,7 +1019,8 @@ does, context
 nothing selected is success, "nothing selected". One more status per run,
 `<status_prefix>/<run>`, sums the run's suites (pending while any is,
 failure or error when any is, success when all are), so a branch rule names
-one check. A run with `compare: last_passed` reads the run's own status to
+one check. The statuses go through the code's connector (`status` and
+`statuses`), as does the comment (`comment`). A run with `compare: last_passed` reads the run's own status to
 find the newest earlier commit whose run passed, or, with none, the newest
 whose run is still pending; the plan's `warnings` say so.
 

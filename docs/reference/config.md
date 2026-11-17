@@ -46,7 +46,7 @@ in the default branch's run once it is merged.
 | A driver entry's pin (`release`, `commit`, `repository`) | the slices its steps run, as a changed plugin entry: from level 4 all of them; below it, while `plugin-entry` is on, each suite's sample of its recorded slices, and every slice without a list |
 | An sbom's or correlator's pin or `config` block | what the entry reaches, as [plugins](../how-to/plugins.md) says |
 | What selects (`tests`, `tag`, `exclude`, `owner`, `extra_deps`, `text_inputs`, `sample`, `sample_on`, `narrowing`, `follow`, `untested` and the like) | what either config selects: the change plans under both and runs the union, so it never deselects its own tests; a slice the head's config adds to a suite (a test file a pattern now matches) runs as a new slice, with the reason "the configuration adds it to the suite" |
-| Where results go, what is kept, how slices are dealt into batches and share machines (`github`, `git`, `store`, `keep`, `writes`, `connectors`, `limits`, `parallel`, `batches`, `batch_minutes`, `run_on`, a lock's name, slots and weight, the runs' triggers and reports) | nothing: no test can observe them |
+| Where results go, what is kept, how slices are dealt into batches and share machines (`github`, `git`, `store`, `keep`, `writes`, `connectors`, a `plugins` entry of kind `connector`, `limits`, `parallel`, `batches`, `batch_minutes`, `run_on`, a lock's name, slots and weight, the runs' triggers and reports) | nothing: no test can observe them |
 | Anything else: a time limit (`minutes`, a correlator's `collect_seconds`), a suite's `correlators`, the runner's entry or its placement, `bazel`, `concourse.include`, the pipelinegen pin in `concourse.planner.bootstrap`, a key this pipelinegen doesn't read in the base | the config is a changed file, as below |
 
 The slices a step's change selects run at every narrowing level, and no
@@ -240,9 +240,12 @@ that describes the `connector_changes` capability), and refuses it
 otherwise. `affected`, `why` and `try` plan with it too.
 
 Where the code and its proposed changes live, when that isn't the `github`
-section. The first connector is the code's. The one built in is `git`, for
-a plain git server with no host API: its proposed changes are the branches
-whose names match `changes.branches`. A run takes them with a `changes`
+section. The first connector is the code's. The one there is today is
+`git`, the [git connector](https://github.com/sideways-works/pipelinegen-connector-git),
+for a plain git server with no host API: its proposed changes are the
+branches whose names match `changes.branches`. pipelinegen lists the
+remote's branches with git and the read credential, and the connector
+picks the changes among them. A run takes them with a `changes`
 trigger. Plain git has no drafts, labels or ready-for-review times, and
 nowhere to post a status or a comment. So the config refuses a run that
 filters on `draft`, `labels`, `labels_without` or `once_per_ready`, or
@@ -253,7 +256,7 @@ asks for `report.comment` or `report.status`, when its changes come from
 |---|---|---|---|
 | `connectors` | list | none | The connectors. The `github` section and `connectors` don't go together. |
 | `connectors[].name` | string | (required) | The connector's name: lower case letters, digits and dashes, unique. Change ids carry it. |
-| `connectors[].plugin` | `git` | (required) | The connector: `git`, the built-in plain git connector. |
+| `connectors[].plugin` | `git` | (required) | The connector: `git`, the plain git connector, pinned by pipelinegen or by a `plugins` entry named `git`. |
 | `connectors[].remote` | URL | `git.remote` | The repository's git URL, as `git.remote` takes it. |
 | `connectors[].changes` | mapping | | Which of the remote's branches are proposed changes. |
 | `connectors[].changes.branches` | list of patterns | (required for `git`) | The branches that are proposed changes, such as `review/*`. There is no default: every branch of a server with many personal ones would otherwise run. |
@@ -270,6 +273,39 @@ runs:
   review:
     trigger: {changes: {base: main}}
 ```
+
+### Pinning a connector
+
+Not in a release yet. Each connector is a plugin of its own, which
+pipelinegen runs: the GitHub connector
+([pipelinegen-connector-github](https://github.com/sideways-works/pipelinegen-connector-github))
+for the `github` section, and the git connector
+([pipelinegen-connector-git](https://github.com/sideways-works/pipelinegen-connector-git))
+for `connectors` entries of plugin `git`. pipelinegen pins a release of
+each, with its checksum for every platform, and fetches the one a config
+uses the way it fetches [bazel-diff](#bazel_diff): a config needs no line
+for it. A generated pipeline's bootstrap fetches it with the other plugins
+into `tools/plugins/<name>`, with the read token; any other machine
+downloads it from the repository's GitHub release into pipelinegen's cache
+the first time a command talks to the host. A binary that doesn't match
+its pin never runs.
+
+A `plugins` entry of kind `connector`, named `github` or `git`, pins
+another release:
+
+```yaml
+plugins:
+  - name: github
+    kind: connector
+    repository: sideways-works/pipelinegen-connector-github
+    release: {version: v0.1.0, sums: ...}
+```
+
+The entry takes `release` (`sha256` for one platform, or `sums`) and no
+`config`: where the API is comes from the step's environment
+(`PIPELINEGEN_GITHUB_API`), and the code's remote and branches from the
+trusted config. Like every plugin entry, a proposed change can't add one or
+change its pin.
 
 ## concourse
 
@@ -618,7 +654,7 @@ its checksum, or by a commit before the first release. See
 |---|---|---|---|
 | `plugins` | list | none | The plugins; see [the guide](../how-to/plugins.md). Planning and recording go through the sbom and correlator plugins; with none, every suite is bound by the Bazel graph. The pipeline needs a runner. |
 | `plugins[].name` | string | (required) | The plugin's name in this config, unique. |
-| `plugins[].kind` | `correlator`, `sbom`, `runner` or `driver` | (required) | What the plugin is. At most one runner. A driver runs a suite's slices for its `steps`; `command` is built in and needs no entry. |
+| `plugins[].kind` | `correlator`, `sbom`, `runner`, `driver` or `connector` | (required) | What the plugin is. At most one runner. A driver runs a suite's slices for its `steps`; `command` is built in and needs no entry. A connector entry, named `github` or `git`, pins the release of that connector in place of pipelinegen's own pin, and takes a `release` and no `config` ([pinning a connector](#pinning-a-connector)). |
 | `plugins[].repository` | `owner/name` | (required) | Where its releases come from. A repository `pipelinegen-KIND-NAME` holds the program `NAME-KIND`, which names its release files and its `./cmd/NAME-KIND`; any other holds the program of its own name. |
 | `plugins[].release` | mapping | | A released version. Give either `release` or `commit`. |
 | `plugins[].release.version` | string | | The release's tag. |

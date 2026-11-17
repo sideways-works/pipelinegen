@@ -100,7 +100,7 @@ your recordings into the repository's store for CI's first runs.
 | | Today |
 |---|---|
 | CI systems | pipelinegen's steps are commands a CI job calls. A runner plugin writes the whole pipeline from the config; there is one, for [Concourse](https://concourse-ci.org). For another CI system, [run the steps by hand](docs/how-to/any-ci-by-hand.md) in its jobs, or [write a runner](docs/writing-plugins/runner.md). |
-| Git hosts | Any git repository. With GitHub it also reports statuses and a comment on pull requests; a plain git server works through the built-in `git` connector. |
+| Git hosts | Any git repository. With GitHub it also reports statuses and a comment on pull requests, through the [GitHub connector](https://github.com/sideways-works/pipelinegen-connector-github); a plain git server works through the [git connector](https://github.com/sideways-works/pipelinegen-connector-git). pipelinegen fetches the connector a config uses, pinned and checked by its checksum. |
 | Languages | Plugins for Go, TypeScript and React, npm, PostgreSQL and OpenAPI. Any other language works with the build graph alone. |
 
 [What works today](docs/introduction/what-works-today.md) keeps this

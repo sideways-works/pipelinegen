@@ -86,7 +86,7 @@
   * [A correlator](writing-plugins/correlator.md)
   * [A runner](writing-plugins/runner.md)
   * [A driver](writing-plugins/driver.md)
-  * [A connector (not in a release yet)](writing-plugins/connector.md)
+  * [A connector](writing-plugins/connector.md)
   * [A store (a design)](writing-plugins/store.md)
 
 ## For contributors

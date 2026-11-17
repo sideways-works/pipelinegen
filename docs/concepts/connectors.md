@@ -5,8 +5,8 @@ repository under test. It recognises the repository from its remote URL,
 lists the changes proposed for a branch (pull requests or merge requests,
 with their head commit, whether they are drafts, their labels, and whether
 they come from a fork), and shows the results there: a status on each
-commit and one comment per proposed change. Connectors are being built;
-until they land, GitHub is built into pipelinegen ([below](#today)).
+commit and one comment per proposed change. Each connector is a plugin in
+a repository of its own ([below](#today)).
 
 Plugins come in six kinds, each answering one question:
 
@@ -32,12 +32,27 @@ change from a fork never runs with a token.
 
 ## Today
 
-The connector plugin is being built. Until it lands, GitHub support is
-built into pipelinegen and configured under `github:` in
-`pipelinegen.yaml`. A plain git server, with review branches as proposed
-changes, has the built-in `git` connector under `connectors:` (not in a
-release yet). The design of the connector plugin
-is in [writing a connector](../writing-plugins/connector.md). [What works
-today](../introduction/what-works-today.md) says when that changes.
+Two connectors exist, each a plugin:
+
+- the GitHub connector,
+  [pipelinegen-connector-github](https://github.com/sideways-works/pipelinegen-connector-github),
+  which a config's `github:` section in `pipelinegen.yaml` uses: it lists
+  the pull requests, sets the statuses and keeps the comment;
+- the git connector,
+  [pipelinegen-connector-git](https://github.com/sideways-works/pipelinegen-connector-git),
+  for a plain git server with review branches as proposed changes, under
+  `connectors:`.
+
+Not in a release yet: pipelinegen pins a release of each and fetches the
+one a config uses, checked by its checksum, the way it fetches bazel-diff,
+so a config that used GitHub before needs no new line. In a generated
+pipeline the bootstrap fetches it with the other plugins; elsewhere
+pipelinegen downloads it into its cache the first time a command talks to
+the host. A `plugins` entry of kind `connector` pins another release
+([pinning a connector](../reference/config.md#pinning-a-connector)).
+
+Config for other connectors, and several connectors at once, is the
+design in [writing a connector](../writing-plugins/connector.md). [What
+works today](../introduction/what-works-today.md) says when that changes.
 
 Next: [the store](the-store.md).

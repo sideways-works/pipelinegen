@@ -1,20 +1,21 @@
 # Writing a connector
 
 > **Not in a release yet.** The connector protocol is written down in
-> [the plugin protocol](../plugins.md#connectors), but the core calls no
-> connector plugin yet: its GitHub support is built in and configured under
-> `github:`, and the one connector the config takes today is the built-in
-> `git`, for a plain git server ([`connectors`](../reference/config.md#connectors)).
-> This page describes the design as a whole; the protocol page has every
-> call and field.
+> [the plugin protocol](../plugins.md#connectors). The core calls two
+> connector plugins: the GitHub connector for a config's `github:` section,
+> and the git connector for a plain git server under
+> [`connectors`](../reference/config.md#connectors). Both are pinned by
+> pipelinegen and fetched when a config uses them. This page describes the
+> design as a whole, of which config for other connectors is still to come;
+> the protocol page has every call and field.
 
 A connector tells pipelinegen where the code lives: the git host of the
 repository under test. It finds the repository from its remote URL, lists
 the changes proposed for a branch (pull requests, merge requests), and
 shows results there: a status per commit and one comment per proposed
 change. pipelinegen's core then knows no git host; GitHub, GitLab and
-Gitea become connector plugins, and a built-in connector covers a plain
-git server with no host at all.
+Gitea are connector plugins, and the git connector covers a plain git
+server with no host at all.
 
 ## Requests as data
 
@@ -90,18 +91,32 @@ than letting everything through.
 
 ## Plain git
 
-A built-in connector covers a git server with no host API. Proposed
-changes are branches that match a pattern of the config, listed with `git
-ls-remote --heads`; there are no drafts or labels. It reports nowhere on a
+The git connector covers a git server with no host API. Proposed changes
+are branches that match a pattern of the config. The core lists the
+branches with `git ls-remote --heads` and the read credential, and hands
+them to the connector as `heads`; the connector picks the changes and
+sends no request. There are no drafts or labels. It reports nowhere on a
 host: results live in the store's records, and `pipelinegen status
 <commit or branch>` prints a run's state for a script or a server's hook.
 ssh remotes take their key from a CI variable and require known host keys.
+A plain git server has no forks, so the connector says every change comes
+from the repository itself, and its kit fixture says why in `no_forks`.
+
+## Testing one
+
+`pipelinegen plugin test <the connector> --tree <fixture>` runs the
+[conformance kit](../plugins.md#conformance) on it: every call it
+declares, against a fake host that serves the fixture's responses, with
+the core's own checks on every request. The GitHub and git connectors run
+it in their own tests.
 
 ## The config, as designed
 
-Today `connectors` takes only the built-in `git` connector, with the keys
-in [the config reference](../reference/config.md#connectors). A connector
-plugin's entry is designed to look like this:
+Today the `github` section uses the GitHub connector, and `connectors`
+takes the git connector, with the keys in [the config
+reference](../reference/config.md#connectors); a `plugins` entry of kind
+`connector` pins either. Naming any connector plugin under `connectors`
+is designed to look like this:
 
 ```yaml
 connectors:
