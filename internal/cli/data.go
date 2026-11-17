@@ -2,11 +2,16 @@ package cli
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/bazel"
 	"github.com/sideways-works/pipelinegen/internal/buildfile"
@@ -227,4 +232,140 @@ func firstOf(s []string, n int) []string {
 	}
 
 	return s
+}
+
+// groupsVersion changes whenever what a cached opening of groups means does.
+const groupsVersion = "1"
+
+const groupsDir = "groups"
+
+// groupOpener opens the filegroups of one tree's recorded slices' data, once per label, and keeps what
+// it learnt by commit: a commit's groups never change.
+type groupOpener struct {
+	bz    *bazel.Client
+	dir   string // "" keeps nothing
+	key   string
+	g     *bazel.Groups
+	asked map[string]bool
+}
+
+func newGroupOpener(cfg *config.Config, bz *bazel.Client, cache, commit string) *groupOpener {
+	o := &groupOpener{bz: bz, g: &bazel.Groups{Members: map[string][]string{}, As: map[string]string{}}, asked: map[string]bool{}}
+
+	if cache == "" || commit == "" {
+		return o
+	}
+
+	sum := sha256.Sum256([]byte(strings.Join(slices.Concat([]string{groupsVersion, cfg.Bazel.Workspace, cfg.Bazel.Bazelisk}, cfg.Bazel.StartupFlags), "\x00")))
+	o.dir, o.key = filepath.Join(cache, groupsDir), commit+"-"+hex.EncodeToString(sum[:])[:12]
+
+	return o
+}
+
+func (o *groupOpener) open(ctx context.Context, labels []string) (*bazel.Groups, error) {
+	var todo []string
+
+	for _, l := range labels {
+		if c, ok := bazel.MainCanonical(l); ok && !o.asked[c] {
+			o.asked[c] = true
+			todo = append(todo, c)
+		}
+	}
+
+	if len(todo) == 0 {
+		return o.g, nil
+	}
+
+	slices.Sort(todo)
+
+	got, err := o.cached(ctx, todo)
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(o.g.Members, got.Members)
+	maps.Copy(o.g.As, got.As)
+
+	return o.g, nil
+}
+
+func (o *groupOpener) cached(ctx context.Context, todo []string) (*bazel.Groups, error) {
+	if o.dir == "" {
+		return o.bz.OpenGroups(ctx, todo)
+	}
+
+	sum := sha256.Sum256([]byte(strings.Join(todo, "\n")))
+	file := filepath.Join(o.dir, o.key+"-"+hex.EncodeToString(sum[:])[:16]+".json")
+
+	if data, err := os.ReadFile(file); err == nil { //nolint:gosec // pipelinegen's own cache
+		var g bazel.Groups
+		if json.Unmarshal(data, &g) == nil && g.Members != nil {
+			// the cache's sweep keeps what plans use
+			now := time.Now()
+			os.Chtimes(file, now, now) //nolint:errcheck // only the sweep's order depends on it
+
+			return &g, nil
+		}
+	}
+
+	g, err := o.bz.OpenGroups(ctx, todo)
+	if err != nil {
+		return nil, err
+	}
+
+	// a cache that can't be written costs only the queries next time
+	if data, err := json.Marshal(g); err == nil && os.MkdirAll(o.dir, 0o750) == nil {
+		if tmp, err := os.CreateTemp(o.dir, ".tmp-"); err == nil {
+			_, werr := tmp.Write(data)
+			cerr := tmp.Close()
+
+			if werr != nil || cerr != nil || os.Rename(tmp.Name(), file) != nil {
+				os.Remove(tmp.Name()) //nolint:errcheck // a scratch file
+			}
+		}
+	}
+
+	return g, nil
+}
+
+// openedData is each file's data with its filegroups opened, less the labels the file names in its own
+// pipelinegen:data lines, which stay whole.
+func openedData(ctx context.Context, o *groupOpener, data, declared map[string][]string) (map[string][]string, *bazel.Groups, error) {
+	var starts []string
+
+	for f, labels := range data {
+		for _, l := range labels {
+			if !slices.Contains(declared[f], l) {
+				starts = append(starts, l)
+			}
+		}
+	}
+
+	g, err := o.open(ctx, starts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	out := make(map[string][]string, len(data))
+
+	for f, labels := range data {
+		var leaves []string
+
+		for _, l := range labels {
+			if slices.Contains(declared[f], l) || !g.IsGroup(l) {
+				leaves = append(leaves, l)
+
+				continue
+			}
+
+			for leaf := range g.Leaves(l) {
+				leaves = append(leaves, leaf)
+			}
+		}
+
+		slices.Sort(leaves)
+		out[f] = slices.Compact(leaves)
+	}
+
+	return out, g, nil
 }

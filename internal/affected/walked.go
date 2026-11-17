@@ -95,12 +95,33 @@ func (o Options) join(ctx context.Context, suite string, b, h *Snapshot, impacte
 		inputs[sl.Name] = rs
 	}
 
-	o.joinInputs(ctx, suite, h.Slices[suite], inputs, &j, add)
+	o.joinInputs(ctx, suite, b.Commit, h.Commit, h.Slices[suite], inputs, &j, add)
+
+	if err := o.joinSetup(suite, b.Commit, h.Commit, main, hashed, len(changes) == 0, add); err != nil {
+		return joined{}, err
+	}
 
 	return j, nil
 }
 
-func (o Options) joinInputs(ctx context.Context, suite string, sls []bazel.Slice, inputs map[string][]Reason, j *joined, add func(string, ...Reason)) {
+// joinSetup selects the setup part for a file added to or removed from what the setup applies, whose
+// units no list holds yet.
+func (o Options) joinSetup(suite, base, head string, impacted map[string]bool, hashed func() (map[string]bool, error), unchanged bool, add func(string, ...Reason)) error {
+	setup := recording.SetupTarget(suite)
+
+	rs, err := o.inputReasons(suite, setup, base, head, impacted, hashed, unchanged)
+	if err != nil {
+		return err
+	}
+
+	if len(rs) > 0 {
+		add(setup, o.withThrough(suite, setup, base, head, rs)...)
+	}
+
+	return nil
+}
+
+func (o Options) joinInputs(ctx context.Context, suite, base, head string, sls []bazel.Slice, inputs map[string][]Reason, j *joined, add func(string, ...Reason)) {
 	o.quiet.prepare(ctx, o, suite, inputs)
 
 	for _, sl := range sls {
@@ -110,9 +131,34 @@ func (o Options) joinInputs(ctx context.Context, suite string, sls []bazel.Slice
 		}
 
 		if len(rs) > 0 {
-			add(sl.Name, rs...)
+			add(sl.Name, o.withThrough(suite, sl.Name, base, head, rs)...)
 		}
 	}
+}
+
+// withThrough names the filegroups an input reason's label was found through, after the quiet rule,
+// which judges only labels without them; bazel-diff then needs no asking about such a label.
+func (o Options) withThrough(suite, slice, base, head string, rs []Reason) []Reason {
+	if o.Through == nil {
+		return rs
+	}
+
+	out := slices.Clone(rs)
+
+	for i, r := range out {
+		if len(r.Through) > 0 {
+			continue
+		}
+
+		switch r.Kind {
+		case KindTarget, KindInputAdded, KindInputUnknown:
+			out[i].Through = o.Through(head, suite, slice, r.What)
+		case KindInputRemoved:
+			out[i].Through = o.Through(base, suite, slice, r.What)
+		}
+	}
+
+	return out
 }
 
 // inputReasons says why a slice's Bazel labels select it, unless no file

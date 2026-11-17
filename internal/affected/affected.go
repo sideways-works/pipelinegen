@@ -220,7 +220,10 @@ type Options struct {
 	// Inputs are, while Select is set, the Bazel labels a recorded slice
 	// depends on whatever its list says; it fails for a tree or slice whose
 	// inputs were never recorded.
-	Inputs       func(commit, suite, slice string) ([]string, error)
+	Inputs func(commit, suite, slice string) ([]string, error)
+	// Through, when set, names the filegroups a slice's input label was
+	// found through at a commit, innermost first.
+	Through      func(commit, suite, slice, label string) []string
 	Unobservable func(base, head string, changes []gitx.Change) UnobservableRule
 	// Declared, when set, are the labels a recorded slice's test file names
 	// in its own pipelinegen:data lines, which stay a reason whatever the

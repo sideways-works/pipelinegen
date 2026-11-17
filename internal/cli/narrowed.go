@@ -14,6 +14,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/depsrepo"
 	"github.com/sideways-works/pipelinegen/internal/graph"
 	"github.com/sideways-works/pipelinegen/internal/plugins"
+	"github.com/sideways-works/pipelinegen/internal/recording"
 )
 
 // planBook keeps what each narrowing kept out of each slice, so the plan can say which slices a
@@ -28,6 +29,8 @@ type planBook struct {
 	alone          map[string]map[string][]string
 	aloneSeen      map[string]bool
 	unobservedSeen map[string]bool
+	// workspace is the Bazel workspace's directory in the repository, where labels' paths start.
+	workspace string
 }
 
 func (b *planBook) noList(commit, suite, name string) {
@@ -118,7 +121,7 @@ type bookTree struct {
 	bound      map[string]bookBound
 
 	unbound  *unboundBook
-	inputs   map[string][]string
+	leaves   map[string]*leafInputs
 	declared map[string][]string
 }
 
@@ -166,27 +169,34 @@ func (b *planBook) inputsHook() func(commit, suite, slice string) ([]string, err
 		return nil
 	}
 
-	return b.inputs
+	return func(commit, suite, slice string) ([]string, error) { return b.inputs(commit, "", suite, slice) }
 }
 
 var errNoInputs = errors.New("the plan kept no Bazel inputs")
 
-func (b *planBook) inputs(commit, suite, slice string) ([]string, error) {
+// inputs are a slice's labels at commit; other is the plan's other tree, whose leaves decide which
+// filegroups go back whole and which files were added or removed. A suite's setup part takes the
+// files whose adding or removing shows there.
+func (b *planBook) inputs(commit, other, suite, slice string) ([]string, error) {
 	b.mu.Lock()
-	bt := b.trees[commit]
+	bt, ot := b.trees[commit], b.trees[other]
 	b.mu.Unlock()
 
 	if bt == nil {
 		return nil, fmt.Errorf("%w for commit %s", errNoInputs, commit)
 	}
 
-	if bt.inputs != nil {
-		in, ok := bt.inputs[suite+"/"+slice]
+	if slice == recording.SetupTarget(suite) {
+		return setupInputs(bt, ot, suite), nil
+	}
+
+	if bt.leaves != nil {
+		li, ok := bt.leaves[suite+"/"+slice]
 		if !ok {
 			return nil, fmt.Errorf("%w for %s/%s at commit %s", errNoInputs, suite, slice, commit)
 		}
 
-		return in, nil
+		return li.labels(otherLeaves(ot, suite, slice)), nil
 	}
 
 	rec, ok := bt.bound[depsrepo.Selector(deps.Slice{Suite: suite, Name: slice})]
@@ -197,43 +207,64 @@ func (b *planBook) inputs(commit, suite, slice string) ([]string, error) {
 	return rec.data, nil
 }
 
-// keepInputs records each walked slice's Bazel labels as its selector would hold them: its data, less
-// the labels of files bound by their units for a slice with a list. A label stays whole where the slice
-// reads the file's text, its list lacks the file's anchor, or no recording of the suite holds the sbom's units.
+func otherLeaves(ot *bookTree, suite, slice string) *leafInputs {
+	if ot == nil {
+		return nil
+	}
+
+	return ot.leaves[suite+"/"+slice]
+}
+
+func setupInputs(bt, ot *bookTree, suite string) []string {
+	out := []string{}
+
+	if ot == nil {
+		return out
+	}
+
+	for key, li := range bt.leaves {
+		if s, slice, _ := strings.Cut(key, "/"); s == suite {
+			_, setup := li.given(otherLeaves(ot, suite, slice))
+			out = append(out, setup...)
+		}
+	}
+
+	slices.Sort(out)
+
+	return slices.Compact(out)
+}
+
+// through names the filegroups a slice's input was found through, innermost first.
+func (b *planBook) through(commit, suite, slice, label string) []string {
+	b.mu.Lock()
+	bt := b.trees[commit]
+	b.mu.Unlock()
+
+	if bt == nil || bt.leaves[suite+"/"+slice] == nil {
+		return nil
+	}
+
+	return bt.leaves[suite+"/"+slice].through(label)
+}
+
+// keepInputs records each walked slice's data as its selector would hold it, judged leaf by leaf
+// (plugins.Leaves): a file whose units the slice touched and a BUILD file are given up, everything else
+// stays whole. The inputs are made once both trees are kept.
 func (b *planBook) keepInputs(cfg *config.Config, commit string, t *deps.Tree, bs []plugins.BindSlice) {
 	if b == nil {
 		return
 	}
 
-	recorded, covers := plugins.RecordedSBOMs(t, bs), holds(bs)
-	in := make(map[string][]string, len(bs))
+	f := plugins.NewLeaves(cfg, t, bs)
+	in := make(map[string]*leafInputs, len(bs))
 	declared := map[string][]string{}
 
 	for _, sl := range bs {
-		var labels []string
-
-		for _, l := range sl.Data {
-			if p, ok := bazel.LabelPath(l); ok && sl.HasList && !cfg.Suites[sl.Suite].ReadsText(sl.Name, p) && !slices.Contains(sl.Declared, l) {
-				if units, ok := t.FileUnits[p]; ok {
-					anchor, anchored := t.Anchors[p]
-
-					switch {
-					case anchored && covers(sl.Suite, sl.Name, anchor):
-						continue
-					case anchored:
-						// its recording doesn't cover the file: whole.
-					case recorded[sl.Suite][plugins.ProviderOf(t, units)]:
-						continue
-					default:
-						b.unobserved(sl.Suite, t.ByUnits[p], p)
-					}
-				}
-			}
-
-			labels = append(labels, l)
+		if sl.Setup {
+			continue
 		}
 
-		in[sl.Suite+"/"+sl.Name] = labels
+		in[sl.Suite+"/"+sl.Name] = newLeafInputs(f, sl, func(p string) { b.unobserved(sl.Suite, t.ByUnits[p], p) })
 
 		if len(sl.Declared) > 0 {
 			declared[sl.Suite+"/"+sl.Name] = sl.Declared
@@ -249,7 +280,11 @@ func (b *planBook) keepInputs(cfg *config.Config, commit string, t *deps.Tree, b
 		b.trees[commit] = bt
 	}
 
-	bt.inputs, bt.declared = in, declared
+	bt.leaves, bt.declared = in, declared
+
+	if cfg != nil {
+		b.workspace = cfg.Bazel.Workspace
+	}
 }
 
 func (b *planBook) declaredHook() func(commit, suite, slice string) []string {

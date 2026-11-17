@@ -29,7 +29,7 @@ const workTree = "tree"
 // overBudget is in drop order, cheapest to get back first; Bazel's output is last, as a plan without it
 // starts cold.
 var overBudget = []string{
-	"answers", "plugins", "caches/gocache", "caches/npm", "caches/gomodcache", "caches",
+	groupsDir, "answers", "plugins", "caches/gocache", "caches/npm", "caches/gomodcache", "caches",
 	"store", bazelDir + "/bazelisk", bazelDir + "/base", bazelDir,
 }
 
@@ -72,6 +72,10 @@ func trimCache(cache string, budget int64, start time.Time) (*trimmed, error) {
 	}
 
 	if err := t.dropSnapshots(cache, start); err != nil {
+		return nil, err
+	}
+
+	if err := t.dropGroups(cache, start); err != nil {
 		return nil, err
 	}
 
@@ -286,6 +290,58 @@ func (t *trimmed) dropSnapshots(cache string, start time.Time) error {
 		}
 
 		if err := t.drop(cache, filepath.Join(dir, name)); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// keptGroups is how many opened filegroups files a cache keeps besides those the step used: a plan
+// writes one per tree.
+const keptGroups = 2 * keptSnapshots
+
+func (t *trimmed) dropGroups(cache string, start time.Time) error {
+	dir := filepath.Join(cache, groupsDir)
+
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("cache: %w", err)
+	}
+
+	type file struct {
+		name string
+		when time.Time
+	}
+
+	var files []file
+
+	for _, e := range entries {
+		if info, err := e.Info(); err == nil {
+			files = append(files, file{e.Name(), info.ModTime()})
+		}
+	}
+
+	sort.Slice(files, func(i, j int) bool { return files[i].when.After(files[j].when) })
+
+	others := 0
+
+	for _, f := range files {
+		if strings.HasSuffix(f.name, ".json") && !f.when.Before(start) {
+			continue
+		}
+
+		if strings.HasSuffix(f.name, ".json") && others < keptGroups {
+			others++
+
+			continue
+		}
+
+		if err := t.drop(cache, filepath.Join(dir, f.name)); err != nil {
 			return err
 		}
 	}

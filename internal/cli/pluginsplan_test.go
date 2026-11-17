@@ -143,6 +143,8 @@ func fakePlugin(kind string) map[string]plugin.Handler {
 		return fakePages(describe)
 	case "catalogs":
 		return fakeCatalogs(describe)
+	case "tables":
+		return fakeTables(describe)
 	}
 
 	return nil
@@ -181,7 +183,7 @@ func pluginsDirFor(t *testing.T) string {
 
 	dir := t.TempDir()
 
-	for _, name := range []string{"texts", "arrows", "binder", "sneaky", "tidy", "tokens", "pages", "catalogs"} {
+	for _, name := range []string{"texts", "arrows", "binder", "sneaky", "tidy", "tokens", "pages", "catalogs", "tables"} {
 		script := "#!/bin/sh\nFAKE_PLUGIN=" + name + " exec '" + exe + "' \"$@\"\n"
 		if err := testenv.WriteExecutable(t.Context(), filepath.Join(dir, name), []byte(script)); err != nil {
 			t.Fatal(err)

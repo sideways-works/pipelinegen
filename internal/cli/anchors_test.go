@@ -141,8 +141,9 @@ func TestAnAnchorProvesARecordingCoversItsCatalog(t *testing.T) {
 		t.Errorf("web catalog selects %q", got)
 	}
 
-	if p.LabelGroups != 1 {
-		t.Errorf("label groups %d, want one: the specs holding the anchor", p.LabelGroups)
+	// //cats opens into its catalogs, so no label needs bazel-diff run again without the catalog.
+	if p.LabelGroups != 0 {
+		t.Errorf("label groups %d, want none", p.LabelGroups)
 	}
 
 	var left []affected.Narrowed
@@ -154,7 +155,7 @@ func TestAnAnchorProvesARecordingCoversItsCatalog(t *testing.T) {
 	}
 
 	if len(left) != 1 || left[0].Narrowing != "catalog-keys" || strings.Join(left[0].Dropped, ",") != "browser/b.spec.ts" ||
-		!strings.Contains(left[0].Reason, "its recording covers cats/web/en.md (cat:cats/web, by catalogs) and touched none of the changed units") {
+		!strings.HasPrefix(left[0].Reason, "cat:cats/web/en.md#Start changed") {
 		t.Errorf("narrowed %+v", left)
 	}
 

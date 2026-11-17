@@ -48,8 +48,10 @@ func pluginsPrepare(cfg *config.Config, l recording.Lists, marks lists.Marks, bz
 		split := set.On(plugins.NarrowSetupSplit, level)
 		bound, setups := lists.Bound(l, split)
 
+		groups := newGroupOpener(cfg, bz(tree), filepath.Dir(tree), commit)
+
 		for _, suite := range sortedKeys(tests) {
-			more, err := suiteBindSlices(ctx, cfg, bz(tree), tree, commit, suite, tests[suite], bound, setups, marks, set, book)
+			more, err := suiteBindSlices(ctx, cfg, bz(tree), groups, tree, commit, suite, tests[suite], bound, setups, marks, set, book)
 			if err != nil {
 				return "", err
 			}
@@ -107,7 +109,7 @@ func pluginsPrepare(cfg *config.Config, l recording.Lists, marks lists.Marks, bz
 	}
 }
 
-func suiteBindSlices(ctx context.Context, cfg *config.Config, bzc *bazel.Client, tree, commit, suite string, sls []bazel.Slice,
+func suiteBindSlices(ctx context.Context, cfg *config.Config, bzc *bazel.Client, groups *groupOpener, tree, commit, suite string, sls []bazel.Slice,
 	bound recording.Lists, setups map[string][]recording.ID, marks lists.Marks, set *plugins.Set, book *planBook,
 ) ([]plugins.BindSlice, error) {
 	var bs []plugins.BindSlice
@@ -129,6 +131,19 @@ func suiteBindSlices(ctx context.Context, cfg *config.Config, bzc *bazel.Client,
 	// a suite bound by the graph binds through its owners; a list
 	// it has anyway (a suite switched from recorded) still counts.
 	graph := cfg.Suites[suite].Bind != config.BindRecorded
+
+	declared := make(map[string][]string, len(sls))
+	for _, sl := range sls {
+		declared[sl.Name] = labelsOnly(commentData(filepath.Join(tree, filepath.FromSlash(sl.Name))))
+	}
+
+	// A recorded slice's filegroups open into what they hold, so a file in one is judged as a file.
+	leaves, opened := data, (*bazel.Groups)(nil)
+	if !graph {
+		if leaves, opened, err = openedData(ctx, groups, data, declared); err != nil {
+			return nil, fmt.Errorf("filegroups of %s: %w", suite, err)
+		}
+	}
 
 	if setup := unitIDs(setups[suite]); len(setup) > 0 {
 		bs = append(bs, plugins.BindSlice{Suite: suite, Name: recording.SetupTarget(suite), List: setup, HasList: true, Depth: depth, Setup: true})
@@ -163,9 +178,9 @@ func suiteBindSlices(ctx context.Context, cfg *config.Config, bzc *bazel.Client,
 
 		bs = append(bs, plugins.BindSlice{
 			Suite: suite, Name: sl.Name, Sources: sl.Sources, Tests: sl.Tests,
-			List: unitIDs(list), HasList: has, Depth: depth, Data: data[sl.Name], Units: units[sl.Name],
-			Declared: labelsOnly(commentData(filepath.Join(tree, filepath.FromSlash(sl.Name)))),
-			Graph:    byGraph,
+			List: unitIDs(list), HasList: has, Depth: depth, Data: leaves[sl.Name], Units: units[sl.Name],
+			Declared: declared[sl.Name], Tops: data[sl.Name], Groups: opened,
+			Graph: byGraph,
 		})
 	}
 

@@ -134,7 +134,7 @@ func planByUnits(t *testing.T, r *testrepo.Repo, cfg *config.Config, lists recor
 		Config: cfg, Repo: gitx.Repo{Dir: r.Dir}, Cache: cache, Base: base, Head: head, Differ: bazeldifftest.Tool(t),
 		Bazel: bazelOf, Prepare: pluginsPrepare(cfg, lists, nil, bazelOf, set, depsWriter(), book, walk),
 		Follow: followFor(cfg, ""), Narrowed: narrowedHook(book, walk, set), Why: book.whyHook(), Reasons: book.reasonsHook(),
-		Sample: sampleRule(cfg, set), Select: walk.selection(), Inputs: inputsHook(book, walk), Unobservable: unobservableHook(walk), Declared: book.declaredHook(),
+		Sample: sampleRule(cfg, set), Select: walk.selection(), Inputs: inputsHook(book, walk), Through: throughHook(book, walk), Unobservable: unobservableHook(walk), Declared: book.declaredHook(),
 	})
 	if err != nil {
 		t.Fatal(err)

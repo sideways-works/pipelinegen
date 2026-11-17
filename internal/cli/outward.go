@@ -52,6 +52,15 @@ type walkTrees struct {
 	level      int
 	// sel is filled in place once both trees are prepared.
 	sel *graph.Selection
+	// changed are the plan's changed paths, once the plan has read them.
+	changed map[string]bool
+}
+
+func (w *walkTrees) changedPaths() map[string]bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.changed
 }
 
 type walkTree struct {
@@ -151,7 +160,16 @@ func narrowedHook(book *planBook, walk *walkTrees, set *plugins.Set) func(base, 
 		return book.narrowedHook()
 	}
 
-	return walkNarrowedHook(walk.selection(), set.OffAt)
+	walked := walkNarrowedHook(walk.selection(), set.OffAt)
+	if book == nil {
+		return walked
+	}
+
+	return func(base, head, suite, width string, selected, left []bazel.Slice) []affected.Narrowed {
+		out := walked(base, head, suite, width, selected, left)
+
+		return append(out, book.buildLeftOut(base, head, suite, selected, left, walk.changedPaths(), set.OffAt(plugins.NarrowBuildFiles))...)
+	}
 }
 
 func entryPoolHook(book *planBook, walk *walkTrees) func(base, head, suite, width string) map[string]bool {
@@ -179,11 +197,36 @@ func entryPoolHook(book *planBook, walk *walkTrees) func(base, head, suite, widt
 }
 
 func inputsHook(book *planBook, walk *walkTrees) func(commit, suite, slice string) ([]string, error) {
-	if walk == nil {
+	if walk == nil || book == nil {
 		return nil
 	}
 
-	return book.inputsHook()
+	return func(commit, suite, slice string) ([]string, error) {
+		return book.inputs(commit, walk.other(commit), suite, slice)
+	}
+}
+
+func throughHook(book *planBook, walk *walkTrees) func(commit, suite, slice, label string) []string {
+	if walk == nil || book == nil {
+		return nil
+	}
+
+	return book.through
+}
+
+// other is the plan's tree beside commit, once both are resolved.
+func (w *walkTrees) other(commit string) string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	switch commit {
+	case w.base:
+		return w.head
+	case w.head:
+		return w.base
+	}
+
+	return ""
 }
 
 // untestedRead names each file an untested entry matches that a slice of the head demonstrably reads:
@@ -301,6 +344,11 @@ func unobservableHook(walk *walkTrees) func(base, head string, changes []gitx.Ch
 func (w *walkTrees) unobservable(base, head string, changes []gitx.Change) affected.UnobservableRule {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	w.changed = make(map[string]bool, len(changes))
+	for _, c := range changes {
+		w.changed[c.Path] = true
+	}
 
 	offAt := w.set.OffAt(plugins.NarrowUnobservable)
 	rule := w.anchoredRule(affected.UnobservableRule{OffAt: offAt}, base, head, changes)

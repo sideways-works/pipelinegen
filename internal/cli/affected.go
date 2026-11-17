@@ -279,7 +279,7 @@ func affectedPlanUnder(ctx context.Context, cfg *config.Config, root, base, head
 			Base: base, Head: head, All: all || everything != "", AllReason: everything, Differ: differ, ToolKey: toolKey(differ),
 			Bazel: bazelFor(c, root, cache), Prepare: p.prepare, Stub: stubFor(deps), Follow: followFor(c, ""),
 			Narrowed: narrowedHook(p.book, p.walk, p.set), EntryPool: entryPoolHook(p.book, p.walk), Meaning: meaning, Unlisted: p.book.unlistedHook(), Why: p.book.whyHook(), Reasons: p.book.reasonsHook(), ExplainLimit: c.ExplainLimitOrDefault(), Sample: sampleRule(c, p.set),
-			Written: writtenHook(p.book), Expect: p.book.expectHook(), Select: p.walk.selection(), Inputs: inputsHook(p.book, p.walk), Unobservable: unobservableHook(p.walk), Declared: p.book.declaredHook(),
+			Written: writtenHook(p.book), Expect: p.book.expectHook(), Select: p.walk.selection(), Inputs: inputsHook(p.book, p.walk), Through: throughHook(p.book, p.walk), Unobservable: unobservableHook(p.walk), Declared: p.book.declaredHook(),
 			Alone:   p.book.aloneHook(),
 			Claimed: claimed,
 		})

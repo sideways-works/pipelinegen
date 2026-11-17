@@ -74,7 +74,7 @@ func TestWalkingSelectsWhatBindingSelects(t *testing.T) {
 			Config: cfg, Repo: gitx.Repo{Dir: r.Dir}, Cache: cache, Base: base, Head: head, Differ: differ,
 			Bazel: bazelOf, Prepare: pluginsPrepare(cfg, lists, nil, bazelOf, set, depsWriter(), book, walk),
 			Follow: followFor(cfg, ""), Narrowed: narrowedHook(book, walk, set), Sample: sampleRule(cfg, set),
-			Expect: book.expectHook(), Select: walk.selection(), Inputs: inputsHook(book, walk),
+			Expect: book.expectHook(), Select: walk.selection(), Inputs: inputsHook(book, walk), Through: throughHook(book, walk),
 		})
 		if err != nil {
 			t.Fatal(err)
