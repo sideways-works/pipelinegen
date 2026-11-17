@@ -42,6 +42,7 @@ func (f *localRunFlags) register(fs *flag.FlagSet) {
 		return nil
 	})
 	f.lp.register(fs)
+	fs.Lookup("plugins").Usage = "the directory holding the configured plugins, the drivers among them (default: tools/plugins under the root)"
 	fs.BoolVar(&f.all, "all", false, "run every slice, not only those the change selects")
 	fs.BoolVar(&f.record, "record", false, "record the suites bound by recording and attach their lists to the head in the local store, a suite's only when every slice of it passed")
 	fs.BoolVar(&f.noLists, "no-lists", false, "bind recorded slices to everything instead of reading the lists")
@@ -88,7 +89,7 @@ func runLocal(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	if len(todo) == 0 {
-		return say(stdout, "nothing selected: no slice to run\n")
+		return say(stdout, "nothing selected: no slice to run\n%s", dirtyLine(dirty))
 	}
 
 	return f.run(ctx, cfg, plan.Head, todo, dirty, stdout)
@@ -184,7 +185,7 @@ func (f *localRunFlags) dirty(ctx context.Context, head string) (bool, error) {
 		return false, err
 	}
 
-	warnf(os.Stderr, "pipelinegen run: the work tree has changes that are neither planned nor run, which test %s as committed:\n  %s\n", short12(head), fileList(files))
+	warnf(os.Stderr, "pipelinegen run: uncommitted changes are neither planned nor run; this tests %s as committed, without:\n  %s\n", short12(head), fileList(files))
 
 	return true, nil
 }
@@ -401,9 +402,7 @@ func localSummary(w io.Writer, head string, tallies []suiteTally, dirty bool) er
 		}
 	}
 
-	if dirty {
-		b.WriteString("the work tree's uncommitted changes were neither planned nor run\n")
-	}
+	b.WriteString(dirtyLine(dirty))
 
 	if err := emit(w, &b); err != nil {
 		return err
@@ -422,4 +421,12 @@ func stateOrNotRun(st report.State) report.State {
 	}
 
 	return st
+}
+
+func dirtyLine(dirty bool) string {
+	if !dirty {
+		return ""
+	}
+
+	return "the work tree's uncommitted changes were neither planned nor run\n"
 }

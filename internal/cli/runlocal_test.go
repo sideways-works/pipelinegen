@@ -123,7 +123,7 @@ func TestRunNamesTheChangesItLeavesOut(t *testing.T) {
 	writeFile(t, filepath.Join(f.root, "e2e/cart.spec.ts"), "test('cart, changed')\n")
 
 	stdout, stderr, code := runAll(t, f)
-	if code != 0 || !strings.Contains(stderr, "the work tree has changes that are neither planned nor run") || !strings.Contains(stderr, "e2e/cart.spec.ts") ||
+	if code != 0 || !strings.Contains(stderr, "uncommitted changes are neither planned nor run; this tests ") || !strings.Contains(stderr, "e2e/cart.spec.ts") ||
 		!strings.HasSuffix(stdout, "the work tree's uncommitted changes were neither planned nor run\n") {
 		t.Fatalf("run: %d %s\n%s", code, stdout, stderr)
 	}
