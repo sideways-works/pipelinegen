@@ -514,8 +514,8 @@ type Suite struct {
 	Bind        string            `yaml:"bind"`
 	Parallel    int               `yaml:"parallel"`
 	// Batches is how many batches a job deals the suite's slices into
-	// (default Parallel): more, smaller batches than run at once lose less
-	// unflushed work when a worker goes away.
+	// (default Parallel), every one run at once: more, smaller batches lose
+	// less unflushed work when a worker goes away.
 	Batches int `yaml:"batches"`
 	// BatchMinutes, when set, deals the suite's selected slices into
 	// batches of about this many minutes each by their recorded durations,
@@ -601,7 +601,8 @@ type RunOn struct {
 	MaxInFlight int    `yaml:"max_in_flight"`
 }
 
-// ParallelOrDefault is how many of the suite's batches run at once.
+// ParallelOrDefault is how many batches a build of the suite is dealt at
+// least, every one run at once.
 func (s Suite) ParallelOrDefault() int {
 	if s.Parallel > 0 {
 		return s.Parallel
@@ -620,7 +621,7 @@ func (s Suite) BatchCount() int {
 	return s.ParallelOrDefault()
 }
 
-// DefaultParallel is how many slices of a suite run at once unless the
+// DefaultParallel is how many batches a build of a suite is dealt unless the
 // suite says otherwise.
 const DefaultParallel = 4
 

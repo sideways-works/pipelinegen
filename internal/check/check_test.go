@@ -251,6 +251,40 @@ func TestASuiteNoRunListsFailsTheCheck(t *testing.T) {
 	}
 }
 
+func TestBatchesFarAboveParallelWarn(t *testing.T) {
+	for batches, want := range map[int]bool{0: false, 16: false, 17: true} {
+		c := cfg()
+		e2e := c.Suites["e2e"]
+		e2e.Batches = batches
+		c.Suites["e2e"] = e2e
+
+		got := Find(c, good(t).tree(), nil)
+		if len(Failures(got)) != 0 || (len(got) == 1) != want {
+			t.Fatalf("batches %d: %v", batches, got)
+		}
+
+		if want && !strings.Contains(got[0].Problem, "suite e2e: batches (17) is more than 4 times parallel (4): every batch of a build runs at once, so a build of everything runs 17 batch tasks at the same time") {
+			t.Errorf("the warning: %+v", got[0])
+		}
+	}
+
+	for batches, want := range map[int]bool{0: true, 8: false} {
+		c := cfg()
+		e2e := c.Suites["e2e"]
+		e2e.BatchMinutes, e2e.Parallel, e2e.Batches = 10, 2, batches
+		c.Suites["e2e"] = e2e
+
+		got := Find(c, good(t).tree(), nil)
+		if len(Failures(got)) != 0 || (len(got) == 1) != want {
+			t.Fatalf("batch_minutes, batches %d: %v", batches, got)
+		}
+
+		if want && !strings.Contains(got[0].Problem, "up to one per slice, and every one runs at once") {
+			t.Errorf("the warning: %+v", got[0])
+		}
+	}
+}
+
 func TestAnUnreadableBuildFileIsReported(t *testing.T) {
 	m := good(t)
 	m["web/BUILD.bazel"] = "filegroup(name = "

@@ -513,6 +513,7 @@ func badConfig(cfg *config.Config, tree Tree) []Finding {
 	}
 
 	out = append(out, unrun(cfg)...)
+	out = append(out, floodingBatches(cfg)...)
 
 	for _, name := range cfg.SuiteNames() {
 		for _, p := range cfg.Suites[name].Tests {
@@ -524,6 +525,43 @@ func badConfig(cfg *config.Config, tree Tree) []Finding {
 					Fix:     "remove the pattern, or fix it",
 				})
 			}
+		}
+	}
+
+	return out
+}
+
+// batchesFlood is how many times parallel a suite's batches may be before
+// the check warns: every batch of a build runs at once, and beyond about
+// this many one build's batches crowd out the other suites' on the
+// workers.
+const batchesFlood = 4
+
+// floodingBatches warns of a suite whose builds run far more batches at once
+// than its parallel says: batches far above it, or batch_minutes with no
+// batches to bound how many a run of everything is dealt.
+func floodingBatches(cfg *config.Config) []Finding {
+	var out []Finding
+
+	for _, name := range cfg.SuiteNames() {
+		s := cfg.Suites[name]
+		parallel := s.ParallelOrDefault()
+
+		switch {
+		case s.Batches > batchesFlood*parallel:
+			out = append(out, Finding{
+				Kind: KindBadConfig, Path: config.FileName, Warning: true,
+				Problem: fmt.Sprintf("suite %s: batches (%d) is more than %d times parallel (%d): every batch of a build runs at once, so a build of everything runs %d batch tasks at the same time",
+					name, s.Batches, batchesFlood, parallel, s.Batches),
+				Fix: "lower batches to how many batch tasks the workers should run at once for one build, or raise parallel to say so",
+			})
+		case s.BatchMinutes > 0 && s.Batches == 0:
+			out = append(out, Finding{
+				Kind: KindBadConfig, Path: config.FileName, Warning: true,
+				Problem: fmt.Sprintf("suite %s: batch_minutes (%d) without batches: a build of everything is dealt as many batches as its time asks for, up to one per slice, and every one runs at once",
+					name, s.BatchMinutes),
+				Fix: "set batches to the most batch tasks one build may run at once",
+			})
 		}
 	}
 
