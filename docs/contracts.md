@@ -420,7 +420,9 @@ result directory"), and so does `pipelinegen report files`. When the
 store refuses a write with the files, or it fails for another reason,
 the states are written again without them, each file noted as dropped
 with the store's answer: a slice's state never waits on its files. The
-files go with the run's records when `keep.runs` sweeps them.
+files go with the run's records when `keep.runs` sweeps them; on a
+branch store (`store.backend: branch`) they stay in the branch's history
+after that.
 
 A file that reads as text (valid UTF-8 with no NUL byte) is masked for
 known secrets as the slice's failures are. A binary file is kept as it
