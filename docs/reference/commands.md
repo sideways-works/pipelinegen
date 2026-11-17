@@ -909,6 +909,7 @@ never ran, or the run itself failed; 2 for a command line it can't read,
 | `--work` | a temporary directory, removed after | Where the builds go, one directory per suite (`<work>/<suite>/build`, with the run's records in `<work>/<suite>/store.git` when it doesn't record). A directory used before is reused as `record --work` reuses it, which keeps Bazel's output base warm. |
 | `--no-image` | `false` | Runs the suites' steps on this machine instead of in the images the config names. |
 | `--container-tool` | `docker`, else `podman`, whichever is on `PATH` | The tool that runs the steps in their images. |
+| `--as-me` | `false` | Runs the steps in their images as you, not as root as CI does; a privileged suite runs as root either way. |
 
 ```
 $ git commit -am "a test of adding zero"
@@ -989,6 +990,7 @@ host are not needed, and a `github` section is ignored here.
 | `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, one executable per name. A plugin it lacks is [fetched](#plugins-a-command-fetches) from its pinned release. |
 | `--no-image` | `false` | Runs the suite's tasks on this machine instead of in their images. |
 | `--container-tool` | `docker`, else `podman`, whichever is on `PATH` | The tool that runs the tasks in their images. |
+| `--as-me` | `false` | Runs the tasks in their images as you, not as root as CI does; a privileged suite runs as root either way. |
 | `--work` | a temporary directory, removed after | Where the build's directories go, to look at what a task left. A directory used before is reused: everything an earlier recording left there that belongs to one run (coverage, results, batches, prepared, work, tools) is removed first, and a line says what; only the caches stay (`cache`, the caches the suite's task files declare, and the checkout's path, by which Bazel keys its output base). A file it can't remove stops the recording. |
 
 It refuses, with exit 1:
@@ -1048,11 +1050,16 @@ have here, so every path a step is given holds in the container:
 the image's platform, and otherwise the release
 `concourse.planner.bootstrap.release` pins, fetched for that platform (on
 macOS, always); `tools/plugins` holds the drivers and correlators fetched
-for that platform. On Linux the steps run as your user (`--user`, or
-`--userns keep-id` with rootless podman), so what they write is yours; a
-privileged suite runs as root, as on CI, and what it wrote is handed back
-when it ends. With neither tool on `PATH`, a suite that names an image
-fails, saying to pass `--no-image`.
+for that platform. Each step runs as root, as a CI task does, with the
+image's own `HOME` and entrypoint set aside for the step's command. On
+Linux with a rootful tool, what it wrote is then root's: once the step
+ends, failed or stopped, a container of the same image gives it back to
+you (`chown -R`), and if that can't run a line says which `sudo chown`
+does; with rootless docker or podman root is you already. `--as-me` runs
+the steps as you instead (`--user`, or `--userns keep-id` with rootless
+podman, and `HOME=/tmp`), except a privileged suite's, which needs root to
+start its own container engine. With neither tool on `PATH`, a suite that
+names an image fails, saying to pass `--no-image`.
 
 ### Plugins a command fetches
 
@@ -1066,7 +1073,10 @@ for `sums`, its line of the release's `SHA256SUMS`, itself checked by the
 pin. A file that doesn't match is refused and never runs; only `sums`
 checks a binary for another platform than linux-amd64. Plugins fetched for
 one command are linked together in `pipelinegen/plugin-sets/`. No token is
-needed or sent: the plugins' repositories are public.
+needed or sent: the plugins' repositories are public. A command's first
+fetch removes from `pipelinegen/releases/` what no command used in 30 days,
+so the cache doesn't grow without bound; a release used again is fetched
+again.
 
 A driver in `--plugins` that isn't the build its pin names is passed over
 for the pinned release, with a line on stderr. An sbom or correlator there
