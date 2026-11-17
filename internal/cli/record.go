@@ -96,6 +96,7 @@ type recordFlags struct {
 
 	suite, store, plugins, work string
 	slices                      []string
+	images                      imageFlags
 }
 
 func runRecord(ctx context.Context, args []string, stdout io.Writer) error {
@@ -112,6 +113,7 @@ func runRecord(ctx context.Context, args []string, stdout io.Writer) error {
 	pathVar(fs, &f.store, "store", "", "the local store (default <git directory>/pipelinegen/local.git)", reads|writes)
 	pathVar(fs, &f.plugins, "plugins", "", "the directory holding the configured plugins (default tools/plugins under the root)", reads)
 	pathVar(fs, &f.work, "work", "", "where the build's directories go (default a temporary directory, removed after)", writes)
+	f.images.register(fs)
 
 	if err := parse(ctx, fs, args); err != nil {
 		return err
@@ -272,7 +274,11 @@ func (f *recordFlags) record(ctx context.Context, root string, stdout io.Writer)
 
 	b := &localBuild{
 		cfg: derived, cfgPath: filepath.Join(work, config.FileName), root: root, dir: filepath.Join(work, "build"),
-		suite: f.suite, ch: ch, plugins: f.plugins,
+		suite: f.suite, ch: ch, plugins: f.plugins, box: &imageBox{flags: f.images},
+	}
+
+	if err := b.findPlugins(ctx); err != nil {
+		return err
 	}
 
 	remove, err := b.checkout(ctx)
@@ -433,8 +439,23 @@ type localBuild struct {
 	dir, suite    string
 	plugins       string
 	ch            runs.Change
+	// box runs the steps in their images; nil runs them here.
+	box *imageBox
 	// out takes the tasks' output; nil is stderr.
 	out io.Writer
+}
+
+// findPlugins puts in b.plugins the drivers and correlators the suite's batch runs, fetching those
+// the plugins directory lacks.
+func (b *localBuild) findPlugins(ctx context.Context) error {
+	f, err := pluginsFor(ctx, b.cfg, b.plugins, config.Platform(), suitePlugins(b.cfg, b.suite, b.cfg.Records(localRun, b.suite)), false)
+	if err != nil {
+		return err
+	}
+
+	b.plugins = f.dir
+
+	return nil
 }
 
 func (b *localBuild) output() io.Writer {
@@ -684,12 +705,18 @@ func names(todo []bazel.Slice) []string {
 	return out
 }
 
-// env never holds a job's address or the pipeline step's mark, which would make the tasks a pipeline's.
-func (b *localBuild) env(params map[string]string) []string {
-	own := map[string]string{
+// ownEnv is the build's own PIPELINEGEN_ variables: never a job's address or the pipeline step's mark,
+// which would make the tasks a pipeline's.
+func (b *localBuild) ownEnv() map[string]string {
+	return map[string]string{
 		envRun: localRun, envSuite: b.suite, envBatch: "0", "PIPELINEGEN_RECORD": strconv.FormatBool(b.cfg.Records(localRun, b.suite)),
 		"PIPELINEGEN_RUN_FILE": filepath.Join(batchesOf(b.dir), runs.RunFile), envConfig: b.cfgPath,
 	}
+}
+
+// env is the steps' environment on this machine: its own, less what ownEnv leaves out.
+func (b *localBuild) env(params map[string]string) []string {
+	own := b.ownEnv()
 
 	var out []string
 
@@ -749,6 +776,28 @@ func (b *localBuild) task(ctx context.Context, kind, file string) error {
 		}
 	}
 
+	img, err := b.boxImage(ctx, kind, file)
+	if err != nil {
+		return err
+	}
+
+	if img.ref != "" {
+		path := t.Run.Path
+		if strings.Contains(path, "/") && !filepath.IsAbs(path) {
+			path = filepath.Join(b.dir, t.Run.Dir, path)
+		}
+
+		if err := b.inImage(ctx, img, kind, filepath.Join(b.dir, t.Run.Dir), append([]string{path}, t.Run.Args...), t.params()); err != nil {
+			if errors.Is(err, errImage) {
+				return err
+			}
+
+			return fmt.Errorf("%w: %s task %s: %w; it ran in its image, %s, as on CI", errTaskFailed, kind, file, err, img.ref)
+		}
+
+		return nil
+	}
+
 	cmd := exec.CommandContext(ctx, t.Run.Path, t.Run.Args...) //nolint:gosec // the repository's own task, which the user asked to run
 	if !strings.Contains(t.Run.Path, "/") {
 		if p, err := exec.LookPath(t.Run.Path); err == nil {
@@ -790,6 +839,28 @@ func (b *localBuild) driven(ctx context.Context) error {
 			args = append(args, "--prepared", "prepared")
 		}
 
+		kind := "batch"
+		if verb == plugin.CallPrepare {
+			kind = kindPrepare
+		}
+
+		img, err := b.boxImage(ctx, kind, "")
+		if err != nil {
+			return err
+		}
+
+		if img.ref != "" {
+			if err := b.inImage(ctx, img, kind, b.dir, append([]string{filepath.Join(b.dir, "tools", "pipelinegen")}, args...), nil); err != nil {
+				if errors.Is(err, errImage) {
+					return err
+				}
+
+				return fmt.Errorf("%w: slice %s in %s: %w", errTaskFailed, verb, img.ref, err)
+			}
+
+			continue
+		}
+
 		cmd := exec.CommandContext(ctx, exe, args...) //nolint:gosec // pipelinegen itself
 		cmd.Dir = b.dir
 		cmd.Env = b.env(nil)
@@ -801,6 +872,15 @@ func (b *localBuild) driven(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// boxImage is the image a task runs in, none when the build runs its steps on this machine.
+func (b *localBuild) boxImage(ctx context.Context, kind, file string) (taskImage, error) {
+	if b.box == nil || b.box.flags.noImage {
+		return taskImage{}, nil
+	}
+
+	return b.image(ctx, kind, file)
 }
 
 // A batch whose end fails stops before the suite's end, and attaches nothing.
@@ -844,7 +924,8 @@ func (b *localBuild) finish(ctx context.Context) error {
 
 type task struct {
 	ImageResource struct {
-		Source map[string]any `yaml:"source"`
+		Source  map[string]any `yaml:"source"`
+		Version map[string]any `yaml:"version"`
 	} `yaml:"image_resource"`
 	Inputs  []taskDir      `yaml:"inputs"`
 	Outputs []taskDir      `yaml:"outputs"`

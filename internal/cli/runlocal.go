@@ -25,7 +25,8 @@ var errCantRun = errors.New("can't run on this machine")
 type localRunFlags struct {
 	common
 
-	lp localPlan
+	lp     localPlan
+	images imageFlags
 
 	base, head, work            string
 	suites                      []string
@@ -48,6 +49,7 @@ func (f *localRunFlags) register(fs *flag.FlagSet) {
 	fs.BoolVar(&f.noLists, "no-lists", false, "bind recorded slices to everything instead of reading the lists")
 	fs.BoolVar(&f.local, "local", false, "read the lists from the local store `pipelinegen record` writes, not the remote")
 	pathVar(fs, &f.work, "work", "", "where the builds' directories go, one per suite (default a temporary directory, removed after)", writes)
+	f.images.register(fs)
 }
 
 func runLocal(ctx context.Context, args []string, stdout io.Writer) error {
@@ -151,7 +153,7 @@ func (f *localRunFlags) run(ctx context.Context, cfg *config.Config, head string
 		defer os.RemoveAll(work) //nolint:errcheck // a temporary directory
 	}
 
-	r := &localSuiteRun{data: data, src: src, root: f.root, work: work, plugins: f.lp.plugins, head: head, out: stdout}
+	r := &localSuiteRun{data: data, src: src, root: f.root, work: work, plugins: f.lp.plugins, head: head, out: stdout, images: f.images}
 
 	var tallies []suiteTally
 
@@ -259,6 +261,7 @@ type localSuiteRun struct {
 	src, root, work, plugins string
 	head                     string
 	out                      io.Writer
+	images                   imageFlags
 }
 
 type suiteTally struct {
@@ -300,7 +303,11 @@ func (r *localSuiteRun) suite(ctx context.Context, sp affected.SuitePlan, record
 
 	b := &localBuild{
 		cfg: derived, cfgPath: cfgPath, root: r.root, dir: filepath.Join(dir, "build"),
-		suite: sp.Suite, ch: ch, plugins: r.plugins, out: r.out,
+		suite: sp.Suite, ch: ch, plugins: r.plugins, out: r.out, box: &imageBox{flags: r.images},
+	}
+
+	if err := b.findPlugins(ctx); err != nil {
+		return suiteTally{}, err
 	}
 
 	remove, err := b.checkout(ctx)

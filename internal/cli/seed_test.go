@@ -77,7 +77,7 @@ func seedRepo(t *testing.T) (string, *gitstore.Store, map[string]string) {
 
 	env := map[string]string{envGitURL: "", envToken: "", envJobURL: "", envPipelineStep: "", envRun: "", envConfig: "", envPR: "", envChange: ""}
 
-	if _, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root); code == 0 {
+	if _, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root); code == 0 {
 		t.Fatalf("a recording with a failed slice passed: %s", stderr)
 	}
 

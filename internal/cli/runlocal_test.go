@@ -200,7 +200,7 @@ func newExampleRun(t *testing.T) *exampleRun {
 func (e *exampleRun) run(t *testing.T, base string) (string, string, int) {
 	t.Helper()
 
-	return runIn(t, e.r.Dir, e.env, "run", "--base", base, "--suite", "unit", "--root", e.r.Dir,
+	return runIn(t, e.r.Dir, e.env, "run", "--no-image", "--base", base, "--suite", "unit", "--root", e.r.Dir,
 		"--cache", e.cache, "--bazel-diff", e.diff, "--plugins", e.plugins)
 }
 

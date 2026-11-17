@@ -15,7 +15,7 @@ import (
 func TestStatusSaysWhatTheRecordsHold(t *testing.T) {
 	root, env := recordRepo(t)
 
-	if _, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root); code != 0 {
+	if _, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root); code != 0 {
 		t.Fatalf("record: %d %s", code, stderr)
 	}
 
@@ -58,7 +58,7 @@ func TestStatusOfARunThatDidNotEnd(t *testing.T) {
 	writeFile(t, filepath.Join(root, "ci/e2e-slice.sh"), "exit 7\n")
 	gitT(t, root, "-c", "user.name=t", "-c", "user.email=t@example.test", "commit", "-qam", "a failing task")
 
-	if _, _, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root); code != 1 {
+	if _, _, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root); code != 1 {
 		t.Fatalf("record: %d", code)
 	}
 
@@ -75,7 +75,7 @@ func TestStatusOnTheServer(t *testing.T) {
 	writeFile(t, filepath.Join(root, config.FileName), recordConfig+"git: {remote: \"file://"+store+"\"}\n")
 	gitT(t, root, "-c", "user.name=t", "-c", "user.email=t@example.test", "commit", "-qam", "the records' remote")
 
-	if _, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root); code != 0 {
+	if _, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root); code != 0 {
 		t.Fatalf("record: %d %s", code, stderr)
 	}
 
@@ -92,7 +92,7 @@ func TestStatusOverSSH(t *testing.T) {
 	root, env := recordRepo(t)
 
 	store := filepath.Join(t.TempDir(), "records.git")
-	if _, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root, "--store", store); code != 0 {
+	if _, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root, "--store", store); code != 0 {
 		t.Fatalf("record: %d %s", code, stderr)
 	}
 

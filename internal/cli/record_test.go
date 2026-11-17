@@ -98,7 +98,7 @@ func gitT(t *testing.T, dir string, args ...string) string {
 func TestRecordAttachesListsOnThisMachine(t *testing.T) {
 	root, env := recordRepo(t)
 
-	stdout, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root)
+	stdout, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root)
 	if code != 0 || !strings.Contains(stdout, "recorded 2 slices of e2e at ") {
 		t.Fatalf("record: %d %s\n%s", code, stdout, stderr)
 	}
@@ -160,7 +160,7 @@ func TestRecordRefusesAChangedTree(t *testing.T) {
 	writeFile(t, filepath.Join(root, "e2e/cart.spec.ts"), "test('cart, changed')\n")
 	writeFile(t, filepath.Join(root, "e2e/new.spec.ts"), "test('new')\n")
 
-	_, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root)
+	_, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root)
 	if code != 1 || !strings.Contains(stderr, "commit these first, then record") ||
 		!strings.Contains(stderr, "e2e/cart.spec.ts") || !strings.Contains(stderr, "e2e/new.spec.ts") {
 		t.Fatalf("%d %s", code, stderr)
@@ -173,7 +173,7 @@ func TestRecordSaysWhereATaskFailed(t *testing.T) {
 	writeFile(t, filepath.Join(root, "ci/e2e-slice.sh"), "echo 'browsers: not found' >&2\nexit 7\n")
 	gitT(t, root, "-c", "user.name=t", "-c", "user.email=t@example.test", "commit", "-qam", "no browsers")
 
-	_, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root)
+	_, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root)
 	if code != 1 || !strings.Contains(stderr, "browsers: not found") ||
 		!strings.Contains(stderr, "it ran on this machine, not in its image example/browsers:1, so the machine needs what that image has") ||
 		!strings.Contains(stderr, "source is a fresh checkout of HEAD: what your working tree has installed or built is not in it") {
@@ -187,7 +187,7 @@ func TestRecordNeedsARecordedSuite(t *testing.T) {
 	writeFile(t, filepath.Join(root, config.FileName), strings.Replace(recordConfig, "    bind: recorded\n", "", 1))
 	gitT(t, root, "-c", "user.name=t", "-c", "user.email=t@example.test", "commit", "-qam", "graph")
 
-	if _, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root); code != 1 || !strings.Contains(stderr, "isn't bound by recording") {
+	if _, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root); code != 1 || !strings.Contains(stderr, "isn't bound by recording") {
 		t.Fatalf("%d %s", code, stderr)
 	}
 
@@ -250,7 +250,7 @@ done
 
 	work := t.TempDir()
 
-	stdout, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root, "--work", work)
+	stdout, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root, "--work", work)
 	if code != 0 || !strings.Contains(stdout, "recorded 2 slices of e2e at ") {
 		t.Fatalf("record: %d %s\n%s", code, stdout, stderr)
 	}
@@ -287,7 +287,7 @@ done
 func TestListsShowReadsTheLocalStore(t *testing.T) {
 	root, env := recordRepo(t)
 
-	if _, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root); code != 0 {
+	if _, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root); code != 0 {
 		t.Fatalf("record: %d %s", code, stderr)
 	}
 
@@ -322,7 +322,7 @@ func TestRecordHoldsTheObservingStepToWhatItSees(t *testing.T) {
 		t.Run(tc.buildRoot, func(t *testing.T) {
 			root, env := recordRepoWith(t, "{build_root: "+tc.buildRoot+"}")
 
-			stdout, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root)
+			stdout, stderr, code := runIn(t, root, env, "record", "--no-image", "--suite", "e2e", "--root", root)
 			if tc.ok {
 				if code != 0 || !strings.Contains(stdout, "recorded 2 slices of e2e at ") {
 					t.Fatalf("record: %d %s\n%s", code, stdout, stderr)
@@ -349,5 +349,17 @@ func TestRecordingsStartedInOneSecondAreRunsOfTheirOwn(t *testing.T) {
 
 	if first != "local-20261114-133922-000000001" {
 		t.Fatalf("named %s", first)
+	}
+}
+
+// A task whose file names an image runs in it unless --no-image says otherwise; with no container tool
+// to run it, the error says so, and how to run on this machine instead.
+func TestAnImageWithNoContainerToolSaysHowToRunHere(t *testing.T) {
+	root, env := recordRepo(t)
+
+	_, stderr, code := runIn(t, root, env, "record", "--suite", "e2e", "--root", root, "--container-tool", "/nonexistent/docker")
+	if code != 1 || !strings.Contains(stderr, "runs in an image (ci/e2e-slice.yml's image_resource)") ||
+		!strings.Contains(stderr, "pass --no-image to run on this machine") {
+		t.Fatalf("%d %s", code, stderr)
 	}
 }
