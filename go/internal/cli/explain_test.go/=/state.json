@@ -1,14 +1,7 @@
 {
   "label": "internal/cli/explain_test.go",
-  "state": "failed",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
-  "updated": "2026-11-17T14:51:21.983104534Z",
-  "failures": [
-    {
-      "test": "TestAPlanOfRecordedSlicesAsksBazelDiffToExplainNothing",
-      "tail": "ownload/v0.6.1/rules_shell-v0.6.1.tar.gz] to /tmp/pipelinegen-test-2325530200/bazel/_bazel_root/60a61ad502ad223364a26f806c14f0db/external/rules_shell+/temp12583947297925848238/rules_shell-v0.6.1.tar.gz: GET returned 500 Internal Server Error\n        ERROR: Evaluation of subquery \"deps(//...)\" failed (did you want to use --keep_going?): preloading transitive closure failed: no such package '@@rules_shell+//shell': java.io.IOException: Error downloading [https://github.com/bazelbuild/rules_shell/releases/download/v0.6.1/rules_shell-v0.6.1.tar.gz] to /tmp/pipelinegen-test-2325530200/bazel/_bazel_root/60a61ad502ad223364a26f806c14f0db/external/rules_shell+/temp12583947297925848238/rules_shell-v0.6.1.tar.gz: GET returned 500 Internal Server Error Through:[] Hops:[]}]] Causes:[] Untouched:[] Removed:[] WholeSuite:[] Narrowed:[] ObservedBy:[] Unlisted:[] slices:[{Name:specs/checkout.spec.ts Label:@pipelinegen_deps//slices:specs/checkout.spec.ts Tags:[] Kind: Sources:[specs/checkout.spec.ts] Tests:[]} {Name:specs/fresh.spec.ts Label:@pipelinegen_deps//slices:specs/fresh.spec.ts Tags:[] Kind: Sources:[specs/fresh.spec.ts] Tests:[]} {Name:specs/orders.spec.ts Label:@pipelinegen_deps//slices:specs/orders.spec.ts Tags:[] Kind: Sources:[specs/orders.spec.ts] T\nests:[]}]}] Narrowing:0 Plugins:\u003cnil\u003e Lists:\u003cnil\u003e Warnings:[] Rebuild:\u003cnil\u003e Unobservable:[] LabelGroups:0 LabelHashSeconds:[] Config:[] ConfigUnderstood:false}\n--- FAIL: TestAPlanOfRecordedSlicesAsksBazelDiffToExplainNothing (46.94s)"
-    }
-  ],
-  "seconds": 46.94,
+  "state": "passed",
+  "updated": "2026-11-17T15:08:15.564938286Z",
+  "seconds": 49.1,
   "recorded": true
 }
