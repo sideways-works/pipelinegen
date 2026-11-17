@@ -65,18 +65,14 @@ runs everything and catches whatever a narrower run left out.
 
 ```mermaid
 flowchart LR
-    pr([a pull request]) --> plan
-    continuous([optional: continuous,<br/>each push to main]) -.-> plan
-    subgraph plan [plan]
-        direction TB
-        sbom[sbom plugins<br/>what changed in the code]
-        lists[recordings<br/>what each test executed]
-        bazel[Bazel's build graph<br/>everything else]
-    end
-    plan --> slices[the slices it reaches]
-    slices --> run[drivers run them<br/>in your CI or on your machine]
-    run -- correlators record --> lists
-    nightly([optional: nightly,<br/>run everything]) -.-> run
+    bazel[Bazel's<br/>build graph] --> plan
+    code[sbom plugins<br/>read the code] --> plan
+    continuous([push to main<br/><i>optional: continuous</i>]) -.-> plan
+    pr([pull request]) --> plan
+    recordings[(recordings:<br/>what each test<br/>executed)] --> plan
+    plan{{plan: which tests<br/>can this change reach?}} --> run[drivers run<br/>only those tests]
+    nightly([every night<br/><i>optional: nightly</i>]) -.->|all tests| run
+    run -->|correlators record| recordings
     classDef optional stroke-dasharray: 5 5
     class continuous,nightly optional
 ```
