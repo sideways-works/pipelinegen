@@ -587,7 +587,13 @@ fixture tree of its own. It checks:
   and for its variants: a lock on every suite, a pipeline that sets
   itself, a config that splits the token by purpose and, for a runner with
   `connector_changes`, a pull request run whose changes come from a
-  connector. A runner must report `placement`; when the config the kit is
+  connector; for a runner with `steps`, suites run by drivers; and for a
+  runner with `steps` and `packages`, suites with packages, one of them
+  with a cached image, and planner packages, where every task the runner
+  writes that runs pipelinegen installs its packages first, every cached
+  image the spec names is built, and the registry's vars reach no task that
+  runs the repository's code (the pushing var no job that does). A
+  runner must report `placement`; when the config the kit is
   given has a `placement`, the pipeline written with it must be the one
   written without it but for worker tags. The connector variant's pipeline sweeps the changes (`unplanned`),
   plans them in two steps (`plan --out`, `plan --from`), and has no
@@ -1310,6 +1316,15 @@ the repository's own parts merged in.
   it can't follow (an unknown kind of step, a run or suite the spec lacks,
   a rule an earlier one makes unreachable) when asked for the pipeline,
   and `pipelinegen check` asks it when it is at hand.
+- The spec's `planner_packages`, `images` and each suite's `packages` say
+  what the steps need installed and which cached images to build and run
+  in, with the keys the core worked out. A runner that installs them, and
+  builds and runs in the images, reports the capability `packages`; one
+  without it ignores the fields and writes the pipeline it always did,
+  and `pipelinegen pipeline` and `check` say the steps run without the
+  packages. The fields are in the contracts'
+  [packages in the spec](contracts.md#packages-in-the-spec), and what a
+  runner does with them in [writing a runner](writing-plugins/runner.md#packages-and-cached-images).
 - The spec's `trusted` is a string the runner passes on without reading
   it. Every task that runs pipelinegen itself gets it, byte for byte, in
   `PIPELINEGEN_TRUSTED` (`plugin.EnvTrusted`). No task that runs the
