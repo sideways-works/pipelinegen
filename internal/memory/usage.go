@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -38,7 +39,12 @@ func Measure(root string) (Usage, error) {
 	cg := filepath.Join(root, "sys", "fs", "cgroup")
 
 	if p, ok := unifiedPath(root); ok {
+		// a container without its own cgroup namespace names the host's path, and mounts its own cgroup
+		// at the root
 		dir := filepath.Join(cg, filepath.FromSlash(p))
+		if _, err := os.Stat(dir); err != nil {
+			dir = cg
+		}
 		cpu := fieldsOf(filepath.Join(dir, "cpu.stat"), " ")
 		u.CPU = float64(atoi(cpu["usage_usec"])) / 1e6
 		cur, _ := number(filepath.Join(dir, "memory.current"))

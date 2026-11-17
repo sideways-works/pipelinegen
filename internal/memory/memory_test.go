@@ -172,3 +172,18 @@ func TestPredictTakesTheNinetiethPercentileAndATenthMore(t *testing.T) {
 		}
 	}
 }
+
+func TestAContainerNamingTheHostsPathIsMeasuredAtTheMount(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, map[string]string{
+		"proc/meminfo":                 meminfo,
+		"proc/self/cgroup":             "0::/garden/0f3c\n",
+		"sys/fs/cgroup/cpu.stat":       "usage_usec 1000000\n",
+		"sys/fs/cgroup/memory.current": "1048576000\n",
+	})
+
+	u, err := Measure(root)
+	if err != nil || u.CPU != 1 || u.Set != 1000 {
+		t.Fatalf("%+v %v", u, err)
+	}
+}
