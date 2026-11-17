@@ -221,16 +221,18 @@ type SpecSecrets struct {
 
 // SpecSuite is one suite.
 type SpecSuite struct {
-	Name        string           `json:"name"`
-	Prepare     string           `json:"prepare,omitempty"`
-	RunSlice    string           `json:"run_slice"`
-	Image       string           `json:"image,omitempty"`
-	SerialGroup string           `json:"serial_group,omitempty"`
-	MaxInFlight int              `json:"max_in_flight,omitempty"`
-	Parallel    int              `json:"parallel"`
-	Privileged  bool             `json:"privileged,omitempty"`
-	Lock        *SpecLock        `json:"lock,omitempty"`
-	WholeSuite  []SpecWholeSuite `json:"whole_suite,omitempty"`
+	Name        string `json:"name"`
+	Prepare     string `json:"prepare,omitempty"`
+	RunSlice    string `json:"run_slice"`
+	Image       string `json:"image,omitempty"`
+	SerialGroup string `json:"serial_group,omitempty"`
+	MaxInFlight int    `json:"max_in_flight,omitempty"`
+	// Parallel is how many batches a build of the suite is dealt at least;
+	// a runner runs every batch `pipelinegen batches` deals at once.
+	Parallel   int              `json:"parallel"`
+	Privileged bool             `json:"privileged,omitempty"`
+	Lock       *SpecLock        `json:"lock,omitempty"`
+	WholeSuite []SpecWholeSuite `json:"whole_suite,omitempty"`
 	// Steps, for a suite run by drivers, replaces Prepare and RunSlice:
 	// the runner writes the suite's tasks itself (CapSteps).
 	Steps *SpecSteps `json:"steps,omitempty"`

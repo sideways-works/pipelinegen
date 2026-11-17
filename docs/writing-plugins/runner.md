@@ -26,7 +26,9 @@ The core knows no CI system; the pipeline's steps call its commands:
 
 1. on a trigger, `pipelinegen plan` for the run;
 2. per suite, `pipelinegen tree`, then the suite's prepare task, then
-   `pipelinegen batches`, then one batch task per batch, side by side, each
+   `pipelinegen batches`, then one batch task per batch, every batch at
+   once (no cap of the runner's own: `batches` deals as many as the suite's
+   `parallel`, `batches` and `batch_minutes` say should run together), each
    calling `slice setup-end` once and `slice start` and `slice end` around
    its slices (they only journal and collect; the batch's end writes
    what they noted);

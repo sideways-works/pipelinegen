@@ -393,8 +393,7 @@ full main 9a0e51c2d4f8: suite unit had ended at 2026-11-15T15:00:00Z: left as it
 ```
 
 A continuous round whose build recorded its start and died before its
-plan (on a runner that doesn't queue the planning job's builds) has no
-suites yet: `end` records that it is over, and the next build stops
+plan has no suites yet: `end` records that it is over, and the next build stops
 waiting for it at once instead of after `limits.plan` and 10 minutes.
 
 ```
