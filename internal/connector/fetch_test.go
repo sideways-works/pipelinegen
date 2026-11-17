@@ -1,6 +1,8 @@
 package connector
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +14,12 @@ import (
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 )
+
+func hexSum(data []byte) string {
+	sum := sha256.Sum256(data)
+
+	return hex.EncodeToString(sum[:])
+}
 
 type releases struct {
 	*httptest.Server
