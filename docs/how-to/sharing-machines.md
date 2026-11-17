@@ -122,7 +122,10 @@ A task file calls `tools/pipelinegen slice memory` first, before its
 setup ([writing tasks](writing-tasks.md#the-batch-task)); `slice run`
 does it itself. On your machine, `pipelinegen run` and `record` read the
 peaks from the store the config names and refuse a suite whose batch this
-machine hasn't the room for, naming the figures; nothing waits there.
+machine hasn't the room for, naming the figures; nothing waits there. As
+on CI, the suite's packages come first: the images with them installed
+([packages and cached images](packages-and-images.md#on-your-machine))
+are made before the check.
 
 To measure a batch by hand, read its container's cgroup at its end:
 `cat /sys/fs/cgroup/memory.peak` inside the task (bytes since the task

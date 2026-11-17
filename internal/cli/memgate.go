@@ -296,13 +296,23 @@ func localMemory(ctx context.Context, peaks func(context.Context) (map[string][]
 		errNoMemoryHere, suite, p.MB, p.Why, r)
 }
 
-// ready finds the build's plugins and refuses a batch this machine hasn't the memory for.
+// ready finds the build's plugins, installs the suite's packages and then refuses a batch this machine
+// hasn't the memory for, before the setup: on CI the install runs in front of the task's command, and
+// the batch waits for its memory after it.
 func (b *localBuild) ready(ctx context.Context, c *common, slices []string) error {
+	return b.readyWith(ctx, sharedPeaks(c, b.suite), slices)
+}
+
+func (b *localBuild) readyWith(ctx context.Context, peaks func(context.Context) (map[string][]int64, error), slices []string) error {
 	if err := b.findPlugins(ctx); err != nil {
 		return err
 	}
 
-	return localMemory(ctx, sharedPeaks(c, b.suite), b.suite, slices)
+	if err := b.installPackages(ctx); err != nil {
+		return err
+	}
+
+	return localMemory(ctx, peaks, b.suite, slices)
 }
 
 // sharedPeaks reads a suite's peaks from the store the config names, for a run on this machine.

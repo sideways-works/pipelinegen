@@ -147,8 +147,9 @@ the runner's version.
 ## On your machine
 
 `pipelinegen run` and `record` run a suite's steps in its image. With
-packages declared they first make the image with them installed, once:
-a container of the base installs them as root and is committed to the
+packages declared they first make the image with them installed, once,
+for the suite's prepare and its batch, before the memory check
+([sharing machines](sharing-machines.md)) and the setup: a container of the base installs them as root and is committed to the
 local image store as `pipelinegen-cache/<key>`. Its key is of the base's
 image ID, so a base pulled again with other content gets an image of its
 own. Later runs reuse it, and the install before each step finds

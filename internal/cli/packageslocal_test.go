@@ -1,9 +1,15 @@
 package cli
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/container"
@@ -84,5 +90,99 @@ func TestTheStepsRunInTheirCachedImage(t *testing.T) {
 
 	if !strings.Contains(said[1], "made before on alpine:3.20") {
 		t.Fatalf("not reused: %q", said)
+	}
+}
+
+// fakeContainerTool is a docker that logs each call to log and has every image the test names: a
+// cached image once a commit made it.
+const fakeContainerTool = `#!/bin/sh
+echo "$*" >> "$LOG"
+for ref; do :; done
+mark="$LOG.$(echo "$ref" | tr -c 'a-z0-9' _)"
+case "$1 $2" in
+"image inspect")
+	case "$ref" in
+	pipelinegen-cache/*) [ -f "$mark" ] || exit 1; echo sha256:made ;;
+	*) case "$4" in *Os*) echo linux/amd64 ;; *Id*) echo "sha256:$(echo "$ref" | cksum | cut -d' ' -f1)" ;; *) echo null ;; esac ;;
+	esac ;;
+commit*) touch "$mark" ;;
+esac
+exit 0
+`
+
+// A batch on this machine gets its packages first, then its memory check, then its setup: the
+// packages' images are made before the memory is asked, and a batch refused for memory had them made.
+func TestPackagesAreInstalledBeforeTheMemoryCheck(t *testing.T) {
+	fakeMemory(t, 3000, time.Hour)
+
+	log := filepath.Join(t.TempDir(), "calls")
+	t.Setenv("LOG", log)
+
+	tool := filepath.Join(t.TempDir(), "docker")
+	if err := os.WriteFile(tool, []byte(fakeContainerTool), 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	b := imageBuild(t, false)
+	b.box.tool = tool
+	b.cfg.Packages = config.Packages{{Name: "jq"}}
+
+	peaks := func(context.Context) (map[string][]int64, error) {
+		f, err := os.OpenFile(log, os.O_APPEND|os.O_WRONLY, 0o600)
+		if err != nil {
+			return nil, fmt.Errorf("the test's log: %w", err)
+		}
+
+		_, err = f.WriteString("memory\n")
+
+		return map[string][]int64{"a": {6000}}, errors.Join(err, f.Close())
+	}
+
+	var err error
+
+	stderrOf(t, func() { err = b.readyWith(t.Context(), peaks, []string{"a"}) })
+
+	if !errors.Is(err, errNoMemoryHere) {
+		t.Fatalf("not refused for memory: %v", err)
+	}
+
+	data, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	calls := strings.Split(strings.TrimSpace(string(data)), "\n")
+
+	commits := 0
+
+	for i, c := range calls {
+		switch {
+		case strings.HasPrefix(c, "commit "):
+			commits++
+		case c == "memory" && i != len(calls)-1:
+			t.Fatalf("the memory was asked before the packages were installed: %q", calls)
+		}
+	}
+
+	// the prepare's image and the batch's are each made once
+	if commits != 2 || calls[len(calls)-1] != "memory" {
+		t.Fatalf("calls: %q", calls)
+	}
+
+	// the tasks then run in the images made, and make nothing again
+	for _, kind := range []string{kindPrepare, kindBatch} {
+		img, err := b.image(t.Context(), kind, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		p, err := b.packaged(t.Context(), img, kind)
+		if err != nil || !strings.HasPrefix(p.ref, packages.LocalRepository+"/") || len(p.before) != 1 {
+			t.Fatalf("%s: %+v %v", kind, p, err)
+		}
+	}
+
+	if again, err := os.ReadFile(log); err != nil || len(again) != len(data) {
+		t.Fatalf("made again: %s %v", again, err)
 	}
 }

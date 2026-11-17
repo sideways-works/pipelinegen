@@ -27,7 +27,11 @@ var (
 	errUndeclared = errors.New("no such image")
 )
 
-const kindPrepare = "prepare"
+// The kinds of a build's tasks.
+const (
+	kindPrepare = "prepare"
+	kindBatch   = "batch"
+)
 
 // The build's tools, under tools/.
 const (
@@ -56,6 +60,15 @@ type imageBox struct {
 	tool  string
 	// linux is the pipelinegen each image platform runs, once found.
 	linux map[string]string
+	// made is each base image, pulled and with the suite's packages, by the base's reference.
+	made map[string]packaged
+}
+
+// packaged is a task's image as it runs: with the suite's packages when it has any, its platform, and
+// the install that then finds them there.
+type packaged struct {
+	ref, platform string
+	before        []string
 }
 
 // taskImage is an image a task runs in, and what named it.
@@ -171,35 +184,22 @@ func imageRef(source, version map[string]any) (string, error) {
 // inImage runs cmd in img in dir as CI's task would: the build's directories and tools at the paths
 // the build has them, so every path the steps are given holds, and only the task's environment.
 func (b *localBuild) inImage(ctx context.Context, img taskImage, kind, dir string, cmd []string, params map[string]string) error {
-	if b.box.tool == "" {
-		tool, err := container.Find(b.box.flags.tool)
-		if err != nil {
-			return fmt.Errorf("%w: suite %s's %s runs in an image (%s), and %w: install docker or podman, or pass --no-image to run on this machine",
-				errImage, b.suite, kind, img.named, err)
-		}
-
-		b.box.tool = tool
-	}
-
-	platform, err := container.Ensure(ctx, b.box.tool, img.ref, os.Stderr)
-	if err != nil {
-		return fmt.Errorf("%w: %w; is %s running? --no-image runs on this machine", errImage, err, filepath.Base(b.box.tool))
-	}
-
-	before, err := b.withPackages(ctx, &img)
+	p, err := b.packaged(ctx, img, kind)
 	if err != nil {
 		return err
 	}
+
+	img.ref = p.ref
 
 	// the steps after, report batch-end among them, run here and read the tools as this machine's
 	defer b.keepHostTools()()
 
-	r, back, err := b.containerRun(ctx, img, kind, dir, cmd, params, platformOf(platform))
+	r, back, err := b.containerRun(ctx, img, kind, dir, cmd, params, platformOf(p.platform))
 	if err != nil {
 		return err
 	}
 
-	r.Before = before
+	r.Before = p.before
 
 	c, err := r.Command(ctx)
 	if err != nil {
@@ -217,6 +217,92 @@ func (b *localBuild) inImage(ctx context.Context, img taskImage, kind, dir strin
 	}
 
 	return err //nolint:wrapcheck // the caller says which task
+}
+
+// packaged pulls img and makes it the image with the suite's packages, once a build: a run makes its
+// tasks' images before its memory check, and the tasks find them made.
+func (b *localBuild) packaged(ctx context.Context, img taskImage, kind string) (packaged, error) {
+	if p, ok := b.box.made[img.ref]; ok {
+		return p, nil
+	}
+
+	if b.box.tool == "" {
+		tool, err := container.Find(b.box.flags.tool)
+		if err != nil {
+			return packaged{}, fmt.Errorf("%w: suite %s's %s runs in an image (%s), and %w: install docker or podman, or pass --no-image to run on this machine",
+				errImage, b.suite, kind, img.named, err)
+		}
+
+		b.box.tool = tool
+	}
+
+	base := img.ref
+
+	platform, err := container.Ensure(ctx, b.box.tool, base, os.Stderr)
+	if err != nil {
+		return packaged{}, fmt.Errorf("%w: %w; is %s running? --no-image runs on this machine", errImage, err, filepath.Base(b.box.tool))
+	}
+
+	before, err := b.withPackages(ctx, &img)
+	if err != nil {
+		return packaged{}, err
+	}
+
+	p := packaged{ref: img.ref, platform: platform, before: before}
+
+	if b.box.made == nil {
+		b.box.made = map[string]packaged{}
+	}
+
+	b.box.made[base] = p
+
+	return p, nil
+}
+
+// installPackages makes the images of the build's tasks with the suite's packages before the rest of
+// the batch, as CI installs them in front of each task's command: the memory check and the setup come
+// after. Tasks that run on this machine install nothing; the machine is checked for the packages.
+func (b *localBuild) installPackages(ctx context.Context) error {
+	if len(b.cfg.PackagesFor(b.suite)) == 0 {
+		return nil
+	}
+
+	for _, t := range b.tasks() {
+		img, err := b.boxImage(ctx, t.kind, t.file)
+		if err != nil {
+			return err
+		}
+
+		if img.ref == "" {
+			b.hostPackages(ctx)
+
+			continue
+		}
+
+		if _, err := b.packaged(ctx, img, t.kind); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// buildTask is one task of a suite's build: its kind and its task file, none for a suite of steps.
+type buildTask struct{ kind, file string }
+
+// tasks are the tasks run runs, in its order.
+func (b *localBuild) tasks() []buildTask {
+	s := b.cfg.Suites[b.suite]
+	if s.HasSteps() {
+		return []buildTask{{kindPrepare, ""}, {kindBatch, ""}}
+	}
+
+	var out []buildTask
+	if s.Prepare != "" {
+		out = append(out, buildTask{kindPrepare, s.Prepare})
+	}
+
+	return append(out, buildTask{kindBatch, s.RunSlice})
 }
 
 // withPackages swaps img for the image with the suite's packages installed on it, made the first time

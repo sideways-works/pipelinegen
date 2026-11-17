@@ -754,12 +754,12 @@ func (b *localBuild) run(ctx context.Context) error {
 	}
 
 	if p := b.cfg.Suites[b.suite].Prepare; p != "" {
-		if err := b.task(ctx, "prepare", p); err != nil {
+		if err := b.task(ctx, kindPrepare, p); err != nil {
 			return err
 		}
 	}
 
-	return b.task(ctx, "batch", b.cfg.Suites[b.suite].RunSlice)
+	return b.task(ctx, kindBatch, b.cfg.Suites[b.suite].RunSlice)
 }
 
 func (b *localBuild) task(ctx context.Context, kind, file string) error {
@@ -845,7 +845,7 @@ func (b *localBuild) driven(ctx context.Context) error {
 			args = append(args, "--prepared", "prepared")
 		}
 
-		kind := "batch"
+		kind := kindBatch
 		if verb == plugin.CallPrepare {
 			kind = kindPrepare
 		}
