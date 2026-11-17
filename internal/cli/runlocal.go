@@ -378,9 +378,11 @@ func (r *localSuiteRun) suite(ctx context.Context, sp affected.SuitePlan, record
 		storeGoes: r.temp && !record,
 	}
 
-	if err := b.ready(ctx, r.common, names(sp.Selected)); errors.Is(err, errNoMemoryHere) {
-		return suiteTally{suite: sp.Suite, slices: names(sp.Selected), short: err.Error()}, nil
-	} else if err != nil {
+	if err := b.ready(ctx, r.common, names(sp.Selected)); err != nil {
+		if t, ok := unready(sp.Suite, names(sp.Selected), err); ok {
+			return t, nil
+		}
+
 		return suiteTally{}, err
 	}
 
@@ -417,6 +419,16 @@ func (r *localSuiteRun) suite(ctx context.Context, sp affected.SuitePlan, record
 	}
 
 	return t, nil
+}
+
+// unready is the tally of a suite whose batch never started here, its slices not run: this machine is
+// short of memory, or the suite's image or packages couldn't be had. The other suites still run.
+func unready(suite string, slices []string, err error) (suiteTally, bool) {
+	if !errors.Is(err, errNoMemoryHere) && !errors.Is(err, errImage) {
+		return suiteTally{}, false
+	}
+
+	return suiteTally{suite: suite, slices: slices, short: err.Error()}, true
 }
 
 func localStates(ctx context.Context, cfg *config.Config, ch runs.Change, suite string) (map[string]report.State, error) {

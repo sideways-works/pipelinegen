@@ -106,6 +106,7 @@ case "$1 $2" in
 	*) case "$4" in *Os*) echo linux/amd64 ;; *Id*) echo "sha256:$(echo "$ref" | cksum | cut -d' ' -f1)" ;; *) echo null ;; esac ;;
 	esac ;;
 commit*) touch "$mark" ;;
+run*) [ -z "$FAIL_INSTALL" ] || exit 1 ;;
 esac
 exit 0
 `
@@ -184,5 +185,36 @@ func TestPackagesAreInstalledBeforeTheMemoryCheck(t *testing.T) {
 
 	if again, err := os.ReadFile(log); err != nil || len(again) != len(data) {
 		t.Fatalf("made again: %s %v", again, err)
+	}
+}
+
+// A suite whose packages can't be installed is not run, and says why; the run goes on to the others.
+func TestASuiteWhosePackagesFailIsNotRun(t *testing.T) {
+	t.Setenv("LOG", filepath.Join(t.TempDir(), "calls"))
+	t.Setenv("FAIL_INSTALL", "1")
+
+	tool := filepath.Join(t.TempDir(), "docker")
+	if err := os.WriteFile(tool, []byte(fakeContainerTool), 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	b := imageBuild(t, false)
+	b.box.tool = tool
+	b.cfg.Packages = config.Packages{{Name: "jq"}}
+
+	none := func(context.Context) (map[string][]int64, error) { return map[string][]int64{}, nil }
+
+	var err error
+
+	stderrOf(t, func() { err = b.readyWith(t.Context(), none, []string{"a"}) })
+
+	tally, ok := unready("unit", []string{"a"}, err)
+	if !errors.Is(err, errImage) || !ok || !strings.Contains(tally.short, "suite unit's packages (jq)") {
+		t.Fatalf("%v: %+v", err, tally)
+	}
+
+	var out strings.Builder
+	if err := localSummary(&out, strings.Repeat("a", 40), []suiteTally{tally}, false); err == nil || !strings.Contains(out.String(), "unit: 1 not run: ") {
+		t.Fatalf("%v: %s", err, out.String())
 	}
 }
