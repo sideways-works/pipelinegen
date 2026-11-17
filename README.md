@@ -94,8 +94,9 @@ narrow](docs/how-to/starting-narrow.md).
 
 **[Converting gavel to pipelinegen](docs/worked-example/README.md)** follows
 one real conversion from start to finish: an open source Bazel monorepo
-with Go tests, tests that need a database, web checks and a browser suite,
-with every command that was run and what each change then selected.
+with Go tests, tests that need a database, web checks, the web app's unit
+tests and a browser suite, with every command that was run and what each
+change then selected.
 
 ## Install
 

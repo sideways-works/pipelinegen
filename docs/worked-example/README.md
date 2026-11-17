@@ -3,25 +3,29 @@
 > Where the conversion stands: made with v0.2.1. gavel's config pins
 > pipelinegen v0.2.1 and the v0.2.0 releases of its runner, plugins and
 > drivers, and all five suites name steps run by drivers, with no batch
-> script left. The numbers on this page were measured with the last
-> candidate, v0.1.13-rc.18, whose code v0.2.1's tool is plus the fixes
-> listed in the changelog's 0.2.0 and 0.2.1 entries; none of them changes
-> what a plan selects. On a developer's machine, with those releases: the
-> `go` suite was recorded whole (289 of 289 test files passed), the `go-db` suite's 18 files passed, the `web`
-> suite's 2 checks and the `vitest` suite's 56 files passed, and the 5
-> browser specs passed, both run plainly and recorded. The pipeline runs
-> on a fork of gavel, green on 2026-11-16 at its commit `6c20a55`, and
-> from v0.2.1 all five suites record there (step 10 says why the browser
-> suite couldn't before).
-> The table of fifteen commits and the three changes at the top were
-> measured again with v0.1.13-rc.18, and so were step 4's check and step
-> 5's plans.
+> script left. Most numbers on this page were measured with the last
+> development build before v0.2.0, whose code is v0.2.1's tool without a
+> few fixes, none of which changes what a plan selects. Some were measured
+> first with an earlier development build, and the page says where. On a
+> developer's machine, with the pinned releases: the `go` suite was
+> recorded whole (289 of 289 test files passed), the `go-db` suite's 18
+> files passed, the `web` suite's 2 checks and the `vitest` suite's 56
+> files passed, and the 5 browser specs passed, both run plainly and
+> recorded. The pipeline runs on a fork of gavel. It was green at its
+> commit `de0c646`, with v0.2.1, and step 10 gives the times of those
+> builds. There the three recorded suites, `go`, `go-db` and `browser`,
+> record in the `main` and `nightly` runs; `web` and `vitest` are bound by
+> the graph and record nothing (step 10 says why the browser suite
+> couldn't record before v0.2.1). The table of fifteen commits and the
+> three changes at the top were measured again with the last development
+> build, and so were step 4's check and step 5's plans.
 
 This page follows one real conversion from start to finish. The project is
 [gavel](https://github.com/gavelcode/gavel), an open source code quality
 tool for Bazel monorepos, at its commit `365aa7a`. The files the
 conversion adds are in [gavel/](gavel/) next to this page, as they stand
-on the fork's branch `pipelinegen`.
+on the fork's branch `pipelinegen`, and so is `graph.yaml`, a config of
+this page's own that step 5 uses and the fork doesn't hold.
 Nothing here assumes you know what a CI pipeline is beyond "the machine
 that runs the tests when someone pushes", or what pipelinegen does.
 
@@ -84,8 +88,9 @@ The job that matters here is `test`:
 ```
 
 `bazel test //...` runs every test target of the workspace, whatever the
-change touched. There are 147: 145 `go_test` targets and the web app's type
-check and lint. A pull request that fixes a typo in a README runs all 147,
+change touched. There are 147: 144 `go_test` targets, one `py_test` of a
+sample Python project in `apps/server/testdata`, and the web app's type check and
+lint. A pull request that fixes a typo in a README runs all 147,
 and so does a one-line fix in the CLI.
 
 Bazel caches test results, so on a warm machine an unchanged target is
@@ -226,6 +231,10 @@ beside this page:
 | [`ci/root.yml`](gavel/ci/root.yml) | the images the suites' tasks run in, as resources of the pipeline |
 | [`apps/web/e2e/recording.ts`](gavel/apps/web/e2e/recording.ts), [`apps/web/playwright.pipelinegen.config.ts`](gavel/apps/web/playwright.pipelinegen.config.ts) | what a recording run adds to the browser specs, and the config the batch runs them with |
 
+[`graph.yaml`](gavel/graph.yaml) beside them is no file of the conversion:
+it is the config of step 5, every suite bound by the graph, kept to plan
+the replay with.
+
 and changed these:
 
 | File | Change |
@@ -233,7 +242,6 @@ and changed these:
 | `apps/web/BUILD.bazel` | two tagged filegroups, one per web check, and one for the files every browser spec shares |
 | `apps/web/e2e/fixtures.ts`, `auth.spec.ts` | the specs take `test` from the shared helper, which wraps it in a recording run |
 | `apps/web/e2e/global-setup.ts`, `start-server.sh` | brought up to date with the server (see [what did not fit yet](#what-did-not-fit-yet)) |
-| `.gitignore` | `/tools/plugins/`, where the plugins lie on your machine |
 
 No BUILD rule of gavel's own changed, and no test's assertions.
 
@@ -355,6 +363,7 @@ suites:
   go:
     tests: ["**/*_test.go"]
     exclude:
+      - "examples/**"
       # the Go end-to-end tests don't build today: untested, below
       - "apps/cli/test/e2e/*_test.go"
       - "apps/server/test/e2e/**"
@@ -469,16 +478,18 @@ For gavel the groups and the decisions were:
 | `examples/**` | `untested` | separate workspaces, judged by gavel's own onboarding job, not by these tests |
 | `docs/**`, `*.md`, `LICENSE`, `glama.json` | `untested` | read by people only |
 | `.github/**`, `.gitignore` files, `codecov.yml` | `untested` | repository settings and the old CI |
-| `.gavel/architecture.yml`, `.gavel/baseline/**`, `.gavel/gavel.bazelrc`, `.golangci.yml` | `untested` | gavel's own baseline and lint settings, read when gavel judges itself; `.bazelrc` imports `gavel.bazelrc`, but it holds only named configs (`build:gavel ...`) that a plain `bazel test` doesn't use |
+| `.gavel/architecture.yml`, `.gavel/baseline/**`, `.gavel/gavel.bazelrc`, `.gavel/gavel.yaml`, `.golangci.yml` | `untested` | gavel's own baseline and lint settings, read when gavel judges itself; `.bazelrc` imports `gavel.bazelrc`, but it holds only named configs (`build:gavel ...`) that a plain `bazel test` doesn't use |
 | `.gavel/gavel.MODULE.bazel` | `everything_on` | `MODULE.bazel` includes it, so it is build setup like `MODULE.bazel` itself |
 | `.goreleaser.yaml`, `hack/release.sh`, `install.sh`, `Makefile` | `untested` | release and developer scripts |
 | `MODULE.bazel`, `.bazelversion`, `.bazelrc`, `.bazelignore`, `go.mod`, `go.sum`, `go.work`, `go.work.sum`, `tools/go.mod`, `tools/go.sum`, `tools/BUILD.bazel`, `apps/web/package.json`, `apps/web/pnpm-lock.yaml` | `everything_on` | the build setup: a change to it can break any test, so it runs every slice |
+| `ci/root.yml` | `everything_on` | the images every suite's tasks run in (step 10) |
 | `pipelinegen.yaml` | neither | the planner judges a change to the config by what it means ([a change to this file](../reference/config.md#a-change-to-this-file)): a suite's changed steps run that suite's slices, a comment runs nothing |
 | `apps/server/cmd/gavel-server/*.go`, `apps/server/internal/platform/frontend/*.go` | the browser suite of step 9 | only tests that start the server binary run them, and of those only the browser specs build; go-sbom claims the files, and the specs' recordings bind them |
 | `apps/server/cmd/gavel-server/BUILD.bazel`, `apps/server/internal/platform/frontend/BUILD.bazel` | `untested` | the server's Bazel build, which no test runs: the browser suite builds the server with `go build` |
-| `apps/cli/test/e2e/*_test.go`, `apps/server/test/e2e/*_test.go` | `untested` | the Go end-to-end tests, which don't build today; they join a suite when they do |
-| e2e `run.sh`, `devdemo.sh`, `apps/server/testdata/**` | `untested` | scripts and sample data for running things by hand |
-| `apps/cli/BUILD.bazel`, `core/domain/iam/model/BUILD.bazel`, `core/userinterface/api/v1/server/supporting/BUILD.bazel` | `untested` | BUILD files that declare no target |
+| `apps/cli/test/e2e/*_test.go`, `apps/server/test/e2e/*_test.go` and their `run.sh` | `untested` | the Go end-to-end tests, which don't build today; they join a suite when they do |
+| `devdemo.sh`, `apps/server/testdata/**` | `untested` | a script and sample data for running a demo by hand |
+| `apps/cli/BUILD.bazel`, the two e2e directories' `BUILD.bazel`, `core/domain/iam/model/BUILD.bazel`, `core/userinterface/api/v1/server/supporting/BUILD.bazel` | `untested` | BUILD files that declare no target |
+| `apps/web/src/assets/**` | `untested` | two images that nothing imports and the build doesn't take (below) |
 | `apps/web/tokens.json`, `apps/web/scripts/generate-tokens.mjs` | `untested` | design tokens a developer script exports from `src/index.css`; nothing in the build reads them |
 | `core/userinterface/api/v1/gen/oapi-codegen.yaml` | `untested` | the generator's settings; its output is checked in and tested |
 | `apps/web/src/**` and the app's config files | read by a macro, below | |
@@ -493,13 +504,14 @@ everything_on:
   - .bazelversion
   - .bazelrc
   - .bazelignore
-  - go.mod
+  - go.mod                            # go.* until step 6
   - go.sum
   - go.work
   - go.work.sum
   - tools/go.mod
   - tools/go.sum
   - tools/BUILD.bazel
+  - ci/root.yml
   - apps/web/package.json
   - apps/web/pnpm-lock.yaml
 
@@ -508,24 +520,28 @@ untested:
     reason: separate Bazel workspaces (in .bazelignore) that gavel's onboarding job judges; no test of this workspace reads them
   - paths: ["docs/**", "**/*.md", LICENSE, glama.json]
     reason: prose and listings, read by people only
-  - paths: [".github/**", .gitignore, "**/.gitignore", codecov.yml]
+  - paths: [".github/**", .gitignore, codecov.yml]
     reason: repository settings and the old CI
-  - paths: [".gavel/architecture.yml", ".gavel/baseline/**", .gavel/gavel.bazelrc, .golangci.yml]
-    reason: gavel's own baseline and lint settings, read when gavel judges itself
+  - paths: [.gavel/architecture.yml, ".gavel/baseline/**", .gavel/gavel.bazelrc, .gavel/gavel.yaml, .golangci.yml]
+    reason: gavel's own quality baseline and lint settings, read when gavel judges itself; .bazelrc imports gavel.bazelrc, which holds only named configs a plain bazel test doesn't use
   - paths: [.goreleaser.yaml, hack/release.sh, install.sh, Makefile]
-    reason: release and developer scripts
-  - paths: ["apps/cli/test/e2e/*_test.go", "apps/server/test/e2e/*_test.go"]
-    reason: Go end-to-end tests that do not build today (build tag e2e); they join a suite when they do
-  - paths: [apps/cli/test/e2e/run.sh, apps/server/test/e2e/run.sh, apps/server/test/e2e/devdemo.sh, "apps/server/testdata/**"]
-    reason: scripts and sample data for running things by hand
-  - paths: [apps/cli/BUILD.bazel, core/domain/iam/model/BUILD.bazel, core/userinterface/api/v1/server/supporting/BUILD.bazel]
+    reason: release and developer scripts, run by people
+  - paths: [apps/web/.gitignore]
+    reason: repository settings
+  - paths: ["apps/web/src/assets/**"]
+    reason: images in the source tree that nothing imports and the build doesn't take
+  - paths: [apps/web/scripts/generate-tokens.mjs, apps/web/tokens.json]
+    reason: the design tokens and the script a person runs to turn them into the checked-in styles
+  - paths: ["apps/cli/test/e2e/*_test.go", "apps/server/test/e2e/*_test.go", apps/cli/test/e2e/run.sh, apps/server/test/e2e/run.sh]
+    reason: end-to-end tests behind the build tag e2e; they do not build at this commit
+  - paths: [apps/server/test/e2e/devdemo.sh, "apps/server/testdata/**"]
+    reason: a script and sample data for running a demo by hand
+  - paths: [apps/server/cmd/gavel-server/BUILD.bazel, apps/server/internal/platform/frontend/BUILD.bazel]
+    reason: the server's Bazel build, which no test runs; the browser suite builds the server with go build
+  - paths: [apps/cli/BUILD.bazel, apps/cli/test/e2e/BUILD.bazel, apps/server/test/e2e/BUILD.bazel, core/domain/iam/model/BUILD.bazel, core/userinterface/api/v1/server/supporting/BUILD.bazel]
     reason: BUILD files that declare no target
-  - paths: [apps/web/src/assets/hero.png, apps/web/src/assets/vite.svg]
-    reason: images no source of the app imports
-  - paths: [apps/web/tokens.json, apps/web/scripts/generate-tokens.mjs]
-    reason: the design tokens exported from src/index.css by a developer script; nothing in the build reads them
   - paths: [core/userinterface/api/v1/gen/oapi-codegen.yaml]
-    reason: the generator's settings; its output is checked in and tested
+    reason: the generator's settings; what it generates is checked in and tested
 ```
 
 The difference between the two matters. A file in `untested` runs nothing
@@ -557,7 +573,8 @@ stops at once:
 pipelinegen try: try 365aa7a69175: a macros declaration claims files the macro doesn't read: macros "@gavel_tools//macros:web.bzl%web_project": reads "src/**" claims apps/web/src/assets/hero.png, apps/web/src/assets/vite.svg for //apps/web:web, and Bazel says nothing //apps/web:web made reads them; the check counts them as covered, so a change to them may run nothing
 ```
 
-which is why the two images are `untested` above.
+which is why `apps/web/src/assets/**`, the two images, is `untested`
+above.
 
 With that, the plugins of step 6 and the suites of step 9 in place, the
 check passes. It still prints the macro declaration, so it stays in sight,
@@ -636,7 +653,8 @@ commit has the same changes as the original; only its id differs.
 Until step 6 every suite is bound by the build graph. The replay carries
 the finished config, so to plan it as this step's config would, keep this
 step's config in a file of its own (here `graph.yaml`: the suites without
-`bind: recorded` and without plugins) and plan both commits under it. For
+`bind: recorded` and without sbom or correlator plugins) and plan both
+commits under it. For
 the replay of `13de672`, the commit that fixed the format verbs in four CLI
 error messages:
 
@@ -725,10 +743,10 @@ warning: go.mod: judged by the plan: go-sbom may claim it, and a file an sbom pl
 On your machine pipelinegen looks for the plugins in `tools/plugins/<name>`
 under the repository's root ([the plugins step](../tutorial/plugins.md)).
 gavel already has a directory `tools/`, its second Go module, so ignore
-only the plugins' directory (`/tools/plugins/` in `.gitignore`), not
-`/tools/` as the step does for a repository without one. Until the
-binaries are ignored, the check reports each as a file no slice depends
-on. Both plugins find their files by themselves; `exclude` keeps them out
+only the plugins' directory, `/tools/plugins/`, not `/tools/` as the step
+does for a repository without one. `.git/info/exclude` keeps that on your
+machine; the fork's `.gitignore` doesn't list it. Until the binaries are
+ignored, the check reports each as a file no slice depends on. Both plugins find their files by themselves; `exclude` keeps them out
 of the example workspaces, which have a `go.mod` of their own. To see what
 they found:
 
@@ -1239,14 +1257,23 @@ The web app's unit tests are a suite of their own, bound by the graph:
     steps: [...]                      # step 7
 ```
 
-No Bazel target holds the test files, so the suite names the app's target
-as their `owner`: a change to anything the app is built from runs them.
-Without it each test file is bound to itself alone, and a change to a
-module it imports selects none of them. With v0.1.13-rc.3 the check
-doesn't say so: the demo change to `apps/web/src/entities/casefile/api.ts`,
-which `pages/project-detail.test.tsx` reaches through the page it imports,
-selected 0 of the 56 without the owner (`why`: "nothing it is bound to
-changed") and all 56 with it.
+No BUILD file of gavel's lists the test files, so the suite names the
+app's target as their `owner`: a change to anything the app is built from
+runs them. With the earlier development build, without the owner, each
+test file was bound to itself alone: the demo change to
+`apps/web/src/entities/casefile/api.ts`, which
+`pages/project-detail.test.tsx` reaches through the page it imports,
+selected 0 of the 56 (`why`: "nothing it is bound to changed") and all 56
+with it.
+
+The check refuses a test file that nothing holds: no owner, no Bazel
+target, no `extra_deps` entry and no `pipelinegen:data` line. It says
+"suite <name> names no owner, and no Bazel target holds N of its test
+files (...), so each is bound to nothing but itself". On gavel, though, the
+check of v0.2.1 passes without the owner too. The `macros` declaration of
+step 4 says the app's macro reads `src/**/*.ts` and `src/**/*.tsx`, which
+match the test files, so the check counts each as held by
+`//apps/web:web`. The owner says the same in the suite itself.
 
 ### How a spec run leaves its evidence
 
@@ -1588,11 +1615,10 @@ github_token
 
 The pipeline has 20 jobs: `pipeline` (it checks that the pipeline set on
 Concourse is the one the config gives), a planning job per run
-(`plan-main`, `plan-browser`, `plan-nightly`, `plan-pr`), `sweep-pr` for
-the pull request run, and a job per run and suite (`main-go`,
-`main-go-db`, `main-web`, `main-vitest`, `browser-browser`, the same four
-for `nightly`, and `pr-go`, `pr-go-db`, `pr-web`, `pr-vitest`,
-`pr-browser`). Three kinds of task run privileged, for the Docker daemons of
+(`plan-main`, `plan-nightly`, `plan-pr`), `sweep-pr` for the pull
+request run, and a job per run and suite (`main-go`, `main-go-db`,
+`main-web`, `main-vitest`, `main-browser`, and the same five for
+`nightly` and for `pr`). Three kinds of task run privileged, for the Docker daemons of
 step 7 and step 9: the `go-db` batches and the browser suite's prepare and
 batches. Its size doesn't grow with the number of test files: a suite job
 reads the plan when it runs and deals the selected slices into batches
@@ -1621,16 +1647,24 @@ drivers, and on the `cover` module's repository: the planner and the
 start of each job fetch the releases, and the browser suite's prepare and
 set-up fetch the module and the fixture with it.
 
-On its first run on the fork, the planning job of `main` took 1 minute 28
-seconds. On 2026-11-16, at the fork's commit `6c20a55`, the pipeline was
-green: `main-go` in 4 minutes 41 seconds, `main-go-db` in 3 minutes 50,
-`main-web` in 3 minutes 19, `main-vitest` in 4 minutes 7 and
-`browser-browser` in 5 minutes 53, each running every slice of its suite,
-since no earlier run of `main` had passed to compare with. The pull request
-run was added after that, at `ff4ef8c`.
+On its first run on the fork, with the last development build, the
+planning job of `main` took 1 minute 28 seconds. At the fork's commit
+`de0c646`, which moves the pin of pipelinegen to v0.2.1, the pipeline was
+green. The planning job (`plan-main` build 8) took 2 minutes 9 seconds and
+selected every slice: "every slice: pipelinegen.yaml changed and no Bazel
+target owns it". A new pin of pipelinegen itself makes the config a
+changed file ([a change to this
+file](../reference/config.md#a-change-to-this-file)). In the same run
+(build 8 of each job) `main-go` took 4 minutes 19 seconds, `main-go-db` 3
+minutes 30, `main-web` 3 minutes 53, `main-vitest` 4 minutes and
+`main-browser` 6 minutes 15, the last recording the five specs. The first
+nightly ran every slice of every suite at the same commit: 289 `go`, 18
+`go-db`, 2 `web`, 56 `vitest` and 5 `browser` files, all passed;
+`nightly-browser` (build 1) took 9 minutes 12 seconds.
 
-The fork's first pull request, a one-line change to the error message of
-the function that finds the Bazel workspace
+The pull request run came earlier, at `ff4ef8c`, with the last development
+build. The fork's first pull request, a one-line change to the error
+message of the function that finds the Bazel workspace
 (`core/infrastructure/platform/bazel/workspace.go`), was planned so:
 
 ```
@@ -1638,10 +1672,12 @@ pr pr-1: browser 5 of 5 (5: it has no recording yet, so it is bound to every uni
 ```
 
 The one Go file is the function's own test, `workspace_test.go`, which ran
-it in its recording; the four are the Go files whose recordings say
-nothing (step 8), and the five browser specs run because they have no
-recording on the pipeline yet. All passed: `pr-go` in 2 minutes 13
-seconds, `pr-go-db` in 1 minute 17, `pr-vitest` in 1 minute 15, `pr-web`
+it in its recording. The four are the Go files whose recordings say
+nothing (step 8); this plan gave them the same reason as a slice with no
+recording, where the plans of v0.2.1 warn that the correlators couldn't
+tell what each of them ran and bind it to everything. The five browser
+specs ran because they had no recording on the pipeline yet. All passed:
+`pr-go` in 2 minutes 13 seconds, `pr-go-db` in 1 minute 17, `pr-vitest` in 1 minute 15, `pr-web`
 in 36 seconds and `pr-browser` in 6 minutes 3, and the pull request got
 a status per suite and one for the run. A suite that selects nothing
 still takes about a minute: its job fetches the pull request's head and
@@ -1701,8 +1737,9 @@ runs.
 
 The table counts one thing throughout: test files of the five suites the
 runs cover, 370 in all. Before, every one of these commits ran all of them,
-as far as anything ran them: gavel's CI ran the 309 that Bazel builds (its
-147 test targets) on every commit, and never ran the 5 browser specs or the
+as far as anything ran them: gavel's CI ran the 309 that Bazel builds (146
+of its 147 test targets; the 147th is the `py_test` of sample data, which
+no suite takes) on every commit, and never ran the 5 browser specs or the
 56 vitest files at all. The browser specs were not part of CI and needed
 four small fixes to pass again (listed under [what did not fit
 yet](#what-did-not-fit-yet)); under pipelinegen they run whenever a change
@@ -1728,19 +1765,19 @@ by Bazel's graph alone, and with the plugins and the recordings.
 | [`3614f62`](https://github.com/gavelcode/gavel/commit/3614f62) | dependabot settings | 0 | 0 |
 | [`365aa7a`](https://github.com/gavelcode/gavel/commit/365aa7a) | a judge feature across 26 files, docs included | 76 | 54 (5 browser, 48 go, 1 go-db) + 4 |
 
-Measured with pipelinegen v0.1.13-rc.18 and the plugins' and drivers'
-last candidates, which the config pinned at the fork's `0bf224e`,
-react-correlator v0.1.4-rc.14 for the recordings. The replay's first commit holds the
-fork's conversion at `0bf224e`, with `glama.json` out of `untested` until
-`4730ed5` adds the file, and one change of this machine's own: gavel's
-database test helper names its container `gavel1116-database-test-…`, so
-that the recording reused no container of another run on the same Docker.
-None of the fifteen commits touches that helper. The `go`, `go-db` and
-`browser` suites were recorded there with `pipelinegen record` (289 files
-in 555 seconds, 18 in 122, 5 in 409, all passed). The graph column was
-planned with `pipelinegen affected --same-config --config graph.yaml
---no-lists` under [gavel/graph.yaml](gavel/graph.yaml), the same suites
-and steps with no plugins, the browser specs owned by the server binary
+Measured with the last development build of pipelinegen and development
+builds of the plugins and drivers, which the config pinned at the fork's
+`0bf224e`. The replay's first commit holds the fork's conversion at
+`0bf224e`, with `glama.json` out of `untested` until `4730ed5` adds the
+file, and one change of this machine's own: gavel's database test helper
+names its container `gavel1116-database-test-…`, so that the recording
+reused no container of another run on the same Docker. None of the fifteen
+commits touches that helper. The `go`, `go-db` and `browser` suites were
+recorded there with `pipelinegen record` (289 files in 555 seconds, 18 in
+122, 5 in 409, all passed). The graph column was planned with `pipelinegen
+affected --same-config --config graph.yaml --no-lists` under
+[gavel/graph.yaml](gavel/graph.yaml), the same suites and steps with no
+sbom or correlator plugins, the browser specs owned by the server binary
 that serves the app; the plugin column with `pipelinegen affected --local`
 against those recordings. Each plan took 2 to 40 seconds once the first
 had hashed its trees (112 and 193 seconds for the first).
@@ -1869,10 +1906,10 @@ changes. Each of these is bound more widely than it could be, never less.
   the Bazel graph: any change to the app runs them. react-correlator
   records what runs in a browser through its Playwright fixture; a
   compiler, a linter and vitest's jsdom are not that. The vitest suite
-  needs its `owner`, `//apps/web:web`: no Bazel target holds the test files,
-  and without an owner each one is bound to its own file alone, so a change
-  to a module it imports selects none of them, and the check of
-  v0.1.13-rc.3 doesn't say so.
+  names its `owner`, `//apps/web:web`, since no BUILD file of gavel's
+  lists the test files: with the earlier development build, without the
+  owner, a change to a module a test file imports selected none of them
+  (step 9).
 - gavel's Go end-to-end tests don't build today: `go vet -tags e2e
   ./apps/cli/test/e2e/` says "use of internal package
   github.com/usegavel/gavel/apps/server/internal/api/v1 not allowed". They
@@ -1901,10 +1938,10 @@ changes. Each of these is bound more widely than it could be, never less.
   +    {
   +      verdict: { outcome: "pass", evaluated_at: now },
   +      counters: {
-  +        findings_count: 2,
+  +        findings_count: 0,
   +        coverage_percent: 85,
   +        new_count: 0,
-  +        existing_count: 2,
+  +        existing_count: 0,
   +        resolved_count: 0,
   +        has_tracking: false,
   +      },
@@ -1960,9 +1997,10 @@ The tool itself has these because gavel needed them:
 - Every "runs on any change" reason names its cause, such as "it has no
   recording yet, so it is bound to every unit the plugins list".
 
-Found on this page with v0.1.13-rc.3 and changed since: the check refuses
-a test file of a suite bound by the graph that has no `owner` and that no
-Bazel target holds (the vitest suite of step 9 without its owner); a past
+Found on this page with the earlier development build and changed since:
+the check refuses a test file of a suite bound by the graph that nothing
+holds, no owner, no Bazel target, no `extra_deps` entry and no data line
+(on gavel the `macros` declaration holds the vitest files, step 9); a past
 commit is planned with the plugins' claims whether or not it is checked
 out (the `4dc9451` row); and a plan warns when a plugin's needs are
 missing from its `PATH`; and from v0.2.1 a recording batch run by drivers
@@ -1986,7 +2024,7 @@ changes, which is why the fifteen commits are a replay.
    `everything_on`.
 5. Replay the last twenty commits onto a branch whose first commit adds the
    config, and plan each against its parent with `pipelinegen affected
-   --no-lists`, with the commit checked out. Read every "every slice" line:
+   --no-lists`. Read every "every slice" line:
    each is a file or rule you can fix.
 6. Add the sbom and correlator plugins of your languages, set `bind:
    recorded` on the suites they cover, and check `pipelinegen plugins

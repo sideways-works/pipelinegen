@@ -374,6 +374,10 @@ suites:
             for s in $PIPELINEGEN_SLICES; do set -- "$@" "${s#apps/web/}"; done
             node_modules/.bin/vitest run "$@"
 
+# the root pipeline file that declares the images the suites name
+concourse:
+  include: ci/root.yml
+
 # The web app's BUILD file calls web_project, a macro from gavel's own
 # module registry (gavel_tools), which globs the app's files itself. The
 # check can't see inside another repository's macro, so it is told here.
