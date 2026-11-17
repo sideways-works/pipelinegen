@@ -45,6 +45,7 @@ func Measure(root string) (Usage, error) {
 		if _, err := os.Stat(dir); err != nil {
 			dir = cg
 		}
+
 		cpu := fieldsOf(filepath.Join(dir, "cpu.stat"), " ")
 		u.CPU = float64(atoi(cpu["usage_usec"])) / 1e6
 		cur, _ := number(filepath.Join(dir, "memory.current"))
