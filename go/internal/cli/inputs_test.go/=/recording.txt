@@ -1,0 +1,26 @@
+# observed
+go:internal/bazel#func:LabelPath
+go:internal/cli#func:groupsOf
+go:internal/cli#func:holds
+go:internal/cli#func:newPlanBook
+go:internal/cli#func:newUnboundBook
+go:internal/cli#func:reportNeeds
+go:internal/cli#func:sliceNeeds
+go:internal/cli#method:planBook.inputs
+go:internal/cli#method:planBook.inputsHook
+go:internal/cli#method:planBook.keep
+go:internal/cli#method:planBook.keepInputs
+go:internal/cli#method:planBook.unobserved
+go:internal/config#func:MatchGlob
+go:internal/config#func:matchParts
+go:internal/config#method:Suite.ReadsText
+go:internal/depsrepo#func:Selector
+go:internal/plugins#func:ProviderOf
+go:internal/plugins#func:RecordedSBOMs
+go:internal/testenv#func:Bazel
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:defaultRoots
+go:internal/testenv#func:outputBases
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
