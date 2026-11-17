@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -91,11 +92,23 @@ func stepsFindings(ctx context.Context, cfg *config.Config, root, dir, cache str
 			Kind: check.KindUndescribedDriver, Path: config.FileName, Warning: true,
 			Problem: fmt.Sprintf("couldn't ask the driver %s what it is (%v), so its steps went unchecked: their verbs, settings and routes (%s)",
 				drv, unasked[drv], strings.Join(unchecked[drv], "; ")),
-			Fix: "put the pinned " + drv + " into " + dir + " (or name its directory with --plugins) so the check can ask it",
+			Fix: askFix(drv, dir, unasked[drv]),
 		})
 	}
 
 	return out
+}
+
+// askFix says how to let the check ask a plugin it couldn't.
+func askFix(name, dir string, err error) string {
+	switch {
+	case errors.Is(err, errCommitPin):
+		return "build it as the reason says, or pin it by a release, which the check fetches"
+	case errors.Is(err, errUnpinned):
+		return "pin " + name + " by a release, which the check fetches and checks by its pin"
+	}
+
+	return "fix what kept its pinned release from being fetched, or put the pinned " + name + " into " + dir + " (or name its directory with --plugins), so the check can ask it"
 }
 
 func settingsProblems(d plugin.Description, conf map[string]any) []string {

@@ -26,7 +26,7 @@ func runCheck(ctx context.Context, args []string, stdout io.Writer) error {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
 	c.register(fs)
 	fs.BoolVar(&staged, "staged", false, "check what the next commit holds (git's index) and report what it touches")
-	pathVar(fs, &pluginsDir, "plugins", "", "where the configured sbom plugins are, asked only for what files they may claim (default: tools/plugins under the root)", reads)
+	pathVar(fs, &pluginsDir, "plugins", "", "the directory holding the configured plugins the check asks, one it lacks fetched from its pinned release (default: tools/plugins under the root)", reads)
 	fs.BoolVar(&summary, "summary", false, "print how many findings of each kind each top-level directory holds, instead of each finding")
 
 	if err := parse(ctx, fs, args); err != nil {

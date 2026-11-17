@@ -31,8 +31,8 @@ names) fetches it from its pinned release into your user cache and checks
 it against the pin's checksum. No token is needed. A plugin pinned by
 `commit` has no release: the command stops, and its error gives the
 commands that build it into `tools/plugins`. `pipelinegen check` fetches
-nothing: without the drivers in `tools/plugins` it warns that their steps
-went unchecked.
+the plugins it asks the same way; for one pinned by `commit` that isn't
+there, its warning gives the commands that build it.
 
 The first plan also downloads bazel-diff, at the release pipelinegen
 pins. `affected`, `why` and `run` fill the Go plugins' module cache with

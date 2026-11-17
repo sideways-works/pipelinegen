@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Fixed
+
+- `check` fetches a plugin it asks that `--plugins` (default `tools/plugins`) lacks from its pinned release, as `affected` and `run` do, checked by its pin, where it warned that the driver's steps went unchecked. A plugin pinned by `commit` that isn't there still can't be asked: the warning gives the commands that build it
+
 ## [0.3.0] - 2026-11-17
 
 ### Added

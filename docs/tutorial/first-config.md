@@ -50,9 +50,11 @@ Nothing runs a test before [step 7](tasks.md), which completes the steps
 The CI pipeline downloads the pinned drivers itself. On your machine,
 pipelinegen looks for them in `tools/plugins/<name>` under the
 repository's root, and `pipelinegen check` asks each what settings its
-steps take; without them it warns that the steps went unchecked. Download
-each, keep `tools/` out of git, and check each against its pin, the
-checksums from the config in a file (`tools/drivers.sums` here):
+steps take. One it doesn't find there it fetches from its pinned release
+into your user cache, checked against the pin. To keep them in the tree
+instead, download each, keep `tools/` out of git, and check each against
+its pin, the checksums from the config in a file (`tools/drivers.sums`
+here):
 
 ```sh
 mkdir -p tools/plugins

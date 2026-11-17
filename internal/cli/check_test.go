@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/testrepo"
 )
 
@@ -56,5 +59,42 @@ func TestCheckSummaryCountsByDirectory(t *testing.T) {
 	if !strings.Contains(out, "3\tuncovered-file\tdocs/\n") || !regexp.MustCompile(`(?m)^\d+\tuncovered-file\t\.$`).MatchString(out) ||
 		!strings.HasSuffix(out, "\n"+strconv.Itoa(n)+" findings\n") || strings.Contains(out, "fix:") {
 		t.Fatalf("summary:\n%s\nfull:\n%s", out, full)
+	}
+}
+
+// A driver the plugins directory lacks is fetched by its pin, as run fetches it, and asked.
+func TestCheckFetchesADriverItLacks(t *testing.T) {
+	f, stub, repo := fetchingDriver(t, "release: {version: v1, sha256: "+sumOf(nil)+"}")
+
+	stub = append(stub, []byte("# "+t.Name()+"\n")...)
+	serveRelease(repo, "v1", "stub-driver-"+config.Platform(), stub)
+
+	cfgPath := filepath.Join(f.root, config.FileName)
+	cfg := strings.NewReplacer(sumOf(nil), sumOf(stub), "with: {log: ", "with: {bogus: 1, log: ").Replace(readFile(t, cfgPath))
+	writeFile(t, cfgPath, cfg)
+
+	stdout, stderr, _ := runIn(t, f.root, f.env, "check", "--root", f.root)
+	if !strings.Contains(stdout, "setting bogus is not one stub takes") || strings.Contains(stdout, "couldn't ask the driver stub") {
+		t.Fatalf("the check didn't ask the fetched driver:\n%s\n%s", stdout, stderr)
+	}
+
+	if _, err := os.Stat(filepath.Join(f.env["XDG_CACHE_HOME"], "pipelinegen", "releases", sumOf(stub), "stub-driver")); err != nil {
+		t.Fatalf("the release isn't in the cache: %v", err)
+	}
+}
+
+// A driver pinned by commit has no release to fetch: the check says how to build it.
+func TestCheckSaysHowToBuildADriverPinnedByCommit(t *testing.T) {
+	f := drivenRepo(t, "[{run: stub, batch: true, with: {log: LOG}}]", false)
+	f.env["XDG_CACHE_HOME"] = t.TempDir()
+
+	if err := os.Remove(filepath.Join(f.root, "tools", "plugins", "stub")); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, stderr, _ := runIn(t, f.root, f.env, "check", "--root", f.root)
+	if !strings.Contains(stdout, "couldn't ask the driver stub what it is (pinned by commit") ||
+		!strings.Contains(stdout, "git clone https://github.com/example/stub stub") || !strings.Contains(stdout, "fix: build it as the reason says") {
+		t.Fatalf("no build hint:\n%s\n%s", stdout, stderr)
 	}
 }

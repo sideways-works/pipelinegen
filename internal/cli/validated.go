@@ -59,7 +59,7 @@ func validatedFindings(ctx context.Context, cfg *config.Config, by map[string][]
 				Kind: check.KindUndescribedDriver, Path: config.FileName, Warning: true,
 				Problem: fmt.Sprintf("couldn't ask the driver %s to check its steps' settings (%v), so only their top-level keys were checked (%s)",
 					name, err, strings.Join(where, "; ")),
-				Fix: "put the pinned " + name + " into " + dir + " (or name its directory with --plugins) so the check can ask it",
+				Fix: askFix(name, dir, err),
 			})
 
 			continue
@@ -124,7 +124,7 @@ func validateSteps(ctx context.Context, cfg *config.Config, name string, steps [
 
 func pinnedValidate(ctx context.Context, p config.Plugin, steps []plugin.ValidateStep, dir, cache string) ([]plugin.ValidateResult, error) {
 	if p.Release == nil || p.Release.Pin() == "" {
-		return nil, errUnpinned
+		return nil, unpinned(p, dir)
 	}
 
 	data, err := json.Marshal(struct {
@@ -143,7 +143,7 @@ func pinnedValidate(ctx context.Context, p config.Plugin, steps []plugin.Validat
 		return results, nil
 	}
 
-	exe, err := pinnedBinary(p, dir)
+	exe, err := pinnedOrFetched(ctx, p, dir)
 	if err != nil {
 		return nil, err
 	}

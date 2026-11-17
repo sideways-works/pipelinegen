@@ -473,7 +473,7 @@ exits 1 when there is any problem and 0 when there is none. See
 | `--config` | `<root>/pipelinegen.yaml` | The config file. With `--staged`, the config in git's index is used when it has one. |
 | `--staged` | `false` | Checks what the next commit holds (git's index), and reports only what the commit touches: the files it adds or changes, and, when it changes a BUILD or `.bzl` file, the setup or the config, every problem it brings that `HEAD` doesn't have. |
 | `--summary` | `false` | Prints, instead of each finding, how many findings of each kind each top-level directory holds (`<count>\t<kind>\t<directory>/`, `.` for files at the root), most first, then the total. The exit code is the same. Use it to see where an existing repository's work is before writing its `untested` list. |
-| `--plugins` | `<root>/tools/plugins` | Where the configured sbom plugins are. The check asks each only for its `describe` answer, and only a binary whose SHA-256 is its pin, to tell which uncovered files planning will judge by their claims. |
+| `--plugins` | `<root>/tools/plugins` | Where the configured plugins are. The check asks the sbom plugins, the correlators and the drivers only for their `describe` answers (and a validating driver to validate its steps), and runs only a binary whose SHA-256 is its pin; one that isn't there is [fetched](#plugins-a-command-fetches) from its pinned release. With an sbom's answer it tells which uncovered files planning will judge by their claims, and with a driver's it checks the steps that name it. |
 
 ## `pipelinegen pipeline`
 
@@ -1063,8 +1063,8 @@ names an image fails, saying to pass `--no-image`.
 
 ### Plugins a command fetches
 
-`affected`, `why`, `try`, `run`, `record` and `slice run` find each plugin
-they run in `--plugins` (default `<root>/tools/plugins`). One that isn't
+`affected`, `why`, `try`, `run`, `record`, `slice run` and `check` find each
+plugin they run in `--plugins` (default `<root>/tools/plugins`). One that isn't
 there is fetched from its pinned release on GitHub, for this machine's
 platform (or the image's), into your user cache
 (`pipelinegen/releases/<sha256>/`), and checked against its pin: its
@@ -1083,6 +1083,9 @@ for the pinned release, with a line on stderr. An sbom or correlator there
 that isn't its pin still runs, its answers cached apart, which is how a
 change to a plugin is tried. A plugin pinned by `commit` has no release:
 the error names it and the command that builds it into `--plugins`.
+`check` never runs a binary that isn't its pin: one there that isn't is a
+warning, as is a plugin it can't fetch, and for one pinned by `commit` the
+warning gives the commands that build it.
 
 ## `pipelinegen seed`
 

@@ -43,8 +43,10 @@ runs only a binary whose SHA-256 is the pin in the config, and keeps the
 answer by that pin, so later runs need neither the binary nor a network.
 An uncovered file the plugin's `candidates` or `include` match is then a
 warning, "judged by the plan", and planning decides: covered if the plugin
-claims it, uncovered otherwise. Without the plugin in `tools/plugins` (or
-`--plugins`), or with a binary that isn't the pinned one, the finding
+claims it, uncovered otherwise. A plugin that isn't in `tools/plugins` (or
+`--plugins`) is fetched from its pinned release, as `affected` fetches it
+([plugins a command fetches](commands.md#plugins-a-command-fetches)). When
+it can't be fetched, or the binary there isn't the pinned one, the finding
 stays a failure and its fix says so.
 
 ## What the check reads
@@ -140,7 +142,7 @@ slice covers it, which is safe but tells you `reads` is short.
 | `declared-macro` | A warning, which fails nothing: a declaration under `macros` the check used, with the files it covered. | Nothing, while the declaration is true. |
 | `pinned-by-version` | A warning, which fails nothing: a target's data comes from a module only its version pins (no `MODULE.bazel.lock` is tracked), so planning counts that data unchanged while the version and the registries are, trusting the registry never to change a published version. | Commit `MODULE.bazel.lock` to pin it exactly. |
 | `runner-notice` | A warning, which fails nothing: the configured runner, at hand in the plugins directory, wrote the pipeline and said something of it short of refusing it, such as a job its placement sends to untagged workers. `pipelinegen pipeline` prints the same notice. | Nothing, if that is what you mean; otherwise change what it names in the runner's config. |
-| `undescribed-driver` | A warning, which fails nothing: a driver that a suite's steps name couldn't be asked what it is, because its binary isn't in the plugins directory (`tools/plugins/` or `--plugins`), isn't the one its release pins, or is pinned by a commit, which leaves no checksum to check it by. The steps that name it went unchecked: their verbs, their settings under `with` and the driver's `config`, and the slices it takes. The same warning names a driver that validates its settings when the check knows its description but can't call it and kept no answer for these steps: their settings were checked by their top-level keys only. | Put the pinned driver where the check looks, or pin it by a release, and run the check again. |
+| `undescribed-driver` | A warning, which fails nothing: a driver that a suite's steps name couldn't be asked what it is, because its binary isn't in the plugins directory (`tools/plugins/` or `--plugins`) and its pinned release couldn't be fetched, the binary there isn't the one its release pins, or it is pinned by a commit, which leaves no checksum to check it by (the warning then gives the commands that build it). The steps that name it went unchecked: their verbs, their settings under `with` and the driver's `config`, and the slices it takes. The same warning names a driver that validates its settings when the check knows its description but can't call it and kept no answer for these steps: their settings were checked by their top-level keys only. | Fix what kept its release from being fetched, put the pinned driver where the check looks, or pin it by a release, and run the check again. |
 | `duplicate-label` | A target names one label twice in an attribute under two spellings (`//docs` and `//docs:docs`), which Bazel refuses when it loads the package. | Name it once. |
 | `unbound-slice` | A tagged suite's slice that depends on nothing but its own files, so no change to the code it checks would run it; a test file whose `owner` pattern names a target that doesn't exist; or, once per suite bound by the graph without an `owner`, the test files no target holds and nothing else binds (see above): a change to anything these files import selects none of them. | Add the targets it checks to its `srcs` or `deps`, or declare the owner target. For the suite's files: give it an `owner` pattern, declare a Bazel target that holds them, or bind it by recording (`bind: recorded`) with a correlator that binds them. |
 

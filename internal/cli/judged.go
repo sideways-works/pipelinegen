@@ -58,7 +58,7 @@ func judgedByPlan(ctx context.Context, cfg *config.Config, dir, cache string, fi
 		}
 
 		if len(unasked) > 0 {
-			out[i].Fix += "; or fetch the plugins into " + dir + " so the check can ask " + strings.Join(unasked, ", ") + " what it may claim"
+			out[i].Fix += "; or put the pinned plugins into " + dir + " so the check can ask " + strings.Join(unasked, ", ") + " what it may claim"
 		}
 	}
 
@@ -87,7 +87,7 @@ func pinnedDescribe(ctx context.Context, p config.Plugin, dir, cache string) (pl
 	var d plugin.Description
 
 	if p.Release == nil || p.Release.Pin() == "" {
-		return d, errUnpinned
+		return d, unpinned(p, dir)
 	}
 
 	// the answer may follow the plugin's config block too.
@@ -104,7 +104,7 @@ func pinnedDescribe(ctx context.Context, p config.Plugin, dir, cache string) (pl
 		return d, nil
 	}
 
-	exe, err := pinnedBinary(p, dir)
+	exe, err := pinnedOrFetched(ctx, p, dir)
 	if err != nil {
 		return d, err
 	}
@@ -155,6 +155,31 @@ func pinnedBinary(p config.Plugin, dir string) (string, error) {
 	}
 
 	return exe, nil
+}
+
+// pinnedOrFetched is dir's copy when it is the pin, or, when dir has none, the pinned release, fetched
+// into the user cache and checked by its pin as run and affected fetch it.
+func pinnedOrFetched(ctx context.Context, p config.Plugin, dir string) (string, error) {
+	exe, err := pinnedBinary(p, dir)
+	if !errors.Is(err, errNotFetched) {
+		return exe, err
+	}
+
+	got, err := fetchPlugin(ctx, p, config.Platform())
+	if err != nil {
+		return "", err
+	}
+
+	return got.Path, nil
+}
+
+// unpinned is why a plugin pinned by commit can't be asked: with no build of it in dir, how to build one.
+func unpinned(p config.Plugin, dir string) error {
+	if _, err := os.Stat(filepath.Join(dir, p.Name)); err != nil && p.Release == nil && p.Commit != "" {
+		return commitPinned(p, dir, config.Platform())
+	}
+
+	return errUnpinned
 }
 
 var (
