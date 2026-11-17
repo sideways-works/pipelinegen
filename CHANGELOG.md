@@ -7,6 +7,12 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-11-17
+
+### Fixed
+
+- Pull request runs: when the target branch moves on between a plan's two steps, the second step takes the first step's plan of the change merged into the older tip, once it finds that tip in the target's history and gets the same merge itself; it refused the plan as "not of this change" and failed the run
+
 ## [0.2.3] - 2026-11-17
 
 ### Added

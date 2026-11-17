@@ -8,12 +8,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/affected"
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
+	"github.com/sideways-works/pipelinegen/internal/gitx"
 	"github.com/sideways-works/pipelinegen/internal/report"
 	"github.com/sideways-works/pipelinegen/internal/runs"
 	"github.com/sideways-works/pipelinegen/plugin"
@@ -261,12 +263,44 @@ func ownPlan(ctx context.Context, cfg *config.Config, ch runs.Change, store *git
 		return nil, err
 	}
 
-	if plan.Head != head || plan.Base != base {
-		return nil, fmt.Errorf("%w: it tests %s against %s, the change is %s against %s",
-			errNotThisChange, short12(plan.Head), short12(plan.Base), short12(head), short12(base))
+	if plan.Head == head && plan.Base == base {
+		return &plan, nil
 	}
 
-	return &plan, nil
+	if olderTip(ctx, cfg, ch, abs, &plan, base) {
+		return &plan, nil
+	}
+
+	return nil, fmt.Errorf("%w: it tests %s against %s, the change is %s against %s",
+		errNotThisChange, short12(plan.Head), short12(plan.Base), short12(head), short12(base))
+}
+
+var fullCommit = regexp.MustCompile(`^[0-9a-f]{40}$`)
+
+// olderTip accepts a plan of the change merged into an older tip of the
+// target, when the target moved on between the two steps: that tip must
+// be in the target's history now, and merging the change into it here must
+// give the plan's head, so the first step's word is taken for nothing.
+func olderTip(ctx context.Context, cfg *config.Config, ch runs.Change, repo string, plan *affected.Plan, tip string) bool {
+	if cfg.Runs[ch.Run].Compare != config.CompareMergedTarget || plan.Base == "" || !fullCommit.MatchString(plan.Base) {
+		return false
+	}
+
+	if err := runs.FetchCommit(ctx, repo, plan.Base, readAuth(ctx, cfg, repo)); err != nil {
+		return false
+	}
+
+	if in, err := (gitx.Repo{Dir: repo}).IsAncestor(ctx, plan.Base, tip); err != nil || !in {
+		return false
+	}
+
+	if merged, err := runs.Merge(ctx, repo, ch.Commit, plan.Base); err != nil || merged != plan.Head {
+		return false
+	}
+
+	warnf(os.Stderr, "pipelinegen plan: %s %s: planned against %s; the target has moved on to %s since\n", ch.Run, ch.ID, short12(plan.Base), short12(tip))
+
+	return true
 }
 
 // beginPlanning records that the build plans its head, so the sweep leaves the head to it until the
