@@ -30,6 +30,8 @@ type stepCall struct {
 	outputs []string
 	caches  []string
 	env     map[string]string
+	// script is the shell's script that runs the call, when a shell does.
+	script string
 }
 
 func stepCalls(text []byte) ([]stepCall, error) {
@@ -87,6 +89,10 @@ func taskCalls(where string, step, cfg map[string]any) []stepCall {
 		caches: names(cfg["caches"], "path"), env: map[string]string{},
 	}
 
+	if b := path.Base(p); (b == "sh" || b == "bash") && len(args) > 1 {
+		base.script = args[1]
+	}
+
 	// the step's own params come after its config's, as Concourse merges them
 	for _, ps := range []any{cfg["params"], step["params"]} {
 		if m, ok := ps.(map[string]any); ok {
@@ -96,7 +102,7 @@ func taskCalls(where string, step, cfg map[string]any) []stepCall {
 		}
 	}
 
-	if path.Base(p) == "pipelinegen" {
+	if path.Base(p) == toolName {
 		c := base
 		c.prog, c.args = p, args
 
@@ -104,6 +110,15 @@ func taskCalls(where string, step, cfg map[string]any) []stepCall {
 	}
 
 	var out []stepCall
+
+	// sh -c 'install the packages; exec "$0" "$@"' tools/pipelinegen args...: the shell runs the
+	// tool, its arguments as they are, after the script
+	if wrapped := shellWrapped(p, args); len(wrapped) > 0 {
+		c := base
+		c.prog, c.args = wrapped[0], wrapped[1:]
+		out = append(out, c)
+		args = args[:2]
+	}
 
 	for _, a := range args {
 		for line := range gostrings.SplitSeq(a, "\n") {
@@ -129,6 +144,29 @@ func taskCalls(where string, step, cfg map[string]any) []stepCall {
 	}
 
 	return out
+}
+
+const (
+	toolName     = "pipelinegen"
+	sliceCommand = "slice"
+)
+
+// shellWrapped is the tool's call a shell runs after its script, with the
+// script's $0 and $@: sh -c script tools/pipelinegen args.
+func shellWrapped(p string, args []string) []string {
+	if b := path.Base(p); b != "sh" && b != "bash" || len(args) < 3 {
+		return nil
+	}
+
+	if !gostrings.HasPrefix(args[0], "-") || !gostrings.Contains(args[0], "c") || path.Base(args[2]) != toolName {
+		return nil
+	}
+
+	if !gostrings.Contains(args[1], `"$0" "$@"`) {
+		return nil
+	}
+
+	return args[2:]
 }
 
 var leading = []string{"exec", "if", "elif", "while", "until", "then", "do", "else", "time", "!", "{"}

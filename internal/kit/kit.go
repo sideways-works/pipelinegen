@@ -481,7 +481,7 @@ func specVariants() []specVariant {
 	return []specVariant{
 		{"", Spec()}, {"with locks", locked}, {"set by itself", self}, {splitTokens, splitSpec()},
 		{connectorRun, connectorSpec()}, {continuousRun, continuousSpec()}, {perBatchRun, perBatchSpec()},
-		{stepsRun, stepsSpec()},
+		{stepsRun, stepsSpec()}, {packagesRun, packagesSpec()},
 	}
 }
 
@@ -493,6 +493,8 @@ func (k *kit) builds(v specVariant) bool {
 		return k.can(plugin.CapLockPerBatch)
 	case stepsRun:
 		return k.can(plugin.CapSteps)
+	case packagesRun:
+		return k.can(plugin.CapSteps) && k.can(plugin.CapPackages)
 	}
 
 	return true
@@ -604,6 +606,12 @@ func strayVars(text []byte, s plugin.Spec) string {
 					allowed[v] = true
 				}
 			}
+		}
+	}
+
+	if s.Images != nil {
+		for _, v := range append(varsOf(s.Images.Credentials), varsOf(s.Images.PullCredentials)...) {
+			allowed[v] = true
 		}
 	}
 

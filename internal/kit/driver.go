@@ -214,10 +214,10 @@ func (k *kit) runFixture(ctx context.Context, f kitDriver, batch, record bool, m
 func markCommand() []string {
 	exe, err := os.Executable()
 	if err != nil {
-		return []string{"pipelinegen", "slice", "mark"}
+		return []string{toolName, sliceCommand, "mark"}
 	}
 
-	return []string{exe, "slice", "mark"}
+	return []string{exe, sliceCommand, "mark"}
 }
 
 type marking struct{ ends *ends }

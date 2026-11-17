@@ -197,7 +197,8 @@ func hasFlag(args []string, name string) bool {
 }
 
 type holdings struct {
-	trusted, step, repo, planning, connector, ssh []string
+	trusted, step, repo, planning, connector, ssh, packages []string
+	packagesBuilt                                           bool
 }
 
 func (h *holdings) add(v specVariant, text []byte) {
@@ -219,6 +220,16 @@ func (h *holdings) add(v specVariant, text []byte) {
 
 	for _, p := range repoTaskProblems(v.spec, text) {
 		h.repo = appendNew(h.repo, v.label()+p)
+	}
+
+	if v.name == packagesRun {
+		h.packagesBuilt = true
+
+		if steps, err := stepCalls(text); err == nil {
+			for _, p := range packageProblems(v.spec, steps, text) {
+				h.packages = appendNew(h.packages, v.label()+p)
+			}
+		}
 	}
 
 	if v.name == connectorRun {
@@ -305,6 +316,14 @@ func (h *holdings) report(k *kit) {
 		k.check("a step holds the ssh key of each purpose it holds the token of, and no other", strings.Join(firstFew(h.ssh), "; "))
 	} else {
 		k.skip("a step holds the ssh key of each purpose it holds the token of, and no other", "the runner hands steps no ssh key")
+	}
+
+	if h.packagesBuilt {
+		k.check("every step the runner writes installs its packages first, every cached image is built, and the registry's credentials reach "+
+			"no step that runs the repository's code", strings.Join(firstFew(h.packages), "; "))
+	} else {
+		k.skip("every step the runner writes installs its packages first, every cached image is built, and the registry's credentials reach "+
+			"no step that runs the repository's code", "the runner installs no packages")
 	}
 
 	if k.can(plugin.CapConnectorChanges) {
