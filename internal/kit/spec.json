@@ -186,7 +186,7 @@
       "kind": "connector",
       "repository": "sideways-works/pipelinegen-connector-github",
       "version": "v0.1.0",
-      "sha256": "TODO"
+      "sha256": "94d20cc9a5b3c2f342da32b0f6786d847f05b4973e7126590116ca7bf5c5a72c"
     }
   ],
   "config_files": [

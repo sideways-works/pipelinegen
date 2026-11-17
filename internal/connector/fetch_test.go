@@ -85,7 +85,7 @@ func TestFetchRefusesAnotherBinary(t *testing.T) {
 func TestFetchRefusesAPinWithoutAChecksum(t *testing.T) {
 	r := newReleases(t, nil)
 
-	for _, pin := range []config.ConnectorPin{pinOf(r, "TODO"), config.PinnedConnectors[config.ConnectorGitHub]} {
+	for _, pin := range []config.ConnectorPin{pinOf(r, "TODO"), pinOf(r, "")} {
 		if _, err := Fetch(t.Context(), r.Client(), "", t.TempDir(), pin); !errors.Is(err, ErrPin) || r.hits.Load() != 0 {
 			t.Fatalf("%+v: %v, %d downloads", pin, err, r.hits.Load())
 		}
