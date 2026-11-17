@@ -28,7 +28,7 @@ concourse:
     prepare: go mod download
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     bootstrap:
-      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
+      release: {version: v0.2.1, sha256: 69557cdf885d5e60dcbeb6bbc402cf2ff742cce0b68618ccfd47024a3e91fb36}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
   include: ci/root.yml
 
