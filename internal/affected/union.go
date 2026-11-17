@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/sideways-works/pipelinegen/internal/bazel"
-	"github.com/sideways-works/pipelinegen/internal/plugins"
 )
 
 const baseConfigReason = "selected by the base's configuration"
@@ -52,7 +51,7 @@ func Union(own, byBase *Plan) *Plan {
 	out.Narrowings = slices.Clone(own.Narrowings)
 
 	for _, o := range byBase.Narrowings {
-		if !slices.ContainsFunc(out.Narrowings, func(n plugins.Override) bool { return n.Name == o.Name }) {
+		if !slices.Contains(out.Narrowings, o) {
 			out.Narrowings = append(out.Narrowings, o)
 		}
 	}

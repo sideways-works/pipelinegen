@@ -471,7 +471,7 @@ func narrowed(b *strings.Builder, s Suite, set []NarrowingSet, named bool) {
 			fmt.Fprintf(b, "; they would run from narrowing level %d", n.OffAt)
 		}
 
-		if lv, ok := SetBy(set, n.Narrowing); ok {
+		if lv, ok := SetBy(set, n.Narrowing, n.OffAt); ok {
 			fmt.Fprintf(b, ", %s", secret.Redact(lv.Text()))
 		}
 

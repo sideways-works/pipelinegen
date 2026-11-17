@@ -90,9 +90,11 @@ func (n NarrowingSet) Text() string {
 		n.OffAt, n.Name, strings.TrimSuffix(oneLine(n.Note), "."), n.By, n.Declared)
 }
 
-// SetBy finds a narrowing's level the config set among a plan's.
-func SetBy(set []NarrowingSet, narrowing string) (NarrowingSet, bool) {
-	i := slices.IndexFunc(set, func(n NarrowingSet) bool { return n.Name == narrowing })
+// SetBy finds a narrowing's level the config set among a plan's, when it is
+// the level offAt the narrowing left a slice out by: a plan united with the
+// base's may hold an entry of the base's level.
+func SetBy(set []NarrowingSet, narrowing string, offAt int) (NarrowingSet, bool) {
+	i := slices.IndexFunc(set, func(n NarrowingSet) bool { return n.Name == narrowing && n.OffAt == offAt })
 	if i < 0 {
 		return NarrowingSet{}, false
 	}

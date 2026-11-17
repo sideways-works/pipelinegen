@@ -242,7 +242,7 @@ func dropped(p planRef, failing map[string]bool) []Trace {
 	for _, sp := range p.plan.Suites {
 		for _, n := range sp.Narrowed {
 			var set *NarrowingSet
-			if lv, ok := SetBy(p.plan.Narrowings, n.Narrowing); ok {
+			if lv, ok := SetBy(p.plan.Narrowings, n.Narrowing, n.OffAt); ok {
 				set = &lv
 			}
 

@@ -564,7 +564,7 @@ func leftOut(p *whyPlan, sp whySuite, name, label string) []WhyReason {
 
 		r.Text += levelText(p.Narrowing, n.OffAt)
 
-		if lv, ok := report.SetBy(p.Narrowings, n.Narrowing); ok {
+		if lv, ok := report.SetBy(p.Narrowings, n.Narrowing, n.OffAt); ok {
 			r.Text += "; " + lv.Text()
 		}
 
