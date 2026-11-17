@@ -447,6 +447,9 @@ func runReport(ctx context.Context, args []string, stdout io.Writer) error {
 		{"suite", "mark the suite's end and set its status and the run's", reportSuite},
 		{"finish", "show the run's final state", reportFinish},
 		{"collect", "write what every slice of the suite recorded into a directory", reportCollect},
+		{"files", "write what a kept run's failed slices left to show why into a directory", func(ctx context.Context, a []string) error {
+			return reportFiles(ctx, a, stdout)
+		}},
 	})
 	if errors.Is(err, runs.ErrSuperseded) {
 		// A change whose branch moved on ran nothing: its ensure ends quietly.

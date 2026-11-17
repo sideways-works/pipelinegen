@@ -208,7 +208,8 @@ generated pipeline's steps call it; its subcommands:
 | `report batch-end` | Closes the slices of batch `--batch` still without a final state once its task ended, from `--result` (one `<name>.json` per slice) and `--coverage`, reading the batch from `--batches`. A batch none of whose slices started is `not run`, said once for the batch. When the slices' records can't be written it says how many of them passed by their results and exits 4. A batch with a slice that did not pass says why below its one line: each failure's name and tail as the statuses show it, slices that failed alike once with their count and names, capped, and where the full text is (each slice's `state.json` in the store). | a slice of the batch did not pass |
 | `report suite` | Marks the suite's end (its slices that never reported become errored, each saying why when `--batches` tells it) and sets its status and the run's. A suite that did not pass says why, as `report batch-end` does, for all its slices. When that makes a branch's recording run pass as a whole, it attaches the run's recordings to the run's commit, as `lists attach` does; when it ends the last suite of such a run that failed, it attaches the recordings of the slices that passed, and an attach that fails there is a warning. When the end mark can't be written it sets the suite's status and the run's to error ("the suite's end could not be recorded: rerun the build"), says what it could not do (the run's lists among it when this was the run's last suite to end) and exits 4. | a slice of the suite did not pass, or the attach failed |
 | `report finish` | Shows the run's final state. | a selected slice did not pass |
-| `report collect` | Writes what every slice of the suite recorded in this run into a directory, for a whole-suite check to read: `<slice>/state.json`, `<slice>/recording.txt` and `<slice>/extra/`, the files the batch task left for the slice. | a read or write fails |
+| `report collect` | Writes what every slice of the suite recorded in this run into a directory, for a whole-suite check to read: `<slice>/state.json`, `<slice>/recording.txt` and `<slice>/extra/`, the files the batch task left for the slice. A slice's failure files stay out. | a read or write fails |
+| `report files` | Writes the failure files a kept run's failed slices left (a screenshot, Playwright's `error-context.md`, a trace) into `--out`, at `<suite>/<slice>/<file>`, and lists them, with the files a cap or a check dropped and why. A person runs it, not the pipeline: it reads the run named by `--run`, `--change` and `--commit` from the repository's remote (or `--local`), never from the environment, and writes nothing to the store. Without `--out` it only lists. | the run has no records left, or a read or write fails |
 
 | Flag | Default | Subcommands | What it does |
 |---|---|---|---|
@@ -222,10 +223,28 @@ generated pipeline's steps call it; its subcommands:
 | `--batches` | `batches` (`suite`: none) | `batch-end`, `suite` | The directory of the run's batches (`<n>/slices.json`), with `started.json`, when the suite's work began: a slice left without a result then says whether the suite's time limit can have stopped it. |
 | `--started` | none | `batch-end` | The directory a lock taken per batch stamped (`started.json`) as the batch began: its end then knows whether the batch's time limit stopped it. |
 | `--tools` | `tools` | `batch-end` | The batch task's tools. In a recording run, the correlators in `tools/plugins/<name>` say what each slice still in the journal touched. |
-| `--suite` | `$PIPELINEGEN_SUITE` | `collect` | The suite whose slices it collects. |
-| `--out` | `slices` | `collect` | Where it writes them. |
+| `--suite` | `$PIPELINEGEN_SUITE` (`files`: none) | `collect`, `files` | The suite whose slices it collects; for `files`, only this suite's slices. |
+| `--out` | `slices` (`files`: none) | `collect`, `files` | Where it writes them. `files` writes nothing without it. |
+| `--run` | none | `files` | The run, as the config names it. Required. |
+| `--change` | none | `files` | The change it ran, as its comment and `why` name it (`pr-12`, `main`). Required. |
+| `--commit` | the change's newest plan | `files` | The commit it ran; 12 characters are enough. |
+| `--slice` | none | `files` | Only this slice, by its name or its label. |
+| `--local` | `false` | `files` | Reads the run from the local store `pipelinegen record` writes, not the remote. |
+| `--json` | `false` | `files` | Prints each slice's kept and dropped files as JSON. |
 
-They read the run from the environment: `PIPELINEGEN_RUN`, and
+`report files` asks the store for nothing but the slices' states and the
+files it writes out:
+
+```
+$ pipelinegen report files --run pr --change pr-12 --slice e2e/checkout.spec.ts --out failure-files
+e2e e2e/checkout.spec.ts (failed):
+  checkout-pays-with-a-card-chromium/test-failed-1.png (screenshot of [chromium] checkout pays with a card), 41.2 KB
+  checkout-pays-with-a-card-chromium/error-context.md (page at the failure of [chromium] checkout pays with a card), 1.3 KB
+  dropped checkout-pays-with-a-card-chromium/trace.zip (trace of [chromium] checkout pays with a card): over keep.files.slice: 2 MB
+wrote 2 files of pr pr-12 at 7a2d41c09e5f into failure-files
+```
+
+The other subcommands read the run from the environment: `PIPELINEGEN_RUN`, and
 `PIPELINEGEN_CHANGE` and `PIPELINEGEN_COMMIT` or else `PIPELINEGEN_RUN_FILE`
 (a run file such as `batches/run.json`, which holds both),
 `PIPELINEGEN_PR` (0 for none), `PIPELINEGEN_ALSO_TO`, `PIPELINEGEN_SUITE`
@@ -1274,6 +1293,14 @@ the planning job does, with the base's lists and the live runs'
 recordings read from the repository's refs: use it for commits no run
 planned yet, or to try a change on your machine. It needs Bazel and the
 plugins, and takes as long as a plan.
+
+Read from a kept run, a slice that ran there and failed or errored with
+failure files says how many it kept and dropped, and the command that
+writes them out:
+
+```
+  failure files: 2 kept, 1 dropped; pipelinegen report files --run pr --change pr-12 --commit 7a2d41c09e5f --slice e2e/checkout.spec.ts --out failure-files writes them out and says why any were dropped
+```
 
 On the notes service of the book, for a change to the backend's
 validation, which only one browser spec reached:

@@ -67,6 +67,17 @@ type Answer struct {
 	Reasons    []WhyReason     `json:"reasons"`
 	Plugins    *report.Plugins `json:"plugins,omitempty"`
 	ObservedBy []string        `json:"observed_by,omitempty"`
+	// Files, for a kept run's slice that failed, say what it kept to show
+	// why and how to fetch it.
+	Files *FilesNote `json:"failure_files,omitempty"`
+}
+
+// FilesNote is how many failure files a slice kept or dropped in a run,
+// and the command that writes them out.
+type FilesNote struct {
+	Kept    int    `json:"kept"`
+	Dropped int    `json:"dropped,omitempty"`
+	Command string `json:"command"`
 }
 
 // WhyReason is one reason with the line a person reads.
@@ -175,6 +186,7 @@ func runWhy(ctx context.Context, args []string, stdout io.Writer) (err error) {
 	var (
 		plan  *whyPlan
 		title string
+		id    report.ID
 	)
 
 	from, err := fromFlags(w.noLists, w.local)
@@ -202,7 +214,7 @@ func runWhy(ctx context.Context, args []string, stdout io.Writer) (err error) {
 			return fmt.Errorf("%w: no store holds kept plans here", errNoRemote)
 		}
 
-		plan, title, err = w.keptPlan(ctx, store)
+		plan, title, id, err = w.keptPlan(ctx, store)
 
 		// A kept plan may hold suites the run never ran.
 		if plan != nil {
@@ -218,7 +230,7 @@ func runWhy(ctx context.Context, args []string, stdout io.Writer) (err error) {
 
 	showIDs, showCache = w.ids, w.verbose
 
-	answers := explain(plan, w.suite, w.slice)
+	answers := failureFiles(ctx, store, id, explain(plan, w.suite, w.slice))
 	if len(answers) == 0 {
 		return fmt.Errorf("%w: %s is in no suite of %s", errNoSlice, w.slice, title)
 	}
@@ -257,6 +269,10 @@ func writeAnswers(stdout io.Writer, answers []Answer, title string, asJSON bool,
 		if len(a.ObservedBy) > 0 {
 			fmt.Fprintf(&b, "  observed by: %s\n", strings.Join(a.ObservedBy, ", "))
 		}
+
+		if f := a.Files; f != nil {
+			fmt.Fprintf(&b, "  failure files: %d kept, %d dropped; %s writes them out and says why any were dropped\n", f.Kept, f.Dropped, f.Command)
+		}
 	}
 
 	pluginLines(&b, answers[0].Plugins)
@@ -286,38 +302,66 @@ func pluginLines(b *bytes.Buffer, p *report.Plugins) {
 	}
 }
 
-func (w *whyFlags) keptPlan(ctx context.Context, store *gitstore.Store) (*whyPlan, string, error) {
+func (w *whyFlags) keptPlan(ctx context.Context, store *gitstore.Store) (*whyPlan, string, report.ID, error) {
 	id, err := keptRun(ctx, store, w.run, w.change, w.commit)
 	if err != nil {
-		return nil, "", err
+		return nil, "", id, err
 	}
 
 	ref := id.PlanRef()
 
 	got, ok, err := store.First(ctx, []string{ref})
 	if err != nil {
-		return nil, "", err
+		return nil, "", id, err
 	}
 
 	if !ok {
-		return nil, "", fmt.Errorf("%w: %s %s at %s has no kept plan", errNoPlan, w.run, w.change, short12(id.Commit))
+		return nil, "", id, fmt.Errorf("%w: %s %s at %s has no kept plan", errNoPlan, w.run, w.change, short12(id.Commit))
 	}
 
 	data, ok, err := store.File(ctx, got.Commit, "plan.json")
 	if err != nil {
-		return nil, "", err
+		return nil, "", id, err
 	}
 
 	if !ok {
-		return nil, "", fmt.Errorf("%w: %s holds no plan.json", errNoPlan, ref)
+		return nil, "", id, fmt.Errorf("%w: %s holds no plan.json", errNoPlan, ref)
 	}
 
 	var p whyPlan
 	if err := json.Unmarshal(data, &p); err != nil {
-		return nil, "", fmt.Errorf("plan of %s %s: %w", w.run, w.change, err)
+		return nil, "", id, fmt.Errorf("plan of %s %s: %w", w.run, w.change, err)
 	}
 
-	return &p, fmt.Sprintf("in %s %s at %s", w.run, w.change, short12(id.Commit)), nil
+	return &p, fmt.Sprintf("in %s %s at %s", w.run, w.change, short12(id.Commit)), id, nil
+}
+
+// failureFiles notes, for each answer whose slice ran in a kept run (id)
+// and kept failure files, how many and how to fetch them. A plan made
+// again has no run, and a run swept past keep.runs, or a store that can't
+// say, notes nothing: why is about selection.
+func failureFiles(ctx context.Context, store *gitstore.Store, id report.ID, answers []Answer) []Answer {
+	if id.Run == "" || store == nil {
+		return answers
+	}
+
+	for i, a := range answers {
+		if !a.Ran {
+			continue
+		}
+
+		list, err := report.RunFiles(ctx, store, id, a.Suite, a.Slice)
+		if err != nil || len(list) != 1 {
+			continue
+		}
+
+		answers[i].Files = &FilesNote{
+			Kept: len(list[0].Files), Dropped: len(list[0].Dropped),
+			Command: report.FilesCommand(id.Run, id.Change, id.Commit, a.Slice),
+		}
+	}
+
+	return answers
 }
 
 func keptRun(ctx context.Context, store *gitstore.Store, run, change, commit string) (report.ID, error) {
