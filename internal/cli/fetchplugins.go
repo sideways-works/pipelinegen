@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
@@ -125,14 +126,38 @@ func fetchPlugin(ctx context.Context, p config.Plugin, platform string) (fetch.G
 		pin.Script = p.Release.SHA256
 	}
 
-	f := fetch.Fetcher{Client: &http.Client{Timeout: 5 * time.Minute}, Cache: defaultCache(), Under: "releases"}
-
-	got, err := f.Fetch(ctx, pin, platform)
+	got, err := releases().Fetch(ctx, pin, platform)
 	if err != nil {
 		return got, fmt.Errorf("plugin %s %s for %s: %w", p.Name, p.Release.Version, platform, err)
 	}
 
 	return got, nil
+}
+
+// releasesKept is how long a release file fetched into the user cache stays there unused.
+const releasesKept = 30 * 24 * time.Hour
+
+const releasesDir = "releases"
+
+var trimReleasesOnce sync.Once
+
+// releases is the fetcher of the plugins' and pipelinegen's own releases. A command's first fetch
+// first removes what no command used for releasesKept, so the cache doesn't grow without bound.
+func releases() fetch.Fetcher {
+	trimReleasesOnce.Do(func() {
+		dir := filepath.Join(defaultCache(), releasesDir)
+
+		removed, err := fetch.Trim(dir, releasesKept, time.Now())
+		if err != nil {
+			warnf(os.Stderr, "pipelinegen: %v\n", err)
+		}
+
+		if len(removed) > 0 {
+			warnf(os.Stderr, "pipelinegen: removed %d release files no command used in %d days from %s\n", len(removed), releasesKept/(24*time.Hour), dir)
+		}
+	})
+
+	return fetch.Fetcher{Client: &http.Client{Timeout: 5 * time.Minute}, Cache: defaultCache(), Under: releasesDir}
 }
 
 // gather puts every plugin in one directory of the cache, by name, with each SHA256SUMS beside its

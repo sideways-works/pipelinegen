@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 )
@@ -156,5 +157,64 @@ func TestASHA256PinChecksNoOtherPlatform(t *testing.T) {
 
 	if _, err := r.fetcher(t).Fetch(t.Context(), pin, config.DarwinARM64); !errors.Is(err, ErrPin) || r.hits.Load() != 0 {
 		t.Fatalf("%v, %d downloads", err, r.hits.Load())
+	}
+}
+
+// What no fetch used for longer than the time kept goes; a fetch from the cache counts as a use.
+func TestTrimRemovesWhatNoFetchUsedLately(t *testing.T) {
+	bin := []byte("pinned")
+	sums := []byte(hexSum(bin) + "  shell-driver-" + platform + "\n")
+	r := newReleases(t, map[string][]byte{release + "shell-driver-" + platform: bin, release + "SHA256SUMS": sums})
+	f := r.fetcher(t)
+
+	pin := r.pin()
+	pin.Sums = hexSum(sums)
+
+	got, err := f.Fetch(t.Context(), pin, platform)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stale := filepath.Join(f.Cache, "releases", hexSum([]byte("an old build")), "shell-driver")
+	if err := os.MkdirAll(filepath.Dir(stale), 0o750); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(stale, []byte("an old build"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	month := 30 * 24 * time.Hour
+	long := time.Now().Add(-2 * month)
+
+	for _, p := range []string{stale, got.Path, filepath.Join(f.Cache, "releases", "sums", pin.Sums)} {
+		if err := os.Chtimes(p, long, long); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// the pinned build is fetched again from the cache: it and its list are used now
+	if _, err := f.Fetch(t.Context(), pin, platform); err != nil || r.hits.Load() != 2 {
+		t.Fatalf("again: %v, %d downloads", err, r.hits.Load())
+	}
+
+	removed, err := Trim(filepath.Join(f.Cache, "releases"), month, time.Now())
+	if err != nil || len(removed) != 1 || removed[0] != filepath.Dir(stale) {
+		t.Fatalf("removed %q, %v", removed, err)
+	}
+
+	if _, err := os.Stat(got.Path); err != nil {
+		t.Fatalf("the build used lately went: %v", err)
+	}
+
+	removed, err = Trim(filepath.Join(f.Cache, "releases"), month, time.Now().Add(3*month))
+	if err != nil || len(removed) != 2 {
+		t.Fatalf("months later: %q, %v", removed, err)
+	}
+}
+
+func TestTrimOfNothingIsNothing(t *testing.T) {
+	if removed, err := Trim(filepath.Join(t.TempDir(), "releases"), time.Hour, time.Now()); err != nil || removed != nil {
+		t.Fatalf("%q %v", removed, err)
 	}
 }

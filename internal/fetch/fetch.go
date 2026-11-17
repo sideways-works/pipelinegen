@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/plugin"
@@ -32,7 +33,10 @@ var ErrPin = errors.New("pin")
 // and the file's name fill it in that order.
 const DefaultURL = "https://github.com/%s/releases/download/%s/%s"
 
-const sumsFile = "SHA256SUMS"
+const (
+	sumsFile = "SHA256SUMS"
+	sumsDir  = "sums"
+)
 
 var sha256Hex = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
@@ -88,6 +92,8 @@ func (f Fetcher) Fetch(ctx context.Context, pin Pin, platform string) (Got, erro
 	for _, w := range files {
 		dest := filepath.Join(f.Cache, f.Under, w.sum, pin.Program())
 		if fileSum(dest) == w.sum {
+			used(dest)
+
 			return Got{Path: dest, SHA256: w.sum, Sums: sums}, nil
 		}
 	}
@@ -165,8 +171,10 @@ func (f Fetcher) sums(ctx context.Context, pin Pin) ([]byte, error) {
 		return nil, fmt.Errorf("%w: %s %s: sums %q is no sha256", ErrPin, pin.Name, pin.Version, pin.Sums)
 	}
 
-	kept := filepath.Join(f.Cache, f.Under, "sums", want)
+	kept := filepath.Join(f.Cache, f.Under, sumsDir, want)
 	if data, err := os.ReadFile(kept); err == nil && hexSum(data) == want { //nolint:gosec // the cache's own file, checked by its checksum
+		used(kept)
+
 		return data, nil
 	}
 
@@ -310,4 +318,77 @@ func (f Fetcher) Accepts(ctx context.Context, pin Pin, platform string) ([]strin
 	}
 
 	return out, err
+}
+
+// used marks a kept file as used now, so Trim keeps it.
+func used(p string) {
+	now := time.Now()
+	_ = os.Chtimes(p, now, now) //nolint:errcheck // at worst it is fetched again
+}
+
+// Trim removes what dir (a Fetcher's Cache joined with its Under) holds that no fetch has used for
+// longer than keep: each release file's directory, and each SHA256SUMS kept. It returns what it removed.
+func Trim(dir string, keep time.Duration, now time.Time) ([]string, error) {
+	var removed []string
+
+	old := func(p string) bool {
+		info, err := os.Stat(p)
+
+		return err == nil && now.Sub(info.ModTime()) > keep
+	}
+
+	ents, err := os.ReadDir(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("trim %s: %w", dir, err)
+	}
+
+	for _, e := range ents {
+		p := filepath.Join(dir, e.Name())
+
+		switch {
+		case e.Name() == sumsDir:
+			lists, err := os.ReadDir(p)
+			if err != nil {
+				return removed, fmt.Errorf("trim %s: %w", dir, err)
+			}
+
+			for _, l := range lists {
+				if lp := filepath.Join(p, l.Name()); old(lp) {
+					if err := os.Remove(lp); err != nil {
+						return removed, fmt.Errorf("trim %s: %w", dir, err)
+					}
+
+					removed = append(removed, lp)
+				}
+			}
+		case e.IsDir() && sha256Hex.MatchString(e.Name()) && allOld(p, old):
+			if err := os.RemoveAll(p); err != nil {
+				return removed, fmt.Errorf("trim %s: %w", dir, err)
+			}
+
+			removed = append(removed, p)
+		}
+	}
+
+	return removed, nil
+}
+
+// allOld says whether every file in the release file's directory is old: one used lately keeps it.
+func allOld(dir string, old func(string) bool) bool {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+
+	for _, f := range files {
+		if !old(filepath.Join(dir, f.Name())) {
+			return false
+		}
+	}
+
+	return true
 }
