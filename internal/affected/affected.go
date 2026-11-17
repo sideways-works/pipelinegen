@@ -226,8 +226,11 @@ type Options struct {
 	// in its own pipelinegen:data lines, which stay a reason whatever the
 	// files behind them.
 	Declared func(commit, suite, slice string) []string
-	quiet    *quiet
-	pinned   func(repo string) (changed bool, why string)
+	// Rebase, when set, compares each reached slice from a later pass of
+	// its own.
+	Rebase *Rebase
+	quiet  *quiet
+	pinned func(repo string) (changed bool, why string)
 }
 
 // SampleRule is how a suite picks its sample.
@@ -514,7 +517,10 @@ func selectSuites(ctx context.Context, o Options, b, h *Snapshot, impacted map[s
 		alone, seen, forced := o.aloneRule(name, h, seen, changes)
 
 		rule := o.sampleRule(name)
+		on := sampleOnHit(o.Config, name, o.beyondConfig(changes))
 		sp := selectSuite(name, o.Config.Suites[name], h.Slices[name], seen, rule.On)
+
+		sp, seen, since := o.rebase(name, sp, h.Slices[name], seen, rule, on)
 		sp.slices = h.Slices[name]
 
 		if walked != nil {
@@ -524,7 +530,6 @@ func selectSuites(ctx context.Context, o Options, b, h *Snapshot, impacted map[s
 		// the slices selected on their own have reasons; those a sample
 		// added have the sample's
 		own := sp.Selected
-		on := sampleOnHit(o.Config, name, o.beyondConfig(changes))
 		sp.Reasons = o.suiteReasons(ctx, b, h, name, unforced(own, forced), walked, changes)
 
 		o.sampleConfigured(&sp, name, b, h, seen, rule, on, changes)
@@ -533,6 +538,7 @@ func selectSuites(ctx context.Context, o Options, b, h *Snapshot, impacted map[s
 		aloneReasons(&sp, alone)
 
 		sp.Causes = causesOf(sp)
+		passedSince(&sp, since)
 
 		if o.Narrowed != nil && !sp.All {
 			sp.Narrowed = append(sp.Narrowed, o.leftOut(b, h, name, sp)...)
@@ -737,6 +743,10 @@ func (o Options) leftOut(b, h *Snapshot, name string, sp SuitePlan) []Narrowed {
 			rest = slices.DeleteFunc(rest, func(sl bazel.Slice) bool { return slices.Contains(n.Dropped, sl.Name) })
 		}
 	}
+
+	// a slice left out for its later pass was reached: no narrowing left it out
+	passed := passedOut(sp)
+	rest = slices.DeleteFunc(rest, func(sl bazel.Slice) bool { return passed[sl.Name] })
 
 	return unnamed(sp.Narrowed, o.Narrowed(b.Commit, h.Commit, name, o.width(name), sp.Selected, rest), len(sp.Selected))
 }

@@ -99,6 +99,7 @@ func unionSuite(own, byBase SuitePlan) SuitePlan {
 
 	sort.Strings(out.WholeSuite)
 	sort.Strings(out.Removed)
+	keepLeftOut(&out)
 
 	return out
 }
@@ -164,6 +165,7 @@ func addedByConfig(own SuitePlan, byBase *SuitePlan, why string) SuitePlan {
 	}
 
 	out.Causes = causesOf(out)
+	keepLeftOut(&out)
 
 	return out
 }

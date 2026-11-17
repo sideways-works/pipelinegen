@@ -222,6 +222,9 @@ const (
 	// NarrowPluginEntry binds a plugin's entry in the config to a sample of
 	// each suite the entry reaches instead of to every slice it reaches.
 	NarrowPluginEntry = "plugin-entry"
+	// NarrowPassedSince compares a slice of a last_passed run from where it
+	// last passed in that run, when that is newer than the run's base.
+	NarrowPassedSince = "passed-since"
 )
 
 // CoreNarrowings are the core's own narrowings with the level that
@@ -236,6 +239,19 @@ var CoreNarrowings = []plugin.Narrowing{
 		"changed still selects on its own, and the nightly runs and records the rest; off, what the entry reaches runs, beside any sample_on sample"},
 	{Name: NarrowUnobservable, OffAt: 4, Note: "a file whose sbom covers it whole and whose units are as they were " +
 		"runs as it did; it rests on the sbom's parse being complete and on the tests that read the file's text being declared (text_inputs)"},
+	{Name: NarrowPassedSince, OffAt: 4, Note: "a slice that passed at a later commit than the run's base was tested on everything up to it; " +
+		"it rests on that one pass, so a flaky pass moves its base too; the nightly runs it"},
+}
+
+// CoreOffAt is the level from which a core narrowing is off.
+func CoreOffAt(name string) int {
+	for _, n := range CoreNarrowings {
+		if n.Name == name {
+			return n.OffAt
+		}
+	}
+
+	return 0
 }
 
 // Descriptions are the plugins' descriptions by name, for a later step's
