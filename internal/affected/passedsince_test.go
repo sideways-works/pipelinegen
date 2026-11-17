@@ -92,11 +92,23 @@ func TestTheSampleIsDrawnAfterTheLaterPasses(t *testing.T) {
 		sampleSuite(&sp, config.Suite{}, "s", all, kept, rule, "0123456789abcdef", nil, nil, entrySide{})
 		passedSince(&sp, since)
 
-		var left []string
+		var left, sampledOut []string
 
 		for _, n := range sp.Narrowed {
-			if n.Narrowing == plugins.NarrowPassedSince {
+			switch {
+			case n.Narrowing == plugins.NarrowPassedSince:
 				left = append(left, n.Dropped...)
+			case n.Kind == NarrowedSampled:
+				sampledOut = append(sampledOut, n.Dropped...)
+			}
+		}
+
+		// a slice the change since its pass doesn't sample runs only from
+		// passed-since's level: the sample doesn't name it; one it samples
+		// runs once the sample is off, and is named under both
+		for _, name := range left {
+			if slices.Contains(sampledOut, name) != c.sampledFromPass {
+				t.Errorf("%s: %s left out by the sample %v", c.name, name, slices.Contains(sampledOut, name))
 			}
 		}
 
@@ -136,7 +148,7 @@ func TestAWholeSuiteKeepsTheRunsBase(t *testing.T) {
 		sp := selectSuite("s", c.suite, all, c.seen, false)
 		sp, _, since := o.rebase("s", sp, all, c.seen, &SampleRule{}, nil)
 
-		if left := len(since) > 0; left != c.left || left == slices.Contains(sliceNames(sp.Selected), "a") {
+		if left := len(since.entries) > 0; left != c.left || left == slices.Contains(sliceNames(sp.Selected), "a") {
 			t.Errorf("%s: leaves a out %v, runs %v", c.name, left, sliceNames(sp.Selected))
 		}
 	}
