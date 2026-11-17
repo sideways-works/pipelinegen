@@ -8,7 +8,6 @@ pipeline: pipelinegen
 
 bazel:
   workspace: .
-  bazelisk: bazelisk
 
 github:
   repository: sideways-works/pipelinegen

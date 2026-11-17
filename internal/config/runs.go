@@ -186,6 +186,10 @@ type Download struct {
 	SHA256  string `json:"sha256"  yaml:"sha256"`
 }
 
+// DefaultBazelisk is the bazelisk release a pipeline's bootstrap fetches
+// when the config names none.
+var DefaultBazelisk = Download{Version: "v1.30.0", SHA256: "a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8"}
+
 func (d Download) valid() bool {
 	return d.Version != "" && sha256Hex.MatchString(d.SHA256)
 }
@@ -557,8 +561,8 @@ func (c *Config) validateConcourse(bad func(string, ...any)) {
 		bad("concourse.planner.bootstrap needs exactly one of release (version and one of sha256 or sums) or commit (40 hex)")
 	}
 
-	if !bs.Bazelisk.valid() {
-		bad("concourse.planner.bootstrap needs bazelisk's version and sha256")
+	if bs.Bazelisk != (Download{}) && !bs.Bazelisk.valid() {
+		bad("concourse.planner.bootstrap.bazelisk needs a version and a sha256")
 	}
 
 	if c.Concourse.Planner.Digest == "" {

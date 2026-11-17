@@ -38,7 +38,7 @@ func newRepo(t *testing.T) *testrepo.Repo {
 		t.Fatal(err)
 	}
 
-	const line = "  bazelisk: bazelisk\n"
+	const line = "  workspace: .\n"
 	if !strings.Contains(string(cfg), line) {
 		t.Fatalf("the example's config has no %q", line)
 	}

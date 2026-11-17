@@ -765,7 +765,7 @@ func TestRunsCheckBeforeThePipelineCan(t *testing.T) {
 	}
 
 	err = c.ValidatePipeline()
-	for _, want := range []string{"git.remote, or the github section", "concourse needs a repository source and a planner image", "bazelisk's version", "the image's digest"} {
+	for _, want := range []string{"git.remote, or the github section", "concourse needs a repository source and a planner image", "the image's digest"} {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("pipeline: want %q in %v", want, err)
 		}
@@ -849,5 +849,16 @@ func TestBatchesAreDealtApartFromParallel(t *testing.T) {
 		if _, err := Parse([]byte(bad)); err == nil {
 			t.Errorf("accepted %q", bad)
 		}
+	}
+}
+
+func TestTheBootstrapFetchesTheDefaultBazelisk(t *testing.T) {
+	var c Config
+
+	c.Concourse.Planner.Bootstrap.Release = &Release{Version: "v0.2.2", SHA256: strings.Repeat("a", 64)}
+	c.defaults()
+
+	if got := c.Concourse.Planner.Bootstrap.Bazelisk; got != DefaultBazelisk {
+		t.Errorf("bazelisk = %+v, want the default %+v", got, DefaultBazelisk)
 	}
 }

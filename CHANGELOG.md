@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Changed
+
+- Config: `concourse.planner.bootstrap.bazelisk` is optional; without it the pipeline fetches bazelisk v1.30.0, checked against its pinned checksum
+
 ## [0.2.2] - 2026-11-17
 
 ### Fixed

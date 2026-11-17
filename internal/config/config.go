@@ -754,6 +754,10 @@ func (c *Config) defaults() {
 		c.Bazel.Bazelisk = "bazelisk"
 	}
 
+	if bs := &c.Concourse.Planner.Bootstrap; (bs.Release != nil || bs.Commit != "") && bs.Bazelisk == (Download{}) {
+		bs.Bazelisk = DefaultBazelisk
+	}
+
 	if c.GitHub.StatusPrefix == "" {
 		c.GitHub.StatusPrefix = "pipelinegen"
 	}
