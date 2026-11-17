@@ -36,11 +36,7 @@ var ErrRefused = errors.New("connector request refused")
 // Exchange calls one connector.
 type Exchange struct {
 	Plugin plugin.Plugin
-	// Builtin, when set, answers the rounds in this process instead of
-	// the executable: a connector built into pipelinegen. Its requests
-	// pass the same checks.
-	Builtin Builtin
-	Desc    plugin.Description
+	Desc   plugin.Description
 	// Hosts are the origins (scheme://host[:port]) requests may go to:
 	// the code remote's (Origin of the configured remote), and the API
 	// hosts the config confirms. An API host goes in only when describe
@@ -154,19 +150,7 @@ func (e *Exchange) Call(ctx context.Context, call, work string, args, answer any
 	}
 }
 
-// Builtin answers one round of a call, as a connector's executable does.
-type Builtin func(call string, req plugin.ExchangeRequest) (plugin.Round, error)
-
 func (e *Exchange) round(ctx context.Context, call string, req plugin.ExchangeRequest) (plugin.Round, error) {
-	if e.Builtin != nil {
-		r, err := e.Builtin(call, req)
-		if err != nil {
-			return r, fmt.Errorf("connector %s %s: %w", e.Plugin.Name, call, err)
-		}
-
-		return r, nil
-	}
-
 	var r plugin.Round
 	if err := e.Plugin.Call(ctx, call, req, &r); err != nil {
 		return r, fmt.Errorf("connector %s: %w", e.Plugin.Name, err)
