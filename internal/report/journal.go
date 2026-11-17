@@ -296,6 +296,7 @@ func (r *Reporter) Started(ctx context.Context, j *Journal, ev SliceEvent, needS
 
 	ev.Running = true
 	ev.Unrecordable = r.collect(ctx, CollectSliceStart, ev)
+	ev.Use = r.meter(true)
 
 	if err := j.append(journalLine{Event: eventStart, At: r.now(), Slice: &ev}); err != nil {
 		return err
@@ -370,6 +371,7 @@ func (r *Reporter) PartStopped(ctx context.Context, j *Journal, ev SliceEvent) e
 
 	part := *open
 	part.Unrecordable = r.closePart(ctx, part)
+	part.Use = r.meter(false)
 
 	if ev.Unrecordable != "" {
 		part.Unrecordable = ev.Unrecordable
@@ -420,6 +422,9 @@ func (r *Reporter) endPart(ctx context.Context, j *Journal, ev SliceEvent, every
 		ev.Seconds = measured
 	}
 
+	ev.Use = r.meter(false)
+	ev.Used = closeUse(mine.Use, ev.Use)
+
 	if err := j.append(journalLine{Event: eventEnd, At: at, Slice: &ev}); err != nil {
 		return "", err
 	}
@@ -444,6 +449,7 @@ func (r *Reporter) endPart(ctx context.Context, j *Journal, ev SliceEvent, every
 
 func (r *Reporter) closeOther(ctx context.Context, j *Journal, open SliceEvent) (*summary, error) {
 	open.Unrecordable = r.closePart(ctx, open)
+	open.Use = r.meter(false)
 
 	if err := j.append(journalLine{Event: eventPartEnd, At: r.now(), Slice: &open}); err != nil {
 		return nil, err

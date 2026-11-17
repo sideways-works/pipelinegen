@@ -30,6 +30,7 @@ type sliceSum struct {
 	Seconds float64   `json:"seconds,omitempty"`
 	From    time.Time `json:"from,omitzero"`
 	Trouble string    `json:"trouble,omitempty"`
+	Use     *useSum   `json:"use,omitempty"`
 }
 
 func key(ev SliceEvent) string { return ev.Suite + "/" + ev.Slice }
@@ -79,6 +80,8 @@ func (s *summary) add(l journalLine) {
 			ss.From = time.Time{}
 		}
 	}
+
+	ss.addUse(l.Event, ev.Use)
 }
 
 func (s *summary) slice(ev SliceEvent) *sliceSum {

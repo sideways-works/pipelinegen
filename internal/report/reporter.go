@@ -65,8 +65,10 @@ type Reporter struct {
 	// NoFlush keeps a slice's start and end off the network: they write the
 	// journal, and a background `slice flush --every` writes it out.
 	NoFlush bool
-	Now     func() time.Time
-	URL     string
+	// Meter measures the batch's cgroup at each slice's start and end; nil measures nothing.
+	Meter Meter
+	Now   func() time.Time
+	URL   string
 	// Throttle is how long a slice's report leaves a pending update on
 	// GitHub before replacing it (default 15s; negative: never waits).
 	Throttle time.Duration
@@ -152,6 +154,9 @@ type SliceEvent struct {
 	Seconds      float64 `json:"seconds,omitempty"`
 	// Short is why a batch never started its slices: the worker was short of memory.
 	Short string `json:"short,omitempty"`
+	// Use is the batch's cgroup's reading at this line, Used what the slice used, on its end.
+	Use  *Use `json:"use,omitempty"`
+	Used *Use `json:"used,omitempty"`
 }
 
 // Slice reports one slice; see Slices.
@@ -319,6 +324,7 @@ func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, file
 	}
 
 	sf.Seconds = ev.Seconds
+	usedIn(sf, ev.Used)
 
 	// a slice that passed without running a test records nothing, so its
 	// list stays as it was, and says so: a test file that runs nothing is
@@ -593,6 +599,7 @@ func (r *Reporter) Suite(ctx context.Context, suite string) (bool, error) {
 	}
 
 	r.markShort(ctx, run)
+	r.recordPeaks(ctx, run, suite)
 
 	// the suite's batches' refs move into the run's; one left behind is
 	// read all the same, and the sweep takes it with the run

@@ -24,7 +24,7 @@ func ShortOnly(run Run) bool {
 	for _, s := range run.Suites {
 		for _, sl := range s.Slices {
 			switch {
-			case sl.ShortOfMemory():
+			case sl.ShortOfMemory() || len(sl.Failures) > 0 && sl.Failures[0].Test == OOMTest:
 				short = true
 			case sl.State != Passed:
 				return false

@@ -186,6 +186,7 @@ type Slice struct {
 	NoTests    bool             `json:"no_tests,omitempty"`
 	Recorded   bool             `json:"recorded,omitempty"`
 	CannotTell []recording.Mark `json:"cannot_tell,omitempty"`
+	PeakMB     int64            `json:"peak_mb,omitempty"`
 	// Files is how many failure files the slice's ref keeps.
 	Files int `json:"files,omitempty"`
 }

@@ -223,6 +223,10 @@ type StateFile struct {
 	// those the result named that it doesn't, with why.
 	Files   []KeptFile    `json:"files,omitempty"`
 	Dropped []DroppedFile `json:"dropped_files,omitempty"`
+	// CPUSeconds and PeakMB are what the slice used of its batch's cgroup: CPU, and the most memory the
+	// batch held while it ran.
+	CPUSeconds float64 `json:"cpu_seconds,omitempty"`
+	PeakMB     int64   `json:"peak_mb,omitempty"`
 }
 
 type endMark struct {
@@ -536,7 +540,7 @@ func buildRun(id ID, snap snapshot, groups map[string]*regexp.Regexp) Run {
 
 			sl := Slice{Name: it.name, Label: it.label, Group: groupOf(groups[sp.Suite], it.name), State: sf.State, URL: sf.URL, Failures: sf.Failures, Reasons: sp.Reasons[it.label]}
 			sl.NoTests = sf.State == Passed && sf.Tests != nil && *sf.Tests == 0
-			sl.Recorded, sl.CannotTell, sl.Files = sf.Recorded, sf.CannotTell, len(sf.Files)
+			sl.Recorded, sl.CannotTell, sl.Files, sl.PeakMB = sf.Recorded, sf.CannotTell, len(sf.Files), sf.PeakMB
 
 			if over && (sl.State == Pending || sl.State == Running) && !sf.Updated.After(ended) {
 				f := noResult

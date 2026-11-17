@@ -1,0 +1,143 @@
+package report
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"maps"
+	"slices"
+
+	"github.com/sideways-works/pipelinegen/internal/gitstore"
+)
+
+// A suite's recent memory peaks, by slice, in one ref the trusted runs' suite ends keep: `batches`
+// predicts each batch's peak from it, and a batch waits for that much memory before it starts.
+const (
+	peaksFile = "peaks.json"
+	// PeaksKept is how many recent peaks a slice keeps.
+	PeaksKept   = 10
+	peakRetries = 3
+)
+
+// PeaksRef holds a suite's recent peaks.
+func PeaksRef(suite string) string { return refRoot + "peaks/" + suite }
+
+type peakSample struct {
+	MB     int64  `json:"mb"`
+	Commit string `json:"commit"`
+}
+
+type peaksDoc struct {
+	Slices map[string][]peakSample `json:"slices"`
+}
+
+func readPeaks(ctx context.Context, store *gitstore.Store, suite string) (peaksDoc, string, error) {
+	doc := peaksDoc{Slices: map[string][]peakSample{}}
+
+	ref, ok, err := store.First(ctx, []string{PeaksRef(suite)})
+	if err != nil || !ok {
+		return doc, "", err
+	}
+
+	data, ok, err := store.File(ctx, ref.Commit, peaksFile)
+	if err != nil {
+		return doc, "", err
+	}
+
+	// a file that won't read is written anew
+	if ok && json.Unmarshal(data, &doc) != nil || doc.Slices == nil {
+		doc.Slices = map[string][]peakSample{}
+	}
+
+	return doc, ref.Commit, nil
+}
+
+// Peaks reads a suite's recent peaks, oldest first, in MB, by slice.
+func Peaks(ctx context.Context, store *gitstore.Store, suite string) (map[string][]int64, error) {
+	doc, _, err := readPeaks(ctx, store, suite)
+	if err != nil {
+		return nil, fmt.Errorf("peaks of %s: %w", suite, err)
+	}
+
+	out := map[string][]int64{}
+
+	for name, samples := range doc.Slices {
+		for _, s := range samples {
+			out[name] = append(out[name], s.MB)
+		}
+	}
+
+	return out, nil
+}
+
+// recordPeaks adds the peaks a trusted run's suite measured, one per slice and commit, so a suite's end
+// told again adds nothing. A proposed change's run reads the peaks and never writes them. A write
+// that fails only warns.
+func (r *Reporter) recordPeaks(ctx context.Context, run Run, suite string) {
+	if r.ID.Proposed || r.Store.Proposed {
+		return
+	}
+
+	measured := map[string]int64{}
+
+	for _, s := range run.Suites {
+		if s.Name != suite {
+			continue
+		}
+
+		for _, sl := range s.Slices {
+			if sl.PeakMB > 0 {
+				measured[sl.display()] = sl.PeakMB
+			}
+		}
+	}
+
+	if len(measured) == 0 {
+		return
+	}
+
+	var err error
+
+	for range peakRetries {
+		if err = r.writePeaks(ctx, suite, measured); !errors.Is(err, gitstore.ErrStale) {
+			break
+		}
+	}
+
+	if err != nil {
+		r.warnf("keeping %s's memory peaks: %v", suite, err)
+	}
+}
+
+func (r *Reporter) writePeaks(ctx context.Context, suite string, measured map[string]int64) error {
+	doc, old, err := readPeaks(ctx, r.Store, suite)
+	if err != nil {
+		return err
+	}
+
+	commit, added := short(r.ID.Commit), false
+
+	for _, name := range slices.Sorted(maps.Keys(measured)) {
+		samples := doc.Slices[name]
+		if slices.ContainsFunc(samples, func(s peakSample) bool { return s.Commit == commit }) {
+			continue
+		}
+
+		samples = append(samples, peakSample{MB: measured[name], Commit: commit})
+		doc.Slices[name], added = samples[max(len(samples)-PeaksKept, 0):], true
+	}
+
+	if !added {
+		return nil
+	}
+
+	data, err := encode(doc)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.Store.Write(ctx, "peaks of "+suite, gitstore.Update{Ref: PeaksRef(suite), Old: old, Files: map[string][]byte{peaksFile: data}})
+
+	return err
+}
