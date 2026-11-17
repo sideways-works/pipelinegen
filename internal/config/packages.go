@@ -46,7 +46,7 @@ func (p *Package) UnmarshalYAML(n *yaml.Node) error {
 	case yaml.MappingNode:
 		var m map[string]string
 		if err := n.Decode(&m); err != nil {
-			return fmt.Errorf("%w: %w", errPackage, err)
+			return &yaml.TypeError{Errors: []string{fmt.Sprintf("line %d: %v: %v", n.Line, errPackage, err)}}
 		}
 
 		p.Name = m[packageDefault]
@@ -60,7 +60,8 @@ func (p *Package) UnmarshalYAML(n *yaml.Node) error {
 	case yaml.DocumentNode, yaml.SequenceNode, yaml.AliasNode:
 	}
 
-	return fmt.Errorf("%w (line %d)", errPackage, n.Line)
+	// a type error, which a config's history reads past with a warning
+	return &yaml.TypeError{Errors: []string{fmt.Sprintf("line %d: %v", n.Line, errPackage)}}
 }
 
 // MarshalYAML writes a package back in the form it was read in.
@@ -222,4 +223,41 @@ func (c *Config) validatePackages(bad func(string, ...any)) {
 	if i.Credentials != "" && i.Credentials == i.PullCredentials {
 		bad("images.pull_credentials is images.credentials: a pull request's steps pull the images, and must not get the var that pushes them")
 	}
+}
+
+// PushSecrets are the repository's tasks given the var that pushes cached
+// images, or a field of it: a task runs the change's code, and with that
+// var a pull request could replace an image every run pulls.
+func (c *Config) PushSecrets() []string {
+	push := c.Images.Credentials
+	if push == "" {
+		return nil
+	}
+
+	var out []string
+
+	check := func(where string, sec Secrets) {
+		kinds := sec.kinds()
+
+		for _, kind := range slices.Sorted(maps.Keys(kinds)) {
+			for _, env := range slices.Sorted(maps.Keys(kinds[kind])) {
+				if v := kinds[kind][env]; v == push || strings.HasPrefix(v, push+".") {
+					out = append(out, fmt.Sprintf("%s's %s tasks are given %s, the var that pushes cached images (images.credentials): "+
+						"no task of the repository's may hold it; give the task a login that only pulls, under another var", where, kind, v))
+				}
+			}
+		}
+	}
+
+	for _, suite := range c.SuiteNames() {
+		check("suite "+suite, c.Suites[suite].Secrets)
+	}
+
+	for _, r := range c.RunNames() {
+		for _, suite := range slices.Sorted(maps.Keys(c.Runs[r].Suites)) {
+			check("run "+r+"'s suite "+suite, c.Runs[r].Suites[suite].Secrets)
+		}
+	}
+
+	return out
 }

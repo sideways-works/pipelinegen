@@ -115,3 +115,34 @@ func TestPackagesMeaning(t *testing.T) {
 		t.Fatalf("parts: %+v", m.Parts)
 	}
 }
+
+func TestATaskMayNotHoldThePushingVar(t *testing.T) {
+	for _, secrets := range []string{
+		"    secrets: {batch: {REGISTRY: registry_push}}\n",
+		"    secrets: {prepare: {REGISTRY_PASSWORD: registry_push.password}}\n",
+	} {
+		_, err := Parse([]byte(withPackages + secrets))
+		if err == nil || !strings.Contains(err.Error(), "the var that pushes cached images (images.credentials)") {
+			t.Errorf("%s: %v", secrets, err)
+		}
+	}
+
+	if _, err := Parse([]byte(withPackages + "    secrets: {batch: {REGISTRY: registry_pull}}\n")); err != nil {
+		t.Fatalf("the pulling var: %v", err)
+	}
+}
+
+func TestAnOldConfigsPackagesLoadWithAWarning(t *testing.T) {
+	for _, bad := range []string{"packages: [[jq]]", "packages: [{name: [jq]}]"} {
+		data := []byte(strings.Replace(withPackages, "packages: [git, jq]", bad, 1))
+
+		if _, err := Parse(data); err == nil || !strings.Contains(err.Error(), "a package is a name") {
+			t.Errorf("%s: %v", bad, err)
+		}
+
+		c, err := ParseHistory(data)
+		if err != nil || len(c.Warnings) == 0 {
+			t.Errorf("%s: history: %v, warnings %q", bad, err, c.Warnings)
+		}
+	}
+}
