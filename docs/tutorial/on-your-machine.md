@@ -158,8 +158,12 @@ e2e e2e/search.spec.ts was left out from 26118462acef to 8933844527a0:
 ```
 
 No file of the page or the specs changed, yet the spec that submits the
-form runs and the one that only searches doesn't. The edit to `Words` from
-step 5:
+form runs and the one that only searches doesn't. `pipelinegen run --base
+HEAD~1` plans the same change and runs what it selects here, the way a
+pull request's run would: the suite's prepare once, then the selected
+slices, with each slice's result and a summary (see
+[the reference](../reference/commands.md#pipelinegen-run)). The edit to
+`Words` from step 5:
 
 <!-- output: affected-words-recorded -->
 ```
