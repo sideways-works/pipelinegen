@@ -229,7 +229,14 @@ func writeFile(tb testing.TB, p, body string) {
 		tb.Fatal(err)
 	}
 
-	if err := os.WriteFile(filepath.Clean(p), []byte(body), 0o600); err != nil {
+	root, err := os.OpenRoot(filepath.Dir(p))
+	if err != nil {
+		tb.Fatal(err)
+	}
+
+	defer func() { _ = root.Close() }() //nolint:errcheck // a read-only handle
+
+	if err := root.WriteFile(filepath.Base(p), []byte(body), 0o600); err != nil {
 		tb.Fatal(err)
 	}
 }
