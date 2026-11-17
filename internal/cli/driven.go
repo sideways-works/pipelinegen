@@ -669,8 +669,13 @@ func localSliceRun(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
+	pf, err := pluginsFor(ctx, cfg, absOr(f.plugins), config.Platform(), suitePlugins(cfg, f.suite, false), false)
+	if err != nil {
+		return err
+	}
+
 	b := &drivenBatch{
-		cfg: cfg, suite: f.suite, tree: root, tools: f.tools, plugins: absOr(f.plugins),
+		cfg: cfg, suite: f.suite, tree: root, tools: f.tools, plugins: pf.dir,
 		work: f.work, cache: f.cache, prepared: filepath.Join(f.work, "prepared"), result: f.result,
 		params: cfg.Suites[f.suite].Params, log: os.Stderr,
 	}

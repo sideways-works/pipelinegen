@@ -32,6 +32,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	// plugins missing from a test's plugins directory are fetched from the test's releases, never GitHub
+	if os.Getenv(envReleasesURL) == "" {
+		os.Setenv(envReleasesURL, serveReleases()+"/%s/releases/download/%s/%s") //nolint:errcheck // for the commands the tests start
+	}
+
 	if kind := os.Getenv("FAKE_PLUGIN"); kind != "" {
 		testenv.ExitChild(m, plugin.Serve(os.Args[1:], os.Stdin, os.Stdout, os.Stderr, fakePlugin(kind)))
 	}

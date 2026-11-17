@@ -377,7 +377,12 @@ func (w *whyFlags) planAgain(ctx context.Context, cfg *config.Config, store *git
 		pluginsAt = filepath.Join(root, "tools", "plugins")
 	}
 
-	plan, err := planCommits(ctx, cfg, store, root, "", base, head, false, repoCache(ctx, w.cache, root), w.bazelDiff, absOr(pluginsAt))
+	pluginsAt, err = planningPluginsDir(ctx, cfg, absOr(pluginsAt), root)
+	if err != nil {
+		return nil, "", err
+	}
+
+	plan, err := planCommits(ctx, cfg, store, root, "", base, head, false, repoCache(ctx, w.cache, root), w.bazelDiff, pluginsAt)
 	if err != nil {
 		return nil, "", err
 	}

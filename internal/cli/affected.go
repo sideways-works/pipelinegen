@@ -260,7 +260,10 @@ func affectedPlanUnder(ctx context.Context, cfg *config.Config, root, base, head
 			return nil, err
 		}
 
-		claimed := claimsIfUnknown(ctx, c, cache, pluginsDir, root, head, known)
+		claimed, pluginsDir, err := claimsWithPlugins(ctx, c, cache, pluginsDir, root, head, known)
+		if err != nil {
+			return nil, err
+		}
 
 		deps := hasDepsRepo(filepath.Join(root, c.Bazel.Workspace))
 
