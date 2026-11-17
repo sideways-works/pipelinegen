@@ -104,6 +104,50 @@ trusted keys: a proposed change's own block takes effect once it is
 merged, which the pipeline being made from the default branch's config
 already ensures.
 
+## Packages and cached images
+
+A runner that declares the capability `packages` installs what the spec
+says the steps need. Each suite with packages carries `packages`: the
+names, an `install` script, and `images`, which maps each resource the
+suite's steps run in that has a cached image to that image's key. The
+spec's `planner_packages` are pipelinegen's own steps' packages, and its
+`images` names the registry (`registry`), the var that pushes
+(`credentials`), the var that only pulls (`pull_credentials`), and the
+images to build (`builds`: `key`, the base resource `base` at `digest`,
+`names` and `install`). The tool works out every key. The runner never
+does, and never changes the scripts.
+
+- Put the `install` script in front of the command of every task the
+  runner writes that runs pipelinegen, in the same shell: the suite's
+  before `slice run` and `slice prepare`, the planner's before the rest.
+  It runs in a subshell, as root, does nothing when the image has every
+  package, and fails the task when one can't be installed. Give the task a
+  cache and name it in `PIPELINEGEN_PACKAGE_CACHE`, so the package manager
+  downloads a package once per worker. A task that reports a broken build
+  may go on without them.
+- A task file is the repository's script: nothing goes in front of it.
+  Its suite gets its packages only from a cached image.
+- For each build, a job that runs when the config changes asks the
+  registry for `<registry>:<key>` and, when it is missing, builds it on the
+  base at its digest with `install` run as root (with
+  `PIPELINEGEN_PACKAGE_CLEAN=1`, so the image keeps no package indexes) and
+  pushes it. It takes nothing from the repository but the config's
+  version, and it alone holds `credentials`. It takes no lock and is in no
+  serial group: two builds that push one key push the same packages on the
+  same base.
+- The suite's tasks run in its cached image. Fetch it so that a missing
+  image never holds the job: Concourse makes every `get` an input that the
+  build waits for, so a task fetches it. When the registry hasn't got it or
+  can't be reached, fetch the base at its digest instead: the installs then
+  do the work. The fetch may hold `pull_credentials`, never `credentials`.
+- The planner image is never swapped for a cached one: those steps hold
+  the tokens that write, and a tag in a registry can be moved by whoever
+  can push.
+
+A runner without the capability ignores these fields and writes the
+pipeline it always did. `pipelinegen pipeline` and `check` say that the
+steps run without the packages.
+
 A branch's recording run attaches its lists by itself, in `report suite`
 once its last suite has ended; the pipeline adds no step for it.
 
@@ -221,8 +265,12 @@ and what the repository's own tasks get in
 
 The kit checks the pipeline your runner writes for its fixture spec and
 its variants (locks on every suite, set by itself, tokens by purpose, a
-connector's changes, a continuous run and locks per batch, the last
-three only when the runner declares them; with locks per batch every lock must
+connector's changes, a continuous run, locks per batch, suites run by
+drivers, and packages with cached images, the last five only when the
+runner declares them; with packages every task the runner writes that runs
+pipelinegen installs its packages first, every cached image the spec names
+is built, and neither registry var reaches a task that runs the
+repository's code nor the pushing var a job that does; with locks per batch every lock must
 be taken around each batch and freed in that step's ensure, and its wait
 may not count against the batch's limit): every step must have a time
 limit, its own or one around it, a hook's steps their own; no job may be

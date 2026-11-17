@@ -1012,6 +1012,31 @@ A suite whose image is the planner's (the same repository, pinned to the
 planner's digest or naming its tag) is fetched once: the job's `planner`
 get takes it from the suite's resource.
 
+### Packages in the spec
+
+A config that declares packages gives the spec these fields, all
+optional. A spec without them is the spec an older pipelinegen gave, and
+a runner that doesn't know them writes the pipeline it always did, without
+the installs.
+
+| Field | What it holds |
+|---|---|
+| `suites[].packages.names` | the suite's packages (`packages` and `suites.<name>.packages`), sorted, as a person reads them |
+| `suites[].packages.install` | a POSIX shell script that installs what the image lacks with its package manager (apt-get, apk, dnf, microdnf, yum), run as root in a subshell before the task's command; it does nothing when every package is there, and fails naming what it can't install. `PIPELINEGEN_PACKAGE_CACHE` names a directory, relative to the task's or absolute, for the manager's downloads; `PIPELINEGEN_PACKAGE_CLEAN=1` removes its indexes after, for an image that is kept |
+| `suites[].packages.images` | each `registry-image` resource of the root pipeline file the suite's steps run in that has a cached image, to its key |
+| `planner_packages` | `names` and `install` of `concourse.planner.packages`, for pipelinegen's own steps; never baked into a cached image |
+| `images.registry` | `images.registry`: cached images are `<registry>:<key>` |
+| `images.credentials` | the var of the login that pushes, `((<var>.username))` and `((<var>.password))`: the image-building steps' alone |
+| `images.pull_credentials` | the var of a login that only pulls, for the steps that fetch a cached image; absent, they pull without one |
+| `images.builds[]` | one per key: `key`, the base resource `base`, its pinned `digest`, and the `names` and `install` that build it |
+
+The key is the SHA-256 of the base's digest, the sorted packages and the
+install script's own hash, so the same packages in another order give the
+same key, and another digest, package or script gives another. A suite gets
+a cached image only when `images.registry` is set and its `image` names a
+resource of the root pipeline file pinned by digest (`version.digest`):
+a tag can move, and a key of a tag would name an image of another base.
+
 The planning step's cache holds the work tree (`tree/`, checked out afresh
 in every build, since its git link points into the trigger's checkout),
 bazel-diff's snapshots (`snapshots/`), the prepare's and the plugins'
