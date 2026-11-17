@@ -65,7 +65,8 @@ runs everything and catches whatever a narrower run left out.
 
 ```mermaid
 flowchart LR
-    change([a change]) --> plan
+    pr([a pull request]) --> plan
+    continuous([continuous: each push to main,<br/>one round at a time]) --> plan
     subgraph plan [plan]
         direction TB
         sbom[sbom plugins<br/>what changed in the code]
