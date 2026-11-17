@@ -306,7 +306,7 @@ checked whole.
 | `concourse.planner.bootstrap.release.sha256` | string | | The checksum of `pipelinegen-linux-amd64` from the release's `SHA256SUMS`; see [releases](../releases.md). Give this or `sums`. |
 | `concourse.planner.bootstrap.release.sums` | string | | The checksum of the release's `SHA256SUMS` itself, in place of `sha256`: the bootstrap checks that file by it and each platform's binary by its line there. |
 | `concourse.planner.bootstrap.commit` | string | | A full 40-character commit of pipelinegen to build instead, before a release exists. |
-| `concourse.planner.bootstrap.bazelisk` | mapping | v1.30.0 | The bazelisk release the steps fetch; set it only to fetch another. |
+| `concourse.planner.bootstrap.bazelisk` | mapping | v1.30.0 | The bazelisk release the steps fetch. Releases up to v0.2.2 require it; later ones fetch v1.30.0 when it is left out. |
 | `concourse.planner.bootstrap.bazelisk.version` | string | | bazelisk's tag, `v1.30.0`. |
 | `concourse.planner.bootstrap.bazelisk.sha256` | string | | The checksum of its linux-amd64 binary. |
 
@@ -323,6 +323,7 @@ concourse:
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     bootstrap:
       release: {version: v1.2.3, sha256: <the linux-amd64 line of SHA256SUMS>}
+      bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 ```
 
 ## suites

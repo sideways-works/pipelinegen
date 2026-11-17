@@ -65,7 +65,7 @@ A file `pipelinegen.yaml` at the root:
 
 ```yaml
 pipeline: shop                    # the pipeline's name
-bazel: {workspace: .}                 # bazelisk on PATH, the default
+bazel: {workspace: ., bazelisk: tools/bin/bazelisk}
 bazel_diff: {version: v67.0.3, sha256: 98d7...8e4e}   # the default; optional
 github: {repository: example/shop, token: github_token}
 concourse:
@@ -79,6 +79,7 @@ concourse:
     digest: sha256:...
     bootstrap:
       release: {version: v0.2.0, sha256: ...}   # or commit: <sha>, before the first release
+      bazelisk: {version: v1.30.0, sha256: ...}
   include: ci/root.yml            # the repository's own root jobs
 plugins:
   - name: concourse               # the runner, which writes the Concourse pipeline

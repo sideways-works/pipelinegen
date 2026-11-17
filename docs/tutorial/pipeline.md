@@ -51,6 +51,7 @@ concourse:
     prepare: go mod download
     bootstrap:
       release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
+      bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 
 plugins:
   # ... the plugins of step 6 and the drivers of step 3 ...

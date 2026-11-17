@@ -95,7 +95,7 @@ concourse:
     bootstrap:
       repository: sideways-works/pipelinegen   # the default
       release: {version: v0.2.0, sha256: ...}  # or commit: <40 hex>, before the first release
-      bazelisk: {version: v1.30.0, sha256: ...}  # the default; optional
+      bazelisk: {version: v1.27.0, sha256: ...}
 ```
 
 Each generated job's first step is one `bootstrap` task on that image, with
