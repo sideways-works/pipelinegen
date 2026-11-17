@@ -256,6 +256,7 @@ func TestRunRunsWhatTheChangeSelects(t *testing.T) {
 	}
 
 	e.r.Write("calc/bad_test.sh", ". ./lib.sh\n\ntest_bad() {\n\tfail bad\n}\n")
+
 	data, err = os.ReadFile(filepath.Join(e.r.Dir, "calc/BUILD.bazel"))
 	if err != nil {
 		t.Fatal(err)
