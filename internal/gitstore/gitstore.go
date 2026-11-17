@@ -369,8 +369,38 @@ func (s *Store) local(ctx context.Context, patterns []string) (map[string]Ref, e
 // Files reads a record: every file of a commit that List or First
 // returned.
 func (s *Store) Files(ctx context.Context, commit string) (map[string][]byte, error) {
+	return s.FilesBut(ctx, commit, "")
+}
+
+// FilesBut reads a record as Files does, but for what lies under dir,
+// which it never fetches.
+func (s *Store) FilesBut(ctx context.Context, commit, dir string) (map[string][]byte, error) {
+	dir = strings.Trim(dir, "/")
+
 	if s.onBranch() {
-		return s.branchRead(ctx, commit, nil)
+		if dir == "" {
+			return s.branchRead(ctx, commit, nil)
+		}
+
+		p, v, err := s.record(commit)
+		if err != nil {
+			return nil, err
+		}
+
+		files, err := v.Files(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+
+		paths := make([]string, 0, len(files))
+
+		for _, f := range files {
+			if rel := strings.TrimPrefix(f, p+"/"); !under(rel, dir) {
+				paths = append(paths, rel)
+			}
+		}
+
+		return s.branchRead(ctx, commit, paths)
 	}
 
 	out, err := s.git(ctx, nil, nil, "ls-tree", "-r", "-z", "--name-only", commit)
@@ -381,13 +411,15 @@ func (s *Store) Files(ctx context.Context, commit string) (map[string][]byte, er
 	var paths []string
 
 	for p := range strings.SplitSeq(out, "\x00") {
-		if p != "" {
+		if p != "" && (dir == "" || !under(p, dir)) {
 			paths = append(paths, p)
 		}
 	}
 
 	return s.read(ctx, commit, paths)
 }
+
+func under(p, dir string) bool { return dir != "" && (p == dir || strings.HasPrefix(p, dir+"/")) }
 
 // Under reads the files of a record under one directory of it, by their
 // paths in the record, and nothing else of it.
