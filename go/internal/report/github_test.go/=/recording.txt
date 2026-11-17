@@ -1,0 +1,17 @@
+# observed
+go:internal/gitstore/storetest#func:Both
+go:internal/report#func:rateLimited
+go:internal/report#method:Client.Comments
+go:internal/report#method:Client.CommitSubject
+go:internal/report#method:Client.CreateComment
+go:internal/report#method:Client.DeleteComment
+go:internal/report#method:Client.SetStatus
+go:internal/report#method:Client.UpdateComment
+go:internal/report#method:Client.do
+go:internal/report#method:Client.once
+go:internal/report#method:Client.repo
+go:internal/report#method:Client.retryPause
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp

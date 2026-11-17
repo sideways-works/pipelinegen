@@ -1,0 +1,18 @@
+# observed
+go:internal/cli#func:boundLine
+go:internal/cli#func:chainText
+go:internal/cli#func:hopName
+go:internal/cli#func:linkWords
+go:internal/cli#func:namesFile
+go:internal/cli#func:plainName
+go:internal/cli#func:ranBecause
+go:internal/cli#func:reasonLine
+go:internal/cli#func:reportNeeds
+go:internal/cli#func:sliceNeeds
+go:internal/testenv#func:Bazel
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:defaultRoots
+go:internal/testenv#func:outputBases
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
