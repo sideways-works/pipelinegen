@@ -172,9 +172,19 @@ func recordable(cfg *config.Config, suite string) error {
 
 // The lists describe HEAD, so a recording of other code would bind its slices to the wrong things.
 func cleanTree(ctx context.Context, root string, tools ...string) error {
+	files, err := changedFiles(ctx, root, tools...)
+	if err != nil || len(files) == 0 {
+		return err
+	}
+
+	return fmt.Errorf("%w: a recording describes a commit; commit these first, then record:\n  %s", errDirty, fileList(files))
+}
+
+// changedFiles are the work tree's changes, tracked or new, outside the tools' directories.
+func changedFiles(ctx context.Context, root string, tools ...string) ([]string, error) {
 	out, err := gitx.Repo{Dir: root}.Git(ctx, "status", "--porcelain", "--untracked-files=all")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var files []string
@@ -187,10 +197,10 @@ func cleanTree(ctx context.Context, root string, tools ...string) error {
 		files = append(files, line[3:])
 	}
 
-	if len(files) == 0 {
-		return nil
-	}
+	return files, nil
+}
 
+func fileList(files []string) string {
 	shown := files[:min(len(files), 10)]
 	more := ""
 
@@ -198,7 +208,7 @@ func cleanTree(ctx context.Context, root string, tools ...string) error {
 		more = fmt.Sprintf("\n  and %d more", len(files)-len(shown))
 	}
 
-	return fmt.Errorf("%w: a recording describes a commit; commit these first, then record:\n  %s%s", errDirty, strings.Join(shown, "\n  "), more)
+	return strings.Join(shown, "\n  ") + more
 }
 
 func under(p string, dirs []string) bool {
@@ -300,7 +310,7 @@ func (c *common) configPath() string {
 const localRunYAML = `trigger: {branch: %s}
 compare: none
 select: all
-record: true
+record: %t
 report: {status: false}
 suites: {%s: {}}
 `
@@ -319,13 +329,19 @@ func localConfig(src, suite, remote, change, out string) (*config.Config, error)
 		return nil, fmt.Errorf("record: %w", err)
 	}
 
+	return localConfigOf(data, src, suite, remote, change, out, true)
+}
+
+// localConfigOf derives a local build's config from the config data src names: one run, local, of suite,
+// recording it when record is set.
+func localConfigOf(data []byte, src, suite, remote, change, out string, record bool) (*config.Config, error) {
 	var doc map[string]any
 	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return nil, fmt.Errorf("record: %s: %w", src, err)
 	}
 
 	var run map[string]any
-	if err := yaml.Unmarshal(fmt.Appendf(nil, localRunYAML, strconv.Quote(change), strconv.Quote(suite)), &run); err != nil {
+	if err := yaml.Unmarshal(fmt.Appendf(nil, localRunYAML, strconv.Quote(change), record, strconv.Quote(suite)), &run); err != nil {
 		return nil, fmt.Errorf("record: %w", err)
 	}
 
@@ -350,7 +366,7 @@ func localConfig(src, suite, remote, change, out string) (*config.Config, error)
 		doc["store"] = store
 	}
 
-	data, err = yaml.Marshal(doc)
+	data, err := yaml.Marshal(doc)
 	if err != nil {
 		return nil, fmt.Errorf("record: %w", err)
 	}
@@ -417,6 +433,16 @@ type localBuild struct {
 	dir, suite    string
 	plugins       string
 	ch            runs.Change
+	// out takes the tasks' output; nil is stderr.
+	out io.Writer
+}
+
+func (b *localBuild) output() io.Writer {
+	if b.out == nil {
+		return os.Stderr
+	}
+
+	return b.out
 }
 
 func (b *localBuild) source() string { return filepath.Join(b.dir, "source") }
@@ -661,7 +687,7 @@ func names(todo []bazel.Slice) []string {
 // env never holds a job's address or the pipeline step's mark, which would make the tasks a pipeline's.
 func (b *localBuild) env(params map[string]string) []string {
 	own := map[string]string{
-		envRun: localRun, envSuite: b.suite, envBatch: "0", "PIPELINEGEN_RECORD": "true",
+		envRun: localRun, envSuite: b.suite, envBatch: "0", "PIPELINEGEN_RECORD": strconv.FormatBool(b.cfg.Records(localRun, b.suite)),
 		"PIPELINEGEN_RUN_FILE": filepath.Join(batchesOf(b.dir), runs.RunFile), envConfig: b.cfgPath,
 	}
 
@@ -734,7 +760,7 @@ func (b *localBuild) task(ctx context.Context, kind, file string) error {
 
 	cmd.Dir = filepath.Join(b.dir, t.Run.Dir)
 	cmd.Env = b.env(t.params())
-	cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
+	cmd.Stdout, cmd.Stderr = b.output(), os.Stderr
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("%w: %s task %s: %w; it ran on this machine, not in its image %s, so the machine needs what that image has; "+
@@ -767,7 +793,7 @@ func (b *localBuild) driven(ctx context.Context) error {
 		cmd := exec.CommandContext(ctx, exe, args...) //nolint:gosec // pipelinegen itself
 		cmd.Dir = b.dir
 		cmd.Env = b.env(nil)
-		cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
+		cmd.Stdout, cmd.Stderr = b.output(), os.Stderr
 
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("%w: slice %s: %w", errTaskFailed, verb, err)
@@ -799,6 +825,10 @@ func (b *localBuild) finish(ctx context.Context) error {
 		cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
 
 		if err := cmd.Run(); err != nil {
+			if !b.cfg.Records(localRun, b.suite) {
+				return fmt.Errorf("%w: %s: %w", errNotPassed, strings.Join(s[:2], " "), err)
+			}
+
 			// the batch's end stops it before the suite's end attaches.
 			attached := "no lists were attached"
 			if i > 0 {
