@@ -33,6 +33,8 @@ The terms are in the [concepts](../concepts/README.md) and the
   params, statuses and the comment.
 - [Start without a full first run](starting-narrow.md): seed the lists
   from your machine, or set a known good commit as the baseline.
+- [Run it on your machine, without CI](running-locally.md): see what a
+  change would run, run it, and record the lists.
 - [Run it on any CI system by hand](any-ci-by-hand.md): the steps in
   order, with one run in a plain shell.
 - [Choose a narrowing level](narrowing.md), the sample and the alarm.

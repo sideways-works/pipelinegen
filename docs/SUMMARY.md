@@ -58,6 +58,7 @@
   * [Estimate what you would save](how-to/estimate-savings.md)
   * [Declare runs](how-to/declaring-runs.md)
   * [Start without a full first run](how-to/starting-narrow.md)
+  * [Run it on your machine, without CI](how-to/running-locally.md)
   * [Run it on any CI system by hand](how-to/any-ci-by-hand.md)
   * [Choose a narrowing level](how-to/narrowing.md)
   * [Durations and batches](how-to/durations.md)

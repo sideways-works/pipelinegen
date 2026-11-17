@@ -91,9 +91,11 @@ flowchart LR
   adding one to a Go module);
 - a git repository.
 
-That is all on your own machine: `slices`, `check`, `affected`, `why` and
-`record` work there with no CI system and no git host, and `seed` puts
-your recordings into the repository's store for CI's first runs.
+That is all on your own machine: `slices`, `check`, `affected`, `why`,
+`run` and `record` work there with no CI system and no git host, and
+`seed` puts your recordings into the repository's store for CI's first
+runs. [Running it on your machine](docs/how-to/running-locally.md) shows
+how to see and run what CI would run for a change.
 
 ## What it works with today
 
