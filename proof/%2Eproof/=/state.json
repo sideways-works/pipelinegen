@@ -1,12 +1,6 @@
 {
   "label": "//:proof",
-  "state": "not run",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-proof",
-  "updated": "2026-11-17T17:36:29.927626958Z",
-  "failures": [
-    {
-      "test": "(not run)",
-      "tail": "batch 0 stopped before its first slice started, 5 minutes after the suite began: not its time limit of 120 minutes (suites.proof.minutes); its task died: the build log says why"
-    }
-  ]
+  "state": "passed",
+  "updated": "2026-11-17T20:07:15.352793548Z",
+  "seconds": 2464.072792499
 }
