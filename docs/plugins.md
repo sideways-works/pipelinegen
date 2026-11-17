@@ -1197,23 +1197,34 @@ observed to touch, plus the file's whole unit (`api:<file>`, say) where a
 correlator says the reader takes the file whole. Which dependency, and for
 which slices, depends on whether the claim names an anchor:
 
+A recorded slice's filegroups are opened down to their files first (see
+[narrowing](how-to/narrowing.md#files-inside-filegroups)), so a file
+inside a filegroup, or a filegroup inside it, is judged like a label
+naming the file.
+
 - With `"anchor": "<unit id>"`, a unit of the sbom's own with a digest
   that never changes, which a recorder puts in a slice's list whenever it
   ran for that file (for a message catalog, `locale:<catalog dir>`): every
   path to the file is replaced for a slice whose list, or its suite's
   setup part, holds the anchor. That is a label naming the file, a
-  filegroup or other rule holding it (bazel-diff, run once more on the
-  head with the base's copies of the files a group of slices takes, says
-  which labels anything else that changed reaches; `label_groups` in the
-  plan counts those runs), `extra_deps` and an owner's `data`. A slice without the
-  anchor keeps every path whole: its recording doesn't cover the file.
-- Without an anchor, only a label naming the file itself is replaced, and
-  only in a suite whose recordings hold units of the sbom that lists the
-  file's units, as judged from the slices' lists. In a suite whose
-  correlators record none, a list can't say which units a slice used, so
-  the label stays whole, and the plan warns once per suite and narrowing
-  (`by-units-unobserved`). A file reached inside a filegroup or another
-  rule is not replaced.
+  filegroup holding it, `extra_deps` and an owner's `data`; inside
+  another rule (a genrule, say), bazel-diff, run once more on the head
+  with the base's copies of the files a group of slices takes, says which
+  labels anything else that changed reaches (`label_groups` in the plan
+  counts those runs). A slice without the anchor keeps every path whole:
+  its recording doesn't cover the file.
+- Without an anchor, a label naming the file is replaced in a suite whose
+  recordings hold units of the sbom that lists the file's units, as
+  judged from the slices' lists. A file found inside a filegroup is
+  replaced only where those recordings hold units the sbom lists for
+  files of the same directory. In a suite whose correlators record none,
+  a list can't say which units a slice used, so the label stays whole,
+  and the plan warns once per suite and narrowing
+  (`by-units-unobserved`). Through other rules the file stays whole.
+
+A file added, removed or renamed in such a group reaches the suite's
+setup part, where the setup list holds units its sbom lists for that
+directory and the setup split is on, or else every slice that holds it.
 
 Some paths are never replaced. A test file's own `pipelinegen:data` lines
 say that this test reads those files, so their labels stay whole; so do
