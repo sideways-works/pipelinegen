@@ -1353,7 +1353,7 @@ that observe it. A slice that is in no suite of the plan exits 1.
 | `--bazel-diff` | the pinned release | A bazel-diff binary to run instead, when it plans again. |
 | `--plugins` | `<root>/tools/plugins` | Where the configured sbom and correlator plugins are, when it plans again, as for `affected`, which fetches one that isn't there. |
 | `--no-fill` | `false` | When it plans again, doesn't fill the plugins' caches first, as for `affected`. |
-| `--no-lists` | `false` | When it plans again, binds recorded slices to everything instead of reading the base's lists. With no remote to read them from (no `git.remote`, no `github` section, no `origin` in the checkout), it says so and does the same; a kept plan needs the remote. |
+| `--no-lists` | `false` | When it plans again, binds recorded slices to everything instead of reading the base's lists. With no remote to read them from (no `git.remote`, no `github` section, no `origin` in the checkout), or a remote whose lists can't be read, it says so and does the same: a warning below the reasons names why; a kept plan needs the remote. |
 | `--local` | `false` | Reads the lists, or the kept plan of a local recording (`--run local`), from the local store `pipelinegen record` writes. |
 | `--json` | `false` | Prints JSON: a list of `{"suite", "slice", "label", "ran", "reasons": [{"kind", "what", "through", "hops", "narrowing", "off_at", "text"}], "observed_by"}`. `hops` is the chain from the unit the slice's recording holds to what changed: `{"from", "to", "kind", "plugin", "back", "label", "file"}`, the first with kind `listed`, each other with the link's kind and the plugin that gave it. |
 | `--ids` | `false` | Shows each unit's id beside its name in the chains. |

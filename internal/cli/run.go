@@ -516,6 +516,8 @@ func planCommits(ctx context.Context, cfg *config.Config, store *gitstore.Store,
 type planExtra struct {
 	rebase *affected.Rebase
 	reach  bool
+	// unread, when set, takes why the lists couldn't be read, and the plan goes on without them.
+	unread *error
 }
 
 func planCommitsBy(ctx context.Context, cfg *config.Config, store *gitstore.Store, trigger, runName, base, head string, all bool, cache, bdPath, plugins string, x planExtra) (*affected.Plan, error) {
@@ -845,6 +847,11 @@ func planWithBy(ctx context.Context, cfg *config.Config, store *gitstore.Store, 
 		progress.Stage(ctx, "reading the lists")
 
 		l, src, err := storeLists(ctx, store, trigger, base, cfg.ListsCommits())
+		if err != nil && x.unread != nil {
+			*x.unread, store = err, nil
+			l, src, err = recording.Lists{}, nil, nil
+		}
+
 		if err != nil {
 			return nil, err
 		}

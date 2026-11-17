@@ -253,6 +253,41 @@ func TestANewSliceRanForItsOwnReason(t *testing.T) {
 	}
 }
 
+// A slice without a list because the lists couldn't be read isn't said to lack a recording.
+func TestASliceBoundForListsUnreadSaysSo(t *testing.T) {
+	bound := affected.Reason{Kind: affected.KindEverything, What: "it is bound to every unit the plugins list: it has no list yet"}
+	sp := whySuite{Suite: "api", Unlisted: []string{"api/a_test.go", "api/b_test.go"}, Reasons: map[string][]affected.Reason{"a": {bound}}}
+	p := &whyPlan{unread: true}
+
+	if got := ranBecause(p, sp, "api/a_test.go", "a"); len(got) != 1 || got[0].Text != "the lists couldn't be read, so it runs on any change" {
+		t.Fatalf("selected: %+v", got)
+	}
+
+	if got := leftOut(p, sp, "api/b_test.go", "b"); len(got) != 1 || !strings.HasPrefix(got[0].Text, "the lists couldn't be read, so it is bound to every unit the plugins list") {
+		t.Fatalf("left out: %+v", got)
+	}
+}
+
+// A remote whose lists can't be read leaves why explaining with none, as affected plans with none.
+func TestWhyGoesOnWhenTheListsCantBeRead(t *testing.T) {
+	testrepo.Parallel(t)
+
+	e := newExampleRun(t)
+	base := e.r.Git("rev-parse", "HEAD")
+
+	e.r.Write("calc/add_test.sh", readFile(t, filepath.Join(e.r.Dir, "calc/add_test.sh"))+"\n# changed\n")
+	e.r.Commit("a test changed")
+
+	e.env[envGitURL] = "file://" + filepath.Join(t.TempDir(), "gone")
+
+	stdout, stderr, code := runIn(t, e.r.Dir, e.env, "why", "--root", e.r.Dir, "--base", base, "--cache", e.cache, "--bazel-diff", e.diff,
+		"--plugins", e.plugins, "--slice", "calc/add_test.sh")
+	if code != 0 || !strings.HasPrefix(stdout, "unit calc/add_test.sh was selected from "+base[:12]+" to ") ||
+		!strings.Contains(stdout, "\nwarning: the lists couldn't be read (") || !strings.Contains(stdout, "; no suite is bound by recording, so this plan needs none\n") {
+		t.Fatalf("why: %d\n%s\n%s", code, stdout, stderr)
+	}
+}
+
 func TestTheHighestLevelHasNoAbove(t *testing.T) {
 	if got := levelText(2, config.MaxNarrowing); got != fmt.Sprintf("; it would have run at narrowing level %d (the plan used 2)", config.MaxNarrowing) {
 		t.Fatalf("%q", got)

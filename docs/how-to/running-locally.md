@@ -78,9 +78,9 @@ everything and runs. The lists come from `pipelinegen record`, or from
 `run --record`, which write them to a local store. A config that names no
 remote reads that store when there is one. A config that names one (a
 `github` section, or `git.remote`) reads the remote: add `--local` to
-read the local store instead. When the remote can't be read, `affected`
-and `run` say so and bind the recorded slices to everything, while `why`
-stops unless you add `--local` or `--no-lists`.
+read the local store instead. When the remote can't be read, `affected`,
+`run` and `why` say so and bind the recorded slices to everything; `why`
+says it in a warning below its reasons.
 
 ## Run what a change selects
 

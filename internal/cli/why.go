@@ -33,6 +33,9 @@ type whyPlan struct {
 	Plugins    *report.Plugins       `json:"plugins"`
 	Lists      *lists.Source         `json:"lists"`
 	Warnings   []string              `json:"warnings"`
+
+	// unread says the lists couldn't be read, so every recorded slice was bound to everything.
+	unread bool
 }
 
 type whySuite struct {
@@ -382,9 +385,16 @@ func (w *whyFlags) planAgain(ctx context.Context, cfg *config.Config, store *git
 		return nil, "", err
 	}
 
-	plan, err := planCommits(ctx, cfg, store, root, "", base, head, false, repoCache(ctx, w.cache, root), w.bazelDiff, pluginsAt)
+	// As affected does, a plan whose lists can't be read binds the recorded slices to everything.
+	var unread error
+
+	plan, err := planCommitsBy(ctx, cfg, store, root, "", base, head, false, repoCache(ctx, w.cache, root), w.bazelDiff, pluginsAt, planExtra{unread: &unread})
 	if err != nil {
 		return nil, "", err
+	}
+
+	if unread != nil {
+		plan.Warnings = append(plan.Warnings, unreadText(cfg, unread))
 	}
 
 	data, err := json.Marshal(plan)
@@ -397,7 +407,18 @@ func (w *whyFlags) planAgain(ctx context.Context, cfg *config.Config, store *git
 		return nil, "", fmt.Errorf("plan: %w", err)
 	}
 
+	p.unread = unread != nil
+
 	return &p, fmt.Sprintf("from %s to %s", short12(base), short12(head)), nil
+}
+
+func unreadText(cfg *config.Config, err error) string {
+	why, _, _ := strings.Cut(err.Error(), "\n")
+	if !hasRecorded(cfg) {
+		return "the lists couldn't be read (" + why + "); no suite is bound by recording, so this plan needs none"
+	}
+
+	return "the lists couldn't be read (" + why + "), so every slice bound by recording was bound to everything"
 }
 
 func labelName(label string) string {
@@ -521,7 +542,7 @@ func ranBecause(p *whyPlan, sp whySuite, name, label string) []WhyReason {
 		// a slice bound to everything ran on this change, not everything
 		// with it.
 		if r.Kind == affected.KindEverything {
-			text = boundLine(sp, name, r)
+			text = boundLine(p, sp, name, r)
 		}
 
 		out = append(out, WhyReason{Kind: r.Kind, What: r.What, Through: r.Through, Hops: r.Hops, Text: text})
@@ -577,9 +598,14 @@ func leftOut(p *whyPlan, sp whySuite, name, label string) []WhyReason {
 	}
 
 	if len(out) == 0 && slices.Contains(sp.Unlisted, name) {
+		why := "it has no list yet"
+		if p.unread {
+			why = "the lists couldn't be read"
+		}
+
 		out = append(out, WhyReason{
 			Kind: whyUntouched, What: label,
-			Text: "it has no list yet, so it is bound to every unit the plugins list, and none of them changed; " +
+			Text: why + ", so it is bound to every unit the plugins list, and none of them changed; " +
 				"a file no plugin claims reaches it only through its Bazel data and extra_deps",
 		})
 	}
@@ -614,7 +640,11 @@ func orAbove(level int) string {
 	return " or above"
 }
 
-func boundLine(sp whySuite, name string, r affected.Reason) string {
+func boundLine(p *whyPlan, sp whySuite, name string, r affected.Reason) string {
+	if p.unread && slices.Contains(sp.Unlisted, name) {
+		return "the lists couldn't be read, so it runs on any change"
+	}
+
 	if slices.Contains(sp.Unlisted, name) {
 		return "it has no recording yet, so it runs on any change until a run records what it touches"
 	}

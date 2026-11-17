@@ -10,6 +10,7 @@ minor version may change the config or the protocol.
 ### Fixed
 
 - `check` fetches a plugin it asks that `--plugins` (default `tools/plugins`) lacks from its pinned release, as `affected` and `run` do, checked by its pin, where it warned that the driver's steps went unchecked. A plugin pinned by `commit` that isn't there still can't be asked: the warning gives the commands that build it
+- `why` plans on when the remote's lists can't be read, as `affected` and `run` do: the recorded slices are bound to everything, and a warning below the reasons says the lists couldn't be read and why. It exited 1, even for a config whose every suite is bound by the graph
 
 ## [0.3.0] - 2026-11-17
 
