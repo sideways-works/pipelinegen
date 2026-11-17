@@ -34,7 +34,6 @@ func TestNoJobIsSerializedUnlessTheSpecAsks(t *testing.T) {
 		"job plan-full: a continuous run's planning job with max_in_flight: its builds would": "jobs:\n- {name: plan-full, max_in_flight: 1, plan: [{task: plan}]}\n",
 		"job plan-full: PIPELINEGEN_SERIAL_PLAN, which the tool no longer reads":              "jobs:\n- {name: plan-full, plan: [{task: plan, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n",
 		"job main-go: PIPELINEGEN_SERIAL_PLAN, which the tool no longer reads":                "jobs:\n" + planning + "- {name: main-go, plan: [{task: x, params: {PIPELINEGEN_SERIAL_PLAN: '1'}}]}\n",
-		"job full-go: a continuous run's job says lock":                                       "jobs:\n" + planning + "- {name: full-go, plan: [{task: lock, config: {}}]}\n",
 	} {
 		got := strings.Join(serializedJobs(s, []byte(text)), "; ")
 		if (want == "") != (got == "") || !strings.Contains(got, want) {

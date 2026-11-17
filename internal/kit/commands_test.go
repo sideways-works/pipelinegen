@@ -80,7 +80,7 @@ func TestATaskMayReadWhatAnEarlierCallWrote(t *testing.T) {
           PIPELINEGEN_BAZELISK=tools/bazelisk exec tools/pipelinegen git-auth NPM_TOKEN >/dev/null || true
           tools/pipelinegen tree --run main --out source
           tools/pipelinegen batches --run main --root source --out batches
-          tools/pipelinegen lock acquire browsers --root source
+          tools/pipelinegen slice start e2e.a --root source
           tools/pipelinegen pipeline --plugins tools/plugins --root source --out pipeline.yml
   - task: early
     config:
@@ -89,14 +89,14 @@ func TestATaskMayReadWhatAnEarlierCallWrote(t *testing.T) {
       params: {GITHUB_TOKEN: x, PIPELINEGEN_TRIGGER: trigger}
       run:
         path: sh
-        args: [-ec, "tools/pipelinegen lock acquire browsers --root source && tools/pipelinegen tree --run main --out source"]
+        args: [-ec, "tools/pipelinegen slice start e2e.a --root source && tools/pipelinegen tree --run main --out source"]
   - task: toolless
     config:
       inputs: [{name: trigger}, {name: source}]
       params: {GITHUB_TOKEN: x, PIPELINEGEN_TRIGGER: trigger}
       run:
         path: tools/pipelinegen
-        args: [lock, acquire, browsers, --root, source]
+        args: [slice, start, e2e.a, --root, source]
 `)
 
 	cmds := Commands{
@@ -111,8 +111,8 @@ func TestATaskMayReadWhatAnEarlierCallWrote(t *testing.T) {
 			"plugins": {Default: "tools/plugins", Use: toolcalls.Reads}, "root": {Default: ".", Use: toolcalls.Reads},
 			"out": {Use: toolcalls.Writes | toolcalls.File},
 		}},
-		"git-auth":     {Words: true},
-		"lock acquire": {Named: true, Flags: map[string]toolcalls.Flag{"root": {Default: ".", Use: toolcalls.Reads}}},
+		"git-auth":    {Words: true},
+		"slice start": {Named: true, Flags: map[string]toolcalls.Flag{"root": {Default: ".", Use: toolcalls.Reads}}},
 	}
 
 	seen := map[string]bool{}
@@ -127,8 +127,8 @@ func TestATaskMayReadWhatAnEarlierCallWrote(t *testing.T) {
 	}
 
 	want := []string{
-		"job main-e2e, step early: pipelinegen lock acquire: reads source, which it doesn't mount and no earlier call wrote",
-		"job main-e2e, step toolless: pipelinegen lock acquire: runs from tools, which it doesn't mount",
+		"job main-e2e, step early: pipelinegen slice start: reads source, which it doesn't mount and no earlier call wrote",
+		"job main-e2e, step toolless: pipelinegen slice start: runs from tools, which it doesn't mount",
 	}
 	if !slices.Equal(mounts, want) {
 		t.Errorf("mounts\n%s", strings.Join(mounts, "\n"))

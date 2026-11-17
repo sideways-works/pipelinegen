@@ -41,8 +41,8 @@ func TestAReportStepThatCannotRecordFailsTheJob(t *testing.T) {
 		"passed on": {endJob(endTask("    ", passes)), ""},
 		"the tool itself": {endJob("    task: batch-end\n    config:\n      platform: linux\n      run:\n        path: tools/pipelinegen\n" +
 			"        args: [report, batch-end, --batch, \"1\"]\n"), ""},
-		"no report step": {endJob("    task: unlock\n    config:\n      platform: linux\n      run:\n        path: tools/pipelinegen\n" +
-			"        args: [lock, release, x]\n    attempts: 2\n"), ""},
+		"no report step": {endJob("    task: auth\n    config:\n      platform: linux\n      run:\n        path: tools/pipelinegen\n" +
+			"        args: [git-auth, NPM_TOKEN]\n    attempts: 2\n"), ""},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got := strings.Join(swallowedUnrecorded(t.Context(), []byte(c.pipeline)), "; ")

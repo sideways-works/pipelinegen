@@ -2,7 +2,6 @@ package kit
 
 import (
 	"fmt"
-	"slices"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -90,42 +89,4 @@ func stepKind(x map[string]any) string {
 	}
 
 	return ""
-}
-
-// waitBoundWithBatch are, with locks taken per batch, the steps whose one
-// time limit holds both the wait for a lock's slot and the batch: a batch
-// that waits behind another run's lease then loses its time to the wait.
-func waitBoundWithBatch(text []byte) []string {
-	var doc any
-	if err := yaml.Unmarshal(text, &doc); err != nil {
-		return []string{"the pipeline isn't YAML: " + err.Error()}
-	}
-
-	var out []string
-
-	walkJobs(doc, "", func(x map[string]any, job string) {
-		do, ok := x["do"].([]any)
-		if !ok || x["timeout"] == nil {
-			return
-		}
-
-		if len(do) < 2 {
-			return
-		}
-
-		// only a lock step the limit holds directly, beside what it guards
-		for _, step := range do {
-			if m, ok := step.(map[string]any); !ok || m["task"] == nil {
-				continue
-			}
-
-			for _, c := range lockCalls(step, "acquire", job) {
-				out = appendNew(out, c.where+": the wait for lock "+c.lock+"'s slot counts against the time limit of the step it guards")
-			}
-		}
-	})
-
-	slices.Sort(out)
-
-	return out
 }

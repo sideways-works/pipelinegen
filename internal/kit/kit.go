@@ -345,9 +345,9 @@ func brokenNotices(notices []string) string {
 // each step mounts what its command reads and keeps what it writes.
 func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 	var (
-		calls, mounts, perBatch []string
-		sh                      shapes
-		held                    holdings
+		calls, mounts []string
+		sh            shapes
+		held          holdings
 	)
 
 	seen := map[string]bool{}
@@ -359,8 +359,7 @@ func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 			continue
 		}
 
-		// nor a continuous run, when it can't build one, nor a lock per
-		// batch
+		// nor a continuous run, when it can't build one
 		if !k.builds(v) {
 			continue
 		}
@@ -396,13 +395,11 @@ func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 
 		held.add(v, text)
 
-		perBatch = appendPerBatch(perBatch, v, text)
-
 		sh.add(ctx, v, text)
 	}
 
 	held.report(k)
-	k.shapeChecks(perBatch, sh)
+	k.shapeChecks(sh)
 
 	var missing []string
 
@@ -418,7 +415,7 @@ func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 }
 
 type shapes struct {
-	limits, queues, follows, handed, unrecorded []string
+	limits, queues, follows, handed, unrecorded, locks []string
 }
 
 func (sh *shapes) add(ctx context.Context, v specVariant, text []byte) {
@@ -427,13 +424,11 @@ func (sh *shapes) add(ctx context.Context, v specVariant, text []byte) {
 	sh.follows = appendLabelled(sh.follows, v, append(unplannedStarts(v.spec, text), undecidedPrepares(v.spec, text)...))
 	sh.handed = appendLabelled(sh.handed, v, unhandedStarts(v.spec, text))
 	sh.unrecorded = appendLabelled(sh.unrecorded, v, swallowedUnrecorded(ctx, text, installsOf(v.spec)...))
+	sh.locks = appendLabelled(sh.locks, v, lockSteps(text))
 }
 
-func (k *kit) shapeChecks(perBatch []string, sh shapes) {
-	if k.can(plugin.CapLockPerBatch) {
-		k.check("a lock taken per batch is taken around each batch and freed in an ensure, and its wait is outside the batch's time limit", strings.Join(firstFew(perBatch), "; "))
-	}
-
+func (k *kit) shapeChecks(sh shapes) {
+	k.check("no step takes a lock, even for an older tool's spec that holds one: none runs pipelinegen lock or unlock", strings.Join(firstFew(sh.locks), "; "))
 	k.check("every step the pipeline runs has a time limit", strings.Join(firstFew(sh.limits), "; "))
 	k.check("no job is serialized unless the spec asks, a planning job never", strings.Join(firstFew(sh.queues), "; "))
 
@@ -466,21 +461,17 @@ func (v specVariant) label() string {
 	return "(" + v.name + ") "
 }
 
-// specVariants are the fixture spec as it is, with a lock on every suite,
-// and set by itself: together they hold every kind of step a runner
-// writes.
+// specVariants are the fixture spec as it is, set by itself, and the
+// others below: together they hold every kind of step a runner writes. An
+// older tool's spec with locks, per build or per batch, is one a runner
+// must still take, writing no lock step for it.
 func specVariants() []specVariant {
-	locked := Spec()
-	for i := range locked.Suites {
-		locked.Suites[i].Lock = &plugin.SpecLock{Name: "lock-" + locked.Suites[i].Name, Minutes: 30}
-	}
-
 	self := Spec()
 	self.CI["self_set"] = true
 
 	return []specVariant{
-		{"", Spec()}, {"with locks", locked}, {"set by itself", self}, {splitTokens, splitSpec()},
-		{connectorRun, connectorSpec()}, {continuousRun, continuousSpec()}, {perBatchRun, perBatchSpec()},
+		{"", Spec()}, {olderLocksRun, olderLocksSpec("")}, {"set by itself", self}, {splitTokens, splitSpec()},
+		{connectorRun, connectorSpec()}, {continuousRun, continuousSpec()}, {olderLocksPerBatchRun, olderLocksSpec("batch")},
 		{stepsRun, stepsSpec()}, {packagesRun, packagesSpec()},
 	}
 }
@@ -489,8 +480,6 @@ func (k *kit) builds(v specVariant) bool {
 	switch v.name {
 	case continuousRun:
 		return k.can(plugin.CapContinuous)
-	case perBatchRun:
-		return k.can(plugin.CapLockPerBatch)
 	case stepsRun:
 		return k.can(plugin.CapSteps)
 	case packagesRun:
@@ -498,22 +487,6 @@ func (k *kit) builds(v specVariant) bool {
 	}
 
 	return true
-}
-
-func appendPerBatch(out []string, v specVariant, text []byte) []string {
-	if v.name != perBatchRun {
-		return out
-	}
-
-	for _, p := range perBatchProblems(text) {
-		out = appendNew(out, v.label()+p)
-	}
-
-	for _, p := range waitBoundWithBatch(text) {
-		out = appendNew(out, v.label()+p)
-	}
-
-	return out
 }
 
 const stepsRun = "suites run by drivers"
@@ -529,13 +502,16 @@ func stepsSpec() plugin.Spec {
 	return s
 }
 
-const perBatchRun = "locks per batch"
+const (
+	olderLocksRun         = "an older tool's locks"
+	olderLocksPerBatchRun = "an older tool's locks per batch"
+)
 
-func perBatchSpec() plugin.Spec {
+func olderLocksSpec(per string) plugin.Spec {
 	s := Spec()
 
 	for i := range s.Suites {
-		s.Suites[i].Lock = &plugin.SpecLock{Name: "lock-" + s.Suites[i].Name, Minutes: 30, Slots: 2, Per: "batch"}
+		s.Suites[i].Lock = &plugin.SpecLock{Name: "lock-" + s.Suites[i].Name, Minutes: 30, Slots: 2, Per: per}
 	}
 
 	return s

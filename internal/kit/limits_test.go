@@ -55,18 +55,3 @@ func TestEveryStepNeedsATimeLimit(t *testing.T) {
 		}
 	}
 }
-
-func TestALocksWaitIsNoPartOfTheBatchsLimit(t *testing.T) {
-	lock := `{task: lock, config: {run: {path: tools/pipelinegen, args: [lock, acquire, browsers, --root, source]}}}`
-
-	bad := "jobs:\n- name: a\n  plan:\n  - do:\n    - " + lock + "\n    - {task: batch, file: x.yml}\n    timeout: 60m\n"
-	if got := strings.Join(waitBoundWithBatch([]byte(bad)), "; "); !strings.Contains(got, "the wait for lock browsers's slot counts against the time limit") {
-		t.Errorf("a wait under the batch's limit: %q", got)
-	}
-
-	good := "jobs:\n- name: a\n  plan:\n  - do:\n    - " + strings.Replace(lock, "{task: lock,", "{task: lock, timeout: 260m,", 1) +
-		"\n    - {task: batch, file: x.yml, timeout: 60m}\n"
-	if got := waitBoundWithBatch([]byte(good)); len(got) != 0 {
-		t.Errorf("a wait beside the batch: %q", got)
-	}
-}

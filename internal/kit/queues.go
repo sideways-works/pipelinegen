@@ -25,7 +25,7 @@ func serializedJobs(s plugin.Spec, text []byte) []string {
 		return []string{"the pipeline isn't YAML: " + err.Error()}
 	}
 
-	asked, planning, continuous := jobsAsked(s)
+	asked, planning := jobsAsked(s)
 
 	jobs, _ := doc["jobs"].([]any) //nolint:errcheck // a pipeline without jobs has none
 
@@ -56,12 +56,6 @@ func serializedJobs(s plugin.Spec, text []byte) []string {
 		if saysSerialPlan(job) {
 			out = append(out, "job "+name+": "+envSerialPlan+", which the tool no longer reads: the job was written for a serial planning job")
 		}
-
-		if continuous[name] && !slices.ContainsFunc(s.Suites, func(su plugin.SpecSuite) bool { return su.Lock != nil }) {
-			if saysLock(job) {
-				out = append(out, "job "+name+": a continuous run's job says lock, though no suite has one")
-			}
-		}
 	}
 
 	slices.Sort(out)
@@ -70,12 +64,11 @@ func serializedJobs(s plugin.Spec, text []byte) []string {
 }
 
 // planning names a continuous run's planning job.
-func jobsAsked(s plugin.Spec) (asked, planning, continuous map[string]bool) {
-	asked, planning, continuous = map[string]bool{}, map[string]bool{}, map[string]bool{}
+func jobsAsked(s plugin.Spec) (asked, planning map[string]bool) {
+	asked, planning = map[string]bool{}, map[string]bool{}
 
 	for _, r := range s.Runs {
-		cont := r.Trigger.Kind == plugin.TriggerContinuous
-		planning["plan-"+r.Name], continuous["plan-"+r.Name] = cont, cont
+		planning["plan-"+r.Name] = r.Trigger.Kind == plugin.TriggerContinuous
 
 		for _, rs := range r.Suites {
 			i := slices.IndexFunc(s.Suites, func(su plugin.SpecSuite) bool { return su.Name == rs.Suite })
@@ -84,42 +77,40 @@ func jobsAsked(s plugin.Spec) (asked, planning, continuous map[string]bool) {
 			}
 
 			job := r.Name + "-" + rs.Suite
-			continuous[job] = cont
 			asked[job] = s.Suites[i].SerialGroup != "" || s.Suites[i].MaxInFlight > 0
 		}
 	}
 
-	return asked, planning, continuous
+	return asked, planning
 }
 
-func saysLock(job map[string]any) bool {
-	found := false
-
-	walkJobs(job, "", func(x map[string]any, _ string) {
-		for k, v := range x {
-			if k == plugin.EnvTrusted {
-				continue
-			}
-
-			if strings.Contains(strings.ToLower(k), "lock") {
-				found = true
-			}
-
-			if text, ok := v.(string); ok && strings.Contains(strings.ToLower(text), "lock") {
-				found = true
-			}
-
-			if list, ok := v.([]any); ok {
-				for _, e := range list {
-					if text, ok := e.(string); ok && strings.Contains(strings.ToLower(text), "lock") {
-						found = true
-					}
-				}
+// walkJobs visits every mapping under v, with the job it is in.
+func walkJobs(v any, job string, visit func(x map[string]any, job string)) {
+	switch x := v.(type) {
+	case map[string]any:
+		if name, ok := x["name"].(string); ok && job == "" {
+			if _, isJob := x["plan"]; isJob {
+				job = name
 			}
 		}
-	})
 
-	return found
+		visit(x, job)
+
+		keys := make([]string, 0, len(x))
+		for k := range x {
+			keys = append(keys, k)
+		}
+
+		slices.Sort(keys)
+
+		for _, k := range keys {
+			walkJobs(x[k], job, visit)
+		}
+	case []any:
+		for _, e := range x {
+			walkJobs(e, job, visit)
+		}
+	}
 }
 
 func saysSerialPlan(job map[string]any) bool {
