@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -265,6 +266,21 @@ func TestASliceBoundForListsUnreadSaysSo(t *testing.T) {
 
 	if got := leftOut(p, sp, "api/b_test.go", "b"); len(got) != 1 || !strings.HasPrefix(got[0].Text, "the lists couldn't be read, so it is bound to every unit the plugins list") {
 		t.Fatalf("left out: %+v", got)
+	}
+}
+
+var errLsRemote = errors.New("ls-remote failed\nfatal: no such repository")
+
+func TestUnreadListsSayWhatTheyBind(t *testing.T) {
+	err := errLsRemote
+	recorded := &config.Config{Suites: map[string]config.Suite{"e2e": {Bind: config.BindRecorded}}}
+
+	if got := unreadText(recorded, err); got != "the lists couldn't be read (ls-remote failed), so every slice bound by recording was bound to everything" {
+		t.Errorf("recorded: %q", got)
+	}
+
+	if got := unreadText(&config.Config{}, err); got != "the lists couldn't be read (ls-remote failed); no suite is bound by recording, so this plan needs none" {
+		t.Errorf("graph only: %q", got)
 	}
 }
 
