@@ -142,3 +142,14 @@ func TestATinySuiteRunsInBusybox(t *testing.T) {
 		t.Fatalf("the container %s is still there", r.Name)
 	}
 }
+
+func TestAKeptContainerIsNotRemovedWhenItEnds(t *testing.T) {
+	got, err := Run{Tool: "docker", Image: "alpine", Name: "n", Dir: "/", Keep: true, Cmd: []string{"true"}}.Args()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slices.Contains(got, "--rm") || got[0] != "run" || got[1] != "--name" {
+		t.Fatalf("args: %q", got)
+	}
+}

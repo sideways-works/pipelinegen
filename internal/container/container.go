@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"slices"
 	"strconv"
@@ -68,6 +69,8 @@ type Run struct {
 	// User and UserNS are --user and --userns, when set.
 	User, UserNS string
 	Privileged   bool
+	// Keep leaves the container once it ends, for a commit; whoever keeps it removes it.
+	Keep bool
 	// Before are shell lines run in the same container ahead of Cmd, stopping at the first that
 	// fails: where installing what a suite declares goes. After are run once Cmd ends, whatever
 	// its status, which the container then exits with. Either needs a shell in the image.
@@ -80,6 +83,9 @@ var errColon = errors.New("a path with a colon can't be mounted")
 // Args are the tool's arguments: run, with the default bridge network.
 func (r Run) Args() ([]string, error) {
 	args := []string{"run", "--rm", "--name", r.Name, "--network", "bridge", "--workdir", r.Dir}
+	if r.Keep {
+		args = slices.Delete(args, 1, 2)
+	}
 
 	if r.Privileged {
 		args = append(args, "--privileged")
@@ -269,4 +275,70 @@ func Reachable(ctx context.Context, tool string) bool {
 	defer cancel()
 
 	return exec.CommandContext(ctx, tool, "info").Run() == nil
+}
+
+// ImageID is the content digest of the image ref the tool has: another
+// image under the same tag has another.
+func ImageID(ctx context.Context, tool, ref string) (string, error) {
+	return inspect(ctx, tool, ref, "{{.Id}}")
+}
+
+// HasImage tells whether the tool has the image ref.
+func HasImage(ctx context.Context, tool, ref string) bool {
+	_, err := inspect(ctx, tool, ref, "{{.Id}}")
+
+	return err == nil
+}
+
+func inspect(ctx context.Context, tool, ref, format string) (string, error) {
+	var out, errOut bytes.Buffer
+
+	cmd := exec.CommandContext(ctx, tool, "image", "inspect", "--format", format, ref) //nolint:gosec // an image the config names, or one pipelinegen made
+	cmd.Stdout, cmd.Stderr = &out, &errOut
+
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("%w %s: %s image inspect: %w: %s", ErrImage, ref, filepath.Base(tool), err, strings.TrimSpace(errOut.String()))
+	}
+
+	return strings.TrimSpace(out.String()), nil
+}
+
+// Remove removes the container name, which a run kept, if it is there.
+func Remove(ctx context.Context, tool, name string) {
+	rm := exec.CommandContext(context.WithoutCancel(ctx), tool, "rm", "-f", name) //nolint:gosec // the container a run kept
+	_ = rm.Run()                                                                  //nolint:errcheck // nothing left to remove
+}
+
+// Commit makes the container name, which has ended, the image ref, with
+// the entrypoint and command of the image base it ran, and removes it.
+func Commit(ctx context.Context, tool, name, base, ref string, log io.Writer) error {
+	defer Remove(ctx, tool, name)
+
+	args := []string{"commit"}
+
+	for _, field := range []string{"Entrypoint", "Cmd"} {
+		v, err := inspect(ctx, tool, base, "{{json .Config."+field+"}}")
+		if err != nil {
+			return err
+		}
+
+		// an empty list keeps the container's own; an empty name is none
+		if v == "null" || v == "" || v == "[]" {
+			v = `[""]`
+			if field == "Cmd" {
+				v = "[]"
+			}
+		}
+
+		args = append(args, "--change", strings.ToUpper(field)+" "+v)
+	}
+
+	c := exec.CommandContext(ctx, tool, append(args, name, ref)...) //nolint:gosec // the container this run kept, and the tag pipelinegen gives it
+	c.Stdout, c.Stderr = log, log
+
+	if err := c.Run(); err != nil {
+		return fmt.Errorf("%w %s: %s commit: %w", ErrImage, ref, filepath.Base(tool), err)
+	}
+
+	return nil
 }
