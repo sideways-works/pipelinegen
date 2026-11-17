@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Fixed
+
+- Pull request runs: when the target branch moves on between a plan's two steps, the second step takes the first step's plan of the change merged into the older tip, once it finds that tip in the target's history and gets the same merge itself; it refused the plan as "not of this change" and failed the run
+
 ### Deprecated
 
 - Config: `suites.<name>.run_on.serial_group`, `suites.<name>.run_on.max_in_flight` and `concourse.serial_groups` are no longer read: no job is serial, in a serial group or capped, and `check` names each one still set; a later release refuses them
