@@ -666,7 +666,9 @@ fixture tree of its own. It checks:
   `from` of `same`, `fork` or `unknown` (`unknown` for every change
   without the `forks` capability). With `forks`, the fixture names the
   changes that come from a fork, and none of them may be reported as
-  `same`, since that is what would let a fork's code run.
+  `same`, since that is what would let a fork's code run. A host with no
+  forks at all, a plain git server, says why in `no_forks` instead, and the
+  changes it names in `same` must be reported as `same`.
   `status`, `statuses`, `subject` and `comment` answer, for the
   capabilities that need them, with statuses in the core's four states
   and a subject on one line. Every request the connector makes must find
@@ -712,6 +714,10 @@ host's address:
 
 `config` goes over the plugin's config block, so a connector whose API
 lives on another host (`api_hosts`) can be pointed at the fake one.
+A plain git connector's fixture has no responses: its `config` holds the
+`heads` the core would list with git, and `"no_forks"` says why no change
+comes from a fork.
+
 `responses` answer by method and path, and by query when one is given; a
 response listed twice for the same request answers the first request and
 then the second, and the last one keeps answering after that. `calls` are each call's arguments. The tokens are canary

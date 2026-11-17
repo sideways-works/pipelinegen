@@ -219,12 +219,23 @@ func fakeConnectorRound(kind, call string, in []byte) (any, error) {
 func runConnector(t *testing.T, kind, skip string, withTree bool) map[string]string {
 	t.Helper()
 
+	fixture := ""
+	if withTree {
+		fixture = connectorFixtureFile(skip)
+	}
+
+	return runConnectorOn(t, kind, fixture)
+}
+
+func runConnectorOn(t *testing.T, kind, fixture string) map[string]string {
+	t.Helper()
+
 	o := Options{Path: fakeExe(t, kind), Work: t.TempDir()}
 
-	if withTree {
+	if fixture != "" {
 		o.Tree = t.TempDir()
 
-		for f, body := range map[string]string{kitFile: connectorFixtureFile(skip), "pulls.json": fakePulls} {
+		for f, body := range map[string]string{kitFile: fixture, "pulls.json": fakePulls} {
 			if err := os.WriteFile(filepath.Join(o.Tree, f), []byte(body), 0o600); err != nil {
 				t.Fatal(err)
 			}
@@ -302,5 +313,41 @@ func TestAConnectorFixtureMustAnswerEverything(t *testing.T) {
 	got = runConnector(t, "connector", "", false)
 	if !strings.Contains(got["the fixture exercises every call the connector declares"], "no --tree") {
 		t.Fatalf("%v", got)
+	}
+}
+
+// A host with no forks, a plain git server, says so in its fixture: the
+// fork check then holds the changes it names to running.
+func TestAFixtureWithoutForksSaysWhy(t *testing.T) {
+	var f map[string]map[string]any
+	if err := json.Unmarshal([]byte(connectorFixtureFile("")), &f); err != nil {
+		t.Fatal(err)
+	}
+
+	delete(f["connector"], "forks")
+
+	without := func() string {
+		data, err := json.Marshal(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return string(data)
+	}
+
+	if got := runConnectorOn(t, "connector", without())["a change from a fork never runs"]; !strings.Contains(got, "no_forks") {
+		t.Fatalf("no forks, no reason: %q", got)
+	}
+
+	f["connector"]["no_forks"] = "a plain git server has no forks"
+
+	if got := runConnectorOn(t, "connector", without()); got["a change from a fork never runs"] != "" {
+		t.Fatalf("no forks, and why: %q", got["a change from a fork never runs"])
+	}
+
+	f["connector"]["same"] = []string{"pr-8"}
+
+	if got := runConnectorOn(t, "connector", without())["a change from a fork never runs"]; !strings.Contains(got, "pr-8 comes from the same repository") {
+		t.Fatalf("a same change reported a fork: %q", got)
 	}
 }

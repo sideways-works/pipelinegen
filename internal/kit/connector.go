@@ -30,6 +30,9 @@ type connectorFixture struct {
 	Calls     map[string]json.RawMessage `json:"calls"`
 	Forks     []string                   `json:"forks,omitempty"`
 	Same      []string                   `json:"same,omitempty"`
+	// NoForks says why the host has no forks to show (a plain git server):
+	// the fork check then checks only that the same ones run.
+	NoForks string `json:"no_forks,omitempty"`
 }
 
 type fixtureResponse struct {
@@ -359,8 +362,9 @@ func (k *kit) changes(ctx context.Context, e *connector.Exchange, fx *connectorF
 		return
 	}
 
-	if len(fx.Forks) == 0 {
-		k.check("a change from a fork never runs", "the connector declares forks, and the fixture names no change from a fork (\"forks\": [ids])")
+	if len(fx.Forks) == 0 && (fx.NoForks == "" || len(fx.Same) == 0) {
+		k.check("a change from a fork never runs", "the connector declares forks, and the fixture names no change from a fork (\"forks\": [ids]), "+
+			"or says why its host has none (\"no_forks\") and names changes from the same repository (\"same\": [ids])")
 
 		return
 	}
