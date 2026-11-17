@@ -39,7 +39,7 @@ func Measure(root string) (Usage, error) {
 
 	if p, ok := unifiedPath(root); ok {
 		dir := filepath.Join(cg, filepath.FromSlash(p))
-		cpu, _ := fields(filepath.Join(dir, "cpu.stat"), " ")
+		cpu := fieldsOf(filepath.Join(dir, "cpu.stat"), " ")
 		u.CPU = float64(atoi(cpu["usage_usec"])) / 1e6
 		cur, _ := number(filepath.Join(dir, "memory.current"))
 		u.Set = workingSet(cur, dir, "inactive_file") / MB
@@ -48,7 +48,7 @@ func Measure(root string) (Usage, error) {
 			u.Peak = workingSet(peak, dir, "inactive_file") / MB
 		}
 
-		events, _ := fields(filepath.Join(dir, "memory.events"), " ")
+		events := fieldsOf(filepath.Join(dir, "memory.events"), " ")
 		u.OOM = atoi(events["oom_kill"])
 
 		return u, nil
@@ -64,7 +64,7 @@ func Measure(root string) (Usage, error) {
 		u.Peak = workingSet(peak, mem, "total_inactive_file") / MB
 	}
 
-	oom, _ := fields(filepath.Join(mem, "memory.oom_control"), " ")
+	oom := fieldsOf(filepath.Join(mem, "memory.oom_control"), " ")
 	u.OOM = atoi(oom["oom_kill"])
 
 	return u, nil
@@ -88,10 +88,24 @@ func Pressure(root string) float64 {
 	return -1
 }
 
+// atoi reads a number, 0 for what isn't one: a file the kernel doesn't keep counts nothing.
 func atoi(s string) int64 {
-	n, _ := strconv.ParseInt(s, 10, 64)
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0
+	}
 
 	return n
+}
+
+// fieldsOf is a file's fields, none for a file the kernel doesn't keep.
+func fieldsOf(p, sep string) map[string]string {
+	f, err := fields(p, sep)
+	if err != nil {
+		return map[string]string{}
+	}
+
+	return f
 }
 
 // Headroom is the share, in percent, a prediction adds to the peaks it is made from.

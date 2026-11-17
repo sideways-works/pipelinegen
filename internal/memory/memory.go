@@ -42,6 +42,15 @@ func (r Reading) Free() int64 {
 	return r.Available
 }
 
+// Capacity is the most the task could ever have: the machine's memory, or a cgroup's limit below it.
+func (r Reading) Capacity() int64 {
+	if r.Limit > 0 {
+		return min(r.Total, r.Limit)
+	}
+
+	return r.Total
+}
+
 func (r Reading) String() string {
 	s := fmt.Sprintf("%d MB free: %d MB available of %d MB", r.Free(), r.Available, r.Total)
 	if r.Limit > 0 {
@@ -178,7 +187,5 @@ func fields(p, sep string) (map[string]string, error) {
 
 // kb reads "16384 kB" as MB.
 func kb(v string) int64 {
-	n, _ := strconv.ParseInt(strings.TrimSpace(strings.TrimSuffix(v, "kB")), 10, 64)
-
-	return n / 1024
+	return atoi(strings.TrimSpace(strings.TrimSuffix(v, "kB"))) / 1024
 }
