@@ -386,3 +386,18 @@ func TestAnUntestedFileNoTargetOwnsSelectsNothing(t *testing.T) {
 		t.Errorf("an unowned file nothing declares: all=%v %q", p.All, p.Reason)
 	}
 }
+
+func TestAPlanOfEverythingForAKnownReasonNamesItsBase(t *testing.T) {
+	s := newSetup(t)
+	base := s.r.Git("rev-parse", "HEAD")
+
+	s.r.Write("extra.txt", "x\n")
+	head := s.r.Commit("extra")
+
+	s.allReason = "MODULE.bazel changed (everything_on MODULE.bazel)"
+
+	p := s.plan(t, base, head, true)
+	if !p.All || p.Base != base {
+		t.Fatalf("all %v, base %q, want %q", p.All, p.Base, base)
+	}
+}

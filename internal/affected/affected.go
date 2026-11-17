@@ -402,7 +402,7 @@ func compute(ctx context.Context, o Options) (*Plan, error) {
 		return nil, err
 	}
 
-	plan.Base = base
+	plan.Base = namedBase(ctx, o, base)
 
 	if reason != "" {
 		h, err := slicesOnly(ctx, o, head)
@@ -556,6 +556,20 @@ func Everything(ctx context.Context, o Options) (string, error) {
 	reason, _, err := everythingReason(ctx, o, head)
 
 	return reason, err
+}
+
+// namedBase is the plan's base: a plan of everything still names it, so
+// the step that writes the plan can tell it is this change's.
+func namedBase(ctx context.Context, o Options, base string) string {
+	if base != "" || o.Base == "" {
+		return base
+	}
+
+	if resolved, ok, err := o.Repo.Resolve(ctx, o.Base); err == nil && ok {
+		return resolved
+	}
+
+	return ""
 }
 
 func everythingReason(ctx context.Context, o Options, head string) (reason, base string, err error) {
