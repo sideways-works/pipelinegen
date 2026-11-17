@@ -700,14 +700,14 @@ func failures(b *strings.Builder, r Run, tails bool) {
 
 	for _, s := range r.Suites {
 		// slices their batch never started are told once, not each
-		if n := s.Counts()[NotRun]; n > 0 {
+		for _, nr := range notRunGroups(s) {
 			if !wrote {
 				b.WriteString("#### Failures\n\n")
 
 				wrote = true
 			}
 
-			fmt.Fprintf(b, "- %s %s of %s: %s\n", stateWord(NotRun), plural(n, "slice"), s.Name, notRun.Tail)
+			fmt.Fprintf(b, "- %s %s of %s: %s\n", stateWord(NotRun), plural(nr.n, "slice"), s.Name, nr.why)
 		}
 
 		for _, sl := range s.Slices {
@@ -813,6 +813,41 @@ func mermaid(r Run) (string, bool) {
 	chart := b.String()
 
 	return chart, edges <= mermaidMaxEdges && len(chart) <= mermaidMaxChars
+}
+
+type notRunGroup struct {
+	n   int
+	why string
+}
+
+// notRunGroups says a suite's slices not run by cause: a setup that failed, and the worker short of
+// memory with the first such batch's reading.
+func notRunGroups(s Suite) []notRunGroup {
+	var setup, short notRunGroup
+
+	for _, sl := range s.Slices {
+		switch {
+		case sl.ShortOfMemory():
+			short.n++
+			if short.why == "" {
+				short.why = sl.Failures[0].Tail
+			}
+		case sl.State == NotRun:
+			setup.n++
+		}
+	}
+
+	setup.why = notRun.Tail
+
+	var out []notRunGroup
+
+	for _, g := range []notRunGroup{setup, short} {
+		if g.n > 0 {
+			out = append(out, g)
+		}
+	}
+
+	return out
 }
 
 func stateWord(s State) string {

@@ -150,6 +150,8 @@ type SliceEvent struct {
 	NotRun       bool    `json:"not_run,omitempty"`
 	Stopped      string  `json:"stopped,omitempty"`
 	Seconds      float64 `json:"seconds,omitempty"`
+	// Short is why a batch never started its slices: the worker was short of memory.
+	Short string `json:"short,omitempty"`
 }
 
 // Slice reports one slice; see Slices.
@@ -299,6 +301,10 @@ func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, file
 		f := notRun
 		if ev.Stopped != "" {
 			f.Tail = ev.Stopped
+		}
+
+		if ev.Short != "" {
+			f = Failure{Test: MemoryTest, Tail: ev.Short}
 		}
 
 		sf.State, sf.Failures = NotRun, []Failure{f}

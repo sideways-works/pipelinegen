@@ -423,6 +423,26 @@ func capTail(s string) string {
 	return s
 }
 
+// MemoryTest names the failure of a slice not run because its batch found the worker short of memory.
+const MemoryTest = "(memory)"
+
+// ShortOfMemory tells a slice its batch never started for want of memory.
+func (sl Slice) ShortOfMemory() bool {
+	return sl.State == NotRun && len(sl.Failures) > 0 && sl.Failures[0].Test == MemoryTest
+}
+
+func (s Suite) shortOfMemory() int {
+	n := 0
+
+	for _, sl := range s.Slices {
+		if sl.ShortOfMemory() {
+			n++
+		}
+	}
+
+	return n
+}
+
 // Counts tallies a suite's slices by state.
 func (s Suite) Counts() map[State]int {
 	c := map[State]int{Untouched: len(s.Untouched)}
@@ -536,7 +556,7 @@ func (s Suite) status() (state, description string) {
 			description += fmt.Sprintf(", %d untouched", c[Untouched])
 		}
 	case c[Errored]+c[NotRun] > 0:
-		state, description = statusError, erroredText(c, ran, total)
+		state, description = statusError, erroredText(c, s.shortOfMemory(), ran, total)
 	case c[Failed] > 0:
 		state = statusFailure
 		description = fmt.Sprintf("%d of %d slices ran, %d failed (%s)", ran, total, c[Failed], plural(s.failedTests(), "test"))
@@ -688,11 +708,15 @@ func (r Run) Sorted() Run {
 	return out
 }
 
-func erroredText(c map[State]int, ran, total int) string {
+func erroredText(c map[State]int, short, ran, total int) string {
 	description := fmt.Sprintf("%d of %d slices ran", ran-c[NotRun], total)
 
-	if c[NotRun] > 0 {
-		description += fmt.Sprintf(", %d not run (a batch's setup failed)", c[NotRun])
+	if n := c[NotRun] - short; n > 0 {
+		description += fmt.Sprintf(", %d not run (a batch's setup failed)", n)
+	}
+
+	if short > 0 {
+		description += fmt.Sprintf(", %d not run (worker short of memory)", short)
 	}
 
 	if c[Errored] > 0 {
