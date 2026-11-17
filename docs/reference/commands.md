@@ -44,7 +44,7 @@ With `PIPELINEGEN_CPU_PROFILE` set to a file's path, any command writes a
 CPU profile of itself there, for `go tool pprof`: how a slow plan spends
 its time, measured on the tree that is slow.
 
-The commands for people are `slices`, `affected`, `record`, `seed`,
+The commands for people are `slices`, `affected`, `run`, `record`, `seed`,
 `baseline`, `lists`, `why`, `unlock` and `also-to`.
 The others are what the generated pipeline's steps call; you run them by
 hand only to try a task file or to repair a run.
@@ -853,6 +853,101 @@ A commit with no lists within 50 commits shows "no earlier lists": its
 recorded slices are bound to everything, as on a first run. See
 [attaching lists](../how-to/attaching-lists.md) and
 [looking inside](../how-to/looking-inside.md).
+
+## `pipelinegen run`
+
+Plans a change as `affected` does and runs the slices it selects on this
+machine, the way a pull request's run would on CI: per suite with a
+selected slice, the suite's prepare once and then one batch of its
+selected slices, through its drivers or its task files, in a build
+directory laid out as `record`'s is. No CI system, host, token or `runs`
+section is needed: a config with `suites` and `plugins` is enough, and a
+`github` section is ignored for the run itself.
+
+It plans and runs commits. `--head` (default `HEAD`) is planned against
+`--base` with `--head`'s own `pipelinegen.yaml`, and the build is a fresh
+checkout of `--head`, so uncommitted changes are neither planned nor run.
+With `--head` at `HEAD` and changes in the work tree, it names them on
+stderr and says so again on its last line, but runs: testing the last
+commit while you edit is what it is for. Under `--record` it refuses
+them, as `record` does.
+
+`--base` has no default. Without one, `affected` plans every slice
+("nothing to compare with"); `run` asks for `--base`, or for `--all` to
+run every slice, so a forgotten flag doesn't run the whole suite.
+
+Its output, on stdout:
+
+1. the plan, as `affected` prints it: a line per suite with how many
+   slices it selected, and the slices;
+2. what the batches print as they go: `prepared <suite>`, `setup ended`
+   and `slice <name>: <state>` as each slice ends (the tests' own output,
+   and why a slice failed, go to stderr);
+3. a summary: per suite, how many slices passed, failed and errored (and
+   any that never ran), each slice that did not pass, and, under
+   `--record`, whether the suite's lists were attached.
+
+It exits 0 when every slice passed, and when the plan selects nothing
+(`nothing selected: no slice to run`); 1 when a slice failed, errored or
+never ran, or the run itself failed; 2 for a command line it can't read,
+`--base` and `--all` both missing among them.
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--root` | `.` | The repository's root. |
+| `--config` | `--head`'s own `pipelinegen.yaml` | The config file to plan and run under. |
+| `--base` | none | The commit to compare with. Required unless `--all`. |
+| `--head` | `HEAD` | The commit to plan and run. |
+| `--suite` | every suite | Only this suite; repeat it for more. |
+| `--all` | `false` | Runs every slice, not only those the change selects. |
+| `--record` | `false` | Records the suites bound by recording, as `record` does, and attaches their lists to `--head` in the local store, each suite's only when every slice of it that ran passed. A suite not bound by recording runs without, and a line on stderr says so. |
+| `--local` | `false` | Plans with the lists of the local store, as `affected --local`. |
+| `--no-lists` | `false` | Binds recorded slices to everything instead of reading the lists, as `affected --no-lists`. |
+| `--cache` | your user cache directory, then `pipelinegen/repos/<repository>` | The planning cache, as `affected`'s. |
+| `--bazel-diff` | the pinned release | A bazel-diff binary to run instead of downloading one. |
+| `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, one executable per name: the sbom and correlator plugins planning asks, and the drivers the batches run. A driver must be the build its pin names, as on CI. |
+| `--no-fill` | `false` | Doesn't fill the caches the plugins read before planning, as `affected --no-fill`. |
+| `--work` | a temporary directory, removed after | Where the builds go, one directory per suite (`<work>/<suite>/build`, with the run's records in `<work>/<suite>/store.git` when it doesn't record). A directory used before is reused as `record --work` reuses it, which keeps Bazel's output base warm. |
+
+```
+$ git commit -am "a test of adding zero"
+$ pipelinegen run --base HEAD~1 --suite unit
+unit: 1 selected, 3 untouched
+  run calc/add_test.sh
+prepared unit
+setup ended
+slice calc/add_test.sh: passed
+ran at 1f6e332512d3:
+  unit: 1 passed, 0 failed, 0 errored
+```
+
+A slice that fails is named in the summary, and why it failed is on
+stderr:
+
+```
+$ pipelinegen run --base HEAD~1 --suite unit
+unit: 1 selected, 3 untouched
+  run text/upper_test.sh
+prepared unit
+setup ended
+slice text/upper_test.sh: failed
+ran at 9619a1b7ebfa:
+  unit: 0 passed, 1 failed, 0 errored
+    failed text/upper_test.sh
+```
+
+What a local run can't do:
+
+- The steps run on this machine, not in the images the config names, so
+  the machine needs what those images have (a browser, Node, Go, a
+  database); a missing tool fails the batch, and the line on stderr names
+  the image. A setup step that starts a server binds its port here.
+- Each suite runs as one batch: no `parallel` split, no `run_on`, no lock.
+- Whole-suite checks don't run; a line on stderr names the selected ones.
+- Without `--record`, nothing is observed and the local store is left
+  as it was. With it, attaching only some slices is as valid as
+  `record --slice`: a local recording adds to the lists, and a slice that
+  didn't run keeps its own.
 
 ## `pipelinegen record`
 
