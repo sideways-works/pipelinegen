@@ -13,52 +13,27 @@ import (
 // they come from the config the pipeline was generated from, never the
 // change's own.
 type Trusted struct {
-	GitRemote       string            `json:"git_remote,omitempty"`
-	SSHKey          SSHKeys           `json:"ssh_key"`
-	KnownHosts      []string          `json:"known_hosts,omitempty"`
-	GitHubRepo      string            `json:"github_repository,omitempty"`
-	GitHubToken     string            `json:"github_token,omitempty"`
-	GitHubTokens    Tokens            `json:"github_tokens"`
-	StatusPrefix    string            `json:"github_status_prefix,omitempty"`
-	StoreBackend    string            `json:"store_backend,omitempty"`
-	StoreBranch     string            `json:"store_branch,omitempty"`
-	BazelDiff       BazelDiff         `json:"bazel_diff"`
-	Bazelisk        string            `json:"bazel_bazelisk,omitempty"`
-	StartupFlags    []string          `json:"bazel_startup_flags,omitempty"`
-	Plugins         []TrustedPlugin   `json:"plugins,omitempty"`
-	Bootstrap       json.RawMessage   `json:"concourse_planner_bootstrap,omitempty"`
-	LockRepos       map[string]string `json:"lock_repositories,omitempty"`
-	Locks           *TrustedLocks     `json:"locks,omitempty"`
-	Connectors      []Connector       `json:"connectors,omitempty"`
-	ConcourseBranch string            `json:"concourse_branch,omitempty"`
+	GitRemote       string          `json:"git_remote,omitempty"`
+	SSHKey          SSHKeys         `json:"ssh_key"`
+	KnownHosts      []string        `json:"known_hosts,omitempty"`
+	GitHubRepo      string          `json:"github_repository,omitempty"`
+	GitHubToken     string          `json:"github_token,omitempty"`
+	GitHubTokens    Tokens          `json:"github_tokens"`
+	StatusPrefix    string          `json:"github_status_prefix,omitempty"`
+	StoreBackend    string          `json:"store_backend,omitempty"`
+	StoreBranch     string          `json:"store_branch,omitempty"`
+	BazelDiff       BazelDiff       `json:"bazel_diff"`
+	Bazelisk        string          `json:"bazel_bazelisk,omitempty"`
+	StartupFlags    []string        `json:"bazel_startup_flags,omitempty"`
+	Plugins         []TrustedPlugin `json:"plugins,omitempty"`
+	Bootstrap       json.RawMessage `json:"concourse_planner_bootstrap,omitempty"`
+	Connectors      []Connector     `json:"connectors,omitempty"`
+	ConcourseBranch string          `json:"concourse_branch,omitempty"`
 	// RunSuites are the suites each run names; a change can't take a suite
 	// out of its own run.
 	RunSuites    map[string][]string `json:"run_suites,omitempty"`
 	Steps        map[string][]Step   `json:"suite_steps,omitempty"`
 	RunnerConfig *json.RawMessage    `json:"runner_config,omitempty"`
-}
-
-// TrustedLocks are the locks' other keys, beside their repositories: what a
-// lease is decides how a machine is shared with every other run, so a
-// proposed change can't raise its own. Nil in trusted keys from an older
-// tool: the change's own values stand.
-type TrustedLocks struct {
-	Suites map[string]TrustedLock `json:"suites"`
-	// RunMinutes are, by "<run>/<suite>", the time limits of the locked
-	// suites in the runs that set their own: a lease lasts the limit of the
-	// suite that takes it.
-	RunMinutes map[string]int `json:"run_minutes,omitempty"`
-}
-
-// TrustedLock is one suite's lock, without its repository. Minutes is the
-// suite's time limit (minutes, or the lock's old minutes), which its
-// leases last.
-type TrustedLock struct {
-	Name    string `json:"name"`
-	Minutes int    `json:"minutes"`
-	Slots   int    `json:"slots,omitempty"`
-	Per     string `json:"per,omitempty"`
-	Weight  int    `json:"weight,omitempty"`
 }
 
 // TrustedPlugin is where a plugin comes from.
@@ -96,18 +71,6 @@ func (c *Config) Trusted() Trusted {
 	t.Steps = c.suiteSteps()
 
 	sort.Slice(t.Plugins, func(i, j int) bool { return t.Plugins[i].Name < t.Plugins[j].Name })
-
-	for _, name := range c.SuiteNames() {
-		if l := c.Suites[name].Lock; l != nil && l.Repository != "" {
-			if t.LockRepos == nil {
-				t.LockRepos = map[string]string{}
-			}
-
-			t.LockRepos[name] = l.Repository
-		}
-	}
-
-	t.Locks = c.trustedLocks()
 
 	for _, cn := range c.Connectors {
 		// a connector's web links move no credential and no write
@@ -157,12 +120,6 @@ func (c *Config) WithTrusted(t Trusted) []string {
 	same("bazel.startup_flags", own.StartupFlags, t.StartupFlags)
 	same("plugins", comparedPlugins(own.Plugins), comparedPlugins(t.Plugins))
 	same("concourse.planner.bootstrap", own.Bootstrap, t.Bootstrap)
-	same("suites.*.lock.repository", own.LockRepos, t.LockRepos)
-
-	if t.Locks != nil {
-		same("suites.*.lock", own.Locks, t.Locks)
-	}
-
 	same("connectors", own.Connectors, t.Connectors)
 	same("concourse.branch", own.ConcourseBranch, t.ConcourseBranch)
 	same("suites.*.steps", own.Steps, t.Steps)
@@ -173,12 +130,7 @@ func (c *Config) WithTrusted(t Trusted) []string {
 	c.trustSteps(t.Steps)
 	c.trustRunnerConfig(t.RunnerConfig, same)
 
-	// a suite given back to a run takes the run's trusted lock minutes too
-	edited = append(edited, c.trustRunSuites(t.RunSuites)...)
-
-	c.trustLocks(t.Locks, t.LockRepos)
-
-	return edited
+	return append(edited, c.trustRunSuites(t.RunSuites)...)
 }
 
 func (c *Config) trustPlain(t Trusted) {
@@ -266,71 +218,6 @@ func (c *Config) trustPlugins(trusted []TrustedPlugin) {
 	}
 
 	c.Plugins = kept
-}
-
-func (c *Config) trustedLocks() *TrustedLocks {
-	out := &TrustedLocks{Suites: map[string]TrustedLock{}}
-
-	for _, name := range c.SuiteNames() {
-		if l := c.Suites[name].Lock; l != nil {
-			out.Suites[name] = TrustedLock{Name: l.Name, Minutes: c.SuiteMinutes("", name), Slots: l.Slots, Per: l.Per, Weight: l.Weight}
-		}
-	}
-
-	for _, run := range c.RunNames() {
-		for suite, rs := range c.Runs[run].Suites {
-			if c.Suites[suite].Lock != nil && (rs.Minutes > 0 || rs.LockMinutes > 0) {
-				if out.RunMinutes == nil {
-					out.RunMinutes = map[string]int{}
-				}
-
-				out.RunMinutes[run+"/"+suite] = c.SuiteMinutes(run, suite)
-			}
-		}
-	}
-
-	return out
-}
-
-// trustLocks gives each suite the trusted lock, or none, and its trusted
-// time limit in every run; nil leaves the change's own.
-func (c *Config) trustLocks(t *TrustedLocks, repos map[string]string) {
-	defer c.trustLockRepos(repos)
-
-	if t == nil {
-		return
-	}
-
-	for name, s := range c.Suites {
-		s.Lock = nil
-
-		if tl, ok := t.Suites[name]; ok {
-			s.Lock = &Lock{Name: tl.Name, Slots: tl.Slots, Per: tl.Per, Weight: tl.Weight}
-			s.Minutes = tl.Minutes
-		}
-
-		c.Suites[name] = s
-	}
-
-	for run, r := range c.Runs {
-		for suite, rs := range r.Suites {
-			if c.Suites[suite].Lock != nil {
-				rs.Minutes, rs.LockMinutes = t.RunMinutes[run+"/"+suite], 0
-				r.Suites[suite] = rs
-			}
-		}
-	}
-}
-
-func (c *Config) trustLockRepos(repos map[string]string) {
-	for name, s := range c.Suites {
-		if s.Lock != nil {
-			l := *s.Lock
-			l.Repository = repos[name]
-			s.Lock = &l
-			c.Suites[name] = s
-		}
-	}
 }
 
 func (c *Config) trustConnectors(trusted []Connector) {

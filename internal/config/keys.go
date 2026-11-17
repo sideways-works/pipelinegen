@@ -41,7 +41,6 @@ var defaults = map[string]string{
 	"store.deadline":                         "10m",
 	"suites.<name>.bind":                     BindGraph,
 	"suites.<name>.parallel":                 strconv.Itoa(DefaultParallel),
-	"suites.<name>.lock.slots":               "1",
 	"runs.<name>.report.status":              "true",
 	"runs.<name>.report.flush":               "30s",
 	"runs.<name>.trigger.pull_requests.missed_after": DefaultMissedAfter.String(),

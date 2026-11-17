@@ -296,8 +296,9 @@ const (
 // Store is where pipelinegen keeps its records in the repository.
 type Store struct {
 	Backend string `yaml:"backend"`
-	// Branch names the branch (default DefaultStoreBranch); the leases of
-	// the locks live on the branch of the same name with "-locks" added.
+	// Branch names the branch (default DefaultStoreBranch). An older
+	// pipelinegen kept the leases of its locks on the branch of the same
+	// name with "-locks" added, which the plan step sweeps.
 	Branch   string `yaml:"branch"`
 	Deadline Period `yaml:"deadline"`
 }
@@ -322,7 +323,8 @@ func (c *Config) StoreBranchName() string {
 	return c.Store.Branch
 }
 
-// LocksBranchName is the branch the leases of the locks live on.
+// LocksBranchName is the branch an older pipelinegen kept the leases of its
+// locks on.
 func (c *Config) LocksBranchName() string { return c.StoreBranchName() + "-locks" }
 
 // StoreDeadline is store.deadline with its default.
@@ -619,21 +621,15 @@ func (s Suite) ReadsText(test, file string) bool {
 // test patterns and no tag.
 func (s Suite) Implicit() bool { return len(s.Tests) > 0 && s.Tag == "" }
 
-// Lock is a lease on a branch that one suite job holds at a time, across
-// pipelines and repositories.
+// Lock is no longer read, so an older config still loads; a notice says so.
+// Minutes alone is still read, as the old spelling of the suite's minutes.
 type Lock struct {
 	Name       string `yaml:"name"`
 	Repository string `yaml:"repository"`
-	// Minutes is the old spelling of the suite's minutes, read as them
-	// when those are unset; a lease expires 15 minutes after the suite's
-	// time limit.
-	Minutes int    `yaml:"minutes"`
-	Slots   int    `yaml:"slots"`
-	Per     string `yaml:"per"`
-	// Weight is how many slots each of this suite's holders takes at once
-	// (default 1), all or none: suites of different sizes share one lock
-	// of a machine, a heavy suite taking every slot.
-	Weight int `yaml:"weight"`
+	Minutes    int    `yaml:"minutes"`
+	Slots      int    `yaml:"slots"`
+	Per        string `yaml:"per"`
+	Weight     int    `yaml:"weight"`
 }
 
 // What holds a slot of a suite's lock.
@@ -1100,50 +1096,6 @@ func (c *Config) validateSuites(bad func(string, ...any)) {
 		validateSuiteSettings(name, s, bad)
 		c.validateSteps(name, s, bad)
 	}
-
-	c.validateSharedLocks(bad)
-}
-
-func validateLock(name string, l *Lock, bad func(string, ...any)) {
-	if l == nil {
-		return
-	}
-
-	if l.Name == "" || l.Minutes < 0 || l.Slots < 0 {
-		bad("suite %s: a lock needs a name", name)
-	}
-
-	if l.Per != "" && l.Per != LockPerBuild && l.Per != LockPerBatch {
-		bad("suite %s: lock.per must be build or batch", name)
-	}
-}
-
-func (c *Config) validateSharedLocks(bad func(string, ...any)) {
-	first := map[string]string{}
-
-	for _, name := range c.SuiteNames() {
-		l := c.Suites[name].Lock
-		if l == nil {
-			continue
-		}
-
-		slots := max(l.Slots, 1)
-
-		if l.Weight < 0 || l.Weight > slots {
-			bad("suite %s: lock.weight %d must be from 1 to the lock's slots (%d)", name, l.Weight, slots)
-		}
-
-		other, seen := first[l.Name]
-		if !seen {
-			first[l.Name] = name
-
-			continue
-		}
-
-		if o := c.Suites[other].Lock; max(o.Slots, 1) != slots || o.Repository != l.Repository {
-			bad("suite %s: lock %s has other slots or another repository than in suite %s", name, l.Name, other)
-		}
-	}
 }
 
 func validateSlices(name string, s Suite, tags map[string]string, bad func(string, ...any)) {
@@ -1209,8 +1161,6 @@ func validateSuiteSettings(name string, s Suite, bad func(string, ...any)) {
 	if (s.Follow != "" && !validFollow(s.Follow)) || s.FollowDepth < 0 {
 		bad("suite %s: follow must be executed or dependents, follow_depth 0 or more", name)
 	}
-
-	validateLock(name, s.Lock, bad)
 
 	for _, w := range s.WholeSuite {
 		if w.Name == "" || w.Task == "" {

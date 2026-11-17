@@ -225,7 +225,7 @@ func suiteRuns(key string) bool {
 func (m *Meaning) means(p []string) string {
 	switch p[0] {
 	case "suites":
-		return suiteMeans(p)
+		return m.suiteMeans(p)
 	case "plugins":
 		return m.pluginMeans(p)
 	case "runs":
@@ -253,7 +253,7 @@ func (m *Meaning) means(p []string) string {
 	return MeansFile
 }
 
-func suiteMeans(p []string) string {
+func (m *Meaning) suiteMeans(p []string) string {
 	if len(p) < 3 {
 		// a suite added or removed: its slices run differently from not
 		// at all, which SliceRuns tells
@@ -267,14 +267,31 @@ func suiteMeans(p []string) string {
 		return MeansSelection
 	case slices.Contains(suiteNothing, key):
 		return MeansNothing
-	case key == "lock" && len(p) > 3 && p[3] != "minutes":
-		return MeansNothing
+	case key == "lock" && len(p) > 3:
+		if p[3] != "minutes" {
+			return MeansNothing
+		}
+	case key == "lock":
+		// no longer read but for its minutes, the old spelling of the
+		// suite's: a lock added or removed whole is a time limit's change
+		// only when its minutes were one
+		if lockMinutes(m.base, p[1]) == lockMinutes(m.head, p[1]) {
+			return MeansNothing
+		}
 	}
 
 	// a time limit can end a batch that passed before, and the
 	// correlators that collect in every batch can fail a slice: no slice
 	// in particular, so the config is a changed file
 	return MeansFile
+}
+
+func lockMinutes(c *Config, suite string) int {
+	if c == nil || c.Suites[suite].Lock == nil {
+		return 0
+	}
+
+	return c.Suites[suite].Lock.Minutes
 }
 
 func (m *Meaning) pluginMeans(p []string) string {

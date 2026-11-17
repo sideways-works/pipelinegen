@@ -200,10 +200,43 @@ func TestLockKeysAreNoLongerRead(t *testing.T) {
 	}
 
 	said := strings.Join(c.Notices, "\n")
-	for _, key := range []string{"run_on.serial_group is no longer read", "run_on.max_in_flight is no longer read", "concourse.serial_groups is no longer read"} {
+	for _, key := range []string{
+		"run_on.serial_group is no longer read", "run_on.max_in_flight is no longer read", "concourse.serial_groups is no longer read",
+		"suites.e2e.lock is no longer read: a suite's batches start when their node has room; remove it",
+	} {
 		if !strings.Contains(said, key) {
 			t.Errorf("no notice %q in %q", key, said)
 		}
+	}
+}
+
+func TestAnOldLockLoadsAndBindsNothing(t *testing.T) {
+	text := strings.Replace(withRuns, "lock: {name: browsers, minutes: 90}", "lock: {name: browsers, minutes: 90, repository: o/locks, slots: 2, weight: 9, per: sometimes}", 1)
+	text = strings.Replace(text, "  backend:\n", "  backend:\n    lock: {slots: -1}\n", 1)
+
+	if !strings.Contains(text, "weight: 9") || !strings.Contains(text, "slots: -1") {
+		t.Fatal("the fixture moved")
+	}
+
+	c, err := Parse([]byte(text))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := c.SuiteMinutes("", "e2e"); got != 90 {
+		t.Errorf("lock.minutes, the old spelling of minutes: %d, want 90", got)
+	}
+
+	said := strings.Join(c.Notices, "\n")
+	for _, s := range []string{"backend", "e2e"} {
+		if !strings.Contains(said, "suites."+s+".lock is no longer read") {
+			t.Errorf("no notice for %s in %q", s, said)
+		}
+	}
+
+	noHost := strings.Replace(withRuns, "lock: {name: browsers, minutes: 90}", "lock: {name: browsers, repository: o/locks}", 1)
+	if _, err := Parse([]byte(noHost)); err != nil && strings.Contains(err.Error(), "lock") {
+		t.Errorf("a lock's repository is still checked: %v", err)
 	}
 }
 
@@ -718,7 +751,6 @@ func TestWithoutAHostWhatNeedsOneIsRefused(t *testing.T) {
 	cases := map[string][3]string{
 		"pull requests":       {"trigger: {branch: main}", "trigger: {pull_requests: {base: main}}", "needs a host or a connector that lists them"},
 		"statuses asked for":  {"compare: last_passed\n", "compare: last_passed\n    report: {status: true}\n", "report.status needs a host"},
-		"a lock's repository": {"lock: {name: browsers, minutes: 90}", "lock: {name: browsers, minutes: 90, repository: o/locks}", "lock.repository needs the github section"},
 		"a password":          {"git://example.test/r.git", "https://u:p@example.test/r.git", "without a user, password"},
 		"a user":              {"git://example.test/r.git", "https://u@example.test/r.git", "without a user, password"},
 		"ssh":                 {"git://example.test/r.git", "ssh://git@example.test/r.git", "an ssh remote needs git.ssh_key"},

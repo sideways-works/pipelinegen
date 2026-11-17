@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"slices"
 	"strings"
 	"testing"
@@ -12,7 +13,6 @@ suites:
   e2e:
     tests: ["e2e/*.spec.ts"]
     run_slice: ci/e2e.yml
-    lock: {name: browsers, minutes: 90, repository: o/locks}
 github: {repository: o/r, token: gh}
 plugins:
   - {name: go-sbom, kind: sbom, repository: s/go-sbom, release: {version: v1, sha256: "1111111111111111111111111111111111111111111111111111111111111111"}}
@@ -74,7 +74,6 @@ func TestAChangesEditsOfTrustedKeysAreUndone(t *testing.T) {
 
 	changed := strings.NewReplacer(
 		"bazel_diff: {version: v1.0.0, sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}", "bazel_diff: {version: v9.9.9, sha256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb}",
-		"repository: o/locks}", "repository: evil/locks}",
 		"github: {repository: o/r, token: gh}", "github: {repository: o/r, token: gh}\ngit: {remote: \"https://evil.example/r.git\"}",
 		`release: {version: v1, sha256: "1111111111111111111111111111111111111111111111111111111111111111"}}`, `release: {version: v2, sha256: "9999999999999999999999999999999999999999999999999999999999999999"}}`,
 	).Replace(trustedBase) + "  - {name: extra, kind: correlator, repository: e/extra, release: {version: v1, sha256: \"3333333333333333333333333333333333333333333333333333333333333333\"}}\n"
@@ -82,15 +81,15 @@ func TestAChangesEditsOfTrustedKeysAreUndone(t *testing.T) {
 	c := parseTrusted(t, changed)
 	edited := c.WithTrusted(trusted)
 
-	for _, key := range []string{"bazel_diff", "suites.*.lock.repository", "git.remote", "plugins"} {
+	for _, key := range []string{"bazel_diff", "git.remote", "plugins"} {
 		if !slices.Contains(edited, key) {
 			t.Errorf("%s not named as edited: %v", key, edited)
 		}
 	}
 
 	switch {
-	case c.BazelDiff.Version != "v1.0.0" || c.Git.Remote != "" || c.Suites["e2e"].Lock.Repository != "o/locks":
-		t.Errorf("not undone: %+v %q %+v", c.BazelDiff, c.Git.Remote, c.Suites["e2e"].Lock)
+	case c.BazelDiff.Version != "v1.0.0" || c.Git.Remote != "":
+		t.Errorf("not undone: %+v %q", c.BazelDiff, c.Git.Remote)
 	case len(c.Plugins) != 2 || c.Plugins[0].Release.Version != "v1":
 		t.Errorf("plugins: %+v", c.Plugins)
 	}
@@ -127,62 +126,21 @@ func TestAChangeCantTakeASuiteOutOfItsRun(t *testing.T) {
 	}
 }
 
-func TestAChangesEditsOfItsLockAreUndone(t *testing.T) {
-	base := strings.Replace(trustedBase, "lock: {name: browsers, minutes: 90, repository: o/locks}",
-		"lock: {name: browsers, minutes: 90, repository: o/locks, slots: 2}", 1) +
-		"runs:\n  pr:\n    trigger: {pull_requests: {base: main}}\n    compare: merged_target\n    select: affected\n    suites: {e2e: {lock_minutes: 120}}\n"
-	trusted := parseTrusted(t, base).Trusted()
-
-	changed := strings.NewReplacer(
-		"lock: {name: browsers, minutes: 90, repository: o/locks, slots: 2}", "lock: {name: mine, minutes: 900, repository: o/locks, slots: 9, per: batch, weight: 9}",
-		"{e2e: {lock_minutes: 120}}", "{e2e: {lock_minutes: 1200}}",
-	).Replace(base)
-
-	c := parseTrusted(t, changed)
-	if edited := c.WithTrusted(trusted); !slices.Equal(edited, []string{"suites.*.lock"}) {
-		t.Errorf("edited: %v, want only suites.*.lock", edited)
+func TestAnOlderPipelinesTrustedLocksAreNoEdit(t *testing.T) {
+	data, err := json.Marshal(parseTrusted(t, trustedBase).Trusted())
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	want := Lock{Name: "browsers", Repository: "o/locks", Slots: 2}
-	if got := *c.Suites["e2e"].Lock; got != want {
-		t.Errorf("lock %+v, want %+v", got, want)
+	old := strings.Replace(string(data), "{", `{"lock_repositories":{"e2e":"o/locks"},"locks":{"suites":{"e2e":{"name":"browsers","minutes":90,"slots":2}}},`, 1)
+
+	var trusted Trusted
+	if err := json.Unmarshal([]byte(old), &trusted); err != nil {
+		t.Fatal(err)
 	}
 
-	if got, run := c.SuiteMinutes("", "e2e"), c.SuiteMinutes("pr", "e2e"); got != 90 || run != 120 {
-		t.Errorf("minutes %d, in the run %d, want 90 and 120", got, run)
-	}
-
-	raised := parseTrusted(t, strings.NewReplacer(
-		"    lock: {name: browsers, minutes: 90, repository: o/locks, slots: 2}\n", "    minutes: 900\n    lock: {name: browsers, repository: o/locks, slots: 2}\n",
-		"{e2e: {lock_minutes: 120}}", "{e2e: {minutes: 1200}}",
-	).Replace(base))
-
-	if edited := raised.WithTrusted(trusted); !slices.Equal(edited, []string{"suites.*.lock"}) {
-		t.Errorf("raised minutes: edited %v", edited)
-	}
-
-	if got, run := raised.SuiteMinutes("", "e2e"), raised.SuiteMinutes("pr", "e2e"); got != 90 || run != 120 {
-		t.Errorf("raised minutes: %d, in the run %d, want 90 and 120", got, run)
-	}
-
-	added := parseTrusted(t, strings.Replace(trustedBase, "    lock: {name: browsers, minutes: 90, repository: o/locks}\n", "", 1)).Trusted()
-
-	c = parseTrusted(t, changed)
-	c.WithTrusted(added)
-
-	if c.Suites["e2e"].Lock != nil {
-		t.Errorf("a lock the trusted config lacks: %+v", c.Suites["e2e"].Lock)
-	}
-
-	old := trusted
-	old.Locks = nil
-
-	c = parseTrusted(t, changed)
-	if edited := c.WithTrusted(old); len(edited) != 0 {
+	c := parseTrusted(t, strings.Replace(trustedBase, "    run_slice: ci/e2e.yml\n", "    run_slice: ci/e2e.yml\n    lock: {name: mine, slots: 9, per: batch}\n", 1))
+	if edited := c.WithTrusted(trusted); len(edited) != 0 {
 		t.Errorf("edited: %v", edited)
-	}
-
-	if l := c.Suites["e2e"].Lock; l.Slots != 9 || l.Repository != "o/locks" {
-		t.Errorf("an older tool's trusted keys changed the lock: %+v", l)
 	}
 }

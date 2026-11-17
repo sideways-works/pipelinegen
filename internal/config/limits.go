@@ -14,8 +14,7 @@ type Limits struct {
 	// the plan) and of its sweep (default DefaultPlanMinutes).
 	Plan int `yaml:"plan"`
 	// Steps bounds each of pipelinegen's own steps in a suite's job (default
-	// DefaultStepMinutes); a step that waits for a lock gets the lock's wait
-	// on top.
+	// DefaultStepMinutes).
 	Steps int `yaml:"steps"`
 }
 
@@ -60,9 +59,8 @@ func (r Run) WaitLength() int {
 }
 
 // SuiteMinutes is a suite's time limit in a run: the run's minutes for it,
-// else the suite's, else the default. A suite whose lock is taken per build
-// bounds its whole work by it; every other suite bounds each of its tasks by
-// it.
+// else the suite's, else the default. It bounds each of the suite's tasks.
+// lock.minutes, the old spelling of minutes, is still read.
 func (c *Config) SuiteMinutes(run, suite string) int {
 	s := c.Suites[suite]
 	rs := c.Runs[run].Suites[suite]
@@ -160,6 +158,10 @@ func (c *Config) oldMinutes() {
 	}
 
 	for _, name := range c.SuiteNames() {
+		if c.Suites[name].Lock != nil {
+			c.Notices = append(c.Notices, fmt.Sprintf("suites.%s.lock is no longer read: a suite's batches start when their node has room; remove it", name))
+		}
+
 		if l := c.Suites[name].Lock; l != nil && l.Minutes > 0 {
 			c.OldSpellings = append(c.OldSpellings, fmt.Sprintf("suites.%s.lock.minutes is the old spelling of suites.%s.minutes, which needs no lock: write minutes", name, name))
 		}

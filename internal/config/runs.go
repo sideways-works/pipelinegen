@@ -70,7 +70,7 @@ func (g GitHub) SplitTokens() map[string]string {
 }
 
 // Git is the repository's own remote. A repository on a host pipelinegen
-// doesn't report to names it here: the records and locks live in the remote,
+// doesn't report to names it here: the records live in the remote,
 // and the CI system's job results are the report.
 type Git struct {
 	// Remote is the repository's URL (https, http, git or file). It never
@@ -587,13 +587,6 @@ func (c *Config) validateNoHost(bad func(string, ...any)) {
 
 		if r.Report.Status != nil && *r.Report.Status {
 			bad("run %s: report.status needs a host to post to: the github section", name)
-		}
-	}
-
-	// without a host, the leases live in the remote with the records
-	for _, name := range c.SuiteNames() {
-		if l := c.Suites[name].Lock; l != nil && l.Repository != "" {
-			bad("suite %s: lock.repository needs the github section; without it the lock lives in git.remote", name)
 		}
 	}
 }

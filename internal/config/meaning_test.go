@@ -203,3 +203,21 @@ narrowings: {document-units: {off_at: 2, note: "every reader declared"}}
 		t.Fatalf("parts %+v", m.Parts)
 	}
 }
+
+func TestALockRemovedMeansNothingButItsMinutes(t *testing.T) {
+	for lock, understood := range map[string]bool{
+		"{name: browsers, slots: 2, per: batch}": true,
+		"{name: browsers, minutes: 90}":          false,
+	} {
+		m := meaningOf(t, []string{"    image: golang\n", "    image: golang\n    lock: " + lock + "\n"}, nil)
+		if !m.Changed() || m.Understood() != understood {
+			t.Errorf("%s removed: changed %v, understood %v, parts %+v", lock, m.Changed(), m.Understood(), m.Parts)
+		}
+	}
+
+	m := meaningOf(t, []string{"    image: golang\n", "    image: golang\n    lock: {name: browsers, slots: 2}\n"},
+		[]string{"    image: golang\n", "    image: golang\n    lock: {name: other, slots: 4, weight: 2}\n"})
+	if !m.Changed() || !m.Understood() {
+		t.Errorf("a lock edited: parts %+v", m.Parts)
+	}
+}
