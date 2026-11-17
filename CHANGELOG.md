@@ -7,6 +7,21 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Changed
+
+- Connectors are plugins in repositories of their own: GitHub's statuses, comment and pull requests go through the GitHub connector ([pipelinegen-connector-github](https://github.com/sideways-works/pipelinegen-connector-github)), and a plain git server's review branches through the git connector ([pipelinegen-connector-git](https://github.com/sideways-works/pipelinegen-connector-git)). pipelinegen pins a release of each and fetches the one a config uses, checked by its checksum, the way it fetches bazel-diff, so a config with a `github` section or a `git` connector needs no new line. A generated pipeline's bootstrap fetches it with the other plugins, with the read token; anywhere else pipelinegen downloads it from the connector's GitHub release into its cache the first time a command talks to the host, which needs github.com and a public repository. Regenerate the pipeline after upgrading. The connector holds no token: pipelinegen sends its requests, with the token of each call's purpose, to the step's API host only
+- Pull request admission asks the connector's listing of open pull requests, not the one pull request: a pull request retargeted to another base reads "closed, or no longer onto `<base>`", and a pull request from a fork, or from a head repository GitHub no longer has, is never planned, by the head repository's id rather than its name
+- `once_per_ready` finds an earlier head of the pull request in the run's own records, a plan written since it was last marked ready, where it read that head's commit statuses
+- The first step of a two-step plan (`plan --out`) that holds the read token alone plans without asking whether the run takes the pull request: no connector call carries the read token. The second step asks with the changes token, as before
+- The sweep's give-up status goes through the connector's `status` call, with the report token, or the changes token when the sweep holds no report token
+- A pull request's comment: the comment kept is the oldest that starts with the run's marker, and it is updated only outside the report throttle of the run's last status, where it waited for its own last update. A run that reports no statuses updates its comment whenever its text changes
+- A call to GitHub without its purpose's token in the step's environment fails, naming the purpose, where it was sent without a token
+
+### Added
+
+- Config: `plugins[].kind: connector`, named `github` or `git`, pins another release of that connector (`release` with `sha256` or `sums`; no `config`)
+- Conformance kit: a connector fixture may say why its host has no forks (`"no_forks"`), and then checks that the changes it names in `same` run
+
 ## [0.2.3] - 2026-11-17
 
 ### Added
