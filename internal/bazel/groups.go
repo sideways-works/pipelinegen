@@ -125,7 +125,7 @@ func (g *Groups) IsGroup(label string) bool {
 	return ok
 }
 
-// Members of a group, nil for a label that is none.
+// MembersOf are what a group holds, nil for a label that is none.
 func (g *Groups) MembersOf(label string) []string {
 	m, _ := g.members(label)
 
@@ -292,10 +292,12 @@ func parseGroupTargets(out []byte) ([]groupTarget, error) {
 	return ts, nil
 }
 
+const aliasClass = "alias"
+
 // opened are a rule's members when it is a group to open: a filegroup
 // without an output_group or a select(), or an alias without a select().
 func opened(class string, attrs []groupAttr) ([]string, bool) {
-	if class != "filegroup" && class != "alias" {
+	if class != "filegroup" && class != aliasClass {
 		return nil, false
 	}
 
@@ -311,12 +313,12 @@ func opened(class string, attrs []groupAttr) ([]string, bool) {
 			return nil, false
 		case class == "filegroup" && (a.Name == "srcs" || a.Name == "data"):
 			members = append(members, a.StringListValue...)
-		case class == "alias" && a.Name == "actual" && a.StringValue != "":
+		case class == aliasClass && a.Name == "actual" && a.StringValue != "":
 			members = append(members, a.StringValue)
 		}
 	}
 
-	if class == "alias" && len(members) == 0 {
+	if class == aliasClass && len(members) == 0 {
 		return nil, false
 	}
 
