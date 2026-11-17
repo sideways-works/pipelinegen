@@ -24,11 +24,22 @@ minor version may change the config or the protocol.
 - `check` notes how each suite gets its packages on CI, a cached image or an install per task and why, and warns of task files that would run without them. `pipelinegen pipeline` and `check` say when the runner can't install packages
 - Spec: `suites[].packages`, `planner_packages` and `images`, with the cached images' keys worked out by the tool, and the runner capability `packages`. A runner without it writes the pipeline it always did. Conformance kit: a variant with packages and cached images checks that every task the runner writes installs first, every image is built, and the registry's vars reach no step that runs the repository's code
 
+### Deprecated
+
+- Config: `suites.<name>.lock` is no longer read, and `check` names each one still set; its `minutes` is still read as the old spelling of `suites.<name>.minutes`. A later release refuses it
+- Commands: `pipelinegen lock` and `pipelinegen unlock` do nothing and exit 0, whatever their arguments, so a pipeline generated before keeps running its lock steps until it is set again; `lock acquire --started <dir>` still stamps the directory its batch end reads. The next release removes both
+
+### Removed
+
+- Locks between runs. A suite's batches no longer take a lease, and nothing coordinates two repositories' pipelines on a shared machine until admission by each node's observed free memory lands; until then Concourse's per-worker task limit and the runner's placement keep them apart. The spec carries no `lock`, `lock_minutes` or `lock_wait`, the runner protocol drops the `lock_per_batch` capability, and `check` no longer warns of batches queued on a lock. A runner given an older tool's spec with a lock writes no lock step and says so in a notice; the conformance kit refuses a pipeline in which a step runs `pipelinegen lock` or `unlock`. The trusted keys hold no locks, and an older pipeline's that do are no edit
+- The leases older pipelines left are swept: a trusted run's one-step plan deletes the refs under `refs/pipelinegen/locks/`, or the files under `locks/` on the branch store's `-locks` branch, and only warns when it can't. Leases kept in another repository (`lock.repository`) stay; nothing reads them
+
 ### Fixed
 
 - `check` fetches a plugin it asks that `--plugins` (default `tools/plugins`) lacks from its pinned release, as `affected` and `run` do, checked by its pin, where it warned that the driver's steps went unchecked. A plugin pinned by `commit` that isn't there still can't be asked: the warning gives the commands that build it
 - `why` plans on when the remote's lists can't be read, as `affected` and `run` do: the recorded slices are bound to everything, and a warning below the reasons says the lists couldn't be read and why. It exited 1, even for a config whose every suite is bound by the graph
 - `run` without `--work` says why a slice failed in full on stderr. It named the slice's ref in the run's own store, which was removed when the run ended
+
 
 ## [0.3.0] - 2026-11-17
 
