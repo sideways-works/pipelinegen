@@ -137,18 +137,19 @@ began; less `inactive_file` in `memory.stat` for the working set), or
 Concourse can't see across pipelines, and pipelinegen no longer takes a
 lock between them. Admission by each node's observed free memory and
 pressure is coming next: a suite's batches will start when their node has
-room. Until it lands, a machine shared with another repository's pipeline
-is kept from overfilling by the same means as inside one repository:
-Concourse's per-worker task limit, and placement that keeps the heavy
-suites of the two pipelines on different workers.
+room. Until it lands, nothing in pipelinegen keeps two repositories'
+pipelines from overfilling a shared machine: only placement that puts
+their heavy suites on different workers does.
 
 A config that still has `suites.<name>.lock` loads: `check` says the key
-is no longer read, and you remove it. Its `minutes` is still read, as the
-old spelling of `suites.<name>.minutes`, until you move it there. A
-pipeline generated before still runs its lock steps; `pipelinegen lock` and
-`pipelinegen unlock` do nothing and pass, so it keeps working until the
-next `pipelinegen pipeline` writes it without them. They go in the next
-release. The leases older pipelines left in the store are swept by the
+is no longer read, and you remove it once the pipeline runs this release.
+Its `minutes` is still read, as the old spelling of `suites.<name>.minutes`,
+until you move it there. A pipeline runs the pipelinegen it was generated
+with, so one generated before keeps its working lock steps until it is set
+again; removing the key while it still runs an older pipelinegen fails
+its lock steps, which can no longer find the lock. A lock step that runs
+this release (`pipelinegen lock` or `pipelinegen unlock`) does nothing and
+passes. Both commands go in the next release. The leases older pipelines left in the store are swept by the
 next plan step of a trusted run.
 
 ## Bazel servers
