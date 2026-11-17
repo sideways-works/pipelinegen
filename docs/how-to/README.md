@@ -44,6 +44,9 @@ The terms are in the [concepts](../concepts/README.md) and the
   between repositories.
 - [Secrets](secrets.md): the token, its least rights, and secrets for your
   tasks.
+- [Packages and cached images](packages-and-images.md): the packages a
+  suite's steps need, installed in their image, and an image with them
+  built once.
 - [Uncovered files at planning](uncovered.md): fail the run or run
   everything.
 

@@ -64,6 +64,7 @@
   * [Durations and batches](how-to/durations.md)
   * [Share machines](how-to/sharing-machines.md)
   * [Secrets](how-to/secrets.md)
+  * [Packages and cached images](how-to/packages-and-images.md)
   * [Uncovered files at planning](how-to/uncovered.md)
   * [Look inside: lists and why](how-to/looking-inside.md)
   * [Attach lists after a merge](how-to/attaching-lists.md)

@@ -89,6 +89,29 @@ first use.
 A task of the repository's may never be given the store key as a secret:
 the config is refused for it, in any run.
 
+## Registry credentials
+
+Cached images ([packages and cached images](packages-and-images.md)) live
+in `images.registry`, and two vars may name its logins, each holding a
+`username` and a `password`:
+
+- `images.credentials`, the login that pushes, reaches only the job that
+  builds a cached image. That job takes nothing from the repository but
+  the config's version: it builds from the spec's packages on the pinned
+  base. No suite job, planning job or task of the repository's holds it,
+  in any run, so a pull request can't push.
+- `images.pull_credentials`, a login that only pulls, reaches the step of
+  a suite's job that fetches its cached image. That step runs in the
+  registry resource's own image and runs none of the repository's code.
+  Leave it out for a registry anyone may pull from. It may not be
+  `images.credentials`.
+
+The kit checks a runner's pipeline for this: neither var in a task that
+runs the repository's code, and the pushing var in no job that runs any.
+The packages and the registry come from the config the pipeline was made
+from, like every key that shapes the pipeline: a proposed change's own
+`packages` or `images` take effect once it is merged.
+
 ## What a proposed change's config can't change
 
 A proposed change is a pull request, a change a connector lists, or a
