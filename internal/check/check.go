@@ -57,6 +57,9 @@ const (
 	// KindRunnerNotice is a warning the runner gave with the pipeline it
 	// wrote: something about it a person should know, short of a refusal.
 	KindRunnerNotice = "runner-notice"
+	// KindPackages is a note of how a suite's steps get the packages it
+	// declares on CI, or a warning that some of them can't.
+	KindPackages = "packages"
 	// KindUndescribedDriver is a warning that the check couldn't ask a
 	// driver a suite's steps name what it is, so the steps that name it
 	// went unchecked.
@@ -155,6 +158,7 @@ func FindWith(cfg *config.Config, tree Tree, staged []string, o Options) []Findi
 	out = append(out, badConfig(cfg, tree)...)
 	out = append(out, declareMacros(cfg, g)...)
 	out = append(out, images(cfg, tree)...)
+	out = append(out, packageModes(cfg, tree)...)
 
 	broken := map[string]bool{}
 
