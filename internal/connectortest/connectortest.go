@@ -49,6 +49,11 @@ func Serve() (stop func(), err error) { //nolint:nonamedreturns // what it does 
 	for name, pin := range config.PinnedConnectors {
 		path := os.Getenv(Env(name))
 		if path == "" {
+			if sum, ok := pin.SHA256.For(config.Platform()); pin.Sums == "" && (!ok || len(sum) != sha256.Size*2) {
+				fmt.Fprintf(os.Stderr, "connectortest: the %s connector's pin has no checksum for %s: set %s to a built %s\n",
+					name, config.Platform(), Env(name), plugin.Program(pin.Repository))
+			}
+
 			continue
 		}
 
