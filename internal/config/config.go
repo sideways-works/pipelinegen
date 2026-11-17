@@ -632,15 +632,6 @@ type Lock struct {
 	Weight     int    `yaml:"weight"`
 }
 
-// What holds a slot of a suite's lock.
-const (
-	LockPerBuild = "build"
-	LockPerBatch = "batch"
-)
-
-// PerBatch tells whether each batch takes the lock, not the whole build.
-func (l *Lock) PerBatch() bool { return l != nil && l.Per == LockPerBatch }
-
 // RunOn says how builds of different changes share a suite's jobs.
 type RunOn struct {
 	SerialGroup string `yaml:"serial_group"`

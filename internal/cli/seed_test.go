@@ -740,7 +740,7 @@ var errCheckFinding = errors.New("pipelinegen.yaml: a finding of the check")
 func TestABaseConfigThatCantPlan(t *testing.T) {
 	repo := t.TempDir()
 	headCfg := strings.Replace(firstRunsConfig, "HOST", "", 1)
-	baseCfg := strings.Replace(headCfg, "    tag: slice-e2e\n", "    tag: slice-e2e\n    lock: {name: browsers, minutes: 90, slots: 1}\n", 1)
+	baseCfg := strings.Replace(headCfg, "    tag: slice-e2e\n", "    tag: slice-e2e\n    minutes: 77\n", 1)
 
 	writeFile(t, filepath.Join(repo, config.FileName), baseCfg)
 	gitT(t, repo, "init", "-q", "-b", "main")
@@ -758,7 +758,7 @@ func TestABaseConfigThatCantPlan(t *testing.T) {
 	}
 
 	plan := func(c *config.Config, everything string, _ *config.Meaning) (*affected.Plan, error) {
-		if c.Suites["e2e"].Lock != nil {
+		if c.Suites["e2e"].Minutes == 77 {
 			return nil, errCheckFinding
 		}
 

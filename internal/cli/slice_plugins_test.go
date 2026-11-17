@@ -227,9 +227,7 @@ func newPluginBatch(t *testing.T, stack bool, correlators map[string]string) *pl
 	}
 
 	cfg := strings.Replace(
-		// the suite's limit in its own key: a batch's steps then say
-		// nothing of the old spelling.
-		strings.NewReplacer("    tag: slice-e2e\n", suite, "    lock: {name: browsers, minutes: 90, slots: 1}\n", "    minutes: 90\n    lock: {name: browsers, slots: 1}\n").Replace(reportConfig),
+		strings.Replace(reportConfig, "    tag: slice-e2e\n", suite, 1),
 		"    report: {comment: {format: list}}\n", "    report: {comment: {format: list}}\n    record: true\n", 1) + "plugins:\n  - {name: units, kind: sbom, repository: example/units, commit: 0123456789abcdef0123456789abcdef01234567}\n"
 
 	exe, err := os.Executable()

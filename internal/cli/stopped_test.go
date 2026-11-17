@@ -11,26 +11,19 @@ import (
 )
 
 func TestAStoppedBatchSaysWhetherItsTimeLimitStoppedIt(t *testing.T) {
-	noLock := strings.Replace(reportConfig, "    lock: {name: browsers, minutes: 90, slots: 1}\n", "    minutes: 90\n", 1)
-	perBatch := strings.Replace(reportConfig, "slots: 1}", "slots: 1, per: batch}", 1)
-
 	for _, tc := range []struct {
 		name, config string
 		suiteAgo     time.Duration
 		batchAgo     time.Duration
 		want         string
 	}{
-		{"lock per build, at its limit", reportConfig, 95 * time.Minute, 0,
-			"batch 1 stopped while slice e2e.a ran after 95 minutes: the suite's time limit of 90 minutes (suites.e2e.minutes) stopped it; raise suites.e2e.minutes"},
-		{"lock per build, within it", reportConfig, 10 * time.Minute, 0,
-			"batch 1 stopped while slice e2e.a ran after 10 minutes, within the suite's time limit of 90 minutes (suites.e2e.minutes): its task died"},
-		{"no lock, surely not the limit", noLock, 10 * time.Minute, 0,
+		{"surely not the limit", reportConfig, 10 * time.Minute, 0,
 			"batch 1 stopped while slice e2e.a ran, 10 minutes after the suite began: not its time limit of 90 minutes (suites.e2e.minutes); its task died"},
-		{"no lock, maybe the limit", noLock, 130 * time.Minute, 0,
+		{"maybe the limit", reportConfig, 130 * time.Minute, 0,
 			"batch 1 stopped while slice e2e.a ran; its time limit is 90 minutes (suites.e2e.minutes): the build log says `timeout exceeded` when that was the cause; raise suites.e2e.minutes"},
-		{"lock per batch, at its limit", perBatch, 200 * time.Minute, 91 * time.Minute,
+		{"an older pipeline's batch stamp, at its limit", reportConfig, 200 * time.Minute, 91 * time.Minute,
 			"batch 1 stopped while slice e2e.a ran after 91 minutes: its time limit of 90 minutes (suites.e2e.minutes) stopped it"},
-		{"lock per batch, within it", perBatch, 200 * time.Minute, 30 * time.Minute,
+		{"an older pipeline's batch stamp, within it", reportConfig, 200 * time.Minute, 30 * time.Minute,
 			"batch 1 stopped while slice e2e.a ran after 30 minutes, within its time limit of 90 minutes (suites.e2e.minutes): its task died"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

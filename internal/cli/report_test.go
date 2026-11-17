@@ -25,7 +25,7 @@ suites:
   e2e:
     tag: slice-e2e
     run_slice: ci/tasks/e2e-slice.yml
-    lock: {name: browsers, minutes: 90, slots: 1}
+    minutes: 90
 github: {repository: o/r, token: gh}
 concourse: {url: "https://ci", repository: {uri: x}, planner: {image: {repository: p}, digest: "sha256:x", bootstrap: {release: {version: v1, sha256: 0000000000000000000000000000000000000000000000000000000000000000}, bazelisk: {version: v1, sha256: 0000000000000000000000000000000000000000000000000000000000000000}}}}
 runs:

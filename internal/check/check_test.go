@@ -285,30 +285,14 @@ func TestBatchesFarAboveParallelWarn(t *testing.T) {
 	}
 }
 
-func TestBatchesQueuedOnALockWarn(t *testing.T) {
-	for _, c := range []struct {
-		batches, minutes, slots int
-		per                     string
-		want                    bool
-	}{
-		{12, 30, 1, config.LockPerBatch, true},
-		{12, 30, 4, config.LockPerBatch, false},
-		{4, 120, 1, config.LockPerBatch, false},
-		{12, 30, 1, config.LockPerBuild, false},
-	} {
-		cf := cfg()
-		e2e := cf.Suites["e2e"]
-		e2e.Batches, e2e.BatchMinutes, e2e.Lock = c.batches, c.minutes, &config.Lock{Name: "browsers", Slots: c.slots, Per: c.per}
-		cf.Suites["e2e"] = e2e
+func TestBatchesOnAnOldLockDontWarn(t *testing.T) {
+	cf := cfg()
+	e2e := cf.Suites["e2e"]
+	e2e.Batches, e2e.BatchMinutes, e2e.Lock = 12, 30, &config.Lock{Name: "browsers", Slots: 1, Per: "batch"}
+	cf.Suites["e2e"] = e2e
 
-		got := Find(cf, good(t).tree(), nil)
-		if len(Failures(got)) != 0 || (len(got) == 1) != c.want {
-			t.Fatalf("%+v: %v", c, got)
-		}
-
-		if c.want && !strings.Contains(got[0].Problem, "suite e2e: its 12 batches ask for lock browsers at once, 1 at a time hold it, and the last may wait 330 minutes, past the lock's wait of 240") {
-			t.Errorf("the warning: %+v", got[0])
-		}
+	if got := Find(cf, good(t).tree(), nil); len(got) != 0 {
+		t.Fatalf("an old lock still warns: %v", got)
 	}
 }
 

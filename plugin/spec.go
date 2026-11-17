@@ -137,10 +137,6 @@ const (
 // pipelinegen's ends on its own, so it can say why and free what it holds.
 const LimitMarginSeconds = 120
 
-// LockWaitMinutes is how long `lock acquire` waits for a slot unless its
-// --wait says otherwise.
-const LockWaitMinutes = 240
-
 // TriggerPullRequests is the kind of a run of a repository's open pull
 // requests (or a connector's changes), each new head planned in two steps.
 const TriggerPullRequests = "pull_requests"
@@ -155,11 +151,6 @@ const TriggerContinuous = "continuous"
 // CapContinuous is a runner's capability to build a continuous run's
 // jobs: the planning job taking every commit of the branch.
 const CapContinuous = "continuous"
-
-// CapLockPerBatch is a runner's capability to take a suite's lock around
-// each batch and each whole-suite check, freed in an ensure, for a lock
-// with per: batch.
-const CapLockPerBatch = "lock_per_batch"
 
 // CapSteps is a runner's capability to write the tasks of a suite run by
 // drivers (SpecSuite.Steps): a batch task that runs `pipelinegen slice

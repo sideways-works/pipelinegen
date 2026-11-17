@@ -40,8 +40,8 @@ func wholeRun(t *testing.T) (string, *githubAPI, func() map[string]report.State)
 
 	root, api, store := runEnv(t)
 	writeFile(t, filepath.Join(root, "pipelinegen.yaml"), strings.Replace(reportConfig,
-		"    lock: {name: browsers, minutes: 90, slots: 1}\n",
-		"    lock: {name: browsers, minutes: 90, slots: 1}\n    whole_suite: [{name: reconcile, task: ci/tasks/reconcile.yml}]\n", 1))
+		"    minutes: 90\n",
+		"    minutes: 90\n    whole_suite: [{name: reconcile, task: ci/tasks/reconcile.yml}]\n", 1))
 
 	id := report.ID{Run: "pr", Change: "pr-7", Commit: "0123456789abcdef0123456789abcdef01234567"}
 	plan := `{"suites": [{"suite": "e2e", "selected": [{"label": "//e2e:a"}], "whole_suite": ["reconcile"]}]}`

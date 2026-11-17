@@ -14,7 +14,7 @@ import (
 )
 
 // startedFile stamps when a stretch the CI system bounds by a time limit began: the suite's work in
-// batches/, or a batch's slot in a per-batch lock step's output.
+// batches/, or, in an older pipeline, a batch's work in its lock step's output.
 const startedFile = "started.json"
 
 type started struct {
@@ -56,12 +56,6 @@ func readStarted(dir string) time.Time {
 	return s.At
 }
 
-func lockPerBuild(cfg *config.Config, run, suite string) bool {
-	l := cfg.Suites[suite].Lock
-
-	return l != nil && !l.PerBatch() && !isContinuous(cfg, run)
-}
-
 func limitOf(cfg *config.Config, run, suite string) string {
 	return fmt.Sprintf("%d minutes (%s)", cfg.SuiteMinutes(run, suite), cfg.SuiteMinutesKey(run, suite))
 }
@@ -89,8 +83,6 @@ func batchStopped(cfg *config.Config, run, suite, batch, where string, at stopTi
 	switch {
 	case !at.batch.IsZero():
 		return exact(at.batch, "its")
-	case !at.suite.IsZero() && lockPerBuild(cfg, run, suite):
-		return exact(at.suite, "the suite's")
 	case !at.suite.IsZero() && at.now.Sub(at.suite) < limit:
 		return fmt.Sprintf("%s, %s after the suite began: not its time limit of %s; its task died: the build log says why", what, minutes(at.now.Sub(at.suite)), limitOf(cfg, run, suite))
 	}
@@ -103,15 +95,13 @@ func suiteStopped(cfg *config.Config, run, suite string, began bool, at stopTime
 	key := cfg.SuiteMinutesKey(run, suite)
 
 	if !began {
-		return fmt.Sprintf("suite %s's work never began: its start step (%s) failed or reached its time limit of %d minutes (limits.steps); the build log says which", suite, startParts(cfg, suite), cfg.Limits.StepMinutes())
+		return fmt.Sprintf("suite %s's work never began: its start step (the tree, the batches) failed or reached its time limit of %d minutes (limits.steps); the build log says which", suite, cfg.Limits.StepMinutes())
 	}
 
 	took := at.now.Sub(at.suite)
 
 	switch {
 	case at.suite.IsZero():
-	case lockPerBuild(cfg, run, suite) && took >= limit:
-		return fmt.Sprintf("suite %s's work stopped after %s at its time limit of %s; raise %s if the suite needs longer", suite, minutes(took), limitOf(cfg, run, suite), key)
 	case took < limit:
 		return fmt.Sprintf("suite %s stopped %s after its work began, before these slices reported: not its time limit of %s; its prepare or a batch failed, or the build was aborted: the build log says which", suite, minutes(took), limitOf(cfg, run, suite))
 	}
@@ -220,12 +210,4 @@ func wholeStopped(cfg *config.Config, run, suite, name, result string) string {
 
 	return fmt.Sprintf("the whole-suite check %s stopped before it wrote its result; its time limit is %s: the build log says `timeout exceeded` when that was the cause; raise %s if the check needs longer",
 		name, limitOf(cfg, run, suite), cfg.SuiteMinutesKey(run, suite))
-}
-
-func startParts(cfg *config.Config, suite string) string {
-	if l := cfg.Suites[suite].Lock; l != nil && l.Per != config.LockPerBatch {
-		return "the tree, the lock " + l.Name + ", the batches"
-	}
-
-	return "the tree, the batches"
 }
