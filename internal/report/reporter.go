@@ -592,6 +592,8 @@ func (r *Reporter) Suite(ctx context.Context, suite string) (bool, error) {
 		return false, err
 	}
 
+	r.markShort(ctx, run)
+
 	// the suite's batches' refs move into the run's; one left behind is
 	// read all the same, and the sweep takes it with the run
 	if _, err := r.Store.Compact(ctx, r.ID.Prefix(), suite); err != nil {

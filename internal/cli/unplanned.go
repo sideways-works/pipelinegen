@@ -353,7 +353,16 @@ func (sw sweep) lately(mark swept) (bool, string) {
 func (sw sweep) stalled(id report.ID) (bool, string) {
 	switch {
 	case begun(sw.refs, id):
-		return false, "planned, a suite began"
+		short, ok := shortOfMemory(sw.refs, id)
+		if !ok {
+			return false, "planned, a suite began"
+		}
+
+		if sw.now.Sub(short) < sw.wait {
+			return false, "planned, its run ended with slices not run for want of memory: waits for the workers"
+		}
+
+		return true, "planned, its run ended with slices not run for want of memory: hand it off again"
 	case sw.now.Sub(sw.refs[id.PlanRef()].Time) < sw.wait:
 		return false, "planned, its suites on their way"
 	}
@@ -508,6 +517,33 @@ func (sw sweep) planHead(ctx context.Context, id report.ID, h runs.Head, dir str
 	}
 
 	return true, say(stdout, "%s %s: no plan: plan it\n", h.Label(), short12(h.Commit))
+}
+
+// shortOfMemory tells a run whose last word is its mark of slices not run for want of memory: no suite
+// build began or ended after it, every one that began has ended, and nobody ended the run by hand. It
+// returns when the mark was written.
+func shortOfMemory(refs map[string]gitstore.Ref, id report.ID) (time.Time, bool) {
+	short, ok := refs[id.ShortRef()]
+	if _, ended := refs[endedRef(id)]; !ok || ended {
+		return time.Time{}, false
+	}
+
+	for name, ref := range refs {
+		suite, began := strings.CutPrefix(name, id.BeganRef(""))
+		if !began && !strings.HasPrefix(name, id.EndRef("")) {
+			continue
+		}
+
+		if short.Time.Before(ref.Time) {
+			return time.Time{}, false
+		}
+
+		if end, ok := refs[id.EndRef(suite)]; began && (!ok || end.Time.Before(ref.Time)) {
+			return time.Time{}, false
+		}
+	}
+
+	return short.Time, true
 }
 
 func begun(refs map[string]gitstore.Ref, id report.ID) bool {
