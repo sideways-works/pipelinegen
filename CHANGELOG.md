@@ -10,6 +10,10 @@ minor version may change the config or the protocol.
 ### Added
 
 - `run --slice <name>`, repeatable, runs only the named slices, by name or label, in every suite that has them: of the plan's selection, or of every slice with `--all`. A slice the plan didn't select runs too, and a line on stderr says so; a name no suite has exits 2 and names it
+- Failure files: a result's `files` names what a failed test left to show why (a screenshot, Playwright's `error-context.md`, a trace), by paths from the result directory with a short label. A slice that failed or errored keeps them in its ref beside `state.json`, a passed one none; they go with the run's records under `keep.runs`, and `report collect` leaves them out. A path that is absolute, has a `..` part or leaves the result directory through a symlink is refused, and only regular files are read. Text files are masked for known secrets, binary ones kept as they are: a failure file can hold what a test printed, so it goes only to the store, whose readers are the code's, never to the comment
+- Config: `keep.files.slice` (2 MB) and `keep.files.run` (50 MB) cap what failure files keep, each slice's and each run's; over a cap the largest go first, and the slice's state names each dropped file and why. A write the store refuses with them goes again without them
+- `pipelinegen report files --run <run> --change <change> --out <dir>` writes a kept run's failure files into a directory, by suite and slice, and lists what each slice kept and dropped; the comment counts each failed slice's files and gives the command, and `why --run` says the same for its slice
+- Drivers: a run request's slices carry `files`, the directory for their failure files, and an `end` may name them in `files`. The command driver passes it as `{files}`; the kit checks that an end names only regular files inside it, for a slice that didn't pass
 
 ### Fixed
 
