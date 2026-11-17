@@ -19,6 +19,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/container"
 	"github.com/sideways-works/pipelinegen/internal/fetch"
 	"github.com/sideways-works/pipelinegen/internal/gitx"
+	"github.com/sideways-works/pipelinegen/internal/packages"
 )
 
 var (
@@ -185,6 +186,11 @@ func (b *localBuild) inImage(ctx context.Context, img taskImage, kind, dir strin
 		return fmt.Errorf("%w: %w; is %s running? --no-image runs on this machine", errImage, err, filepath.Base(b.box.tool))
 	}
 
+	before, err := b.withPackages(ctx, &img)
+	if err != nil {
+		return err
+	}
+
 	// the steps after, report batch-end among them, run here and read the tools as this machine's
 	defer b.keepHostTools()()
 
@@ -192,6 +198,8 @@ func (b *localBuild) inImage(ctx context.Context, img taskImage, kind, dir strin
 	if err != nil {
 		return err
 	}
+
+	r.Before = before
 
 	c, err := r.Command(ctx)
 	if err != nil {
@@ -209,6 +217,48 @@ func (b *localBuild) inImage(ctx context.Context, img taskImage, kind, dir strin
 	}
 
 	return err //nolint:wrapcheck // the caller says which task
+}
+
+// withPackages swaps img for the image with the suite's packages installed on it, made the first time
+// and kept in the local image store, and is the install that then finds them there: it installs
+// nothing, and fails a step that would run without them.
+func (b *localBuild) withPackages(ctx context.Context, img *taskImage) ([]string, error) {
+	ps := b.cfg.PackagesFor(b.suite)
+	if len(ps) == 0 {
+		return nil, nil
+	}
+
+	ref, built, err := packages.Local(ctx, b.box.tool, img.ref, ps, os.Stderr)
+	if err != nil {
+		return nil, fmt.Errorf("%w: suite %s's packages (%s) on %s: %w", errImage, b.suite, strings.Join(packages.Names(ps), ", "), img.ref, err)
+	}
+
+	made := "made before"
+	if built {
+		made = "made now"
+	}
+
+	warnf(os.Stderr, "pipelinegen: suite %s's packages (%s) are in %s, %s on %s\n", b.suite, strings.Join(packages.Names(ps), ", "), ref, made, img.ref)
+
+	img.ref = ref
+
+	return []string{packages.Script(ps)}, nil
+}
+
+// hostPackages says which packages the suite declares that this machine seems to lack: steps that run
+// here install nothing.
+func (b *localBuild) hostPackages(ctx context.Context) {
+	ps := b.cfg.PackagesFor(b.suite)
+	if len(ps) == 0 || b.hostChecked {
+		return
+	}
+
+	b.hostChecked = true
+
+	if missing := packages.Missing(ps, packages.OnHost(ctx)); len(missing) > 0 {
+		warnf(os.Stderr, "pipelinegen: suite %s declares packages this machine has under no command or installed package of their name: %s; "+
+			"its steps run here and install nothing, so install them, or run in the suite's image without --no-image\n", b.suite, strings.Join(missing, ", "))
+	}
 }
 
 // handBack gives the user what a root container wrote, however it ended: failed, or stopped.

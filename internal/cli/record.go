@@ -441,6 +441,8 @@ type localBuild struct {
 	ch            runs.Change
 	// box runs the steps in their images; nil runs them here.
 	box *imageBox
+	// hostChecked is set once the packages were looked for on this machine.
+	hostChecked bool
 	// out takes the tasks' output; nil is stderr.
 	out io.Writer
 	// storeGoes says the run's store is removed when it ends, so a failure is said in full.
@@ -800,6 +802,8 @@ func (b *localBuild) task(ctx context.Context, kind, file string) error {
 		return nil
 	}
 
+	b.hostPackages(ctx)
+
 	cmd := exec.CommandContext(ctx, t.Run.Path, t.Run.Args...) //nolint:gosec // the repository's own task, which the user asked to run
 	if !strings.Contains(t.Run.Path, "/") {
 		if p, err := exec.LookPath(t.Run.Path); err == nil {
@@ -862,6 +866,8 @@ func (b *localBuild) driven(ctx context.Context) error {
 
 			continue
 		}
+
+		b.hostPackages(ctx)
 
 		cmd := exec.CommandContext(ctx, exe, args...) //nolint:gosec // pipelinegen itself
 		cmd.Dir = b.dir
