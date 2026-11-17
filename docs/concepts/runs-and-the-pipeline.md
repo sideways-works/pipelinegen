@@ -44,7 +44,12 @@ runs:
 
 The first run on `main` has nothing to compare with, so it runs every
 slice and records them all. After that, each commit on `main` runs only
-what it reaches. Seeding the lists from your machine, or a baseline on a
+what it reaches since the last commit whose run passed. A slice that
+passed at a later commit in the same run, while another slice kept the
+run red, is compared from there (the
+[`passed-since`](../how-to/narrowing.md#slices-that-passed-since-the-base)
+narrowing, off from level 4), so one failing slice doesn't make the
+others run again on every commit. Seeding the lists from your machine, or a baseline on a
 known good commit, lets it [start narrow](../how-to/starting-narrow.md).
 
 ## The runner and the generated pipeline

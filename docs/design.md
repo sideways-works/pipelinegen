@@ -167,8 +167,9 @@ What each run declares:
   earlier commit on the branch whose run of this name passed, read from the
   commit statuses; with none, the newest whose run is still going, which
   plans everything and makes the lists, so the commits pushed meanwhile
-  don't each run everything; neither means rule 4) or `none` (rule 4:
-  everything).
+  don't each run everything; neither means rule 4; while `passed-since` is
+  on, a slice that passed later in the same run is compared from there) or
+  `none` (rule 4: everything).
 - **select**: `affected` or `all`.
 - **suites**: which suites run, each with parameters that merge over the
   suite's own (`PROJECTS: all` at night, two screen types otherwise).
@@ -716,6 +717,15 @@ its `describe` answer.
   Suites bound by the graph and tagged checks keep the edge, since a
   format check or a lint reads the text. A recorded test that reads such a
   file's text is declared with `text_inputs`, and keeps the edge.
+- **passed-since** (the core, on a `last_passed` run): the run's base is
+  the newest earlier commit whose whole run passed, so one slice that keeps
+  failing keeps every change since in the comparison. A slice that passed
+  at a newer commit in the same run, with its tests run, is compared from
+  there: for the newest two such commits the plan finds what changed from
+  each to the head before the sample is drawn, and leaves out a slice that
+  passed at one of them and that the change from there doesn't reach. A
+  slice without such a pass, the sample's targets and a suite whose checks
+  of the whole suite run keep the run's base.
 - **unreached-new** (go-correlator): a new declaration or file
   unit nothing reaches selects nothing by itself: whatever starts using it
   changed too and selects its own slices. A new method is not new in this
@@ -777,6 +787,7 @@ that switches each off:
 | sample-bound | 3 | what every slice reaches only through code they all ran, or runs at start-up, is exercised as that code is: the sample's own argument, with the same gap |
 | plugin-entry | 4 | a correlator's entry changes what is recorded and bound, not what runs, and an sbom's entry how units are listed and digested, not the code: a sample checks the new entry on each suite it reaches, a unit that really changed still selects on its own, and the nightly runs and records the rest; off, what the entry reaches runs, beside any `sample_on` sample |
 | unobservable-edits | 4 | it rests on an sbom's parse being complete and on the tests that read a file's text being declared; level 4 is where a repository takes neither from its plugins |
+| passed-since | 4 | a slice that passed in the same run at a commit newer than the run's base was tested on every change up to it, so only what came since needs it; it rests on that one pass, a flaky one included, and the nightly runs the rest |
 
 Each plugin declares its own narrowings in its `describe` answer, each with
 the level that switches it off, and lists them with the reason for each

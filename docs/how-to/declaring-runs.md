@@ -226,7 +226,12 @@ ended.
   run of main passed; compared with <commit>, whose run is still going".
   That run is selecting everything and will make the lists, so only it
   runs everything, not every commit pushed while it runs. With neither,
-  every slice runs. A failed run is never a base.
+  every slice runs. A failed run is never a base. While the
+  `passed-since` narrowing is on (levels 1 to 3), a slice is compared
+  from the newer of that base and the newest earlier commit at which it
+  passed in this run with its tests run, so a slice that keeps failing
+  doesn't keep every other slice running on each commit; see
+  [narrowing](narrowing.md#slices-that-passed-since-the-base).
 - `none`: nothing, so every slice runs.
 
 ## What it selects

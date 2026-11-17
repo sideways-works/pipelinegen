@@ -22,6 +22,7 @@ The core declares these itself:
 | `sample-bound` | a change to what every slice reaches only through that code, or to what runs at start-up, runs a sample of the suite | 3 |
 | `plugin-entry` | a changed plugin entry (a pin, a checksum, its config block) runs a sample of each suite it reaches; what it left out is named under it | 4 |
 | `unobservable-edits` | a changed file whose sbom covers it whole, with every unit as it was, runs no slice of a recorded suite, only the checks that read its text | 4 |
+| `passed-since` | on a `last_passed` run, a slice is compared from the newer of the run's base and the commit where it last passed in that run, so a change it passed with doesn't run it again while another slice keeps the run red | 4 |
 
 Each plugin declares its own narrowings, each with the level it is off
 from, in its `describe` answer, and its README lists them in a section
@@ -101,6 +102,39 @@ only the rest.
 `everything_on` still runs everything. The comment says how many slices
 the sample left for the nightly, and `pipelinegen why` names the narrowing
 for a slice the sample left out.
+
+## Slices that passed since the base
+
+A `compare: last_passed` run compares each commit with the newest earlier
+one whose run passed whole. While one slice keeps failing, that base stays
+where it was, and every change since then stays in the comparison: each
+slice those changes reach would run again on every commit, though it has
+passed with them since. While `passed-since` is on (levels 1 to 3), a
+slice is compared from the newer of the run's base and the newest earlier
+commit at which it passed in the same run with its tests run. The plan
+works that out before the sample is drawn:
+
+- It reads the slices' records of the runs since the base, kept as long as
+  `keep.runs` keeps them. A pass counts when the slice's state is passed
+  and its tests ran: a slice that ran no tests (`"tests": 0`), was not run
+  or was skipped counts as no pass. Only the same run of the same branch
+  counts, never a nightly or a pull request.
+- For the newest two commits at which some slice last passed, it plans
+  what changed from there to the head, as it plans any change. A slice
+  that passed at one of them and that this change doesn't reach is left
+  out, with the reason "compared from `<commit>`, where it last passed in
+  run `<run>`: nothing from there to the head reaches it".
+- A slice with no such pass, or whose pass is older than those two
+  commits, keeps the run's base. So do a suite whose checks of the whole
+  suite would run, one whose setup's change runs it whole, the sample's
+  own targets, a plan of everything, and a commit after which the config
+  changed.
+
+`pipelinegen why` names the narrowing and that commit for a slice it left
+out. From level 4 every slice is compared from the run's base, as before,
+and the plan reads no records for it. Each of the two plans costs about
+what a plan of one commit costs, and less when that commit was planned on
+the same machine, since its hashes are cached.
 
 ## Files that changed nothing observable
 

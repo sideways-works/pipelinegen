@@ -652,7 +652,9 @@ sample (kind `sampled`, by `sample`, `sample-bound` or `setup-split`) or a
 narrowing that left out slices the wide rule would have selected (a changed
 plugin entry's sample is named this way: kind `narrowed` under
 `plugin-entry`, with the slices the entry reached that the sample left
-out); `reached` counts the slices selected plus those it left out. A slice
+out; so is a slice of a `last_passed` run left out because it passed at a
+newer commit than the base and nothing since reaches it: kind `narrowed`
+under `passed-since`, one entry per such commit, which its reason names); `reached` counts the slices selected plus those it left out. A slice
 that the wide rules of several narrowings would select is named under each
 of them, so it runs from the lowest `off_at` it is named under; it is never
 named twice under one narrowing, nor under a narrowing when a sample left
@@ -1022,7 +1024,10 @@ failure or error when any is, success when all are), so a branch rule names
 one check. The statuses go through the code's connector (`status` and
 `statuses`), as does the comment (`comment`). A run with `compare: last_passed` reads the run's own status to
 find the newest earlier commit whose run passed, or, with none, the newest
-whose run is still pending; the plan's `warnings` say so.
+whose run is still pending; the plan's `warnings` say so. The plan's
+`base` is that commit; a slice compared from a newer one, where it last
+passed (the `passed-since` narrowing), is named under `narrowed` with
+that commit in the reason.
 
 ## More pull requests for one comment
 

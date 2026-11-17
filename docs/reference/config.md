@@ -235,6 +235,16 @@ runs older than `keep.runs` are gone while a status stays, and a run that
 passed but couldn't attach its lists shows an error status while its
 records say it passed.
 
+That base is the run's, and while the `passed-since` narrowing is on
+(levels 1 to 3) each slice may compare from a newer commit: the newest
+earlier commit at which it passed in this run with its tests run, read
+from the run's records in the store, so only within `keep.runs`. The plan
+finds what changed from the newest two such commits to the head, and
+leaves out a slice that passed at one of them when nothing from there
+reaches it; `pipelinegen why` says "compared from `<commit>`, where it
+last passed". A slice with no such pass keeps the run's base. See
+[narrowing](../how-to/narrowing.md#slices-that-passed-since-the-base).
+
 ## connectors
 
 Not in a release yet. `pipelinegen pipeline` builds a run that takes
@@ -486,7 +496,7 @@ One entry per run, by name (lower case letters, digits and dashes). See
 | `runs.<name>.idle_minutes` | integer | `limits.steps` + 2 × the largest suite `minutes` of the run + 10 | For a continuous run: how long a round may record nothing before the next build stops waiting for it, as dead. A batch records nothing until it ends, so the default covers a start step, a prepare and a batch. `pipelinegen end` ends a round you know is dead at once. |
 | `runs.<name>.turn_minutes` | integer | none | No longer read; a config that sets it is warned. |
 | `runs.<name>.wait_minutes` | integer | `480` | For a continuous run: how long a build waits for the round in progress to end. When it has waited that long, a build whose commit the branch moved past ends superseded; one still the newest fails, naming the round. |
-| `runs.<name>.compare` | string | (required) | What the change is compared with: `merged_target` (the pull request merged into its base's tip, compared with that tip; pull requests only), `last_passed` (the newest earlier commit on the branch whose run of this name passed; with none, the newest whose run is still going, so only that one runs everything) or `none` (nothing: every slice runs). |
+| `runs.<name>.compare` | string | (required) | What the change is compared with: `merged_target` (the pull request merged into its base's tip, compared with that tip; pull requests only), `last_passed` (the newest earlier commit on the branch whose run of this name passed; with none, the newest whose run is still going, so only that one runs everything; while the `passed-since` narrowing is on, a slice that passed at a newer commit in this run is compared from there) or `none` (nothing: every slice runs). |
 | `runs.<name>.select` | `affected` or `all` | (required) | Whether the run selects the slices the change reaches or every slice. |
 | `runs.<name>.suites` | mapping | (at least one) | The suites the run covers. Its plan holds these alone, and its statuses, its comment and its end count only them. |
 | `runs.<name>.suites.<name>.params` | mapping of strings | none | Params for this suite in this run, merged over the suite's own; the run's win. |

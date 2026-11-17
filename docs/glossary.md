@@ -187,6 +187,7 @@ level, so "would have run at level 5" means only with every narrowing off.
 | `sample` | pipelinegen | 3 | a change to code every slice ran the same way runs a sample of the suite |
 | `sample-bound` | pipelinegen | 3 | the same for what every slice reaches only through that code, or what runs at start-up |
 | `plugin-entry` | pipelinegen | 4 | a changed plugin entry (a pin, a checksum, its config block) runs a sample of each suite it reaches, not every slice it reaches |
+| `passed-since` | pipelinegen | 4 | on a `last_passed` run, a slice is compared from where it last passed in that run, when that is newer than the run's base |
 | `rows-to-readers` | pg-sbom | 2 | a slice that only wrote a table binds the table's definition alone, not the rows other code reads |
 | `document-units` | openapi-sbom | 2 | a test that depends on a contract file as a whole binds only the operations it touched |
 | `setup-split` | go-correlator | 3 | what a batch's setup ran binds the suite's sample, not every slice |

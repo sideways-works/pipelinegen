@@ -21,6 +21,7 @@ minor version may change the config or the protocol.
 
 - Config: `plugins[].kind: connector`, named `github` or `git`, pins another release of that connector (`release` with `sha256` or `sums`; no `config`)
 - Conformance kit: a connector fixture may say why its host has no forks (`"no_forks"`), and then checks that the changes it names in `same` run
+- `compare: last_passed`: while the new core narrowing `passed-since` is on (levels 1 to 3), each slice is compared from the newer of the run's base and the newest earlier commit at which it passed in the same run with its tests run, read from the run's records within `keep.runs`. For the newest two such commits the plan finds what changed from there to the head before the sample is drawn, and leaves out a slice that passed at one of them when nothing since reaches it, under `narrowed` with the reason "compared from `<commit>`, where it last passed in run `<run>`", which `pipelinegen why` shows. A run kept red by one slice re-ran every slice the changes since its last whole pass reached, on every commit. A slice with no such pass, one that ran no tests or was not run, the sample's targets, a suite whose whole-suite checks run, and a commit after which the config changed keep the run's base
 
 ## [0.2.3] - 2026-11-17
 
