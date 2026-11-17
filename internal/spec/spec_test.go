@@ -296,3 +296,42 @@ func TestTheSpecFetchesTheConnector(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 }
+
+func TestAnOldLockReachesNoRunner(t *testing.T) {
+	data, err := os.ReadFile("../../testdata/kit/pipelinegen.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	text := strings.Replace(string(data), "    prepare: ci/e2e-prepare.yml\n", "    prepare: ci/e2e-prepare.yml\n    lock: {name: browsers, minutes: 90, slots: 2, per: batch}\n", 1)
+	if text == string(data) {
+		t.Fatal("the fixture moved")
+	}
+
+	cfg, err := config.Parse([]byte(text))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := From(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := json.Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(string(out), `"lock`) {
+		t.Errorf("the spec holds a lock: %s", out)
+	}
+
+	for _, r := range s.Runs {
+		for _, rs := range r.Suites {
+			if rs.Suite == "e2e" && rs.Minutes != 90 {
+				t.Errorf("run %s: e2e's limit %d, want lock.minutes, the old spelling of minutes, 90", r.Name, rs.Minutes)
+			}
+		}
+	}
+}

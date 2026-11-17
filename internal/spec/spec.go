@@ -56,9 +56,7 @@ func FromInclude(cfg *config.Config, include []byte) (plugin.Spec, error) {
 		Branch:      cfg.Concourse.Branch,
 		ConfigFiles: []string{config.FileName},
 		Tools:       tools(cfg),
-		Limits: plugin.SpecLimits{
-			Plan: cfg.Limits.PlanMinutes(), Steps: cfg.Limits.StepMinutes(), LockWait: plugin.LockWaitMinutes,
-		},
+		Limits:      plugin.SpecLimits{Plan: cfg.Limits.PlanMinutes(), Steps: cfg.Limits.StepMinutes()},
 	}
 
 	trusted, err := json.Marshal(cfg.Trusted())
@@ -106,13 +104,6 @@ func suite(cfg *config.Config, name string) plugin.SpecSuite {
 	out := plugin.SpecSuite{
 		Name: name, Prepare: su.Prepare, RunSlice: su.RunSlice, Image: su.Image,
 		Parallel: parallel, Privileged: su.Privileged,
-	}
-
-	if l := su.Lock; l != nil {
-		out.Lock = &plugin.SpecLock{Name: l.Name, Minutes: cfg.SuiteMinutes("", name), Slots: l.Slots}
-		if l.PerBatch() {
-			out.Lock.Per = config.LockPerBatch
-		}
 	}
 
 	if su.HasSteps() {
@@ -184,9 +175,6 @@ func run(cfg *config.Config, name string) plugin.SpecRun {
 		}
 
 		rs.Minutes, rs.MinutesKey = cfg.SuiteMinutes(name, s), cfg.SuiteMinutesKey(name, s)
-		if cfg.Suites[s].Lock != nil {
-			rs.LockMinutes = rs.Minutes
-		}
 
 		out.Suites = append(out.Suites, rs)
 	}

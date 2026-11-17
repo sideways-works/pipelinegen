@@ -119,9 +119,8 @@ const (
 
 // SpecLimits are the time limits of the pipeline's own steps, in minutes.
 type SpecLimits struct {
-	Plan     int `json:"plan"`
-	Steps    int `json:"steps"`
-	LockWait int `json:"lock_wait"`
+	Plan  int `json:"plan"`
+	Steps int `json:"steps"`
 }
 
 // A step's time limit reaches pipelinegen's own steps so that a step ends a
@@ -214,8 +213,7 @@ const (
 	PurposeChanges = "changes"
 	// PurposeReport sets commit statuses and pull request comments.
 	PurposeReport = "report"
-	// PurposeStore writes the records, the plugins' answers and the
-	// locks.
+	// PurposeStore writes the records and the plugins' answers.
 	PurposeStore = "store"
 )
 
@@ -265,15 +263,10 @@ type SpecRunSuite struct {
 	Suite   string            `json:"suite"`
 	Params  map[string]string `json:"params,omitempty"`
 	Records bool              `json:"records"`
-	// Minutes is the suite's time limit in this run: of each of its tasks
-	// on its own (the prepare, each batch, each whole-suite check), or,
-	// when its lock is taken per build, of all its work while it holds
-	// the lock.
+	// Minutes is the suite's time limit in this run, of each of its tasks
+	// on its own: the prepare, each batch, each whole-suite check.
 	Minutes    int    `json:"minutes"`
 	MinutesKey string `json:"minutes_key"`
-	// LockMinutes is Minutes for a suite with a lock (0 without), for
-	// runners that read only it.
-	LockMinutes int `json:"lock_minutes,omitempty"`
 	// Secrets are the suite's merged with the run's, by kind of task: a
 	// runner gives each task its kind's and no other.
 	Secrets SpecSecrets `json:"secrets,omitzero"`
@@ -297,8 +290,10 @@ type SpecSuite struct {
 	MaxInFlight int    `json:"max_in_flight,omitempty"`
 	// Parallel is how many batches a build of the suite is dealt at least;
 	// a runner runs every batch `pipelinegen batches` deals at once.
-	Parallel   int              `json:"parallel"`
-	Privileged bool             `json:"privileged,omitempty"`
+	Parallel   int  `json:"parallel"`
+	Privileged bool `json:"privileged,omitempty"`
+	// Lock is never written: only an older tool's spec holds one, which a
+	// runner takes no lock for and says so in a notice.
 	Lock       *SpecLock        `json:"lock,omitempty"`
 	WholeSuite []SpecWholeSuite `json:"whole_suite,omitempty"`
 	// Steps, for a suite run by drivers, replaces Prepare and RunSlice:
@@ -321,16 +316,12 @@ type SpecSteps struct {
 	Drivers      []string `json:"drivers,omitempty"`
 }
 
-// SpecLock is a lease between pipelines.
+// SpecLock is the lock an older tool's spec gave a suite. No step takes it.
 type SpecLock struct {
 	Name    string `json:"name"`
 	Minutes int    `json:"minutes"`
 	Slots   int    `json:"slots,omitempty"`
-	// Per is "batch" when each batch takes the lock around itself (and
-	// each whole-suite check around itself), in every run; empty, the
-	// suite's build takes it around all its work, except in a continuous
-	// run, which always takes it per batch.
-	Per string `json:"per,omitempty"`
+	Per     string `json:"per,omitempty"`
 }
 
 // SpecWholeSuite is a check of a suite as a whole.

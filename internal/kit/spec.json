@@ -193,10 +193,9 @@
     "pipelinegen.yaml"
   ],
   "branch": "main",
-  "trusted": "{\"ssh_key\":{\"read\":\"\",\"store\":\"\"},\"github_repository\":\"owner/fixture\",\"github_token\":\"github_token\",\"github_tokens\":{\"read\":\"\",\"changes\":\"\",\"report\":\"\",\"store\":\"\"},\"github_status_prefix\":\"pipelinegen\",\"bazel_diff\":{\"version\":\"\",\"sha256\":null,\"url\":\"\"},\"bazel_bazelisk\":\"bazelisk\",\"plugins\":[{\"name\":\"go-correlator\",\"repository\":\"owner/go-correlator\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\"},{\"name\":\"go-sbom\",\"repository\":\"owner/go-sbom\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\"}],\"concourse_planner_bootstrap\":{\"repository\":\"sideways-works/pipelinegen\",\"release\":null,\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"bazelisk\":{\"version\":\"v1.27.0\",\"sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}},\"locks\":{\"suites\":{}},\"concourse_branch\":\"main\",\"run_suites\":{\"main\":[\"backend\",\"e2e\"],\"nightly\":[\"backend\",\"e2e\"],\"pr\":[\"backend\",\"e2e\"]}}",
+  "trusted": "{\"ssh_key\":{\"read\":\"\",\"store\":\"\"},\"github_repository\":\"owner/fixture\",\"github_token\":\"github_token\",\"github_tokens\":{\"read\":\"\",\"changes\":\"\",\"report\":\"\",\"store\":\"\"},\"github_status_prefix\":\"pipelinegen\",\"bazel_diff\":{\"version\":\"\",\"sha256\":null,\"url\":\"\"},\"bazel_bazelisk\":\"bazelisk\",\"plugins\":[{\"name\":\"go-correlator\",\"repository\":\"owner/go-correlator\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\"},{\"name\":\"go-sbom\",\"repository\":\"owner/go-sbom\",\"commit\":\"0123456789abcdef0123456789abcdef01234567\"}],\"concourse_planner_bootstrap\":{\"repository\":\"sideways-works/pipelinegen\",\"release\":null,\"commit\":\"0123456789abcdef0123456789abcdef01234567\",\"bazelisk\":{\"version\":\"v1.27.0\",\"sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}},\"concourse_branch\":\"main\",\"run_suites\":{\"main\":[\"backend\",\"e2e\"],\"nightly\":[\"backend\",\"e2e\"],\"pr\":[\"backend\",\"e2e\"]}}",
   "limits": {
     "plan": 120,
-    "steps": 20,
-    "lock_wait": 240
+    "steps": 20
   }
 }

@@ -250,25 +250,9 @@ func runnerRunsContinuous(cfg *config.Config, runner string, desc plugin.Descrip
 	return nil
 }
 
-// runnerLocksPerBatch refuses a lock per batch the runner can't take so: it would hold it for the whole build.
-func runnerLocksPerBatch(cfg *config.Config, runner string, desc plugin.Description) error {
-	if slices.Contains(desc.Capabilities, plugin.CapLockPerBatch) {
-		return nil
-	}
-
-	for _, name := range cfg.SuiteNames() {
-		if cfg.Suites[name].Lock.PerBatch() {
-			return fmt.Errorf("%w: suite %s takes its lock per batch, and runner %s %s can't: update the runner",
-				errRunner, name, runner, desc.Version)
-		}
-	}
-
-	return nil
-}
-
 func runnerCan(cfg *config.Config, name string, desc plugin.Description) error {
 	for _, can := range []func(*config.Config, string, plugin.Description) error{
-		runnerBuildsConnectorRuns, runnerHandsSSHKeys, runnerRunsContinuous, runnerLocksPerBatch, runnerWritesSteps,
+		runnerBuildsConnectorRuns, runnerHandsSSHKeys, runnerRunsContinuous, runnerWritesSteps,
 	} {
 		if err := can(cfg, name, desc); err != nil {
 			return err

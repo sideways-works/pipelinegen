@@ -204,39 +204,3 @@ func TestSSHKeysGoWhereTheirTokensGo(t *testing.T) {
 		t.Errorf("a repository task with a key: %q", got)
 	}
 }
-
-func TestALockStepWithoutTheTrustedKeysIsNamed(t *testing.T) {
-	s := Spec()
-	quoted := "'" + strings.ReplaceAll(s.Trusted, "'", "''") + "'"
-
-	if !strings.Contains(s.Trusted, `"locks":`) {
-		t.Fatalf("the fixture spec's trusted keys hold no locks: %s", s.Trusted)
-	}
-
-	lockStep := func(env string) []byte {
-		return []byte(`jobs:
-- name: pr-e2e
-  plan:
-  - task: lock
-    config:
-      inputs: [{name: tools}, {name: trigger}, {name: source}]
-      params: {PIPELINEGEN_TRIGGER: trigger, ` + env + `}
-      run: {path: tools/pipelinegen, args: [lock, acquire, browsers, --root, source]}
-`)
-	}
-
-	for env, want := range map[string]string{
-		plugin.EnvTrusted + ": " + quoted: "",
-		"GITHUB_TOKEN: x":                 "job pr-e2e, step lock: no " + plugin.EnvTrusted,
-	} {
-		steps, err := stepCalls(lockStep(env))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		got := strings.Join(trustedProblems(s, steps), "; ")
-		if (want == "") != (got == "") || !strings.Contains(got, want) {
-			t.Errorf("%s: %q, want %q", env, got, want)
-		}
-	}
-}
