@@ -202,7 +202,7 @@ func inputsHook(book *planBook, walk *walkTrees) func(commit, suite, slice strin
 	}
 
 	return func(commit, suite, slice string) ([]string, error) {
-		return book.inputs(commit, walk.other(commit), suite, slice)
+		return book.inputs(commit, walk.other(commit), true, suite, slice)
 	}
 }
 

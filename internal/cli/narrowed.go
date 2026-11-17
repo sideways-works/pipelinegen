@@ -169,15 +169,16 @@ func (b *planBook) inputsHook() func(commit, suite, slice string) ([]string, err
 		return nil
 	}
 
-	return func(commit, suite, slice string) ([]string, error) { return b.inputs(commit, "", suite, slice) }
+	return func(commit, suite, slice string) ([]string, error) { return b.inputs(commit, "", false, suite, slice) }
 }
 
 var errNoInputs = errors.New("the plan kept no Bazel inputs")
 
 // inputs are a slice's labels at commit; other is the plan's other tree, whose leaves decide which
 // filegroups go back whole and which files were added or removed. A suite's setup part takes the
-// files whose adding or removing shows there.
-func (b *planBook) inputs(commit, other, suite, slice string) ([]string, error) {
+// files whose adding or removing shows there. Paired, the plan has two trees: a slice the other tree
+// lacks keeps the files with units inside its filegroups whole.
+func (b *planBook) inputs(commit, other string, paired bool, suite, slice string) ([]string, error) {
 	b.mu.Lock()
 	bt, ot := b.trees[commit], b.trees[other]
 	b.mu.Unlock()
@@ -196,7 +197,9 @@ func (b *planBook) inputs(commit, other, suite, slice string) ([]string, error) 
 			return nil, fmt.Errorf("%w for %s/%s at commit %s", errNoInputs, suite, slice, commit)
 		}
 
-		return li.labels(otherLeaves(ot, suite, slice)), nil
+		o := otherLeaves(ot, suite, slice)
+
+		return li.labels(o, paired && o == nil), nil
 	}
 
 	rec, ok := bt.bound[depsrepo.Selector(deps.Slice{Suite: suite, Name: slice})]
@@ -224,7 +227,7 @@ func setupInputs(bt, ot *bookTree, suite string) []string {
 
 	for key, li := range bt.leaves {
 		if s, slice, _ := strings.Cut(key, "/"); s == suite {
-			_, setup := li.given(otherLeaves(ot, suite, slice))
+			_, setup := li.given(otherLeaves(ot, suite, slice), false)
 			out = append(out, setup...)
 		}
 	}

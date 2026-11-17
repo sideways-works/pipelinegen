@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sideways-works/pipelinegen/internal/bazel"
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/deps"
 	"github.com/sideways-works/pipelinegen/internal/plugins"
@@ -86,5 +87,28 @@ func TestBookInputsOfWalkedSlices(t *testing.T) {
 
 	if _, err := inputs("h", "s", "other_test.go"); !errors.Is(err, errNoInputs) {
 		t.Fatalf("a slice never kept: %v", err)
+	}
+}
+
+func TestBookInputsWithoutTheOtherTreeKeepGroupedFilesWhole(t *testing.T) {
+	book := newPlanBook(nil)
+	tree := &deps.Tree{
+		Units: map[string]deps.Unit{"tbl:a": {ID: "tbl:a", File: "db/1.sql"}}, FileUnits: map[string][]string{"db/1.sql": {"tbl:a"}},
+		ByUnits: map[string]string{"db/1.sql": "by-table"}, Providers: map[string]string{"tbl:a": "tables"},
+	}
+	groups := &bazel.Groups{Members: map[string][]string{"//db:all": {"//db:1.sql", "//db:x.txt"}}}
+
+	book.keepInputs(&config.Config{}, "h", tree, []plugins.BindSlice{{
+		Suite: "s", Name: "a_test.go", HasList: true, List: []string{"tbl:a"},
+		Tops: []string{"//db:all"}, Groups: groups, Data: []string{"//db:1.sql", "//db:x.txt"},
+	}})
+
+	if got, err := book.inputs("h", "", false, "s", "a_test.go"); err != nil || !slices.Equal(got, []string{"//db:x.txt"}) {
+		t.Fatalf("one tree: %v %v", got, err)
+	}
+
+	// paired with a tree the book never kept, an added file can't be told from one that was there
+	if got, err := book.inputs("h", "b", true, "s", "a_test.go"); err != nil || !slices.Equal(got, []string{"//db:all"}) {
+		t.Fatalf("unpaired: %v %v", got, err)
 	}
 }
