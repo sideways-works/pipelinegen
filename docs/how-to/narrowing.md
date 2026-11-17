@@ -116,8 +116,9 @@ works that out before the sample is drawn:
 
 - It reads the slices' records of the runs since the base, kept as long as
   `keep.runs` keeps them. A pass counts when the slice's state is passed
-  and its tests ran: a slice that ran no tests (`"tests": 0`), was not run
-  or was skipped counts as no pass. Only the same run of the same branch
+  and its tests ran: a slice that ran no tests (`"tests": 0`) or was not
+  run counts as no pass. A result says how many tests ran, not how many
+  were skipped, so a pass in which some tests skipped still counts. Only the same run of the same branch
   counts, never a nightly or a pull request.
 - For the newest two commits at which some slice last passed, it plans
   what changed from there to the head, as it plans any change. A slice
