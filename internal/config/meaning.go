@@ -187,6 +187,7 @@ var suiteSettings = []struct {
 	{"run_slice", func(_ *Meaning, c *Config, s string) any { return c.Suites[s].RunSlice }},
 	{"image", func(_ *Meaning, c *Config, s string) any { return c.Suites[s].Image }},
 	{"privileged", func(_ *Meaning, c *Config, s string) any { return c.Suites[s].Privileged }},
+	{"packages", func(_ *Meaning, c *Config, s string) any { return c.PackagesFor(s).Strings() }},
 	{"stack", func(_ *Meaning, c *Config, s string) any { return c.Suites[s].Stack }},
 	{"params", func(m *Meaning, c *Config, s string) any {
 		return m.perRun(c, func(r string) any { return nonEmpty(c.Params(r, s)) })
@@ -207,7 +208,7 @@ var (
 	topSelection = append([]string{
 		"everything_on", "untested", "macros", "uncovered", "narrowing_alarm", "narrowings", "explain_limit", "rebuild_check",
 	}, sharedSelection...)
-	topNothing = []string{"pipeline", "github", "git", "store", "keep", "writes", "connectors", "generated", "learn", "limits", "bazel_diff"}
+	topNothing = []string{"pipeline", "github", "git", "store", "keep", "writes", "connectors", "generated", "learn", "limits", "bazel_diff", "images"}
 )
 
 func suiteRuns(key string) bool {
@@ -240,6 +241,9 @@ func (m *Meaning) means(p []string) string {
 	}
 
 	switch {
+	case p[0] == "packages":
+		// every suite's: SliceRuns tells which suites it changes
+		return MeansSlices
 	case slices.Contains(topSelection, p[0]):
 		return MeansSelection
 	case slices.Contains(topNothing, p[0]):

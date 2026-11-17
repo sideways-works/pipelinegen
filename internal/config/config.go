@@ -47,12 +47,15 @@ type Config struct {
 	GitHub       GitHub           `yaml:"github"`
 	Git          Git              `yaml:"git"`
 	Concourse    Concourse        `yaml:"concourse"`
-	Learn        Learn            `yaml:"learn"`
-	Keep         Keep             `yaml:"keep"`
-	Writes       Writes           `yaml:"writes"`
-	Store        Store            `yaml:"store"`
-	Runs         map[string]Run   `yaml:"runs"`
-	Untested     []Untested       `yaml:"untested"`
+	// Packages are what every suite's steps need installed.
+	Packages Packages       `yaml:"packages,omitempty"`
+	Images   Images         `yaml:"images,omitempty"`
+	Learn    Learn          `yaml:"learn"`
+	Keep     Keep           `yaml:"keep"`
+	Writes   Writes         `yaml:"writes"`
+	Store    Store          `yaml:"store"`
+	Runs     map[string]Run `yaml:"runs"`
+	Untested []Untested     `yaml:"untested"`
 	// Macros declares what a macro of another repository reads in the
 	// package that calls it, by "<.bzl label>%<name>": the check can't see
 	// inside such a macro.
@@ -545,6 +548,8 @@ type Suite struct {
 	Steps      []Step       `yaml:"steps,omitempty"`
 	RunOn      RunOn        `yaml:"run_on"`
 	Image      string       `yaml:"image,omitempty"`
+	// Packages are what the suite's steps need besides the top level's.
+	Packages Packages `yaml:"packages,omitempty"`
 	// Params go to the suite's prepare, batch and whole-suite tasks: plain
 	// values, never secrets.
 	Params      map[string]string `yaml:"params"`
@@ -935,6 +940,7 @@ func (c *Config) Validate() error {
 	c.validateKeep(bad)
 	c.validateNarrowing(bad)
 	c.validateImages(bad)
+	c.validatePackages(bad)
 	c.validateWrites(bad)
 	c.validatePlugins(bad)
 

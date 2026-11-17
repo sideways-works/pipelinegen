@@ -150,6 +150,9 @@ type Planner struct {
 	Params   map[string]string `yaml:"params,omitempty"`
 	Secrets  map[string]string `yaml:"secrets,omitempty"`
 	GitToken string            `yaml:"git_token,omitempty"`
+	// Packages are what pipelinegen's own steps need installed in the
+	// planner image.
+	Packages Packages `yaml:"packages,omitempty"`
 }
 
 // Bootstrap is what each job's first step fetches into its tools: the
