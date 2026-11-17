@@ -44,9 +44,8 @@ type gitHubHost struct {
 	remote string
 	tokens map[string]string
 
-	once sync.Once
+	mu   sync.Mutex
 	host *connector.Host
-	err  error
 }
 
 // newGitHubHost reads the API from the step's environment, never from the
@@ -71,14 +70,26 @@ func newGitHubHost(cfg *config.Config) *gitHubHost {
 	}
 }
 
+// open keeps the connector once it opened, and tries again after a fetch
+// that failed.
 func (g *gitHubHost) open(ctx context.Context) (*connector.Host, error) {
-	g.once.Do(func() {
-		g.host, g.err = openConnector(ctx, g.cfg, config.ConnectorGitHub, connector.Options{
-			Config: map[string]any{"api": g.api}, Remote: g.remote, API: g.api, Tokens: g.tokens,
-		})
-	})
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
-	return g.host, g.err
+	if g.host != nil {
+		return g.host, nil
+	}
+
+	h, err := openConnector(ctx, g.cfg, config.ConnectorGitHub, connector.Options{
+		Config: map[string]any{"api": g.api}, Remote: g.remote, API: g.api, Tokens: g.tokens,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	g.host = h
+
+	return h, nil
 }
 
 func (g *gitHubHost) Changes(ctx context.Context, a plugin.ChangesArgs) ([]plugin.Change, error) {
