@@ -303,16 +303,7 @@ func (r *Reporter) Close(ctx context.Context, evs []SliceEvent) (map[string]Stat
 // write together.
 func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, files map[string][]byte) []candidate {
 	if ev.NotRun {
-		f := notRun
-		if ev.Stopped != "" {
-			f.Tail = ev.Stopped
-		}
-
-		if ev.Short != "" {
-			f = Failure{Test: MemoryTest, Tail: ev.Short}
-		}
-
-		sf.State, sf.Failures = NotRun, []Failure{f}
+		notRunIn(sf, ev)
 
 		return nil
 	}
@@ -383,6 +374,21 @@ func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, file
 	// failure files are masked as they are read, text only: scrub would
 	// break a binary one
 	return r.failureFiles(ev, sf)
+}
+
+// notRunIn is the state of a slice its batch never ran: stopped before
+// it, or short of memory.
+func notRunIn(sf *StateFile, ev SliceEvent) {
+	f := notRun
+	if ev.Stopped != "" {
+		f.Tail = ev.Stopped
+	}
+
+	if ev.Short != "" {
+		f = Failure{Test: MemoryTest, Tail: ev.Short}
+	}
+
+	sf.State, sf.Failures = NotRun, []Failure{f}
 }
 
 func (r *Reporter) failureFiles(ev SliceEvent, sf *StateFile) []candidate {
