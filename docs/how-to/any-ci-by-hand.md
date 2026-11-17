@@ -13,7 +13,7 @@ the slices, reports them, and attaches the lists to the commit, then a
 second commit whose plan selects less. What it leaves out: pull requests
 (their plan runs in two steps, `plan --out` and `plan --from --gate
 <dir>`, so the change's code never runs where a credential that writes
-is, and their suites start only when `<dir>/gate.json` is open), locks,
+is, and their suites start only when `<dir>/gate.json` is open),
 whole-suite checks, a suite's prepare steps (`slice prepare`), statuses and comments on a
 git host, and continuous runs. For a continuous run, run its plan step's
 builds side by side, never one at a time: each records its round for the

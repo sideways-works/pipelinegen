@@ -46,7 +46,7 @@ in the default branch's run once it is merged.
 | A driver entry's pin (`release`, `commit`, `repository`) | the slices its steps run, as a changed plugin entry: from level 4 all of them; below it, while `plugin-entry` is on, each suite's sample of its recorded slices, and every slice without a list |
 | An sbom's or correlator's pin or `config` block | what the entry reaches, as [plugins](../how-to/plugins.md) says |
 | What selects (`tests`, `tag`, `exclude`, `owner`, `extra_deps`, `text_inputs`, `sample`, `sample_on`, `narrowing`, `narrowings`, `follow`, `untested` and the like) | what either config selects: the change plans under both and runs the union, so it never deselects its own tests; a slice the head's config adds to a suite (a test file a pattern now matches) runs as a new slice, with the reason "the configuration adds it to the suite" |
-| Where results go, what is kept, how slices are dealt into batches and share machines (`github`, `git`, `store`, `keep`, `writes`, `connectors`, a `plugins` entry of kind `connector`, `limits`, `parallel`, `batches`, `batch_minutes`, `run_on`, a lock's name, slots and weight, the runs' triggers and reports) | nothing: no test can observe them |
+| Where results go, what is kept, how slices are dealt into batches and share machines (`github`, `git`, `store`, `keep`, `writes`, `connectors`, a `plugins` entry of kind `connector`, `limits`, `parallel`, `batches`, `batch_minutes`, `run_on`, `lock` but its `minutes`, the runs' triggers and reports) | nothing: no test can observe them |
 | Anything else: a time limit (`minutes`, a correlator's `collect_seconds`), a suite's `correlators`, the runner's entry or its placement, `bazel`, `concourse.include`, the pipelinegen pin in `concourse.planner.bootstrap`, a key this pipelinegen doesn't read in the base | the config is a changed file, as below |
 
 The slices a step's change selects run at every narrowing level, and no
@@ -96,7 +96,7 @@ changed".
 | `sample_on` | list of patterns | none | Files every test exercises the same way (task files, shared setup): a change to one runs a sample of every suite (the config itself only for a change the planner doesn't understand whole; see [a change to this file](#a-change-to-this-file)), `suites.<name>.sample` slices spread over it, with the reason "`<file>` changed (sample_on `<pattern>`)". Which slices the sample must keep depends on what else changed. When every file the change touches matches a suite's `sample_on`, the slices it reaches through those files are the sample's to stand for, those that list such a file among their Bazel inputs (in a filegroup, say) included: the sample keeps only the slices whose own test files changed and those a changed plugin entry reaches, and picks the rest. When the change touches any other file too, the sample keeps every slice the change reaches, through any file. The kept slices count toward the `sample` slices, since the file reaches them like every slice of the suite: a change that already reaches that many runs nothing more. A file whose readers must run on every change to it doesn't belong here, even when they declare it as an input: put it in a Bazel target its readers depend on, and in neither list. It acts at every narrowing level. A file listed here needs no Bazel target and counts as covered. `everything_on` wins where both match. When the change also moves a plugin's entry, the suite still runs one sample, and where `plugin-entry` is off (levels 4 and 5) the slices the entry reaches run on their own beside it, as slices the change selects. |
 | `limits` | mapping | | The time limits, in minutes, of the steps that aren't a suite's own tasks. Every step of the pipeline has one: a step that hangs ends, and says which limit it reached and which key raises it, instead of holding its run pending. A suite's own tasks take `suites.<name>.minutes`. |
 | `limits.plan` | integer | `120` | Each task of a run's planning job and of its sweep: the planner's prepare command and the plan together. A continuous run's planning task gets its `wait_minutes` on top, for the wait for the round in progress, which comes before the prepare; the prepare and the plan have `limits.plan` from the wait's end. |
-| `limits.steps` | integer | `20` | Each of pipelinegen's own steps in a suite's job (the tree and the batches, each batch's end, the reports, a lock's release) and the pipeline job's. A step that waits for a lock gets the lock's wait, 4 hours, on top. |
+| `limits.steps` | integer | `20` | Each of pipelinegen's own steps in a suite's job (the tree and the batches, each batch's end, the reports) and the pipeline job's. |
 | `generated` | list of mappings | none | Files other generators write, for the check to compare. Its keys belong to the check. Accepted, not acted on yet. |
 | `packages` | list | none | Packages every suite's steps need, installed with the package manager of the image a step runs in (apt-get, apk, dnf, microdnf or yum) before its command; a suite's own `packages` add to them. An entry is a plain name (`jq`), or a mapping of names by family where they differ: `{name: postgresql-client, apk: postgresql16-client}`, whose `name` serves every family it doesn't name. The families are `apt`, `apk` and `rpm` (dnf, microdnf and yum, which install from the same repositories). A name is letters, digits and `+ . _ -`; anything else is refused, since it goes into a shell script. A step that runs on your machine (`--no-image`) installs nothing: it names the packages the machine has under no command or installed package of their name. See [packages and cached images](../how-to/packages-and-images.md). |
 | `images` | mapping | none | Where cached images are kept: a base image with a suite's packages installed, built once. Without it every task installs the packages, with a download cache. Locally no registry is needed: the image is made once in the local image store as `pipelinegen-cache/<key>`. |
@@ -173,7 +173,7 @@ runs before it has either: `check` and `affected` work on it, and
 | `github.tokens.read` | string | `github.token` | Fetches the code: the repository's commits, and private modules a task downloads. The only token a task that runs the change's code may get, so a read-only token here keeps write tokens away from it. |
 | `github.tokens.changes` | string | `github.token` | Lists pull requests and reads their state. |
 | `github.tokens.report` | string | `github.token` | Sets commit statuses and the pull request's comment. |
-| `github.tokens.store` | string | `github.token` | Writes the records, the plugins' answers and the locks. |
+| `github.tokens.store` | string | `github.token` | Writes the records and the plugins' answers. |
 | `github.status_prefix` | string | `pipelinegen` | The start of every commit status's context: `<prefix>/<run>/<suite>` per suite and `<prefix>/<run>` for the whole run. |
 
 ```yaml
@@ -187,11 +187,10 @@ github:
 
 The repository's own remote, for a repository whose host pipelinegen
 doesn't report to. Without a `github` section, the runs need it: the
-records and locks live in this remote, nothing is posted anywhere, and the
+records live in this remote, nothing is posted anywhere, and the
 CI system's own job results are the report. Branch, timer and manual runs
-work this way; `pipelinegen pipeline` refuses `pull_requests` triggers,
-`report.status: true` and a lock's own `repository` without the `github`
-section. A local `affected` without either reads the recordings from the
+work this way; `pipelinegen pipeline` refuses `pull_requests` triggers and
+`report.status: true` without the `github` section. A local `affected` without either reads the recordings from the
 checkout's `origin`, and with no `origin` reads none and says so.
 
 | Key | Type | Default | What it does |
@@ -200,7 +199,7 @@ checkout's `origin`, and with no `origin` reads none and says so.
 | `git.remote` | URL | the `github` repository | The repository's git URL: `https`, `http`, `git`, `file` or `ssh` (also the scp form, `git@host:path`), with no password or query in it. A plain git server will do: pipelinegen asks it for nothing beyond what stock git serves. |
 | `git.ssh_key` | var name, or mapping | | For an ssh remote: the name of the CI var holding the private key, never the key. One var serves both purposes; `{read: <var>, store: <var>}` gives each its own. Required with an ssh remote. |
 | `git.ssh_key.read` | var name | | The key that fetches the code. |
-| `git.ssh_key.store` | var name | | The key that writes the records and locks. |
+| `git.ssh_key.store` | var name | | The key that writes the records. |
 | `git.known_hosts` | list of strings | | For an ssh remote: the server's host keys, as `known_hosts` lines. Required: a host key that isn't listed fails the fetch, and none is ever accepted on first use. |
 
 ```yaml
@@ -425,8 +424,8 @@ and dashes, starting with a letter.
 | `suites.<name>.secrets.whole` | mapping of strings | none | The whole-suite checks' secrets. |
 | `suites.<name>.parallel` | integer | `4` | How many batches a build of the suite is dealt into, and so how many run at once: every batch of a build runs at the same time. `batches` and `batch_minutes` deal more. |
 | `suites.<name>.batch_minutes` | integer | none | Deals the selected slices into batches of about this many minutes each, by the durations file (a slice without a recorded time counts at the median of those with one): the total time divided by `batch_minutes`, rounded up, but never fewer batches than `parallel` and never more than there are slices; with `batches` set, at most that many. Every batch runs at once, so without `batches` a run of everything runs as many batches at once as its time asks for: `pipelinegen check` warns of it, and `batches` bounds it. A run of everything gets many small batches, a change of a few slices few: five slices of two minutes with `parallel: 2` make two batches, 585 minutes with `batch_minutes: 18` make 33. |
-| `suites.<name>.minutes` | integer | `120` | The suite's time limit, which needs no lock. Each of its tasks has it on its own: the prepare, each batch and each whole-suite check, so a batch that hangs ends while its other batches go on, and the suite's total is bounded by its batches times this, and by Concourse's own settings for the job. A suite whose lock is taken per build has it as one limit for all its work while it holds the lock, which the lease covers. `batch_minutes` is what a batch is dealt to take, never a limit; `minutes` must be at least `batch_minutes`. A batch its limit stopped errors its open slices with the limit and this key; see [troubleshooting](../troubleshooting.md#a-step-reached-its-time-limit). |
-| `suites.<name>.batches` | integer | the suite's `parallel` | How many batches a build deals the suite's selected slices into, balanced by their durations; at least `parallel`. Every batch of a build runs at once, so this is also how many run together: `batches: 12, parallel: 3` runs twelve at once. More, smaller batches lose less work when a worker goes away, since a batch writes its recordings when it ends, but each takes a worker's container. `pipelinegen check` warns when it is more than four times `parallel`, and when the batches take a lock one by one (`lock.per: batch`, or a continuous run) and the last could wait past the lock's 4 hours: every batch asks for a slot at once. |
+| `suites.<name>.minutes` | integer | `120` | The suite's time limit. Each of its tasks has it on its own: the prepare, each batch and each whole-suite check, so a batch that hangs ends while its other batches go on, and the suite's total is bounded by its batches times this, and by Concourse's own settings for the job. `batch_minutes` is what a batch is dealt to take, never a limit; `minutes` must be at least `batch_minutes`. A batch its limit stopped errors its open slices with the limit and this key; see [troubleshooting](../troubleshooting.md#a-step-reached-its-time-limit). |
+| `suites.<name>.batches` | integer | the suite's `parallel` | How many batches a build deals the suite's selected slices into, balanced by their durations; at least `parallel`. Every batch of a build runs at once, so this is also how many run together: `batches: 12, parallel: 3` runs twelve at once. More, smaller batches lose less work when a worker goes away, since a batch writes its recordings when it ends, but each takes a worker's container. `pipelinegen check` warns when it is more than four times `parallel`. |
 | `suites.<name>.narrowing` | integer 1 to 5 | the config's | The suite's narrowing level; the plan uses the highest level of the config and its suites. |
 | `suites.<name>.sample` | integer | the suite's `parallel` | How many slices a sampled change runs (by `sample_on`, by the sample narrowings at levels 1 and 2, or by a changed plugin entry at levels 1 to 3 while `plugin-entry` is on). A slice counts toward it when the sampled change reaches it: the slices a `sample_on` file's change or a sample narrowing's change selects are part of the sample, so a change that selects that many already runs no more. A changed plugin entry's sample is drawn from the recorded slices the entry reaches, and only those of them that run anyway count: a slice that runs for another reason, one without a list say, tells nothing of the new entry, so the sample comes on top of it. A change that asks for a sample more than one way runs one sample of the suite. |
 | `suites.<name>.sample_on` | list of patterns | none | Like the top-level `sample_on`, for this suite only: its own task files, say. |
@@ -436,13 +435,13 @@ and dashes, starting with a letter.
 | `suites.<name>.bind` | `graph` or `recorded` | `graph` | How the suite's slices are bound to code: the Bazel graph only, or also what they touched when they last ran. `recorded` needs sbom and correlator plugins, which read the recordings; a config with a recorded suite and neither is refused. A `graph` suite's test file depends on its own file and on the target that owns it, whose graph bazel-diff follows; bind correlators never see it. Planning binds through the plugins, none when none is configured. |
 | `suites.<name>.follow` | `executed` or `dependents` | the top-level `follow` | This suite's width. |
 | `suites.<name>.follow_depth` | integer | the top-level `follow_depth` | This suite's depth bound. |
-| `suites.<name>.lock` | mapping | none | A lease the suite holds while it runs, for a machine shared with another repository; see [sharing machines](../how-to/sharing-machines.md). |
-| `suites.<name>.lock.name` | string | (required in a lock) | The lock's name. Suites, and repositories naming the same `repository`, share a lock by name. |
-| `suites.<name>.lock.repository` | `owner/name` | the code repository | The repository whose refs hold the lock. |
-| `suites.<name>.lock.minutes` | integer | none | The old spelling of `suites.<name>.minutes`, read as it when that is unset; `check` and the plan step warn, and a config that sets both to different values is refused. A lease expires 15 minutes after the suite's time limit. |
-| `suites.<name>.lock.slots` | integer | `1` | How many holders the lock admits at once. |
-| `suites.<name>.lock.weight` | integer | `1` | How many of the lock's slots each holder of this suite takes at once, all or none: suites of different sizes share one lock of a machine (backend batches weight 1 on a four-slot lock, a suite that needs the whole machine weight 4). At most the lock's slots; suites that share a lock agree on its slots. A waiter that takes more slots than others leaves a mark, and lighter takers leave the slots that free to it, so it is never starved. |
-| `suites.<name>.lock.per` | `build` or `batch` | `build` | What holds a slot: the suite's whole build, its batches side by side, or each batch (and each whole-suite check) on its own, in every run alike, so a slot is one batch. A continuous run takes it per batch either way. With `batch`, the suite needs no serial group for the machine the lock stands for. |
+| `suites.<name>.lock` | | | No longer read: a suite's batches start when their node has room. `check` names it; remove it. A pipeline generated before still runs its lock steps, which do nothing; see [sharing machines](../how-to/sharing-machines.md#between-repositories). |
+| `suites.<name>.lock.name` | | | No longer read, with `suites.<name>.lock`. |
+| `suites.<name>.lock.repository` | | | No longer read, with `suites.<name>.lock`. |
+| `suites.<name>.lock.minutes` | integer | none | The old spelling of `suites.<name>.minutes`, still read as it when that is unset; `check` and the plan step warn, and a config that sets both to different values is refused. |
+| `suites.<name>.lock.slots` | | | No longer read, with `suites.<name>.lock`. |
+| `suites.<name>.lock.weight` | | | No longer read, with `suites.<name>.lock`. |
+| `suites.<name>.lock.per` | | | No longer read, with `suites.<name>.lock`. |
 | `suites.<name>.whole_suite` | list | none | Checks that judge the suite as a whole; see [concepts](../how-to/adding-a-suite.md#whole-suite-checks). |
 | `suites.<name>.whole_suite[].name` | string | (required) | The check's name. It reports as `whole.<name>`. |
 | `suites.<name>.whole_suite[].task` | path | (required) | The check's task file. |
@@ -470,7 +469,7 @@ suites:
     tag: slice-lint
     run_slice: ci/lint.yml
     params: {GOFLAGS: -trimpath}
-    lock: {name: linters, minutes: 10}
+    minutes: 10
 ```
 
 ## runs
@@ -615,10 +614,12 @@ writes: {retries: 10, backoff: 1s, deadline: 10m}
 ## store
 
 Where pipelinegen keeps what outlives a job: the plans and states of runs,
-the recorded lists, the plugins' cached answers and the leases of locks.
+the recorded lists and the plugins' cached answers.
 By default they are hidden refs of the repository (`refs/pipelinegen/*`).
 With `backend: branch` they are ordinary files on one branch that shares no
-history with the code, and the leases on a second, small branch beside it.
+history with the code. An older pipelinegen kept the leases of its locks on
+a second, small branch beside it, which the next plan step of a trusted run
+empties.
 
 A write to the branch is a commit on the tip it read, pushed so that the
 branch only moves when nobody moved it first. When another writer did, the
@@ -633,16 +634,17 @@ first, in one fetch, and the push itself fetches nothing. Which files it
 lacks it learns from the objects it holds, never by asking git about one
 it may lack, which a git before 2.45 answers by dying.
 
-Both branches need force-pushes allowed, for the leases and for the job that
-squashes the store's history. Leave them out of branch rules that require
-pull requests, and out of webhooks and workflows that run on every push. A
-run can't be triggered by either branch.
+The branch needs force-pushes allowed, for the job that squashes the
+store's history, and so does the leases' branch while it holds any. Leave
+both out of branch rules that require pull requests, and out of webhooks
+and workflows that run on every push. A run can't be triggered by either
+branch.
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
 | `store` | mapping | | The section. |
 | `store.backend` | string | `refs` | `refs` or `branch`. |
-| `store.branch` | string | `pipelinegen` | With `backend: branch`, the branch the records live on; the leases live on the same name with `-locks` added. No run may be triggered by either, since every write would start it again. With `refs` it is not used. |
+| `store.branch` | string | `pipelinegen` | With `backend: branch`, the branch the records live on; an older pipelinegen's leases live on the same name with `-locks` added. No run may be triggered by either, since every write would start it again. With `refs` it is not used. |
 | `store.deadline` | period | `10m` | How long a write keeps applying itself again after other writers moved the branch first, before the command fails. |
 
 ```yaml

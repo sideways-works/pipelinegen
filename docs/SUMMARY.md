@@ -100,7 +100,7 @@
   * [The stored graph and the walk](internals/graph.md)
   * [The generated pipeline](internals/pipeline.md)
   * [Refs](internals/refs.md)
-  * [The lock](internals/lock.md)
+  * [The lock, removed](internals/lock.md)
   * [The reporter](internals/reporter.md)
   * [Batches](internals/batches.md)
   * [Safety](internals/safety.md)

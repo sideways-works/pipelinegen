@@ -9,7 +9,7 @@ task, and reaches only the tasks of that kind.
 
 - cloning the repository and fetching the commits a run tests;
 - reading and writing pipelinegen's hidden refs: plans, run state, lists,
-  the plugins' answer cache, locks;
+  the plugins' answer cache;
 - posting commit statuses and the pull request comment;
 - downloading pipelinegen's and the plugins' releases.
 
@@ -70,7 +70,7 @@ The lines name the variable and never hold the token, so a trace of the
 A remote reached over ssh takes a private key per purpose in place of a
 token: `git.ssh_key` names the CI var that holds it, never the key. Use a
 read-only deploy key for `read` and a separate key for `store`, which
-writes the records and locks. One var for both works, but then a step that
+writes the records. One var for both works, but then a step that
 may only read holds a key that writes.
 
 Only the var's name is in the config, the spec and the generated pipeline.
@@ -122,17 +122,12 @@ config the pipeline was made from instead: `git.remote`, `git.ssh_key`,
 `git.known_hosts`, `github.repository`, `github.token` and
 `github.tokens`, `github.status_prefix`, `store.backend`, `store.branch`,
 `bazel_diff`, `bazel.bazelisk`, `bazel.startup_flags`, the plugins' pins,
-`concourse.planner.bootstrap`, each suite's `lock` (its repository,
-name, slots, `per` and weight) and the time limit (`minutes`, in every
-run) of a suite that has one, which its leases last, the `connectors`
-except their `links`, `concourse.branch`, the runner's `config` block,
-and the suites each run names (a change may add to them, never take one
-out). Together they say where a run reads and writes, which credential
-serves which purpose, which binaries a step runs, where the pipeline's
-steps run, which suites a run waits for and how much of a shared machine
-a run takes: a change can't raise its own slots
-or lease on a lock it shares with other runs. The lock steps read them
-too, so a lease is taken as the trusted config has it. The pipeline hands them to every step as
+`concourse.planner.bootstrap`, the `connectors` except their `links`,
+`concourse.branch`, the runner's `config` block, and the suites each run
+names (a change may add to them, never take one out). Together they say
+where a run reads and writes, which credential serves which purpose, which
+binaries a step runs, where the pipeline's steps run and which suites a
+run waits for. The pipeline hands them to every step as
 `PIPELINEGEN_TRUSTED`. A change that edits one is planned with the
 repository's value, and its plan names the keys it edited.
 

@@ -20,7 +20,7 @@ stops at that point and points you to Bazel's own guides.
 ### Git
 
 The repository is a git repository. pipelinegen keeps its own records
-(plans, what each test ran, locks) in hidden refs of that same repository,
+(plans, what each test ran) in hidden refs of that same repository,
 so it needs no database and no service of its own.
 
 ### Tests you can run one file at a time

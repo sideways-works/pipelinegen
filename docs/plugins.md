@@ -584,8 +584,8 @@ fixture tree of its own. It checks:
 - for a runner: `pipeline` turns the kit's fixture spec into exactly one
   file, the same bytes every time. The kit reads every call of
   `pipelinegen` in it (a task's own, or a line of a script), for the spec
-  and for its variants: a lock on every suite, a pipeline that sets
-  itself, a config that splits the token by purpose and, for a runner with
+  and for its variants: an older tool's spec with a lock on every suite,
+  per build and per batch, a pipeline that sets itself, a config that splits the token by purpose and, for a runner with
   `connector_changes`, a pull request run whose changes come from a
   connector; for a runner with `steps`, suites run by drivers; and for a
   runner with `steps` and `packages`, suites with packages, one of them
@@ -610,8 +610,8 @@ fixture tree of its own. It checks:
   declared secrets and the repository's own (`concourse.repository`,
   `concourse.include`). Every task, get, put and `set_pipeline` step has a
   time limit, a timeout of its own or on a step around it, and a step in
-  a hook has its own; a lock taken per batch keeps its wait for a slot
-  outside the limit of the batch it guards. A step that runs `report
+  a hook has its own. No step runs `pipelinegen lock` or `unlock`, even
+  for a spec that holds a lock. A step that runs `report
   batch-end` or `report suite` is in no `try`, and its run, given a
   stand-in for the tool that exits 4 for a report, exits 4: a step that
   could not write the run's records fails its job. Every call of the tool gets the spec's `trusted`
@@ -1272,12 +1272,11 @@ every run that selects everything compares, per slice, what it touched
 
 A runner turns the config's runs and suites into one CI system's pipeline.
 It owns everything specific to that system: task files and their inputs and
-outputs, steps repeated over a list known only at run time, locks and
-queues, caches, hooks that report a broken build, the bootstrap step, and
+outputs, steps repeated over a list known only at run time, caches, hooks that report a broken build, the bootstrap step, and
 the repository's own parts merged in.
 
 - `describe` adds what the CI system can do: steps repeated over a runtime
-  list, caches that stay with a job, a native rerun, locks. A runner also
+  list, caches that stay with a job, a native rerun. A runner also
   says, in `cache_scopes`, how widely each cache its pipeline keeps is
   shared, by the cache's name: `job` (one job's), `pipeline` (every job's)
   or `worker` (every job's on a worker). The plan's cache holds answers
@@ -1340,7 +1339,7 @@ the repository's own parts merged in.
 
 `pipelinegen pipeline` calls the configured runner. The pipeline's steps
 call the core's commands, which know no CI system: `plan`, `tree`,
-`batches`, `slice start` and `slice end`, `report`, `lock`, and `lists`.
+`batches`, `slice start` and `slice end`, `report` and `lists`.
 Each runner documents how its system hands a batch task its inputs.
 
 ## Drivers
@@ -1641,7 +1640,7 @@ on the first one that breaks a rule:
 - the stored graph and the walk over it;
 - the plugins' answer cache;
 - the narrowing level, the sample and the alarm;
-- plans, refs, statuses, the comment and locks;
+- plans, refs, statuses and the comment;
 - sending a connector's requests, with the tokens, retries and the checks
   on where they go;
 - the commands a pipeline's steps call;

@@ -1641,7 +1641,7 @@ follow-up commit. With a credential manager that resolves `((name))` by
 itself, `concourse.self_set` lets the job set the pipeline instead.
 
 `github_token` needs, on the repository: contents read and write
-(pipelinegen keeps run state, lists and locks in hidden refs there) and
+(pipelinegen keeps run state and lists in hidden refs there) and
 commit statuses read and write; pull requests read and write once a run
 takes pull requests and comments on them. `github_read_token` needs
 contents read on the releases of pipelinegen, its plugins and its

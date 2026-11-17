@@ -31,7 +31,7 @@ pull request and the build it was shown on. An entry whose result is
   build of each suite job.
 
 - It needs one var, `github_token`: a fine-grained token on this repository
-  with Contents read and write (clone; the run state, locks and recorded
+  with Contents read and write (clone; the run state and recorded
   lists under `refs/pipelinegen/`; releases), Commit statuses read and
   write, Pull requests read and write and Issues read and write (listing
   pull requests, the comment), and Metadata read.
@@ -52,7 +52,7 @@ the test and closed afterwards.
 | c | A change to the build setup runs everything | | | pending |
 | d | The first build with no earlier passing commit runs everything | | | pending |
 | e | The comment appears when the change is planned and follows slices as they start and end, as a list and as a Mermaid chart, and renders on GitHub | | | pending |
-| f | Two changes queue on a suite job by its serial group; two repositories' pipelines exclude each other by the lease, and a holder that dies frees it by itself | | | pending |
+| f | Two changes' builds of one suite job run side by side, and no step takes a lock | | | pending |
 | g | Rerunning a failed suite build (Concourse's own rerun) runs exactly the failed slices again, and the comment and statuses end right | | | pending |
 | h | After a passing branch run that recorded, that commit's lists ref holds what its slices touched; no commit was added and no file changed; the next plan finds the lists (the run's own refs stay until `keep` sweeps them, see n) | | | open: waits for a suite of this repository that records |
 | i | An added test file is a new slice and runs, and nothing else | | | pending |
@@ -83,12 +83,8 @@ the test and closed afterwards.
   `format: list` and once with `format: mermaid`. Rendered on GitHub and
   looked at.
 - **f**: two pull requests changing `example/words/main.go`, marked ready
-  together: the second's `smoke` build waits for the first's by the job's
-  serial group. Across repositories: a second pipeline (a copy of this
-  repository's config under another name) whose suite takes the same lease
-  waits until the first releases it; then a lease whose holder is gone
-  (taken and never released) is taken over after its expiry, with no one
-  removing it.
+  together: their `smoke` builds run at once, neither waiting for the
+  other, and no step of either runs `pipelinegen lock`.
 - **g**: a pull request that breaks `example/calc/add_test.sh` and
   `example/calc/mul_test.sh`: those two fail, the rest pass. Rerunning the
   failed `unit` build runs those two again on the same commit and nothing
@@ -101,7 +97,7 @@ the test and closed afterwards.
   `refs/pipelinegen/lists/<commit>` exists and names what each smoke slice
   touched (`count` touched `Count`, `upper` did not); `main` has no commit
   after the merged one and its tree is unchanged; the run's own refs stay
-  until the sweep (n) and no lock ref of it is left held; the next
+  until the sweep (n); the next
   change's plan reads those lists, or the nearest ancestor's when its own
   base has none yet. A following change to `Count` alone then runs only the
   `count` slice.

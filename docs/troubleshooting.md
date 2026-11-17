@@ -3,7 +3,7 @@
 The first part lists the messages you can meet while setting pipelinegen
 up, in the order of the [step-by-step guide](tutorial/README.md). The
 second part starts from what you see in a running pipeline: a slice that
-didn't run, a run that ran everything, a stuck lock. Each case says how to
+didn't run, a run that ran everything, a step at its time limit. Each case says how to
 find out what happened and what to do.
 
 ## While setting up
@@ -177,21 +177,15 @@ and what to do:
 | `it touched <unit>, which no configured sbom lists: configure an sbom that lists <kind> units, or every change runs it` | Add the sbom plugin for that kind of unit (npm-sbom for `dep:npm:` units, say). |
 | a mark: a correlator couldn't tell what the slice touched in its last recording | `pipelinegen lists show --slice <name>` shows the mark and its reason, such as "3 tests ran and nothing was recorded". Fix what the reason names (often the task left no coverage) and record again. A suite whose tests touch nothing of the tree sets `empty_recordings: allow`. |
 
-### A slice is stuck waiting for a lock
+### A step says locks are gone
 
-Find out: the suite job's log shows the lock step waiting and who holds
-each slot (`pipelinegen lock acquire` prints the holders while it waits):
-the repository, run, change, commit and suite of each.
+Find out: a suite job's step prints `pipelinegen lock: locks are gone`,
+and `pipelinegen check` says `suites.<name>.lock is no longer read`.
 
-What to do: open the holder's build. If it is running, wait. If its worker
-is gone, its lease expires 15 minutes after the lock's minutes and the
-next waiter takes it. If you can't wait, free it by hand:
-
-```sh
-pipelinegen unlock <name> <slot>
-```
-
-Freeing a lease that is still in use puts two holders on one machine.
+What to do: nothing breaks; the step passes and takes nothing. Remove
+`lock` from the suite (move its `minutes` to the suite's own `minutes`) and
+set the pipeline again, so it has no lock steps before the release that
+drops the command.
 
 ### A step reached its time limit
 
@@ -200,12 +194,12 @@ A batch's slices say `batch <n> stopped while slice <name> ran` and then
 one of these:
 
 - `after 125 minutes: its time limit of 120 minutes (suites.e2e.minutes)
-  stopped it`: the limit ended the batch. A suite whose lock is taken per
-  batch or per build knows this exactly, from the moment it took the lock.
+  stopped it`: the limit ended the batch. A pipeline generated with locks
+  per batch knows this exactly, from the moment its lock step ran.
 - `14 minutes after the suite began: not its time limit`: the batch's
   task died on its own; its build log says why.
 - `its time limit is 120 minutes (suites.e2e.minutes): the build log says
-  timeout exceeded when that was the cause`: without a lock, a batch's end
+  timeout exceeded when that was the cause`: a batch's end
   only knows when the suite's work began, so it can't tell more. Concourse
   writes `timeout exceeded` in the step's log when the limit ended it.
 
@@ -214,8 +208,8 @@ A whole-suite check that left no result says `the whole-suite check
 raises it; its build log tells whether the limit stopped it. Slices that
 never started say `suite <name> stopped before these slices
 reported` with the same kind of reason, and `suite <name>'s work never
-began` when the step before the batches (the tree, the suite's lock when
-it takes one for the whole build, the batches) didn't finish. One of pipelinegen's own steps ends two minutes before its
+began` when the step before the batches (the tree, the batches) didn't
+finish. One of pipelinegen's own steps ends two minutes before its
 limit and says `stopped at its step's time limit of 20 minutes
 (limits.steps)`.
 

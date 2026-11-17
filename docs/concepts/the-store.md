@@ -2,8 +2,7 @@
 
 pipelinegen remembers things between runs: each run's plan and the state
 of its slices, the recordings and the lists made from them, the plugins'
-cached answers, and the locks that let two repositories share a machine.
-Where it keeps them is the store.
+cached answers. Where it keeps them is the store.
 
 The store is the sixth kind of plugin, and still a design. The default store, and today the
 only one, keeps everything in your own git repository, under hidden refs,
@@ -27,7 +26,7 @@ only writer: never push to them by hand.
 | `lists/<commit>` | what each slice executed, for that commit |
 | `run/<run>/<change>/<commit>` | a run's plan and the state of its slices |
 | `batch/...` | a batch's slices while it runs; folded into the run's ref when its suite ends |
-| `locks/<name>/<slot>` | a lease between repositories that share a machine |
+| `locks/<name>/<slot>` | a lease an older pipelinegen took; the next plan step of a trusted run removes it |
 | `cache/<plugin>/...` | the plugins' answers, by content |
 
 A run keeps few refs: one per batch while it runs, and one for the whole

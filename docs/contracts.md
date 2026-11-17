@@ -210,7 +210,7 @@ unless the suite declares it for its batches.
 
 Each of these tasks' environment is layered: the suite's `params` (merged with the run's for that suite, the run's win), then the declared secrets, then pipelinegen's own `PIPELINEGEN_*` variables last, so nothing overrides them.
 
-pipelinegen's own steps keep the pipeline's token (`github.token`) as `GITHUB_TOKEN`, because they write refs and statuses: the bootstrap, `plan`, `tree`, `batches`, `lock acquire` and `lock release`, `report batch-end`, `report collect`, `report whole`, `report suite` and the error report. The pipeline job's `pipeline` and its staleness check write nothing remote and get no token. They get `PIPELINEGEN_RUN`, `PIPELINEGEN_SUITE` (in a suite job), `PIPELINEGEN_PIPELINE_STEP=1` (the mark of a pipeline's step: Bazel's output in the step's cache, a short idle time, git without the worker's own config), `PIPELINEGEN_JOB_URL` (the job's link, which a runner may leave out of planning steps), and `PIPELINEGEN_TRIGGER` where the trigger is one of their inputs, and no `params` or secrets. The pipeline job's `pipeline` and staleness steps also get `PIPELINEGEN_CONCOURSE_URL` when the config leaves `concourse.url` out: writing the pipeline is the only thing that needs Concourse's address, so no other step, and no task of the repository's, gets it.
+pipelinegen's own steps keep the pipeline's token (`github.token`) as `GITHUB_TOKEN`, because they write refs and statuses: the bootstrap, `plan`, `tree`, `batches`, `report batch-end`, `report collect`, `report whole`, `report suite` and the error report. The pipeline job's `pipeline` and its staleness check write nothing remote and get no token. They get `PIPELINEGEN_RUN`, `PIPELINEGEN_SUITE` (in a suite job), `PIPELINEGEN_PIPELINE_STEP=1` (the mark of a pipeline's step: Bazel's output in the step's cache, a short idle time, git without the worker's own config), `PIPELINEGEN_JOB_URL` (the job's link, which a runner may leave out of planning steps), and `PIPELINEGEN_TRIGGER` where the trigger is one of their inputs, and no `params` or secrets. The pipeline job's `pipeline` and staleness steps also get `PIPELINEGEN_CONCOURSE_URL` when the config leaves `concourse.url` out: writing the pipeline is the only thing that needs Concourse's address, so no other step, and no task of the repository's, gets it.
 
 When the config splits the token by purpose (`github.tokens`), pipelinegen's steps read each purpose's token from its own variable, `PIPELINEGEN_READ_TOKEN`, `PIPELINEGEN_CHANGES_TOKEN`, `PIPELINEGEN_REPORT_TOKEN` and `PIPELINEGEN_STORE_TOKEN`, and never from `GITHUB_TOKEN`; the spec names each purpose's var (`github.tokens`), and a runner gives each step only the purposes it uses. A task that runs the change's code (a prepare, a batch, a whole-suite check) gets at most the read token. With one token, nothing changes: every step reads `GITHUB_TOKEN`.
 
@@ -580,9 +580,8 @@ covering.
 ## (d) Run state: temporary refs
 
 pipelinegen keeps no state store and no state branch. What outlives a job
-is refs: the lists, a run's live state, the locks (below), the suites'
-memory peaks and the plugins' answer cache
-([plugins.md](plugins.md#caching-by-content)).
+is refs: the lists, a run's live state, the suites' memory peaks and the
+plugins' answer cache ([plugins.md](plugins.md#caching-by-content)).
 
 A suite's recent memory peaks are `refs/pipelinegen/peaks/<suite>`, a
 parentless commit holding `peaks.json`: `{"slices": {"<slice>": [{"mb",
@@ -881,52 +880,20 @@ grows by a sample per slice and commit and keeps 10. Backups and mirrors must in
 record again, and batches start without waiting for memory until their
 suite is measured again).
 
-## Locks between runs
+## Locks between runs: removed
 
-Concourse's serial groups hold only inside one pipeline, so a suite that
-needs a machine shared with another repository's pipeline takes a lease
-instead.
+No step takes a lock. The spec gives a runner no lock, and a runner that
+reads an older tool's spec with one (`suites[].lock`) writes no lock step
+for it and says so in a notice; the conformance kit refuses a pipeline in
+which any step runs `pipelinegen lock` or `pipelinegen unlock`.
 
-```yaml
-suites:
-  e2e:
-    minutes: 120
-    lock: {name: browsers, repository: example/shop, slots: 1}
-```
-
-`name` may be shared by several suites, and by several repositories that
-name the same `repository` (the lock store, one they already write to; it
-defaults to the code repository). A lease expires 15 minutes after the
-suite's time limit (`minutes`, see [time limits](#time-limits)). `slots` is how many holders the lock
-admits at once (default 1; a worker that carries three heavy jobs at a time
-has 3).
-
-A slot is the ref `refs/pipelinegen/locks/<name>/<n>` (`n` from 1 to
-`slots`) in the lock store, pointing at a parentless commit holding
-`lease.json`:
-
-```json
-{"holder": "owner/repo pr pr-123 0123456789ab e2e", "job_url": "https://...", "acquired": "2026-11-13T09:00:00Z", "expires": "2026-11-13T11:15:00Z"}
-```
-
-- `acquire`: create a free slot's ref with a create-only push (it fails
-  when the ref exists); when every slot is held, take over an expired one
-  with a push that names its old value (force with lease), and otherwise
-  wait and try again. A push that loses a race simply fails; nothing is
-  ever rebased or retried blindly.
-- `release` (in an `ensure` of the suite job): delete the slot's ref with
-  a push that names its value, so only the holder releases it.
-- The holder is `<owner/repo> <run> <change> <commit> <suite>`, plus
-  the batch when one is named. Acquiring is never re-entrant, and gives up
-  after 4 hours unless `--wait` says otherwise.
-- An expired lease is taken by the next waiter, so a holder lost with its
-  worker frees itself at its expiry.
-- A waiter that takes several slots at once (`weight`) leaves a mark,
-  `refs/pipelinegen/locks/<name>/wait-<id>` (lease.json with the waiter and
-  an expiry two minutes on, renewed while it waits and removed in the
-  write that gives it the slots); a lighter taker takes no slot while a
-  heavier waiter's mark is live. `pipelinegen unlock <name> [<n>]` deletes
-  a lease by hand.
+For one release the tool keeps what an older pipeline calls: `lock` and
+`unlock` print that locks are gone and exit 0, whatever their arguments,
+and `lock acquire --started <dir>` still stamps `<dir>/started.json`. The
+config still loads `suites.<s>.lock` with a notice. A trusted run's
+one-step plan deletes the leases older pipelines left: the refs under
+`refs/pipelinegen/locks/`, or the files under `locks/` on the branch
+store's `<store.branch>-locks`. The release after removes all of it.
 
 ## Time limits
 
@@ -937,35 +904,31 @@ it hangs on, outside that limit. The spec gives the runner the minutes:
 
 - a suite's own tasks: `minutes` of the suite in the run (`suites.<s>.minutes`,
   `runs.<r>.suites.<s>.minutes`, 120 by default), on each task alone: the
-  prepare, each batch, each whole-suite check. A suite whose lock is taken
-  per build has it once, around all its work after the lock is taken;
+  prepare, each batch, each whole-suite check;
 - the planning job's and the sweep's tasks: `limits.plan` (120), plus a
   continuous run's `wait_minutes` for its planning task, whose decision
   waits for the round in progress to end before the prepare; the prepare
   and the plan after it have `limits.plan` from the decision's end;
 - pipelinegen's own steps in a suite job, and the pipeline job:
-  `limits.steps` (20), plus the lock's wait (4 hours) for a step that
-  takes a lock. A lock's wait for a slot never counts against the limit
-  of the batch it guards.
+  `limits.steps` (20).
 
 Each of pipelinegen's own steps gets `PIPELINEGEN_LIMIT=<key>=<minutes>`
 (such as `limits.steps=20`); a task whose script runs something first
 (the planner's prepare command) also exports `PIPELINEGEN_DEADLINE`, the
 limit's end in Unix seconds, at the script's start. The step then ends two
 minutes before the limit, says which limit it reached and the key that
-raises it, and frees what it holds: a lock's
-waiting mark.
+raises it.
 
 A stretch the limit ends leaves its slices without a result, and the step
 after it says why, as exactly as it can tell:
 
 - `batches` stamps `batches/started.json` (`{"at": ...}`) as the suite's
   work begins; `report suite --batches batches` reads it;
-- a lock taken per batch stamps the batch's start into its own output
-  (`lock acquire --started begun`), and the batch's end reads it
-  (`report batch-end --started begun`): with it, or with the lock taken per
-  build, the end knows whether the limit stopped the batch;
-- without either, the end knows only when the suite's work began: a batch
+- an older pipeline's lock step stamped the batch's start into its own
+  output (`lock acquire --started begun`), and that pipeline's batch end
+  reads it (`report batch-end --started begun`): with it, the end knows
+  whether the limit stopped the batch;
+- without it, the end knows only when the suite's work began: a batch
   that stopped sooner after it than its limit died on its own, one that
   stopped later may have reached its limit, and the message says so.
 
@@ -1325,6 +1288,5 @@ behaviour, and that package's tests guard it.
 | (c) Durations and batches | `internal/durations`, `internal/batch` | `internal/durations`, `internal/batch` |
 | (d) Run state in refs, statuses, the comment, the sweep | `internal/report`, `internal/gitstore` | `internal/report`, `internal/gitstore` |
 | The lists and their attach | `internal/lists`, `internal/attached` | `internal/lists`, `internal/attached` |
-| Locks | `internal/lock` | `internal/lock` |
 | The check | `internal/check`, `internal/buildfile` | `internal/check`, `internal/buildfile` |
 | Commands and flags | `internal/cli` | `internal/cli`; `internal/docscheck` holds the command reference to `cli.Commands` |

@@ -207,8 +207,8 @@ npx playwright test --config e2e/playwright.config.ts e2e/search.spec.ts
 
 - No token, no git host and no CI system. Nothing posts a status or a
   comment.
-- Each suite runs as one batch: no `parallel` split, no `run_on` and no
-  lock. CI deals a suite's slices into several batches ([durations and
+- Each suite runs as one batch: no `parallel` split and no `run_on`. CI
+  deals a suite's slices into several batches ([durations and
   batches](durations.md)), so a suite's setup runs once here.
 - Whole-suite checks don't run. A line on stderr names the ones the plan
   selected.

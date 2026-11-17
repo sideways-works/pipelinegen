@@ -3,8 +3,8 @@
 This page is for people writing a runner for another CI system. A runner
 turns the config's runs and suites into one CI system's pipeline. It owns
 everything specific to that system: task files and their inputs and
-outputs, steps repeated over a list known only at run time, queues and
-locks, caches, the bootstrap step that fetches pipelinegen and the plugins,
+outputs, steps repeated over a list known only at run time, caches, the
+bootstrap step that fetches pipelinegen and the plugins,
 and the repository's own parts merged in. `concourse-runner` is the one
 runner so far, and its documentation is the example to follow. The fields
 are in [plugins.md](../plugins.md#runners).
@@ -12,7 +12,7 @@ are in [plugins.md](../plugins.md#runners).
 ## Calls
 
 - `describe` adds what the CI system can do: steps repeated over a runtime
-  list, caches that stay with a job, a native rerun, locks.
+  list, caches that stay with a job, a native rerun.
 - `pipeline` takes the spec of the config and answers the pipeline's
   files: `{"files": ["pipeline.yml"]}`. `pipelinegen pipeline` calls it,
   and the same spec must give the same bytes every time. What a person
@@ -33,8 +33,7 @@ The core knows no CI system; the pipeline's steps call its commands:
    its slices (they only journal and collect; the batch's end writes
    what they noted);
 3. after each batch, whatever happens, `pipelinegen report batch-end`; at
-   the suite's end, `pipelinegen report suite`; around the work,
-   `pipelinegen lock acquire` and `release` when the suite has a lock;
+   the suite's end, `pipelinegen report suite`;
 4. each whole-suite check the plan selected (`tree` writes a gate for
    each), after the batches, with `pipelinegen report collect` first so the
    check can read every slice's state, and `pipelinegen report whole`
@@ -222,28 +221,19 @@ gate is open: builds of it run side by side too, and one whose config the
 default branch no longer has must never set its older pipeline over a
 newer one.
 
-A runner that declares `lock_per_batch` takes a suite's lock the same way,
-around each batch and each whole-suite check and freed in that step's
-ensure, in every run, when the spec's lock says `"per": "batch"`; the lock
-step gets the batch's `PIPELINEGEN_BATCH`, so each batch holds a slot of
-its own. A suite's `weight` needs nothing of the runner: `lock acquire`
-reads it from the config. A runner without the capability is refused such
-a lock.
+No step takes a lock. A spec from an older tool may still give a suite a
+`lock`: write no lock step for it, and say so in a notice.
 
 Every step the pipeline runs has a time limit, so a step that hangs
 ends instead of holding its run pending: the spec's `limits` and each
 run suite's `minutes`, as the contracts' [time limits](../contracts.md#time-limits)
 say. A step in a hook gets its own: a CI system that, like Concourse, runs
-a hook after a limit ended the step runs it outside that limit. A lock's
-wait for a slot never counts against the batch it guards: give the lock
-step its own limit, `limits.steps` and the lock's wait, and the batch the
-suite's `minutes`. Each of pipelinegen's own steps gets
+a hook after a limit ended the step runs it outside that limit. Each of
+pipelinegen's own steps gets
 `PIPELINEGEN_LIMIT`, and a task whose script runs something before the
 tool also `PIPELINEGEN_DEADLINE`, so the tool ends two minutes early and
-says which limit it reached. The end task gets the suite's `batches`, and
-with a lock taken per batch the lock step stamps into an output that the
-batch's end reads (`--started`), so a slice left open says whether its
-limit stopped it.
+says which limit it reached. The end task gets the suite's `batches`, so a
+slice left open says whether its limit stopped it.
 
 The step that runs `report batch-end` is the step that observes: give it
 the tree as `source` and the batch's coverage output as `coverage` in its
@@ -264,15 +254,14 @@ and what the repository's own tasks get in
 [params and secrets](../contracts.md#params-and-secrets).
 
 The kit checks the pipeline your runner writes for its fixture spec and
-its variants (locks on every suite, set by itself, tokens by purpose, a
-connector's changes, a continuous run, locks per batch, suites run by
-drivers, and packages with cached images, the last five only when the
-runner declares them; with packages every task the runner writes that runs
-pipelinegen installs its packages first, every cached image the spec names
-is built, and neither registry var reaches a task that runs the
-repository's code nor the pushing var a job that does; with locks per batch every lock must
-be taken around each batch and freed in that step's ensure, and its wait
-may not count against the batch's limit): every step must have a time
+its variants (an older tool's spec with a lock on every suite, per build
+and per batch, set by itself, tokens by purpose, a connector's changes, a
+continuous run, suites run by drivers, and packages with cached images, the
+last four only when the runner declares them; with packages every task the
+runner writes that runs pipelinegen installs its packages first, every
+cached image the spec names is built, and neither registry var reaches a
+task that runs the repository's code nor the pushing var a job that does):
+no step may run `pipelinegen lock` or `pipelinegen unlock`; every step must have a time
 limit, its own or one around it, a hook's steps their own; no job may be
 serial, in a serial group or bounded by `max_in_flight`, a planning job
 included: a serial planning job, and a step that still sets
@@ -281,9 +270,7 @@ on what its planning job puts inside an `across` (the hand-off it puts
 when `plan --gate` opened its gate), never on the branch; a pull request
 run's suite jobs only on what its planning job or its sweep puts inside an
 `across`, with no put of it outside one, and its planning job's `plan
---from` passes `--gate`; and a
-continuous run's jobs never say lock when no suite has one;
-a step that runs `report batch-end` or `report suite` sits in no `try`
+--from` passes `--gate`; and a step that runs `report batch-end` or `report suite` sits in no `try`
 and, run with a stand-in for the tool that exits 4 for a report, exits 4
 itself, so a step that could not write the run's records fails its job
 whatever else of its failures the pipeline tolerates;

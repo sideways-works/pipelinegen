@@ -1,50 +1,25 @@
-# The lock
+# The lock, removed
 
-`internal/lock`, called by `pipelinegen lock` and `pipelinegen unlock`. The
-contract is in [contracts.md](../contracts.md#locks-between-runs); the
-user's side in [sharing machines](../how-to/sharing-machines.md).
+pipelinegen no longer takes a lock between runs. A suite used to take a
+lease, a ref under `refs/pipelinegen/locks/` (or a file under `locks/` on
+the branch store's `-locks` branch), around its build or each batch, to
+keep two repositories' pipelines from overfilling a shared machine. That
+job moves to admission by each node's observed free memory and pressure,
+which is coming next; see [sharing machines](../how-to/sharing-machines.md#between-repositories).
 
-## Why a lease, and only between repositories
+What is left, for one release:
 
-Concourse's serial groups and `max_in_flight` hold inside one pipeline, and
-each repository has one, so inside a repository they are enough. A machine
-shared with another repository's pipeline needs something both can see: a
-ref in a repository both write to.
+- `suites.<name>.lock` still loads, and `check` says it is no longer read.
+  Its `minutes` is still read as the old spelling of the suite's `minutes`.
+- `pipelinegen lock` and `pipelinegen unlock` do nothing and exit 0, so a
+  pipeline generated before keeps running its lock steps. `lock acquire
+  --started <dir>` still stamps the directory, for that pipeline's batch
+  end to judge the batch's time limit by.
+- The one-step plan of a trusted run (`planAfter` in `internal/cli`)
+  deletes the leases an older pipelinegen left in its store; a run that
+  isn't trusted leaves them, and a failed sweep only warns.
+- A runner ignores an older tool's spec that holds a lock and says so in a
+  notice; the conformance kit refuses a pipeline that runs `pipelinegen
+  lock` or `unlock`.
 
-## Slots and leases
-
-A lock with `slots: n` is the refs `refs/pipelinegen/locks/<name>/1` to
-`<name>/n` in the lock's repository. A held slot points at a commit holding
-`lease.json`: holder, job URL, when it was taken and when it expires (the
-suite's time limit in the run, `minutes`, plus 15).
-
-## Acquire
-
-1. Read every slot.
-2. If as many leases are live (not expired) as there are slots, wait.
-3. Otherwise take the first free or expired slot: a free one with a
-   create-only write, an expired one with a write that names the commit it
-   was read at. If another waiter was first, the write fails with
-   `ErrStale` and nothing changed; try again soon.
-4. Wait a random pause up to 15 seconds between looks (a tenth of that
-   after a lost race), and log who holds the lock each time that changes.
-5. Give up after `--wait` (4 hours by default), naming the holders.
-
-Two holders can never share a slot: a slot changes hands only by a
-compare-and-swap on its ref. Acquiring is never re-entrant.
-
-## Release
-
-`Release` deletes one slot this holder holds, the one it took first, with
-a write that names the commit it holds, so a lease taken over meanwhile is
-left alone, and two builds under one holder name each free their own.
-The suite job releases in an `ensure`, whatever happened.
-
-## A holder that dies
-
-Its lease expires on its own, and the next waiter takes it over. Nothing
-removes it by hand unless someone runs `pipelinegen unlock`, which deletes
-a slot, or every slot, whoever holds it.
-
-A lowered `slots` count leaves leases above the new count in place until
-they expire or are released; while they live, waiters count them.
+The release after removes the commands, the sweep and the key.

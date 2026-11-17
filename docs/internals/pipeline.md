@@ -59,12 +59,11 @@ It takes the same version (`passed: [plan-<run>]`), then:
    otherwise. The rest of the job sits in an `across` over the gate, so a
    version without a plan, or with nothing for this suite, ends in seconds
    and fails nothing;
-3. the lease, for a suite with a `lock`;
-4. the suite's prepare task;
-5. `pipelinegen batches`: deals the plan's selected slices into at most
+3. the suite's prepare task;
+4. `pipelinegen batches`: deals the plan's selected slices into at most
    `parallel` batches by duration, leaving out those that already passed
    for this change;
-6. `across` the batches, all at once (`max_in_flight: all`; Concourse's
+5. `across` the batches, all at once (`max_in_flight: all`; Concourse's
    own default runs them one at a time), without fail fast, one batch task
    each. An
    `ensure` inside each iteration runs `report batch-end`, which writes
@@ -73,13 +72,13 @@ It takes the same version (`passed: [plan-<run>]`), then:
    iteration's var). The batch task gets no token unless the suite
    declares one for it, so without one its slices reach GitHub at this
    step;
-7. whole-suite checks, when selected, each after `report collect` has
+6. whole-suite checks, when selected, each after `report collect` has
    written every slice's state for it to read. They run only when every
    batch passed: Concourse runs nothing after a failed `across`. Each
    check's `ensure` runs `report whole`, which reports its result as the
    slice `whole.<name>`;
-8. in the job's `ensure`: `report suite` (the suite's status and the run's)
-   and the lease's release. When the whole run has passed, the last suite
+7. in the job's `ensure`: `report suite` (the suite's status and the run's).
+   When the whole run has passed, the last suite
    to finish posts the final report and, for a branch's recording run,
    attaches the lists; a branch's recording run that failed attaches the
    recordings of its slices that passed once its last suite has ended. The task sits in no `try`: a suite's end that could

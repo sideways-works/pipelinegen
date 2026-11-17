@@ -196,8 +196,6 @@ ended.
   round that passes [replaces the
   lists](../concepts/refreshing-the-lists.md). A repository may keep its
   nightly beside it, though it adds little.
-- A suite with a `lock` takes it as in any other run: per batch with
-  `per: batch`, else for its whole build.
 - A rerun of an older round's suite job, started by hand, runs beside the
   round in progress: nothing stops it, and it starts no round of its own.
 - The planning job's builds run side by side, in every runner and in a
@@ -281,15 +279,13 @@ Every step of a run has a time limit, so a step that hangs ends and says
 which limit it reached instead of holding its run pending for ever, and a
 continuous run's next round after it. A suite's own tasks have the
 suite's `minutes` (120 by default) each: its prepare, each batch and each
-whole-suite check, so one batch that hangs ends while the others go on. A
-suite whose lock is taken per build has it once, for all its work while
-it holds the lock. The suite's total is bounded by its batches times its
+whole-suite check, so one batch that hangs ends while the others go on.
+The suite's total is bounded by its batches times its
 `minutes`, and by Concourse's own settings for the job, not by a key.
 `batch_minutes` is what each batch is dealt to take, and the limit must be
 at least that. The planning tasks have `limits.plan` (120) and
-pipelinegen's own steps `limits.steps` (20); a step that waits for a lock
-has the lock's wait on top, and a continuous run's plan step its
-`wait_minutes`. See [troubleshooting](../troubleshooting.md#a-step-reached-its-time-limit)
+pipelinegen's own steps `limits.steps` (20), and a continuous run's plan
+step its `wait_minutes` on top. See [troubleshooting](../troubleshooting.md#a-step-reached-its-time-limit)
 for what a stopped step says.
 
 ## Recording

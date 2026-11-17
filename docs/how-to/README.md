@@ -40,8 +40,8 @@ The terms are in the [concepts](../concepts/README.md) and the
 - [Choose a narrowing level](narrowing.md), the sample and the alarm.
 - [Durations and batches](durations.md): how slices are dealt into
   batches.
-- [Share machines](sharing-machines.md): builds side by side, and locks
-  between repositories.
+- [Share machines](sharing-machines.md): placement, builds side by side,
+  and what keeps two repositories' pipelines apart.
 - [Secrets](secrets.md): the token, its least rights, and secrets for your
   tasks.
 - [Packages and cached images](packages-and-images.md): the packages a

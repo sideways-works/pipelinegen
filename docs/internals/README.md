@@ -15,7 +15,6 @@ flowchart TD
   cli --> plugins["internal/plugins<br/>sbom and correlator calls"]
   cli --> report["internal/report<br/>run state, statuses, comment, sweep"]
   cli --> lists["internal/lists<br/>lists, marks, attach"]
-  cli --> lock["internal/lock<br/>leases between repositories"]
   cli --> check["internal/check<br/>files no slice covers"]
   cli --> spec["internal/spec<br/>the runner's input"]
   cli --> bazeldiff["internal/bazeldiff<br/>runs and fetches bazel-diff"]
@@ -30,7 +29,6 @@ flowchart TD
   check --> buildfile["internal/buildfile<br/>BUILD files without Bazel"]
   lists --> gitstore["internal/gitstore<br/>refs as compare-and-swap cells"]
   report --> gitstore
-  lock --> gitstore
   plugincache --> gitstore
   report --> github[("GitHub API")]
   gitstore --> remote[("the repository's refs")]
@@ -69,7 +67,7 @@ plans, which `internal/graph` walks; at slice ends, the same package calls the
 correlators' `collect` and `observe`. The pipeline comes from the runner
 plugin through `internal/spec`. The core keeps the config, Bazel and
 bazel-diff, the stored graph and the walk over it, the narrowing levels and
-the sample, plans, refs, reports and locks, and the commands a
+the sample, plans, refs and reports, and the commands a
 pipeline's steps call.
 
 ## The pages
@@ -83,7 +81,7 @@ pipeline's steps call.
 - [The generated pipeline](pipeline.md): the jobs, the gate, batches,
   reruns, the bootstrap.
 - [Refs](refs.md): the layout under `refs/pipelinegen/` and its guarantees.
-- [The lock](lock.md): slots, leases, takeover.
+- [The lock, removed](lock.md): what is left of it for one release.
 - [The reporter](reporter.md): states, statuses, the comment, the sweep.
 - [Batches](batches.md): dealing by duration, the durations file.
 - [Safety](safety.md): why a change can't be missed, and the known limits.

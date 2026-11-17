@@ -1,8 +1,8 @@
 # Backups of the hidden refs
 
 pipelinegen keeps its state in your repository, under
-`refs/pipelinegen/`: the lists, each run's plan and states, the locks, and
-the plugins' answer cache. A plain `git clone`
+`refs/pipelinegen/`: the lists, each run's plan and states, and the
+plugins' answer cache. A plain `git clone`
 or a mirror that copies only branches and tags leaves them out.
 
 ## Include them
@@ -23,8 +23,7 @@ need no bypass for it.
 
 Losing them is safe. Without lists, a recorded slice is bound to
 everything, as on a first run, so runs select more until they record again.
-Without a run's refs, its comment and `why` can't be rebuilt. Without a
-lock's refs, every slot is free. Without the answer cache, the plugins are
+Without a run's refs, its comment and `why` can't be rebuilt. Without the answer cache, the plugins are
 asked again about every file, which costs time and changes no answer.
 
 Never push to `refs/pipelinegen/*` by hand: every write is a

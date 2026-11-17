@@ -99,7 +99,7 @@ suites:
     bind: recorded                # also bound to what each file executed
     prepare: ci/tasks/e2e-prepare.yml
     run_slice: ci/tasks/e2e-batch.yml
-    lock: {name: browsers, minutes: 120}
+    minutes: 120
     parallel: 3                   # batches dealt, all run at once
     durations: ci/durations/e2e.json
     whole_suite:
@@ -262,8 +262,7 @@ and the like) gets no plan.
 A **suite job** takes the same version (`passed: [plan-<run>]`). It reads
 the plan ref for its version; without one it ends in seconds and posts
 nothing (the gate is an `across` over an empty list, so nothing runs and
-nothing fails). Otherwise: the tree under test, the lease (between
-repositories only), the prepare step, then the batches: a pipelinegen step
+nothing fails). Otherwise: the tree under test, the prepare step, then the batches: a pipelinegen step
 deals the plan's selected slices of the suite into batches (at most
 `parallel`, by duration), and `across` runs one batch task per batch, all
 at once (`max_in_flight: all`), without fail fast. Each batch task reports every slice as it starts and ends, so the
@@ -286,9 +285,9 @@ selected in the plan posts "nothing selected" and ends.
   branch's run that failed attaches too, once its last suite has ended:
   the recordings of the slices that passed go in, and every other slice
   keeps what the lists held.
-- Builds of different changes queue on a suite job, or run side by side,
-  as the suite's `run_on.serial_group` and `max_in_flight` say; the lease
-  lock is only for machines shared with another repository.
+- Builds of different changes run side by side on a suite job: nothing
+  queues them, and no lock is taken, inside a repository or between
+  repositories. Admission by each node's free memory is coming next.
 - Task caches (the Go, npm and Bazel caches) belong to a job in Concourse,
   so a static pipeline keeps them warm from run to run.
 - When the config changes, the pipeline is set again (by a person, or by

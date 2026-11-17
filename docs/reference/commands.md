@@ -14,7 +14,7 @@ command exits with:
 |---|---|
 | 0 | It did what it was asked. For `affected`, also when the answer is "every slice". |
 | 1 | It failed, or what it reports did not pass: an unreadable config, a failed Bazel query, a head commit that doesn't exist, a failed push, a batch with a failed slice. The reason is on stderr. |
-| 2 | The command line can't be read: an unknown command, subcommand or flag, a missing argument, a suite or lock that isn't in the config, a required environment variable that isn't set. |
+| 2 | The command line can't be read: an unknown command, subcommand or flag, a missing argument, a suite that isn't in the config, a required environment variable that isn't set. |
 | 4 | `report batch-end` or `report suite` could not write the run's records after every retry: what ran is not lost, but the run doesn't know it, and a rerun of the build runs it again. A pipeline must let no step that exits 4 pass, whatever else of its failures it tolerates. |
 
 Run without a command, pipelinegen lists its commands and exits with 2.
@@ -45,7 +45,7 @@ CPU profile of itself there, for `go tool pprof`: how a slow plan spends
 its time, measured on the tree that is slow.
 
 The commands for people are `slices`, `affected`, `run`, `record`, `seed`,
-`baseline`, `lists`, `why`, `unlock` and `also-to`.
+`baseline`, `lists`, `why` and `also-to`.
 The others are what the generated pipeline's steps call; you run them by
 hand only to try a task file or to repair a run.
 
@@ -221,7 +221,7 @@ generated pipeline's steps call it; its subcommands:
 | `--coverage` | none | `slice`, `batch-end` | The coverage directory, in recording runs. |
 | `--batch` | `$PIPELINEGEN_BATCH` | `batch-end` | The batch's index in the whole run, from 0. |
 | `--batches` | `batches` (`suite`: none) | `batch-end`, `suite` | The directory of the run's batches (`<n>/slices.json`), with `started.json`, when the suite's work began: a slice left without a result then says whether the suite's time limit can have stopped it. |
-| `--started` | none | `batch-end` | The directory a lock taken per batch stamped (`started.json`) as the batch began: its end then knows whether the batch's time limit stopped it. |
+| `--started` | none | `batch-end` | The directory an older pipeline's lock step stamped (`started.json`) as the batch began: its end then knows whether the batch's time limit stopped it. |
 | `--tools` | `tools` | `batch-end` | The batch task's tools. In a recording run, the correlators in `tools/plugins/<name>` say what each slice still in the journal touched. |
 | `--suite` | `$PIPELINEGEN_SUITE` (`files`: none) | `collect`, `files` | The suite whose slices it collects; for `files`, only this suite's slices. |
 | `--out` | `slices` (`files`: none) | `collect`, `files` | Where it writes them. `files` writes nothing without it. |
@@ -378,31 +378,14 @@ tab-separated, for a task in plain shell. See [writing tasks](../how-to/writing-
 
 ## `pipelinegen lock`
 
-Takes or frees a slot of a lock between runs; a suite job calls it around
-its work. The lock's slots, repository and minutes come from the suite that
-names it in the config, and in a proposed change's run from the trusted
-config. A lease lasts the suite's time limit in the run (its `minutes`;
-`PIPELINEGEN_RUN` and `PIPELINEGEN_SUITE` say which), plus 15.
-
-- `lock acquire <name>` waits for a free or expired slot and takes it. It
-  prints `lock <name>: slot <n> until <time>`, and exits 1 when the wait
-  ends first.
-- `lock release <name>` frees one slot this holder holds, the one it took
-  first, and only while it still holds it: a holder that overran its lease
-  and lost it to the next waiter never frees the successor's. It prints how
-  many it freed, 0 or 1.
-
-| Flag | Default | What it does |
-|---|---|---|
-| `--root` | `.` | The repository's root. |
-| `--config` | `<root>/pipelinegen.yaml` | The config file. |
-| `--wait` | `4h0m0s` | How long `acquire` waits for a slot. |
-| `--started` | none | A directory `acquire` stamps (`started.json`) once it holds the slot, for the end of the batch the lock guards. |
-
-The holder is the repository, `PIPELINEGEN_RUN`, `PIPELINEGEN_CHANGE`, the
-first 12 characters of `PIPELINEGEN_COMMIT` and `PIPELINEGEN_SUITE`, plus
-the batch (`PIPELINEGEN_BATCH`) or slice when set. `GITHUB_TOKEN` must be
-able to push to the lock's repository. See [sharing machines](../how-to/sharing-machines.md).
+Gone: locks between runs are removed, and `lock` does nothing. A pipeline
+generated before still has steps that run `lock acquire <name>` and `lock
+release <name>`; they print that locks are gone and exit 0, whatever their
+arguments, environment or config, so the pipeline keeps working until
+`pipelinegen pipeline` writes it again without them. `lock acquire
+--started <dir>` still stamps the directory (`started.json`), which that
+pipeline's batch end reads. The next release removes the command. See
+[sharing machines](../how-to/sharing-machines.md#between-repositories).
 
 ## `pipelinegen end`
 
@@ -444,24 +427,10 @@ full main 4f1c2a9e07b3: the round ended by hand before its plan
 
 ## `pipelinegen unlock`
 
-Frees a lock's slot by hand, whoever holds it: `unlock <name> <n>` frees
-slot `n`, `unlock <name>` every slot. For a lease whose holder you know is
-gone and that you can't wait out. It finds the leases by the lock's name
-alone, so it also frees a lock the config no longer names. The lock's
-repository is the
-one a suite of the config names for it, else `--repository`, else the
-code repository.
-
-```
-$ pipelinegen unlock smoke
-lock smoke: slot 1 freed, held by owner/example pr pr-12 0723eb0a27d9 smoke until 2026-11-13T10:25:00Z
-```
-
-| Flag | Default | What it does |
-|---|---|---|
-| `--root` | `.` | The repository's root. |
-| `--config` | `<root>/pipelinegen.yaml` | The config file. |
-| `--repository` | the code repository | The repository (`owner/name`) that holds a lock no suite of the config names. |
+Gone, as [`lock`](#pipelinegen-lock) is: it prints that locks are gone and
+exits 0. The leases older pipelines left in the store are swept by the next
+plan step of a trusted run, so nothing needs freeing by hand. The next
+release removes the command.
 
 ## `pipelinegen also-to`
 
@@ -668,8 +637,7 @@ check. With the gate open it writes the build's start record in the store
 (`<run's records>/_began/<suite>`, over the one before, with when the
 build started and the job's link) and prints `<run> <change>: <suite>
 began`; from then on the run counts the suite as begun, so its sweep and
-its planning builds hand the head on no more, a build that waits after
-this step for its suite's lock included. A store that can't be
+its planning builds hand the head on no more. A store that can't be
 written costs a warning on stderr and nothing else. Then it writes the
 tree under test into `--out`: a git work tree whose HEAD is the tested
 commit.
@@ -1001,7 +969,7 @@ What a local run can't do:
   images have (a browser, Node, Go, a database); a missing tool fails the
   batch, and the line on stderr names the image. A setup step that starts
   a server binds its port here.
-- Each suite runs as one batch: no `parallel` split, no `run_on`, no lock.
+- Each suite runs as one batch: no `parallel` split, no `run_on`.
 - Whole-suite checks don't run; a line on stderr names the selected ones.
 - Without `--record`, nothing is observed and the local store is left
   as it was. With it, attaching only some slices is as valid as

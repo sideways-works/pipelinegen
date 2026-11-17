@@ -146,7 +146,7 @@ done
 ```
 
 Bound every wait and stop every server on exit: a task that hangs holds
-its suite (and its lock, if it has one) until its time limit.
+its suite until its time limit.
 
 ### Params and secrets
 

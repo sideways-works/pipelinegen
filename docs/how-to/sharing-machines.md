@@ -1,9 +1,9 @@
 # Sharing machines
 
-Three things decide where and what runs at once: the runner's placement,
-which puts each step on workers; Concourse's own settings for builds of one
-suite job, inside your repository's pipeline; and a lock between
-repositories.
+Two things decide where and what runs at once: the runner's placement,
+which puts each step on workers, and Concourse's own limits on what a
+worker takes. pipelinegen takes no lock: nothing queues one build behind
+another.
 
 ## Which workers
 
@@ -132,60 +132,24 @@ To measure a batch by hand, read its container's cgroup at its end:
 began; less `inactive_file` in `memory.stat` for the working set), or
 `hijack` into the running task and watch `memory.current`.
 
-## Between repositories: the lock
+## Between repositories
 
-When a machine is shared with another repository's pipeline, Concourse
-can't see across, so a suite takes a lock instead:
+Concourse can't see across pipelines, and pipelinegen no longer takes a
+lock between them. Admission by each node's observed free memory and
+pressure is coming next: a suite's batches will start when their node has
+room. Until it lands, a machine shared with another repository's pipeline
+is kept from overfilling by the same means as inside one repository:
+Concourse's per-worker task limit, and placement that keeps the heavy
+suites of the two pipelines on different workers.
 
-```yaml
-suites:
-  e2e:
-    minutes: 120
-    lock: {name: browsers, repository: owner/shared-locks, slots: 1}
-```
-
-- `name` is shared by every suite that should take turns, in any repository
-  that names the same `repository` (default: the code repository).
-- `slots` is how many holders it admits at once: a worker that carries three
-  heavy jobs at a time has 3.
-- The lease lasts the suite's time limit (`suites.<name>.minutes`, 120
-  by default) and 15 minutes more, so a holder lost with its worker frees
-  the slot by itself. With the lock taken per build, the limit bounds all
-  of the suite's work while it holds the lock; per batch, each batch. A
-  run that takes longer sets `minutes` for the suite in the run.
-  `lock.minutes` and a run's `lock_minutes` are the old spellings of these
-  and still read.
-
-A pull request's run takes the lock as the config the pipeline was made
-from has it: a change that raises its own `slots`, `minutes`, `weight` or
-`per` takes effect once it is merged, and its plan says that it edits them.
-
-Each slot is a hidden ref, `refs/pipelinegen/locks/<name>/<n>`, holding a
-lease with its holder and expiry. Taking a free slot is a push that only
-creates the ref; taking an expired one is a push that names its old value;
-so two holders never share a slot. The suite job takes it first
-(`pipelinegen lock acquire`, waiting up to 4 hours) and frees it in an
-`ensure` (`pipelinegen lock release`), whatever happened. A release frees
-one slot, the one this holder took first, and only while it still holds
-it; it logs when it frees none, such as after its lease expired and the
-next waiter took it.
-
-## A suite stuck waiting
-
-`pipelinegen lock acquire` prints who holds the lock while it waits. When a
-lease's holder is gone and you can't wait for its expiry:
-
-```
-$ pipelinegen unlock browsers
-lock browsers: slot 1 freed, held by owner/example pr pr-12 0723eb0a27d9 e2e until 2026-11-13T10:25:00Z
-```
-
-`unlock <name> <n>` frees one slot. It finds a lease by the lock's name,
-whatever the config says now: after you removed a lock from the config,
-`unlock` still frees its leases, and `--repository owner/name` names the
-repository of a lock that was kept elsewhere. Freeing a lease that is
-still in use lets a second holder onto the machine, so check the holder's
-build first: the line `unlock` prints names it.
+A config that still has `suites.<name>.lock` loads: `check` says the key
+is no longer read, and you remove it. Its `minutes` is still read, as the
+old spelling of `suites.<name>.minutes`, until you move it there. A
+pipeline generated before still runs its lock steps; `pipelinegen lock` and
+`pipelinegen unlock` do nothing and pass, so it keeps working until the
+next `pipelinegen pipeline` writes it without them. They go in the next
+release. The leases older pipelines left in the store are swept by the
+next plan step of a trusted run.
 
 ## Bazel servers
 

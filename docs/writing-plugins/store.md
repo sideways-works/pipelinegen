@@ -9,8 +9,7 @@
 
 A store keeps what pipelinegen learns between runs: plans, the state of
 each run's slices, recordings and the lists made from them, the plugins'
-cached answers, and the leases that let repositories share a machine.
-Today's hidden refs become the first store plugin, git-ref-store. A team
+cached answers. Today's hidden refs become the first store plugin, git-ref-store. A team
 that wants its records in a database, or in a store built for many teams
 writing at once, writes a store plugin instead of changing pipelinegen.
 
@@ -23,7 +22,7 @@ that content: a name never has the same version twice, and a version's
 files never change), and the time it was written. Lists, plans, slice
 states and recordings, a suite's end, a suite build's start, a continuous run's round started
 and planning (written create-only, read by listing the run's rounds),
-the plugins' answers and leases are all records, under names of their own
+the plugins' answers are all records, under names of their own
 kind.
 
 ## The calls
@@ -42,14 +41,13 @@ step rather than once per call.
 | `write {batch}` | each entry a name, what it expects (a version, absent, or any) and its files or a delete; all of the batch applies or none, and a mismatch answers which names were stale |
 | `settle {prefix}` | a hint that a suite has ended; a store may ignore it, and no reader's result may depend on it |
 | `answers.get`, `answers.use`, `answers.put`, `answers.replace`, `answers.drop` | the plugins' answers by key: written once, a hit counts as a use, the nightly's cold rebuild may replace them, and answers unused since a time may go |
-| `lease.take`, `lease.renew`, `lease.release` | a slot of a lock, granted with a token; only the token's holder renews or releases it |
 
 Versions never change, so the core caches records by name and version and
 reads only the versions it lacks.
 
 ## What a store promises
 
-The core relies on seven promises, and the conformance kit tests each:
+The core relies on six promises, and the conformance kit tests each:
 
 1. A write that answered ok is durable, and every later read sees it,
    from any process on any machine. An eventually consistent store is not
@@ -61,8 +59,6 @@ The core relies on seven promises, and the conformance kit tests each:
 5. A listing is consistent for each record, not across records.
 6. Answers are written once per key, and a missing answer is always safe:
    the core computes it again.
-7. A lease slot has at most one holder among takers whose clocks agree
-   within seconds.
 
 git-ref-store keeps them with guarded atomic pushes. A database keeps
 them with transactions and row locks.
@@ -88,8 +84,8 @@ what later plans bind with.
 ## Purge
 
 A store can purge at every grain: everything, one proposed change's
-runs, one run, everything older than a duration, the lists, the answer
-cache, or the leases, with a dry run that prints what would go. Purging
+runs, one run, everything older than a duration, the lists or the answer
+cache, with a dry run that prints what would go. Purging
 only ever makes later plans select more: a purged answer is computed
 again, a change whose runs are gone runs all its slices again, and lists
 purged in the middle of a branch's history leave a tombstone, so plans
@@ -107,8 +103,6 @@ version and checksum like every plugin.
 
 As proof the design has no git in it: records and their files in tables
 (`records`, `record_files`, and `blobs` keyed by hash, so recordings that
-repeat across runs are kept once), answers and leases in tables of their
-own; a guarded batch is one transaction that selects the named records for
-update, compares each expectation and writes new versions or rolls back;
-a lease is an insert that, on conflict, updates only a row whose expiry
-is past, by the database's clock.
+repeat across runs are kept once), answers in a table of their own; a
+guarded batch is one transaction that selects the named records for
+update, compares each expectation and writes new versions or rolls back.
