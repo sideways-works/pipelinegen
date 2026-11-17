@@ -97,11 +97,12 @@ coverage, results, batches, what its prepare made, the drivers' work) and
 says so on one line; it keeps only the caches, so nothing an earlier run
 touched counts as this one's.
 
-The steps run on your machine, not in the images the CI gives them
-([step 9](pipeline.md)), so the machine needs what those images have: Go
-for the Go tests and the server's build; Node and a Playwright browser for
-the specs (`npx playwright install chromium` once; playwright-driver runs
-`npm ci` itself).
+With Docker or Podman on your machine, the steps run in the images the
+config names, as on CI ([step 9](pipeline.md)), each pulled the first
+time. With `--no-image`, or a suite that names no image, they run on your
+machine, which then needs what those images have: Go for the Go tests and
+the server's build; Node and a Playwright browser for the specs (`npx
+playwright install chromium` once; playwright-driver runs `npm ci` itself).
 
 **You should see** each slice pass, and a last line naming the local
 store.

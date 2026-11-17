@@ -8,6 +8,26 @@ the repository as it is.
 a fresh clone needs nothing else. The hidden refs aren't fetched by a plain
 `git clone`, and you don't need them.
 
+## Running the suites
+
+`pipelinegen run` and `pipelinegen record` on a fresh clone need Docker or
+Podman, and nothing else of pipelinegen's: no `tools/plugins`, no token.
+
+```
+$ git clone https://github.com/owner/example.git && cd example
+$ pipelinegen run --base HEAD~1
+```
+
+The plugins and drivers the config pins are fetched from their releases
+into your user cache, each checked against its pin, and each suite's steps
+run in the image CI runs them in, pulled the first time. Without Docker or
+Podman, `--no-image` runs the steps on this machine, which then needs what
+the images have. [The command reference](../reference/commands.md#in-their-images)
+says what is mounted and passed in, and
+[which plugins are fetched](../reference/commands.md#plugins-a-command-fetches).
+A plugin pinned by commit has no release: build it into `tools/plugins`
+first, as the error says.
+
 ## Lines an older setup left
 
 A repository set up to plan through a hidden Bazel repository holds

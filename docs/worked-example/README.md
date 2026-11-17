@@ -1054,9 +1054,11 @@ $ pipelinegen record --suite go-db --work ../work-go-db
 recorded 18 slices of go-db at c2ed16b60510; ...
 ```
 
-The steps run on this machine, not in the image the suite names, so what
-they need must be here: Go for the Go suites, Docker for `go-db` and the
-browser specs, Node for the web app.
+These recordings ran their steps on this machine, as `record --no-image`
+does now, not in the image the suite names, so what they needed had to be
+here: Go for the Go suites, Docker for `go-db` and the browser specs, Node
+for the web app. Without `--no-image`, `record` runs them in the suites'
+images, as CI does.
 
 On a shared 8-core machine under heavy load, with the earlier development
 build, the Go suite's 289 test files took 35 minutes, one `bazel coverage`

@@ -111,7 +111,7 @@ runs longer than a minute says on stderr, once a minute, where it is, as
 | `--local` | `false` | Reads the lists from the local store `pipelinegen record` writes, not from the remote. A config that names no remote (no `git.remote`, no `github` section) reads the local store without it whenever there is one, before the checkout's `origin`; with neither, it reads `origin`. Either way the first line on stderr says "lists from the local store (recorded on this machine)" and where that is. It can't go with `--no-lists`. |
 | `--cache` | your user cache directory, then `pipelinegen/repos/<repository>` | Where the work tree, hashes and bazel-diff are kept: a directory per repository (worktrees of one share it), so two repositories never share a work tree. Two plans of one repository take turns: the cache's lock holds one plan at a time. |
 | `--bazel-diff` | the pinned release | A bazel-diff binary to run instead of downloading one. |
-| `--plugins` | `<root>/tools/plugins` | Where the configured sbom and correlator plugins are, one executable per plugin name. With such plugins configured, affected binds through them as the planning job does, keeping their answers in the cache only. A plugin whose binary is not the build its pin names (one you built yourself) is used all the same, and its answers are cached by its own SHA-256, so it is never served the pinned build's answers, nor they its. It is said once on stderr: `pipelinegen: plugin <name> is not the build its pin names (<version>, sha256 <pin>): its binary's sha256 is <digest>: it answers, and its answers are cached apart`. For a release pinned by `sums` the line also gives the checksum the list gives the file, or, with no `<name>.SHA256SUMS` beside the plugin, says it can't be checked against its pin. |
+| `--plugins` | `<root>/tools/plugins` | Where the configured sbom and correlator plugins are, one executable per plugin name. With such plugins configured, affected binds through them as the planning job does, keeping their answers in the cache only. A plugin whose binary is not the build its pin names (one you built yourself) is used all the same, and its answers are cached by its own SHA-256, so it is never served the pinned build's answers, nor they its. It is said once on stderr: `pipelinegen: plugin <name> is not the build its pin names (<version>, sha256 <pin>): its binary's sha256 is <digest>: it answers, and its answers are cached apart`. For a release pinned by `sums` the line also gives the checksum the list gives the file, or, with no `<name>.SHA256SUMS` beside the plugin, says it can't be checked against its pin. A plugin that isn't there is [fetched](#plugins-a-command-fetches) from its pinned release. |
 | `--no-fill` | `false` | Doesn't fill the caches the plugins read before planning. By default, affected first runs what each plugin's `describe` says fills its cache (for the Go plugins, `go mod download` in every directory holding a `go.mod` that the plugins don't exclude), in both trees, once per content of those files, and says so on stderr the first time. This happens because no planner prepare ran on your machine. Without the fill, a plugin that lacks a module can't tell, and the plan binds those slices to everything. `plugins[].fill: false` turns it off for one plugin. See [filling caches on your machine](../plugins.md#filling-caches-on-your-machine). |
 
 On the example, after a test was added to `calc/add_test.sh`:
@@ -169,7 +169,7 @@ kept by commit in the cache, so each commit's tree is hashed once.
 | `--head` | `HEAD` | The newest commit. |
 | `--cache` | your user cache directory, then `pipelinegen/repos/<repository>` | Where the work tree, hashes and bazel-diff are kept: a directory per repository (worktrees of one share it), so two repositories never share a work tree. Two plans of one repository take turns: the cache's lock holds one plan at a time. |
 | `--bazel-diff` | the pinned release | A bazel-diff binary to run instead of downloading one. |
-| `--plugins` | `<root>/tools/plugins` | Where the configured sbom and correlator plugins are; a plugin that is not the build its pin names is used and said once, as for `affected`. |
+| `--plugins` | `<root>/tools/plugins` | Where the configured sbom and correlator plugins are; a plugin that is not the build its pin names is used and said once, and one that isn't there is fetched, as for `affected`. |
 | `--no-fill` | `false` | Doesn't fill the plugins' caches first, as for `affected`. |
 
 ```sh
@@ -317,7 +317,7 @@ slice that ended.
 | `--cache` | `cache`; on this machine `pipelinegen/slice-run` in your user cache directory | The directory kept between builds, for the drivers and `{cache}` in params. |
 | `--suite` | | On this machine, the suite `slice run` runs. |
 | `--slice` | every slice | On this machine, a slice `slice run` runs; repeatable. |
-| `--plugins` | `tools/plugins` under the root | On this machine, where the configured drivers are. |
+| `--plugins` | `tools/plugins` under the root | On this machine, where the configured drivers are; a driver that isn't there, or isn't the build its pin names, is [fetched](#plugins-a-command-fetches) from its pinned release. |
 | `--dir` | `PIPELINEGEN_MARKS` | The bundle's marks directory (`slice mark`). |
 | `--timeout` | `2m0s` | How long `slice mark` waits for the batch to take the mark. |
 
@@ -904,9 +904,11 @@ never ran, or the run itself failed; 2 for a command line it can't read,
 | `--no-lists` | `false` | Binds recorded slices to everything instead of reading the lists, as `affected --no-lists`. |
 | `--cache` | your user cache directory, then `pipelinegen/repos/<repository>` | The planning cache, as `affected`'s. |
 | `--bazel-diff` | the pinned release | A bazel-diff binary to run instead of downloading one. |
-| `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, one executable per name: the sbom and correlator plugins planning asks, and the drivers the batches run. A driver must be the build its pin names, as on CI. |
+| `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, one executable per name: the sbom and correlator plugins planning asks, and the drivers the batches run. A plugin it lacks, and a driver there that isn't the build its pin names, is [fetched](#plugins-a-command-fetches) from its pinned release. A driver must be the build its pin names, as on CI. |
 | `--no-fill` | `false` | Doesn't fill the caches the plugins read before planning, as `affected --no-fill`. |
 | `--work` | a temporary directory, removed after | Where the builds go, one directory per suite (`<work>/<suite>/build`, with the run's records in `<work>/<suite>/store.git` when it doesn't record). A directory used before is reused as `record --work` reuses it, which keeps Bazel's output base warm. |
+| `--no-image` | `false` | Runs the suites' steps on this machine instead of in the images the config names. |
+| `--container-tool` | `docker`, else `podman`, whichever is on `PATH` | The tool that runs the steps in their images. |
 
 ```
 $ git commit -am "a test of adding zero"
@@ -935,12 +937,16 @@ ran at 9619a1b7ebfa:
     failed text/upper_test.sh
 ```
 
+A suite's steps run in the image CI runs them in, as
+[in their images](#in-their-images) says; `--no-image` runs them on this
+machine.
+
 What a local run can't do:
 
-- The steps run on this machine, not in the images the config names, so
-  the machine needs what those images have (a browser, Node, Go, a
-  database); a missing tool fails the batch, and the line on stderr names
-  the image. A setup step that starts a server binds its port here.
+- With `--no-image`, the steps run on this machine, so it needs what the
+  images have (a browser, Node, Go, a database); a missing tool fails the
+  batch, and the line on stderr names the image. A setup step that starts
+  a server binds its port here.
 - Each suite runs as one batch: no `parallel` split, no `run_on`, no lock.
 - Whole-suite checks don't run; a line on stderr names the selected ones.
 - Without `--record`, nothing is observed and the local store is left
@@ -954,8 +960,9 @@ Records a suite's slices at HEAD on this machine, so `affected` and `why`
 show the selection the recordings narrow, with no CI system, host or
 token. It runs the suite's own `prepare` task, when it has one, and then
 its `run_slice` task, as one batch of every slice (or those `--slice`
-names). Each task's `run` runs here, in a build directory laid out as a
-suite job's: `source` is a worktree of HEAD made inside the build directory
+names). Each task's `run` runs in its image, as
+[in their images](#in-their-images) says, or with `--no-image` here, in a
+build directory laid out as a suite job's: `source` is a worktree of HEAD made inside the build directory
 (so a task that runs `cd source` and writes `../coverage` writes into the
 build, as on CI) and removed after, `tools/pipelinegen` this pipelinegen, `tools/plugins` the plugins, and `batches`, `prepared`,
 `result` and `coverage` as the [batch contract](../contracts.md#a-the-batch-task)
@@ -979,7 +986,9 @@ host are not needed, and a `github` section is ignored here.
 | `--suite` | none | The suite to record. Required. |
 | `--slice` | every slice of the suite | Records only this slice, by its name or label; repeat it for more. |
 | `--store` | `<git directory>/pipelinegen/local.git` | The local store. `affected` and `why` read only the default one. |
-| `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, one executable per name. |
+| `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, one executable per name. A plugin it lacks is [fetched](#plugins-a-command-fetches) from its pinned release. |
+| `--no-image` | `false` | Runs the suite's tasks on this machine instead of in their images. |
+| `--container-tool` | `docker`, else `podman`, whichever is on `PATH` | The tool that runs the tasks in their images. |
 | `--work` | a temporary directory, removed after | Where the build's directories go, to look at what a task left. A directory used before is reused: everything an earlier recording left there that belongs to one run (coverage, results, batches, prepared, work, tools) is removed first, and a line says what; only the caches stay (`cache`, the caches the suite's task files declare, and the checkout's path, by which Bazel keys its output base). A file it can't remove stops the recording. |
 
 It refuses, with exit 1:
@@ -990,9 +999,10 @@ It refuses, with exit 1:
 - a task file without a `run.path`, or one that takes an input a local
   recording doesn't make.
 
-A task that fails stops the recording and attaches nothing. The tasks run
-on this machine, not in the image their file names, so the last line says
-which image that is: what the task needs (a browser, Node) must be here.
+A task that fails stops the recording and attaches nothing. With
+`--no-image` the tasks run on this machine, not in the image their file
+names, so the last line says which image that is: what the task needs (a
+browser, Node) must be here.
 `source` is a fresh checkout of HEAD, as on CI, so the files git ignores in
 your working tree (an installed `node_modules`, a built `dist`) are not in
 it: the suite's `prepare` task has to make what the batch needs, and the
@@ -1009,6 +1019,60 @@ pipelinegen affected: lists from the local store (recorded on this machine): .gi
 
 The lists belong to the recorded commit, so the change is planned against
 it: `--base` names that commit.
+
+### In their images
+
+`run` and `record` run a suite's steps in the image CI runs them in, with
+`docker` or `podman`, whichever is on `PATH` (`--container-tool` names
+one):
+
+- a suite's `image`, a `registry-image` resource of the root pipeline
+  file (`concourse.include`), read at the commit that runs: `source.repository`
+  and `source.tag`, or by digest when the resource pins a `version: {digest: ...}`;
+  a prepare step's own `image` for `slice prepare`;
+- otherwise a task file's `image_resource`;
+- with neither, on this machine, as before.
+
+An image it doesn't have is pulled first. Each step is one container,
+removed when it ends, on the default bridge network, so it reaches what
+this machine reaches, as a CI task does; a server a set-up step starts
+listens inside the container. The suite's `privileged` runs it privileged.
+Its environment is the task's alone: the build's `PIPELINEGEN_*`
+variables and the suite's and the task file's `params`, never a token or
+anything else of this machine's environment.
+
+The build's directory, the repository's git directory (read only, as
+`source` is a worktree of it) and the tools are mounted at the paths they
+have here, so every path a step is given holds in the container:
+`tools/pipelinegen` is this pipelinegen when it is a static Linux build for
+the image's platform, and otherwise the release
+`concourse.planner.bootstrap.release` pins, fetched for that platform (on
+macOS, always); `tools/plugins` holds the drivers and correlators fetched
+for that platform. On Linux the steps run as your user (`--user`, or
+`--userns keep-id` with rootless podman), so what they write is yours; a
+privileged suite runs as root, as on CI, and what it wrote is handed back
+when it ends. With neither tool on `PATH`, a suite that names an image
+fails, saying to pass `--no-image`.
+
+### Plugins a command fetches
+
+`affected`, `why`, `try`, `run`, `record` and `slice run` find each plugin
+they run in `--plugins` (default `<root>/tools/plugins`). One that isn't
+there is fetched from its pinned release on GitHub, for this machine's
+platform (or the image's), into your user cache
+(`pipelinegen/releases/<sha256>/`), and checked against its pin: its
+`sha256`, the linux-amd64 file's checksum or a Node plugin's one `.mjs`, or,
+for `sums`, its line of the release's `SHA256SUMS`, itself checked by the
+pin. A file that doesn't match is refused and never runs; only `sums`
+checks a binary for another platform than linux-amd64. Plugins fetched for
+one command are linked together in `pipelinegen/plugin-sets/`. No token is
+needed or sent: the plugins' repositories are public.
+
+A driver in `--plugins` that isn't the build its pin names is passed over
+for the pinned release, with a line on stderr. An sbom or correlator there
+that isn't its pin still runs, its answers cached apart, which is how a
+change to a plugin is tried. A plugin pinned by `commit` has no release:
+the error names it and the command that builds it into `--plugins`.
 
 ## `pipelinegen seed`
 
@@ -1274,7 +1338,7 @@ that observe it. A slice that is in no suite of the plan exits 1.
 | `--head` | `HEAD` | Plans again: the commit to plan. |
 | `--cache` | the user's cache, a directory per repository | Where work trees and hashes are kept when it plans again. |
 | `--bazel-diff` | the pinned release | A bazel-diff binary to run instead, when it plans again. |
-| `--plugins` | `<root>/tools/plugins` | Where the configured sbom and correlator plugins are, when it plans again, as for `affected`. |
+| `--plugins` | `<root>/tools/plugins` | Where the configured sbom and correlator plugins are, when it plans again, as for `affected`, which fetches one that isn't there. |
 | `--no-fill` | `false` | When it plans again, doesn't fill the plugins' caches first, as for `affected`. |
 | `--no-lists` | `false` | When it plans again, binds recorded slices to everything instead of reading the base's lists. With no remote to read them from (no `git.remote`, no `github` section, no `origin` in the checkout), it says so and does the same; a kept plan needs the remote. |
 | `--local` | `false` | Reads the lists, or the kept plan of a local recording (`--run local`), from the local store `pipelinegen record` writes. |
