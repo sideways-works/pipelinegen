@@ -225,7 +225,7 @@ func (b *batchPlugins) observeAhead(ctx context.Context, j *report.Journal, suit
 		setup, parts := report.ObserveInputs(ev)
 
 		for _, c := range b.sets {
-			if left[c.name] {
+			if _, kept := b.kept(ev.Slice, c.name); left[c.name] || kept {
 				continue
 			}
 

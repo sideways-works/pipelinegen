@@ -243,46 +243,77 @@ func (b *drivenBatch) run(ctx context.Context, list []batchSlice, hooks driver.H
 		return err
 	}
 
-	var running []driver.Running
+	se, err := b.open(ctx, hooks, setupEnd)
+	defer se.close(ctx)
 
-	defer func() {
-		for _, r := range slices.Backward(running) {
-			if serr := r.Stop(ctx); serr != nil {
-				warnf(b.log, "pipelinegen slice run: %v\n", serr)
-			}
-		}
-	}()
-
-	exports, err := b.setUp(ctx, &running)
 	if err != nil {
 		return err
 	}
 
+	return se.run(ctx, routed)
+}
+
+// session is a batch's set-ups running, and the runner its run steps go through.
+type session struct {
+	b       *drivenBatch
+	running []driver.Running
+	exports map[string]string
+	runner  *driver.Runner
+}
+
+// open starts the set-ups and closes them with setupEnd; close stops what it started, also when it failed.
+func (b *drivenBatch) open(ctx context.Context, hooks driver.Hooks, setupEnd func() error) (*session, error) {
+	se := &session{b: b}
+
+	exports, err := b.setUp(ctx, &se.running)
+	if err != nil {
+		return se, err
+	}
+
+	se.exports = exports
+
 	if err := setupEnd(); err != nil {
-		return err
+		return se, err
 	}
 
 	exe, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("%w: %w", errSteps, err)
+		return se, fmt.Errorf("%w: %w", errSteps, err)
 	}
 
+	s := b.cfg.Suites[b.suite]
 	marks := plugin.Marks{Command: []string{exe, sliceCommand, "mark"}, Dir: filepath.Join(b.work, "marks")}
 	// In a recording run the correlators' collect calls come at each slice's real start and end.
 	collects := len(b.cfg.CorrelatorsFor(b.suite)) > 0
-	runner := &driver.Runner{Hooks: hooks, Record: b.record, Stack: s.Stack, Collects: collects, Marks: marks, Log: b.log}
+	se.runner = &driver.Runner{Hooks: hooks, Record: b.record, Stack: s.Stack, Collects: collects, Marks: marks, Log: b.log}
+
+	return se, nil
+}
+
+func (se *session) close(ctx context.Context) {
+	for _, r := range slices.Backward(se.running) {
+		if serr := r.Stop(ctx); serr != nil {
+			warnf(se.b.log, "pipelinegen slice run: %v\n", serr)
+		}
+	}
+}
+
+// run runs each run step with the slices routed to it.
+func (se *session) run(ctx context.Context, routed map[int][]batchSlice) error {
+	b := se.b
+	s := b.cfg.Suites[b.suite]
 
 	for _, i := range s.StepsOf(config.StepRun) {
 		if len(routed[i]) == 0 {
 			continue
 		}
 
-		rs, err := b.ready(ctx, s.Steps[i], exports)
+		rs, err := b.ready(ctx, s.Steps[i], se.exports)
 		if err != nil {
 			return err
 		}
 
-		if err := runner.Run(ctx, driver.Step{Driver: rs.d, Desc: rs.desc, Batch: s.Steps[i].Bundles(), Base: rs.req}, b.driverSlices(routed[i])); err != nil {
+		if err := se.runner.Run(ctx, driver.Step{Driver: rs.d, Desc: rs.desc, Batch: s.Steps[i].Bundles(), Base: rs.req}, b.driverSlices(routed[i])); err != nil {
 			return err
 		}
 	}
@@ -405,7 +436,7 @@ func sliceRun(ctx context.Context, args []string, stdout io.Writer) error {
 		return errors.Join(batchSliceRun(ctx, args, stdout), localSliceRun(ctx, args, stdout))
 	}
 
-	if os.Getenv(envBatch) == "" {
+	if os.Getenv(envBatch) == "" && !feedArg(args) {
 		return localSliceRun(ctx, args, stdout)
 	}
 
@@ -430,6 +461,7 @@ func (s *step) startBatch(ctx context.Context, f drivenFlags, batch, suite strin
 
 type drivenFlags struct {
 	batches, result, coverage, prepared, work, cache string
+	feed, pools                                      string
 }
 
 func (f *drivenFlags) register(fs *flag.FlagSet) {
@@ -441,6 +473,8 @@ func (f *drivenFlags) register(fs *flag.FlagSet) {
 	pathVar(fs, &f.prepared, "prepared", "", "what the suite's prepare steps made (default none: the suite has no prepare step)", reads)
 	pathVar(fs, &f.work, "work", "work", "the batch's scratch directory for its drivers", writes)
 	pathVar(fs, &f.cache, "cache", "cache", "the directory kept between builds, for the drivers and {cache}", reads|writes)
+	pathVar(fs, &f.feed, "feed", "", "a piperun session's feed directory: after the set-up, run the slices of its chunks in order until its end, writing a result line for each, PIPELINEGEN_LIMIT each slice's limit; the batch is PIPELINEGEN_BATCH, else PIPERUN_SESSION", reads|writes)
+	pathVar(fs, &f.pools, "pools", "", "with --feed, the pools' slices plan --emit wrote (default pools)", reads)
 }
 
 func batchSliceRun(ctx context.Context, args []string, stdout io.Writer) (err error) {
@@ -449,13 +483,18 @@ func batchSliceRun(ctx context.Context, args []string, stdout io.Writer) (err er
 		f drivenFlags
 	)
 
-	s.setupEnd = true
+	// a session's slices are written as they end, by piperun's sidecar
+	s.setupEnd = !feedArg(args)
 
 	if err := s.open(ctx, sliceCommand, args, f.register); err != nil {
 		return err
 	}
 
 	defer s.close(&err)
+
+	if f.feed != "" {
+		return feedSliceRun(ctx, &s, f, stdout)
+	}
 
 	if err := needEnv(envSuite, envBatch); err != nil {
 		return err
@@ -476,15 +515,9 @@ func batchSliceRun(ctx context.Context, args []string, stdout io.Writer) (err er
 
 	defer stop()
 
-	rec := ""
-	if cfg.Records(s.reporter.ID.Run, suite) {
-		rec = f.coverage
-
-		if err := errors.Join(needCollector(cfg, s.plugins, suite), needObservable(cfg, s.plugins, suite), needInterpreters(s.plugins, suite, "slice run")); err != nil {
-			return err
-		}
-	} else {
-		s.reporter.Collectors = nil
+	rec, err := s.recordingIn(f, suite, "slice run")
+	if err != nil {
+		return err
 	}
 
 	// the batch's ensure writes the journal out; nothing here waits on

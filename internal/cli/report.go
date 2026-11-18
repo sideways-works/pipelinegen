@@ -361,7 +361,7 @@ func (s *step) open(ctx context.Context, name string, args []string, more func(*
 		s.root = treeDir
 	}
 
-	if name == sliceCommand || name == batchEndCommand {
+	if name == sliceCommand || name == batchEndCommand || name == flushCommand {
 		pathVar(fs, &s.tools, "tools", "tools", "the batch task's tools, which hold the correlators", reads)
 	}
 
@@ -394,7 +394,7 @@ func (s *step) open(ctx context.Context, name string, args []string, more func(*
 
 	store := openStore(cfg)
 	// a batch's steps write its slices into the batch's own ref.
-	store.Batch = os.Getenv(envBatch)
+	store.Batch = batchFromEnv()
 
 	s.reporter = &report.Reporter{
 		Config:   cfg,
@@ -443,7 +443,12 @@ func runReport(ctx context.Context, args []string, stdout io.Writer) error {
 		{"start", "set every suite's status and the run's, and make the comment", reportStart},
 		{"slice", "report one slice or whole-suite check from its own step", reportSlice},
 		{"whole", "report a whole-suite check's end from its result", reportWhole},
-		{"batch-end", "close the slices of a batch still without a final state", reportBatchEnd},
+		{"batch-end", "close the slices of a batch still without a final state", func(ctx context.Context, a []string) error {
+			return reportBatchEnd(ctx, a, stdout)
+		}},
+		{"flush", "write the ends of a piperun session's confirmed slices from its journal, once or every period: --confirmed <file> [--every <period>]", func(ctx context.Context, a []string) error {
+			return reportFlush(ctx, a, stdout)
+		}},
 		{"suite", "mark the suite's end and set its status and the run's", reportSuite},
 		{"finish", "show the run's final state", reportFinish},
 		{"collect", "write what every slice of the suite recorded into a directory", reportCollect},
@@ -647,18 +652,22 @@ func sliceEvent(suite string, sl batchSlice, root, result, coverage string) repo
 	return ev
 }
 
-func reportBatchEnd(ctx context.Context, args []string) (err error) {
+func reportBatchEnd(ctx context.Context, args []string, stdout io.Writer) (err error) {
 	var (
 		s                                       step
 		batch, batches, result, coverage, begun string
+		confirmed, requeued, pools              string
 	)
 
 	if err := s.open(ctx, batchEndCommand, args, func(fs *flag.FlagSet) {
-		textVar(fs, &batch, "batch", os.Getenv(envBatch), "the batch's number")
+		textVar(fs, &batch, "batch", batchFromEnv(), "the batch's number")
 		pathVar(fs, &batches, "batches", "batches", "the directory of the run's batches", reads)
 		pathVar(fs, &result, "result", "result", "the batch's result directory", reads)
 		pathVar(fs, &coverage, "coverage", "", "the batch's coverage directory (recording runs)", reads)
 		pathVar(fs, &begun, "started", "", "the directory an older pipeline's lock step stamped when the batch's work began", reads)
+		pathVar(fs, &confirmed, "confirmed", "", "a piperun session's end: the items whose end piperun recorded ($PIPERUN_CONFIRMED), the only slices it closes", readsFile)
+		pathVar(fs, &requeued, "requeued", "", "a piperun session's end: the items it handed back to the pool ($PIPERUN_REQUEUED), left open for another session", readsFile)
+		pathVar(fs, &pools, "pools", "", "with --confirmed, the pools' slices plan --emit wrote, for the labels of slices the journal never saw (default pools)", reads)
 	}); err != nil {
 		return err
 	}
@@ -667,6 +676,10 @@ func reportBatchEnd(ctx context.Context, args []string) (err error) {
 
 	if err := needEnv(envSuite); err != nil {
 		return err
+	}
+
+	if confirmed != "" || requeued != "" {
+		return sessionEnd(ctx, &s, sessionFiles{batch: batch, result: result, coverage: coverage, confirmed: confirmed, requeued: requeued, pools: pools}, stdout)
 	}
 
 	list, err := readBatch(batches, batch)
@@ -858,7 +871,7 @@ func runSlice(ctx context.Context, args []string, stdout io.Writer) error {
 		{"memory", "wait, before the batch's setup, until the worker has the memory the batch should use, or leave the batch's slices not run", sliceMemory},
 		{"setup-end", "close what the batch's setup ran, once before its first slice", func(ctx context.Context, args []string) error { return sliceSetupEnd(ctx, args, stdout) }},
 		{"flush", "write the starts and ends the batch's journal holds", func(ctx context.Context, args []string) error { return sliceFlush(ctx, args, stdout) }},
-		{"run", "run the batch's slices through the suite's steps, or a suite's slices on this machine: [--suite <s>] [--slice <name>]...", func(ctx context.Context, args []string) error { return sliceRun(ctx, args, stdout) }},
+		{runVerb, "run the batch's slices through the suite's steps, or a suite's slices on this machine: [--suite <s>] [--slice <name>]...", func(ctx context.Context, args []string) error { return sliceRun(ctx, args, stdout) }},
 		{"mark", "mark a slice boundary of a bundle the running batch gave a driver: start <name>, stop <name>", func(ctx context.Context, args []string) error { return sliceMark(ctx, args, stdout) }},
 		{"prepare", "run the suite's prepare steps into the prepared directory", func(ctx context.Context, args []string) error { return slicePrepare(ctx, args, stdout) }},
 	})

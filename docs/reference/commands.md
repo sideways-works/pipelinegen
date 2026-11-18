@@ -205,7 +205,8 @@ generated pipeline's steps call it; its subcommands:
 | `report start` | Sets every suite's status and the run's, and makes the comment. Selected slices show as pending. | a write fails |
 | `report slice` | Reports one slice or whole-suite check from its own step: `--state running` at its start, its end from `--result` (a directory holding `result.json`) and, in a recording run, `--coverage`. | the slice did not pass |
 | `report whole` | Reports a whole-suite check once its task has ended, from `--result` (a directory holding `result.json`; none makes the check errored). The check is shown as `whole.<name>`, beside the suite's slices. The pipeline runs it in the ensure of each check's task. | the check did not pass |
-| `report batch-end` | Closes the slices of batch `--batch` still without a final state once its task ended, from `--result` (one `<name>.json` per slice) and `--coverage`, reading the batch from `--batches`. A batch none of whose slices started is `not run`, said once for the batch. When the slices' records can't be written it says how many of them passed by their results and exits 4. A batch with a slice that did not pass says why below its one line: each failure's name and tail as the statuses show it, slices that failed alike once with their count and names, capped, and where the full text is (each slice's `state.json` in the store). | a slice of the batch did not pass |
+| `report batch-end` | Closes the slices of batch `--batch` still without a final state once its task ended, from `--result` (one `<name>.json` per slice) and `--coverage`, reading the batch from `--batches`. A batch none of whose slices started is `not run`, said once for the batch. When the slices' records can't be written it says how many of them passed by their results and exits 4. A batch with a slice that did not pass says why below its one line: each failure's name and tail as the statuses show it, slices that failed alike once with their count and names, capped, and where the full text is (each slice's `state.json` in the store). With `--confirmed` or `--requeued` it is a piperun session's end instead, needing no `--batches`: it writes the end the journal holds of each confirmed slice, closes a confirmed slice the journal holds no end of as errored (piperun ended it), leaves a requeued slice that isn't confirmed open for the session that takes it next, and touches no other slice, which is another session's now. A session with nothing confirmed exits 0. | a slice of the batch did not pass |
+| `report flush` | A piperun session's sidecar: writes the ends of the slices listed in `--confirmed` (`$PIPERUN_CONFIRMED`, the items whose end piperun recorded) from the session's journal in `--result`, which it only reads, and closes nothing. With `--every <period>` it writes what was confirmed since, every period until it is stopped (SIGTERM), at the lowest priority; a slice whose end is unchanged is not written again, and a flush written twice writes the same states. A last line of the list without its newline is still being written and waits for the next round. In a recording run a slice waits for the session's end unless the session kept what its correlators observed. | a write fails (once; with `--every` a round that fails only warns) |
 | `report suite` | Marks the suite's end (its slices that never reported become errored, each saying why when `--batches` tells it) and sets its status and the run's. A suite that did not pass says why, as `report batch-end` does, for all its slices. When that makes a branch's recording run pass as a whole, it attaches the run's recordings to the run's commit, as `lists attach` does; when it ends the last suite of such a run that failed, it attaches the recordings of the slices that passed, and an attach that fails there is a warning. When the end mark can't be written it sets the suite's status and the run's to error ("the suite's end could not be recorded: rerun the build"), says what it could not do (the run's lists among it when this was the run's last suite to end) and exits 4. | a slice of the suite did not pass, or the attach failed |
 | `report finish` | Shows the run's final state. | a selected slice did not pass |
 | `report collect` | Writes what every slice of the suite recorded in this run into a directory, for a whole-suite check to read: `<slice>/state.json`, `<slice>/recording.txt` and `<slice>/extra/`, the files the batch task left for the slice. A slice's failure files stay out. | a read or write fails |
@@ -216,13 +217,17 @@ generated pipeline's steps call it; its subcommands:
 | `--root` | `.` | all | The repository's root, the tree under test. |
 | `--config` | `<root>/pipelinegen.yaml` | all | The config file. |
 | `--state` | none | `slice` | `running`, to report the slice's start. |
-| `--result` | `result` (`slice`, `whole`: none) | `slice`, `whole`, `batch-end` | The result directory. |
+| `--result` | `result` (`slice`, `whole`: none) | `slice`, `whole`, `batch-end`, `flush` | The result directory. |
 | `--name` | none | `whole` | The whole-suite check, as the suite's `whole_suite` names it. Required. |
 | `--coverage` | none | `slice`, `batch-end` | The coverage directory, in recording runs. |
-| `--batch` | `$PIPELINEGEN_BATCH` | `batch-end` | The batch's index in the whole run, from 0. |
+| `--batch` | `$PIPELINEGEN_BATCH`, else `$PIPERUN_SESSION` | `batch-end` | The batch's index in the whole run, from 0; on piperun the session's number. |
+| `--confirmed` | none | `batch-end`, `flush` | The list of items whose end piperun recorded (`$PIPERUN_CONFIRMED`): one item key a line, or a JSON object with its `key`. Required for `flush`. |
+| `--requeued` | none | `batch-end` | The list of items the session handed back to the pool (`$PIPERUN_REQUEUED`), in the same form. |
+| `--pools` | `pools` | `batch-end` | With `--confirmed`, the pools' slices `plan --emit` wrote, for the label of a slice the journal never saw. |
+| `--every` | `0s` | `flush` | Flush again every period until stopped; 0 flushes once. |
 | `--batches` | `batches` (`suite`: none) | `batch-end`, `suite` | The directory of the run's batches (`<n>/slices.json`), with `started.json`, when the suite's work began: a slice left without a result then says whether the suite's time limit can have stopped it. |
 | `--started` | none | `batch-end` | The directory an older pipeline's lock step stamped (`started.json`) as the batch began: its end then knows whether the batch's time limit stopped it. |
-| `--tools` | `tools` | `batch-end` | The batch task's tools. In a recording run, the correlators in `tools/plugins/<name>` say what each slice still in the journal touched. |
+| `--tools` | `tools` | `batch-end`, `flush` | The batch task's tools. In a recording run, the correlators in `tools/plugins/<name>` say what each slice still in the journal touched. |
 | `--suite` | `$PIPELINEGEN_SUITE` (`files`: none) | `collect`, `files` | The suite whose slices it collects; for `files`, only this suite's slices. |
 | `--out` | `slices` (`files`: none) | `collect`, `files` | Where it writes them. `files` writes nothing without it. |
 | `--run` | none | `files` | The run, as the config names it. Required. |
@@ -351,6 +356,8 @@ slice that ended.
 | `--suite` | | On this machine, the suite `slice run` runs. |
 | `--slice` | every slice | On this machine, a slice `slice run` runs; repeatable. |
 | `--plugins` | `tools/plugins` under the root | On this machine, where the configured drivers are; a driver that isn't there, or isn't the build its pin names, is [fetched](#plugins-a-command-fetches) from its pinned release. |
+| `--feed` | none | `slice run` as a piperun session: its feed directory (`$PIPERUN_FEED`). |
+| `--pools` | `pools` | With `--feed`, the pools' slices `plan --emit` wrote (`<suite>-slices.json`). |
 | `--dir` | `PIPELINEGEN_MARKS` | The bundle's marks directory (`slice mark`). |
 | `--timeout` | `2m0s` | How long `slice mark` waits for the batch to take the mark. |
 
@@ -366,6 +373,32 @@ and exits 1 when a slice did not pass. Without `PIPELINEGEN_BATCH` it
 runs a suite's slices (`--suite`, `--slice`) on this machine through the
 same steps, prepare steps first, on the working tree as it is, prints
 each slice's result and reports nowhere; see [drivers](../concepts/drivers.md).
+`slice run --feed <dir>` is a piperun session of a suite's pool. After
+the set-up it reads the feed's chunks in order, `<dir>/1.json`,
+`<dir>/2.json` and on, until `<dir>/end`, and runs each item, a slice of
+the pool's file, through the suite's steps as a batch does, journaling it
+and, in a recording run, observing it before its end is written. For each
+item it appends one line under 4 KB to `<dir>/results.jsonl`: `{"key",
+"start": true}`, then its end `{"key", "outcome": "passed|failed|errored",
+"summary", "files", "duration_ms", "cpu_seconds", "peak_mb"}`, the summary
+cut and the files left out, the last first, until the line fits. It reads
+chunk c+1 only after every item of chunk c has its line. A failed slice's
+failure files are copied to `<dir>/files/<slice>/`, at most 2 MB a slice
+and 50 MB a session, the largest left out first. Before a slice's start
+it checks the worker's memory against the slice's predicted peak beyond
+what the session holds, and the memory pressure, waiting as a batch does;
+a slice still short is handed back with `{"key", "requeue": true,
+"reason"}` instead of starting. `PIPELINEGEN_LIMIT`, else the suite's minutes, is each
+slice's limit: a slice still running a little before it is stopped and
+errors naming the limit, and the session goes on. The batch is `PIPELINEGEN_BATCH`, else
+`PIPERUN_SESSION`. The result and coverage directories are not emptied,
+so a session started again keeps its journal; what it held unreported
+went back to the pool, so its journal forgets it, an item it ended is not
+run again, and an item it is fed again starts anew. It exits 0 once the
+end is there and every item it took has its line, and 1 when it stops
+before that, leaving piperun to end what it hadn't reported. Only a suite
+run by drivers takes a feed.
+
 `slice mark start|stop <name>` is what a driver calls at a bundle's slice
 boundaries in a recording run of a stack suite; it returns once the
 running `slice run` has taken the mark, and fails when the batch failed

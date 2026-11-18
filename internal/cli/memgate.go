@@ -383,6 +383,11 @@ func (s *step) admit(ctx context.Context, f drivenFlags, batch, suite string) (s
 		return nil, err
 	}
 
+	return s.sample(ctx), nil
+}
+
+// sample measures each slice's use until stop.
+func (s *step) sample(ctx context.Context) (stop func()) {
 	var sm sampler
 
 	sampling, stop := context.WithCancel(ctx)
@@ -391,7 +396,7 @@ func (s *step) admit(ctx context.Context, f drivenFlags, batch, suite string) (s
 
 	s.reporter.Meter = sm.meter()
 
-	return stop, nil
+	return stop
 }
 
 // cgroupMeter reads the task's cgroup at each slice's start and end; separate processes can't watch

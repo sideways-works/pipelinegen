@@ -44,7 +44,7 @@ func commands() []command {
 		{"tree", "write a suite job's tree under test and its gates", runTree},
 		{"batches", "deal a suite's selected slices into batches", runBatches},
 		{"learn", "write the stub deps repository a fresh checkout needs: --stub", runLearn},
-		{"report", "keep a run's state and show it on GitHub: start, slice, batch-end, suite, finish, collect", runReport},
+		{"report", "keep a run's state and show it on GitHub: start, slice, batch-end, flush, suite, finish, collect", runReport},
 		{sliceCommand, "report a slice of the running batch: start <name>, end <name>", runSlice},
 		{"lock", lockSummary, runLock},
 		{"unlock", lockSummary, runUnlock},
@@ -104,7 +104,14 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 			return 0
 		}
 
-		err := runLimited(ctx, c.name, func(ctx context.Context) error { return c.run(ctx, args[1:], stdout) }, stderr)
+		var err error
+
+		// a session of a pool limits each slice by PIPELINEGEN_LIMIT, not itself
+		if limitsEachSlice(c.name, args[1:]) {
+			err = c.run(ctx, args[1:], stdout)
+		} else {
+			err = runLimited(ctx, c.name, func(ctx context.Context) error { return c.run(ctx, args[1:], stdout) }, stderr)
+		}
 
 		// The ssh key a step wrote and the change it checked out go whatever happened.
 		closeSSH()

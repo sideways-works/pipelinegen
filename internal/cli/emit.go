@@ -25,6 +25,10 @@ import (
 // record of media type application/vnd.pipelinegen.plan+json.
 const planRecordFile = "plan.json"
 
+// defaultPools is where plan --emit writes the pools' slices and their sessions read them, unless a
+// flag says otherwise; the flags default to nothing, so a step that never emits reads and writes none.
+const defaultPools = "pools"
+
 type emitFlags struct{ dir, pools string }
 
 func (f *emitFlags) register(fs *flag.FlagSet) {
@@ -35,7 +39,7 @@ func (f *emitFlags) register(fs *flag.FlagSet) {
 func (f *emitFlags) emitter(cfg *config.Config, ch runs.Change, store *gitstore.Store, root string) *emitter {
 	pools := f.pools
 	if pools == "" {
-		pools = "pools"
+		pools = defaultPools
 	}
 
 	return &emitter{dir: f.dir, pools: pools, cfg: cfg, ch: ch, store: store, root: root}
@@ -240,8 +244,12 @@ func writeJSON(p string, v any) error {
 	return nil
 }
 
-// readPool reads the slices plan --emit wrote for a suite's pool.
+// readPool reads the slices plan --emit wrote for a suite's pool, in dir or else pools.
 func readPool(dir, suite string) (map[string]piperun.Slice, error) {
+	if dir == "" {
+		dir = defaultPools
+	}
+
 	p := filepath.Join(dir, plugin.PiperunSlices(suite)+".json")
 
 	data, err := os.ReadFile(p) //nolint:gosec // the run's own pool file
