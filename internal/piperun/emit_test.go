@@ -131,3 +131,57 @@ func TestEachLimitIsRefusedByName(t *testing.T) {
 		t.Fatalf("bytes: %v", err)
 	}
 }
+
+// piperun refuses an emission whose after names a node it doesn't emit.
+func TestEveryAfterNamesAnEmittedNode(t *testing.T) {
+	for _, s := range []Suite{
+		{Name: "a", Slices: []Slice{{Name: "x"}}, Whole: []string{"w"}},
+		{Name: "b", Slices: []Slice{{Name: "x"}}},
+		{Name: "c", Whole: []string{"w"}},
+		{Name: "d", Prepare: true},
+		{Name: "e", Prepare: true, Whole: []string{"w"}},
+		{Name: "f"},
+	} {
+		em, err := Emit([]Suite{s})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		nodes := map[string]bool{}
+		for _, j := range em.Jobs {
+			nodes[j.Name] = true
+		}
+
+		for _, p := range em.Pools {
+			nodes[p.Name] = true
+		}
+
+		var afters []plugin.EmitAfter
+		for _, j := range em.Jobs {
+			afters = append(afters, j.After...)
+		}
+
+		for _, p := range em.Pools {
+			afters = append(afters, p.After...)
+		}
+
+		for _, a := range afters {
+			if !nodes[a.Job] {
+				t.Errorf("suite %s: after names %s, which isn't emitted: %+v", s.Name, a.Job, em)
+			}
+		}
+
+		if !s.Prepare && nodes[plugin.PiperunPrepare(s.Name)] {
+			t.Errorf("suite %s has no prepare, and one is emitted", s.Name)
+		}
+	}
+
+	em, err := Emit([]Suite{{Name: "b", Slices: []Slice{{Name: "x"}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if end := em.Jobs[len(em.Jobs)-1]; end.Name != "b-end" || len(end.After) != 1 || end.After[0] != (plugin.EmitAfter{Job: "b-slices", Ended: true}) || len(em.Pools[0].After) != 0 {
+		t.Fatalf("a suite without prepare: %+v", em)
+	}
+}
