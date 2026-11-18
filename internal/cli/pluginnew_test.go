@@ -160,3 +160,71 @@ func TestNewRefusesATemplateItCantTrust(t *testing.T) {
 		}
 	}
 }
+
+// selfNamingTemplate is a plugins repository whose sbom template names its own directory in its
+// BUILD.bazel and README.
+func selfNamingTemplate(t *testing.T) string {
+	t.Helper()
+
+	src, bare := t.TempDir(), filepath.Join(t.TempDir(), "plugins.git")
+	git(t, src, "init", "-q", "-b", "main")
+
+	dir := filepath.Join(src, "templates", "sbom")
+	writeFile(t, filepath.Join(dir, "go.mod"), "module github.com/o/plugins/templates/sbom\n")
+	writeFile(t, filepath.Join(dir, "cmd", "example-sbom", "main.go"), "package main\n")
+	writeFile(t, filepath.Join(dir, "BUILD.bazel"), "template(dir = \"templates/sbom\")\n")
+	writeFile(t, filepath.Join(dir, "README.md"), "bazel run //templates/sbom:test\nbazel run //templates/sbomx:other\n")
+
+	git(t, src, "add", "-A")
+	git(t, src, "commit", "-q", "-m", "templates")
+	git(t, src, "tag", "templates/v1.0.0")
+	git(t, t.TempDir(), "clone", "-q", "--bare", src, bare)
+
+	return "file://" + bare
+}
+
+func TestNewNamesItsOwnDirectoryWhereTheTemplateNamedIts(t *testing.T) {
+	from := selfNamingTemplate(t)
+
+	repo := t.TempDir()
+	git(t, repo, "init", "-q", "-b", "main")
+
+	for into, dir := range map[string]string{
+		filepath.Join(repo, "plugins", "rust"):  "plugins/rust",
+		filepath.Join(repo, "sbom", "rust"):     "sbom/rust",
+		filepath.Join(repo, "a", "b", "c", "d"): "a/b/c/d",
+	} {
+		_, stderr, code := pinsRun(t, "plugin", "new", "sbom", "rust", "--from", from, "--into", into)
+		if code != 0 {
+			t.Fatalf("%s: exit %d: %s", into, code, stderr)
+		}
+
+		for file, want := range map[string]string{
+			"BUILD.bazel": "template(dir = \"" + dir + "\")\n",
+			"README.md":   "bazel run //" + dir + ":test\nbazel run //templates/sbomx:other\n",
+			"go.mod":      "module github.com/o/plugins/sbom/rust\n",
+		} {
+			if got, err := os.ReadFile(filepath.Join(into, file)); err != nil || string(got) != want {
+				t.Errorf("%s: %s: %v %q", into, file, err, got)
+			}
+		}
+	}
+}
+
+// Outside a git work tree the new plugin is named where the plugins repository keeps one.
+func TestNewOutsideAWorkTreeNamesKindAndName(t *testing.T) {
+	from := selfNamingTemplate(t)
+	outside := t.TempDir()
+	t.Setenv("GIT_CEILING_DIRECTORIES", outside)
+
+	into := filepath.Join(outside, "rust")
+
+	_, stderr, code := pinsRun(t, "plugin", "new", "sbom", "rust", "--from", from, "--into", into)
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+
+	if got, err := os.ReadFile(filepath.Join(into, "BUILD.bazel")); err != nil || string(got) != "template(dir = \"sbom/rust\")\n" {
+		t.Fatalf("%v %q", err, got)
+	}
+}

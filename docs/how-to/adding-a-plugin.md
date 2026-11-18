@@ -113,7 +113,10 @@ template the plugins repository keeps for each kind under
 or `--version`'s, with git, so any repository git can fetch works with
 `--from <git-url>`. A template is a Go module with one program under
 `cmd/`. The copy gets its own module path, the template's with
-`templates/<kind>` made `<kind>/<name>` (`--module` sets another), and its
-program becomes `<name>-<kind>`, `rust-sbom` here, in every file's text and
-path. [Writing plugins](../writing-plugins/README.md) says what each kind
-answers.
+`templates/<kind>` made `<kind>/<name>` (`--module` sets another), its
+program becomes `<name>-<kind>`, `rust-sbom` here, and the template's own
+directory, `templates/<kind>` wherever a file names it (its `BUILD.bazel`,
+its README), becomes the new plugin's: its path in the git work tree that
+holds it, or `<kind>/<name>` outside one. Each is rewritten in every
+file's text and path. [Writing plugins](../writing-plugins/README.md) says
+what each kind answers.

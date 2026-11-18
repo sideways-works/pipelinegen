@@ -73,7 +73,7 @@ func pluginNew(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	t, err := fromTemplate(files, kind, name, module)
+	t, err := fromTemplate(files, kind, name, module, newDir(ctx, into, kind, name))
 	if err != nil {
 		return fmt.Errorf("%w: %s %s: %w", errTemplate, tag, kind, err)
 	}
@@ -225,9 +225,9 @@ type template struct {
 }
 
 // fromTemplate is a template's files with its module and program renamed: the module its go.mod
-// declares becomes module, and the one program under cmd/ becomes <name>-<kind>, in every file's
-// text and path.
-func fromTemplate(files map[string]templateFile, kind, name, module string) (template, error) {
+// declares becomes module, the one program under cmd/ becomes <name>-<kind>, and the template's
+// own directory, templates/<kind>, becomes dir, in every file's text and path.
+func fromTemplate(files map[string]templateFile, kind, name, module, dir string) (template, error) {
 	gomod, ok := files["go.mod"]
 	if !ok {
 		return template{}, errors.New("no go.mod") //nolint:err113 // the template's
@@ -262,13 +262,59 @@ func fromTemplate(files map[string]templateFile, kind, name, module string) (tem
 
 	program := name + "-" + kind
 	r := strings.NewReplacer(oldModule, module, programs[0], program)
+	// the template's directory as a whole path part: templates/sbomx is another one
+	own := regexp.MustCompile(regexp.QuoteMeta(templatesDir+"/"+kind) + `([A-Za-z0-9_.-]?)`)
+	replace := func(text string) string {
+		return own.ReplaceAllStringFunc(r.Replace(text), func(m string) string {
+			if strings.HasSuffix(m, "/"+kind) {
+				return dir
+			}
+
+			return m
+		})
+	}
 
 	out := template{files: map[string]templateFile{}, module: module, program: program}
 	for p, f := range files {
-		out.files[r.Replace(p)] = templateFile{data: []byte(r.Replace(string(f.data))), exec: f.exec}
+		out.files[replace(p)] = templateFile{data: []byte(replace(string(f.data))), exec: f.exec}
 	}
 
 	return out, nil
+}
+
+// newDir is the new plugin's directory as its files name it: its path in the git work tree that
+// holds it, else <kind>/<name>, where a plugin of the plugins repository lives.
+func newDir(ctx context.Context, into, kind, name string) string {
+	parent := filepath.Dir(into)
+	for {
+		if _, err := os.Stat(parent); err == nil || filepath.Dir(parent) == parent {
+			break
+		}
+
+		parent = filepath.Dir(parent)
+	}
+
+	top, err := gitx.Repo{Dir: parent}.Git(ctx, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return kind + "/" + name
+	}
+
+	resolved, err := filepath.EvalSymlinks(parent)
+	if err != nil {
+		return kind + "/" + name
+	}
+
+	below, err := filepath.Rel(parent, into)
+	if err != nil {
+		return kind + "/" + name
+	}
+
+	rel, err := filepath.Rel(strings.TrimSpace(top), filepath.Join(resolved, below))
+	if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+		return kind + "/" + name
+	}
+
+	return filepath.ToSlash(rel)
 }
 
 // defaultModule puts the new plugin beside the others of its repository: .../templates/sbom makes
