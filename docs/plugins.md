@@ -593,7 +593,13 @@ fixture tree of its own. It checks:
   the spec pins already in `tools` at its pin: the runner under test in
   `tools/plugins/<name>`, the fixture spec's runner pin made the runner's
   checksum, and every other tool a stand-in that notes each call, opens
-  every gate but a decision's and writes the outputs a call names. The
+  every gate but a decision's and writes the outputs a call names. It
+  writes and runs the pipeline twice more, once with a stand-in plugin and
+  once with the runner itself pinned by `sums` and no `sha256`, the list
+  the pin names already beside it as `tools/plugins/<name>.SHA256SUMS`:
+  each task it runs must get as far as calling the tool, or exit 0, and
+  leave the list matching the pin and the tool matching its line in it,
+  so a runner that checks only a `sha256` fails. The
   kit does this for the spec
   and for its variants: an older tool's spec with a lock on every suite,
   per build and per batch, a pipeline that sets itself, a config that splits the token by purpose and, for a runner with

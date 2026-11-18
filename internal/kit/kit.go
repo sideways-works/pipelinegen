@@ -280,6 +280,7 @@ func (k *kit) runner(ctx context.Context) {
 	k.Check("the pipeline's notices are one line each", brokenNotices(notices))
 	k.Check("pipeline is the same every time", ifNot(bytes.Equal(texts[0], texts[1]), "two calls wrote different pipelines"))
 	k.placement(ctx, root, texts[0])
+	k.sums(ctx, root)
 
 	k.Check("the pipeline references only the token, the declared secrets and the repository's own vars", strayVars(texts[0], Spec()))
 

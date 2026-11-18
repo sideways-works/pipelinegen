@@ -22,6 +22,7 @@ minor version may change the config or the protocol.
 
 ### Changed
 
+- The kit checks that a runner fetches a tool pinned by `sums`: it writes the pipeline with a stand-in plugin, and again with the runner itself, pinned by the checksum of a `SHA256SUMS` it places beside the tool as `tools/plugins/<name>.SHA256SUMS`, with no `sha256`, and each task it runs must reach its call of the tool or exit 0 with the list and the tool still matching. A runner that checks only a `sha256` passed the kit before, though every real task would fail.
 - The kit runs a runner's task that calls pipelinegen through a program of the runner's own instead of a script naming the calls: each task marked as the tool's step, in its job's order, offline, with the runner in `tools/plugins/<name>` and a stand-in for the tool that notes each call, so its calls face every check a script's do. The kit's fixture spec pins a runner, made the one under test, and a variant gives the planner a prepare command with a git token
 - The plugin protocol's parts that know no kind (calls and their exit codes, the connector exchange, pinned downloads, the container runner, the kit's harness) come from the module `github.com/sideways-works/plugkit`. `plugin` names its types as its own, so plugins build unchanged, and nothing a plugin reads or writes changes
 

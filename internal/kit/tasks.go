@@ -45,6 +45,12 @@ type taskRun struct {
 	recording  string
 	unrecorded int
 	said       string
+	// task names the task; exit and output are its first run's, listed where the tools pinned by
+	// sums in its directory don't check against their lists after it.
+	task   string
+	exit   int
+	output string
+	listed []string
 }
 
 // standInTool is the kit's pipelinegen, and every other pinned tool but the runner. It notes each
@@ -211,16 +217,17 @@ func fetched(dir string) {
 }
 
 func (r taskRunner) runTask(ctx context.Context, dir, arts string, step, cfg map[string]any) *taskRun {
-	res := &taskRun{unrecorded: -1}
+	res := &taskRun{unrecorded: -1, task: fmt.Sprint(step["task"])}
 
 	td, err := r.prepare(dir, arts, step, cfg)
 	if err != nil {
-		res.said = err.Error()
+		res.said, res.exit, res.output = err.Error(), -1, "can't run: "+err.Error()
 
 		return res
 	}
 
-	r.exec(ctx, td, step, cfg)
+	res.exit, res.output = r.exec(ctx, td, step, cfg)
+	res.listed = r.listedProblems(td)
 	res.calls = recordedCalls(td)
 
 	for _, c := range res.calls {
@@ -353,6 +360,23 @@ func (r taskRunner) placeTools(td string) error {
 		}
 
 		if err := os.WriteFile(dest, []byte(standInTool), 0o700); err != nil { //nolint:gosec // the kit's own stand-in
+			return fmt.Errorf("%s: %w", t.Name, err)
+		}
+	}
+
+	return r.placeLists(td)
+}
+
+// placeLists puts beside each tool pinned by sums the list its pin names, as a task that fetched
+// the tool holds it.
+func (r taskRunner) placeLists(td string) error {
+	for _, t := range r.spec.Tools {
+		if t.Sums == "" {
+			continue
+		}
+
+		list := filepath.Join(td, "tools", "plugins", t.Name+sumsSuffix)
+		if err := os.WriteFile(list, sumsList(t, placedSum(t, r.runner)), 0o600); err != nil {
 			return fmt.Errorf("%s: %w", t.Name, err)
 		}
 	}

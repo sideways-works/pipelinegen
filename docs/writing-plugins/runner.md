@@ -309,7 +309,11 @@ the tool's step with `PIPELINEGEN_PIPELINE_STEP`, in its job's order,
 offline, with every pinned tool already in `tools` at its pin and your
 runner in `tools/plugins/<name>`. Such a step must keep tools it finds at
 their pins rather than fetch them again; what it calls is checked as a
-script's calls are.
+script's calls are. The kit runs them once more with a stand-in plugin,
+and once with your runner, pinned by `sums` and no `sha256`, the list
+beside it as `tools/plugins/<name>.SHA256SUMS`: each task must get as far
+as calling the tool, or exit 0, with the list still matching the pin and
+the tool its line in it.
 [Conformance](../plugins.md#conformance) has the full list.
 
 A tool's repository names the program it holds. A repository named
