@@ -1,9 +1,10 @@
 # Converting gavel to pipelinegen
 
 > Where the conversion stands: made with v0.2.1. gavel's config pins
-> pipelinegen v0.2.1 and the v0.2.0 releases of its runner, plugins and
-> drivers, and all five suites name steps run by drivers, with no batch
-> script left. Most numbers on this page were measured with the last
+> pipelinegen v0.2.1 and the v0.2.0 release of its runner, and its plugins
+> and drivers at v0.4.0 from the plugins repository, one group by
+> directory, which a pipelinegen and a runner of v0.4.0 read; all five
+> suites name steps run by drivers, with no batch script left. Most numbers on this page were measured with the last
 > development build before v0.2.0, whose code is v0.2.1's tool without a
 > few fixes, none of which changes what a plan selects. Some were measured
 > first with an earlier development build, and the page says where. On a
@@ -294,10 +295,12 @@ bazel:
   bazelisk: bazelisk
 
 plugins:
-  - name: go
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - name: go
+        kind: driver
+        path: driver/go
+        release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}
 
 suites:
   go:
@@ -699,16 +702,18 @@ of the book says how to find and check a release's checksum.
 
 ```yaml
 plugins:
-  - name: go-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
-    exclude: ["examples/**"]
-  - name: go-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
-    exclude: ["examples/**"]
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - name: go-sbom
+        kind: sbom
+        path: sbom/go
+        release: {version: v0.4.0, sums: e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d}
+        exclude: ["examples/**"]
+      - name: go-correlator
+        kind: correlator
+        path: correlator/go
+        release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}
+        exclude: ["examples/**"]
 ```
 
 and the two Go suites say `bind: recorded` and name the correlator that
@@ -790,14 +795,14 @@ whole picture. gavel needs no task file and no script of its own.
 The drivers are pinned beside the other plugins:
 
 ```yaml
-  - name: go
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
-  - name: shell
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-shell
-    release: {version: v0.2.0, sha256: 38d59a75f3cf9818085cbe1c54225c94f68c7db626c37490de18b0d0debe5ed8}
+      - name: go
+        kind: driver
+        path: driver/go
+        release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}
+      - name: shell
+        kind: driver
+        path: driver/shell
+        release: {version: v0.4.0, sums: ccba3ad11a223e3f148f05afe010831766ba776c314caf8c2d797496b58231af}
 ```
 
 ### The Go tests
@@ -1121,38 +1126,38 @@ the Go tests that ran its handler.
 The config adds the four plugins:
 
 ```yaml
-  - name: ts
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-ts
-    release: {version: v0.2.0, sha256: 5c51edb18c7e736548cec063a9572c226c647673499db30a94b907fd5b41fdbe}
-    exclude: ["examples/**", "docs/**"]
-  - name: react
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-react
-    release: {version: v0.2.0, sha256: 32b1688da148017ccca64067e00d57c685a50b3b0adf6bfc976c6eb8abd7f32b}
-    exclude: ["examples/**", "docs/**"]
-    config:
-      bundles:
-        - {dist: apps/web/dist, base: /, html: apps/web/index.html, public: apps/web/public}
-  - name: npm
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-npm
-    release: {version: v0.2.0, sha256: 9b85e7f3a4aeb5f723e5080a3270ab1c7446d2e319007162602ae499d61fa9bb}
-    exclude: ["examples/**"]
-  - name: openapi
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-openapi
-    release: {version: v0.2.0, sha256: fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab}
-    exclude: ["examples/**", "docs/**", ".github/**"]
-  - name: api-uses
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-oapi-codegen
-    release: {version: v0.2.0, sha256: 155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce}
-    exclude: ["examples/**"]
-    config:
-      documents:
-        - path: openapi/v1/openapi.yaml
-          go: {package: core/userinterface/api/v1/gen, strict: true}
+      - name: ts
+        kind: sbom
+        path: sbom/ts
+        release: {version: v0.4.0, sums: fd968f0cc982209d8c1626bb9ea7bf664f04e5b2f304bd73200b00ec10c38605}
+        exclude: ["examples/**", "docs/**"]
+      - name: react
+        kind: correlator
+        path: correlator/react
+        release: {version: v0.4.0, sums: 2c0ba0cea4a32648c96afd2a1b64f41af1fb515b839b9e916dd8056396141f98}
+        exclude: ["examples/**", "docs/**"]
+        config:
+          bundles:
+            - {dist: apps/web/dist, base: /, html: apps/web/index.html, public: apps/web/public}
+      - name: npm
+        kind: sbom
+        path: sbom/npm
+        release: {version: v0.4.0, sums: c999573b743af45dec26d9f3d59646da41614024d1662896e9881655cb495d64}
+        exclude: ["examples/**"]
+      - name: openapi
+        kind: sbom
+        path: sbom/openapi
+        release: {version: v0.4.0, sums: d9906494cc33ad4c500d72f4595e56ae9724145dbfffd1fb1e604f1f2b54787a}
+        exclude: ["examples/**", "docs/**", ".github/**"]
+      - name: api-uses
+        kind: correlator
+        path: correlator/oapi-codegen
+        release: {version: v0.4.0, sums: c7353aed77ddcaa21eadb50b7cce4101973ee2e5ed9aa6bfd4d0d97e29b37f1a}
+        exclude: ["examples/**"]
+        config:
+          documents:
+            - path: openapi/v1/openapi.yaml
+              go: {package: core/userinterface/api/v1/gen, strict: true}
 ```
 
 What they claim on gavel:
@@ -1317,15 +1322,15 @@ the next spec from zero. Its config names the directory they pass
 through, the server set-up's own:
 
 ```yaml
-  - name: go-correlator
-    # ...
-    config:
-      cover_dir: work/shell/server/ctl
+      - name: go-correlator
+        # ...
+        config:
+          cover_dir: work/shell/server/ctl
 ```
 
-The module `github.com/sideways-works/pipelinegen-correlator-go/cover` is
-pinned at `v0.2.0` (its tag `cover/v0.2.0`) and is private while the
-plugins are. gavel's
+The module `github.com/sideways-works/pipelinegen-plugins/correlator/go/cover`
+is pinned at `v0.4.0` (its tag `correlator/go/cover/v0.4.0`) and is
+private while the plugins are. gavel's
 `go.mod` doesn't take it: Bazel's Go rules and the planner's `go mod
 download` would have to reach it too. The prepare step adds it to a copy
 of `go.mod` of its own (`go get -modfile`), writes the one-line file that
