@@ -65,21 +65,23 @@ func TestFold(t *testing.T) {
 
 func TestHeaderNamesTheFamilysOwnCode(t *testing.T) {
 	n := &noticeText{first: true}
-	n.header("shell-driver", "release binaries", []string{"github.com/sideways-works/pipelinegen", "github.com/sideways-works/pipelinegen-sbom-go"})
+	n.header("shell-driver", "release binaries", []string{"github.com/sideways-works/pipelinegen", "github.com/sideways-works/pipelinegen-plugins"})
 
 	want := "shell-driver\n" + copyright + "\n\n" +
 		"This product is licensed under the Apache License, Version 2.0 (see\n" +
 		"LICENSE). Its release binaries include code from\n" +
 		"github.com/sideways-works/pipelinegen and\n" +
-		"github.com/sideways-works/pipelinegen-sbom-go, which have the same\n" +
+		"github.com/sideways-works/pipelinegen-plugins, which have the same\n" +
 		"copyright holder and licence, and the third-party software below, each\n" +
 		"under its own licence, reproduced here as those licences require.\n\n"
 	if got := n.b.String(); got != want {
 		t.Errorf("header:\n%s\nwant\n%s", got, want)
 	}
 
-	if got := familyRepository("go-sbom"); got != "pipelinegen-sbom-go" {
-		t.Errorf("go-sbom lives in %s", got)
+	for _, name := range []string{"go-sbom", "ts-sbom", "pipelinegen-plugins"} {
+		if got := familyRepository(name); got != "pipelinegen-plugins" {
+			t.Errorf("%s lives in %s", name, got)
+		}
 	}
 
 	if got := familyRepository("pipelinegen"); got != "pipelinegen" {

@@ -25,6 +25,8 @@ const (
 	separator = "--------------------------------------------------------------------------------"
 	copyright = "Copyright 2026 Sideways Works UG (haftungsbeschränkt)"
 	family    = "github.com/sideways-works"
+
+	pluginsRepository = "pipelinegen-plugins"
 )
 
 type noticeText struct {
@@ -166,10 +168,12 @@ func refuseNotice(format string, args ...any) error {
 	return fmt.Errorf("%w: notice: %s", ErrRelease, fmt.Sprintf(format, args...))
 }
 
+// familyRepository is the repository holding the family's module or package name: a plugin's
+// (go-sbom, @sideways-works/ts-sbom) is the plugins repository's.
 func familyRepository(name string) string {
 	for _, k := range plugin.Kinds {
 		if base, ok := strings.CutSuffix(name, "-"+k); ok && base != "" {
-			return "pipelinegen-" + k + "-" + base
+			return pluginsRepository
 		}
 	}
 
