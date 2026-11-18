@@ -31,6 +31,9 @@ type taskRunner struct {
 	runner   string
 	work     string
 	installs []string
+	// tampered places each tool pinned by sums changed, so that it no longer matches its line in
+	// the list beside it.
+	tampered bool
 }
 
 // taskRuns are what the tasks of one pipeline did when they ran, by task.
@@ -51,6 +54,8 @@ type taskRun struct {
 	exit   int
 	output string
 	listed []string
+	// handed says the task takes tools as an input, which an earlier task of its job fetched.
+	handed bool
 }
 
 // standInTool is the kit's pipelinegen, and every other pinned tool but the runner. It notes each
@@ -217,7 +222,7 @@ func fetched(dir string) {
 }
 
 func (r taskRunner) runTask(ctx context.Context, dir, arts string, step, cfg map[string]any) *taskRun {
-	res := &taskRun{unrecorded: -1, task: fmt.Sprint(step["task"])}
+	res := &taskRun{unrecorded: -1, task: fmt.Sprint(step["task"]), handed: slices.Contains(names(cfg["inputs"], "name"), "tools")}
 
 	td, err := r.prepare(dir, arts, step, cfg)
 	if err != nil {
@@ -379,6 +384,31 @@ func (r taskRunner) placeLists(td string) error {
 		if err := os.WriteFile(list, sumsList(t, placedSum(t, r.runner)), 0o600); err != nil {
 			return fmt.Errorf("%s: %w", t.Name, err)
 		}
+
+		if r.tampered {
+			if err := tamper(filepath.Join(td, "tools", "plugins", t.Name)); err != nil {
+				return fmt.Errorf("%s: %w", t.Name, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// tamper changes a placed tool so that it still runs: a program, or a script, with a line more.
+// A link to the runner under test is replaced by a copy first.
+func tamper(p string) error {
+	data, err := os.ReadFile(p) //nolint:gosec // a tool the kit placed
+	if err != nil {
+		return fmt.Errorf("tamper: %w", err)
+	}
+
+	if err := os.Remove(p); err != nil {
+		return fmt.Errorf("tamper: %w", err)
+	}
+
+	if err := os.WriteFile(p, append(data, "\n# changed\n"...), 0o700); err != nil { //nolint:gosec // the kit's own stand-in or the runner under test
+		return fmt.Errorf("tamper: %w", err)
 	}
 
 	return nil

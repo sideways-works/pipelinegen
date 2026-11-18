@@ -24,14 +24,12 @@ const sumsSuffix = ".SHA256SUMS"
 // sums checks that the tasks the kit runs fetch a tool pinned by sums, with no sha256, by its
 // list: a stand-in plugin's, and the runner's own. The kit places the list beside each, as a task
 // that fetched them would hold it, so the tasks stay offline; a runner that reads only a sha256
-// finds none to check the tool by and has to fetch it.
+// finds none to check the tool by and has to fetch it. The kit then runs the tasks again with the
+// tool changed so that it no longer matches its line: a task that fetches the tools itself and
+// called the tool before must now refuse it and call nothing, as one that keeps an unchecked tool
+// doesn't.
 func (k *kit) sums(ctx context.Context, root string) {
-	var (
-		problems []string
-		ran      bool
-	)
-
-	for _, v := range []struct {
+	variants := []struct {
 		name string
 		kind func(plugin.SpecTool) bool
 	}{
@@ -39,38 +37,16 @@ func (k *kit) sums(ctx context.Context, root string) {
 			return t.Kind != plugin.KindRunner && t.Kind != plugin.ToolPipelinegen && t.Kind != plugin.ToolBazelisk && t.Version != ""
 		}},
 		{"the runner pinned by sums", func(t plugin.SpecTool) bool { return t.Kind == plugin.KindRunner }},
-	} {
-		spec := k.bySums(k.pinned(Spec()), v.kind)
-		work := k.WorkDir()
+	}
 
-		var ans plugin.PipelineAnswer
-		if err := k.call(ctx, plugin.CallPipeline, plugin.PipelineRequest{Request: k.p.NewRequest(work), Spec: spec, Root: root}, &ans); err != nil || len(ans.Files) != 1 {
-			problems = append(problems, fmt.Sprintf("(%s) pipeline: %v (%d files)", v.name, err, len(ans.Files)))
+	problems, ran := make([]string, 0, len(variants)), false
 
-			continue
-		}
-
-		text, err := os.ReadFile(filepath.Join(work, filepath.Clean(ans.Files[0]))) //nolint:gosec // inside the call's work directory
-		if err != nil {
-			problems = append(problems, fmt.Sprintf("(%s) %v", v.name, err))
-
-			continue
-		}
-
-		runs := runTasks(ctx, taskRunner{spec: spec, runner: k.o.Path, work: k.WorkDir(), installs: installsOf(spec)}, text)
-
-		var unfetched []string
-
-		for _, key := range slices.Sorted(maps.Keys(runs.byTask)) {
-			ran = true
-
-			if p := runs.byTask[key].unfetched(); p != "" {
-				unfetched = appendNew(unfetched, fmt.Sprintf("(%s) job %s, task %s: %s", v.name, strings.SplitN(key, "\n", 2)[0], runs.byTask[key].task, p))
-			}
-		}
+	for _, v := range variants {
+		p, r := k.sumsVariant(ctx, root, v.name, k.bySums(k.pinned(Spec()), v.kind))
 
 		// each variant's own, so one's failures don't hide the other's
-		problems = append(problems, firstFew(unfetched)...)
+		problems = append(problems, firstFew(p)...)
+		ran = ran || r
 	}
 
 	if !ran && len(problems) == 0 {
@@ -80,6 +56,45 @@ func (k *kit) sums(ctx context.Context, root string) {
 	}
 
 	k.Check(sumsCheck, strings.Join(problems, "; "))
+}
+
+// sumsVariant runs the tasks of the pipeline for spec, with the tool pinned by sums as its list
+// names it and then changed, and says what went wrong, and whether any task ran.
+func (k *kit) sumsVariant(ctx context.Context, root, name string, spec plugin.Spec) ([]string, bool) {
+	work := k.WorkDir()
+
+	var ans plugin.PipelineAnswer
+	if err := k.call(ctx, plugin.CallPipeline, plugin.PipelineRequest{Request: k.p.NewRequest(work), Spec: spec, Root: root}, &ans); err != nil || len(ans.Files) != 1 {
+		return []string{fmt.Sprintf("(%s) pipeline: %v (%d files)", name, err, len(ans.Files))}, false
+	}
+
+	text, err := os.ReadFile(filepath.Join(work, filepath.Clean(ans.Files[0]))) //nolint:gosec // inside the call's work directory
+	if err != nil {
+		return []string{fmt.Sprintf("(%s) %v", name, err)}, false
+	}
+
+	r := taskRunner{spec: spec, runner: k.o.Path, work: k.WorkDir(), installs: installsOf(spec)}
+	runs := runTasks(ctx, r, text)
+
+	r.tampered, r.work = true, k.WorkDir()
+	tampered := runTasks(ctx, r, text)
+
+	var out []string
+
+	for _, key := range slices.Sorted(maps.Keys(runs.byTask)) {
+		where := fmt.Sprintf("(%s) job %s, task %s: ", name, strings.SplitN(key, "\n", 2)[0], runs.byTask[key].task)
+
+		if p := runs.byTask[key].unfetched(); p != "" {
+			out = appendNew(out, where+p)
+		}
+
+		// a task handed the tools by an earlier one, which checked them, may use them as they are
+		if t := tampered.byTask[key]; !runs.byTask[key].handed && len(runs.byTask[key].calls) > 0 && t != nil && len(t.calls) > 0 {
+			out = appendNew(out, where+"it ran with a tool that doesn't match its line in the list beside it")
+		}
+	}
+
+	return out, len(runs.byTask) > 0
 }
 
 // bySums is the spec with the first tool which picks pinned by sums instead of a sha256: by the

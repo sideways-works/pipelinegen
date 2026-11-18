@@ -39,7 +39,7 @@ func fakes(kind string) map[string]plugin.Handler {
 		return bookkeepingFake(kind)
 	}
 
-	if slices.Contains([]string{"runner-listed", "runner-sha256-only", "runner-list-dropped"}, kind) {
+	if slices.Contains([]string{"runner-listed", "runner-sha256-only", "runner-list-dropped", "runner-unchecked"}, kind) {
 		return sumsFake(kind)
 	}
 

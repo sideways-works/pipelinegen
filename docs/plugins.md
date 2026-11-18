@@ -610,7 +610,11 @@ fixture tree of its own. It checks:
   names already beside the tool as `tools/plugins/<name>.SHA256SUMS`: each
   task must get as far as calling the tool, or exit 0, and leave the list
   matching the pin and the tool matching its line in it, so a runner that
-  checks only a `sha256` fails. A
+  checks only a `sha256` fails. Run again with each such tool changed so
+  that it no longer matches its line, a task that fetches the tools itself
+  (one not handed `tools` as an input) and called the tool before must
+  not call it, so a runner that keeps a tool with no `sha256` unchecked
+  fails too. A
   runner must report `placement`; when the config the kit is
   given has a `placement`, the pipeline written with it must be the one
   written without it but for worker tags and the gets a moved step needs

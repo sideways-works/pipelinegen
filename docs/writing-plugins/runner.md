@@ -313,7 +313,10 @@ script's calls are. The kit runs them once more with a stand-in plugin
 pinned by `sums` and no `sha256`, and once with your runner pinned so, the list
 beside it as `tools/plugins/<name>.SHA256SUMS`: each task must get as far
 as calling the tool, or exit 0, with the list still matching the pin and
-the tool its line in it.
+the tool its line in it. Run again with the tool changed so that it no
+longer matches its line, a task that fetches the tools itself (one not
+handed `tools` as an input) and called the tool must refuse it and call
+nothing.
 [Conformance](../plugins.md#conformance) has the full list.
 
 A tool's repository names the program it holds. A repository named

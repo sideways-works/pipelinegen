@@ -15,7 +15,8 @@ import (
 
 // fetchScript checks each plugin a release pins in tools/plugins, as a task that fetched it
 // would: by its line in the list beside it when it is pinned by sums, else by its sha256. The
-// sha256-only kind reads no list, and the dropped kind removes the list once it checked by it.
+// sha256-only kind reads no list, the dropped kind removes the list once it checked by it, and the
+// unchecked kind keeps a tool with no sha256 unchecked.
 // It then calls the tool by a path the kit can't read.
 func fetchScript(kind string) string {
 	sums := `if [ "$sums" != - ]; then
@@ -29,6 +30,9 @@ func fetchScript(kind string) string {
 		sums = ""
 	case "runner-list-dropped":
 		sums += `  rm -f "$f.SHA256SUMS"
+`
+	case "runner-unchecked":
+		sums = `[ "$sha" = - ] && continue
 `
 	}
 
@@ -96,6 +100,10 @@ func TestAToolPinnedBySumsIsCheckedByItsList(t *testing.T) {
 	for kind, want := range map[string][]string{
 		"runner-listed":      nil,
 		"runner-sha256-only": {"(a plugin pinned by sums) job main-go, task start: exit 1: no checksum for tools/plugins/github", "(the runner pinned by sums) job main-go, task start: exit 1: no checksum for tools/plugins/runner"},
+		"runner-unchecked": {
+			"(a plugin pinned by sums) job main-go, task start: it ran with a tool that doesn't match its line in the list beside it",
+			"(the runner pinned by sums) job main-go, task start: it ran with a tool that doesn't match its line in the list beside it",
+		},
 		"runner-list-dropped": {
 			"(a plugin pinned by sums) job main-go, task start: tools/plugins/github.SHA256SUMS isn't the list the pin's sums names",
 			"(the runner pinned by sums) job main-go, task start: tools/plugins/runner.SHA256SUMS isn't the list the pin's sums names",
