@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // mainBranch is the branch a patch release is cut from.
@@ -75,6 +74,15 @@ func atOriginMain(ctx context.Context, o IO, dir string) error {
 		return err
 	}
 
+	status, err := output(ctx, dir, "git", "status", "--porcelain")
+	if err != nil {
+		return err
+	}
+
+	if status != "" {
+		return refuse("%s has changes that aren't committed:\n%s", dir, status)
+	}
+
 	checkout := []string{"checkout", "-q", mainBranch}
 	if !quiet(ctx, dir, "git", "rev-parse", "-q", "--verify", "refs/heads/"+mainBranch) {
 		checkout = []string{"checkout", "-q", "-b", mainBranch, "origin/" + mainBranch}
@@ -88,44 +96,44 @@ func atOriginMain(ctx context.Context, o IO, dir string) error {
 		return refuse("%s: main is not at origin/main and doesn't fast-forward to it", dir)
 	}
 
-	status, err := output(ctx, dir, "git", "status", "--porcelain")
-	if err != nil {
-		return err
-	}
-
-	if status != "" {
-		return refuse("%s has changes that aren't committed:\n%s", dir, status)
-	}
-
 	return nil
 }
 
-// tagHead tags main's head as tag, and each nested module released with it as SUB/tag, and pushes
-// those tags alone; a tag that exists is left as it is, since a pushed tag never moves.
+// tagHead tags main's head as tag, and each nested module released with it as SUB/tag, unless tag
+// exists (a pushed tag never moves), and pushes those tags: again on every run, so a push that
+// failed before is made up, and a remote tag of the same name elsewhere fails it.
 func tagHead(ctx context.Context, o IO, dir, tag string) error {
-	if hasTag(ctx, dir, tag) {
-		_, err := fmt.Fprintf(o.Stderr, "%s is tagged already\n", tag)
-
-		return err //nolint:wrapcheck // the run's own output
-	}
-
 	subs, err := releasedWith(dir)
 	if err != nil {
 		return err
 	}
 
-	refs := []string{"refs/tags/" + tag}
+	names := []string{tag}
 	for _, sub := range subs {
-		refs = append(refs, "refs/tags/"+sub+"/"+tag)
+		names = append(names, sub+"/"+tag)
 	}
 
-	for _, ref := range refs {
-		if err := o.run(ctx, dir, os.Environ(), "git", "tag", strings.TrimPrefix(ref, "refs/tags/")); err != nil {
-			return err
+	if hasTag(ctx, dir, tag) {
+		if _, err := fmt.Fprintf(o.Stderr, "%s is tagged already\n", tag); err != nil {
+			return err //nolint:wrapcheck // the run's own output
+		}
+	} else {
+		for _, name := range names {
+			if err := o.run(ctx, dir, os.Environ(), "git", "tag", name); err != nil {
+				return err
+			}
 		}
 	}
 
-	return o.run(ctx, dir, os.Environ(), "git", append([]string{"push", "-q", "origin"}, refs...)...)
+	refs := []string{"push", "-q", "origin"}
+
+	for _, name := range names {
+		if hasTag(ctx, dir, name) {
+			refs = append(refs, "refs/tags/"+name)
+		}
+	}
+
+	return o.run(ctx, dir, os.Environ(), "git", refs...)
 }
 
 // verifyDownload downloads the release into a directory of its own and checks it against its

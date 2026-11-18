@@ -100,8 +100,16 @@ func TestPatchTagsBuildsPublishesAndVerifies(t *testing.T) {
 		t.Errorf("the release's SHA256SUMS %q (%v), the build's %q (%v)", published, errA, built, errB)
 	}
 
-	// once more, as after a failed publish: the tag and the build stay, the release is checked
+	// once more, as after a push that failed: the tags stay and are pushed, the build stays, and the
+	// release is checked
+	run(t, origin, "git", "tag", "-d", "v1.2.3", "probe/v1.2.3")
+
 	out, err = patch()
+
+	if tags := run(t, origin, "git", "tag", "--points-at", head); tags != "probe/v1.2.3\nv1.2.3\n" {
+		t.Errorf("origin's tags on main's head after the second run: %q", tags)
+	}
+
 	if err != nil || !strings.Contains(out, "v1.2.3 is tagged already") || !strings.Contains(out, "keeping the build in") ||
 		!strings.Contains(out, "released with exactly these files") || !strings.Contains(out, "verified by download") {
 		t.Errorf("again: %v\n%s", err, out)

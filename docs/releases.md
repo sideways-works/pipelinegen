@@ -164,8 +164,9 @@ with the commands run in a checkout of pipelinegen's `main`:
 to 4 hold: `bazel run //ci/release -- patch <clone> owner/name vX.Y.Z
 <out>`. It fetches `origin` in the clone and refuses a `main` that doesn't
 fast-forward to `origin/main` or a clone with changes not committed. It
-tags `main`'s head and each nested module released with it, and pushes
-those tags alone; a tag that exists stays where it is. It builds into
+tags `main`'s head and each nested module released with it, unless the
+release's tag exists, which never moves, and pushes those tags alone, on
+every run. It builds into
 `<out>`, or keeps the build there from an earlier try, publishes it,
 downloads the release into a directory of its own, checks the files
 against their `SHA256SUMS` and that file against the build's, and prints
