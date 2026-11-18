@@ -1,15 +1,18 @@
 load("@rules_go//go:def.bzl", "go_binary")
 
-# The release command: bazel run //ci/release -- build DIR TAG OUT, and its
-# other forms (docs/releases.md).
+# The release command, with the pinned gh first on PATH:
+# bazel run //ci/release -- build DIR TAG OUT, and its other forms
+# (docs/releases.md).
 go_binary(
     name = "release",
     args = [
         "--go=$(rlocationpath @go_sdk//:bin/go)",
+        "--path=$(rlocationpath //tools:gh)",
         "run",
         "./ci/release",
     ],
     data = [
+        "//tools:gh",
         "@go_sdk//:bin/go",
         "@go_sdk//:files",
     ],

@@ -1,7 +1,7 @@
 module(name = "pipelinegen")
 
-# The tools this repository's `bazel run` targets run (internal/launch), at the versions
-# .tool-versions names; the lint fails when the two disagree.
+# The tools this repository's `bazel run` targets run (internal/launch). Go and golangci-lint
+# are at the versions .tool-versions names; the lint fails when the two disagree.
 
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_go", version = "0.64.1")
@@ -52,4 +52,37 @@ http_archive(
     sha256 = "ee7ec5f3453d15ddf106fae5a4d6c71737712348a979d1fe9cd52ec7ea299bae",
     strip_prefix = "golangci-lint-2.14.0-linux-arm64",
     url = "https://github.com/golangci/golangci-lint/releases/download/v2.14.0/golangci-lint-2.14.0-linux-arm64.tar.gz",
+)
+
+# gh, which the release command publishes with, by the checksums its release lists
+http_archive(
+    name = "gh_darwin_amd64",
+    build_file_content = 'exports_files(["bin/gh"])',
+    sha256 = "2dc7f1fc4761f96732995f6e4f4c6b4d705f2635da4126620c8b30eaa67b9c98",
+    strip_prefix = "gh_2.103.2_macOS_amd64",
+    url = "https://github.com/cli/cli/releases/download/v2.103.2/gh_2.103.2_macOS_amd64.zip",
+)
+
+http_archive(
+    name = "gh_darwin_arm64",
+    build_file_content = 'exports_files(["bin/gh"])',
+    sha256 = "5416000f5d17580a187339e0c4068a01ca5c87f7d4fe6ca64933696f967bc418",
+    strip_prefix = "gh_2.103.2_macOS_arm64",
+    url = "https://github.com/cli/cli/releases/download/v2.103.2/gh_2.103.2_macOS_arm64.zip",
+)
+
+http_archive(
+    name = "gh_linux_amd64",
+    build_file_content = 'exports_files(["bin/gh"])',
+    sha256 = "62ccf747115ddc61237efffdde66a3c8f70ba249433dc64f70801089b59c59c8",
+    strip_prefix = "gh_2.103.2_linux_amd64",
+    url = "https://github.com/cli/cli/releases/download/v2.103.2/gh_2.103.2_linux_amd64.tar.gz",
+)
+
+http_archive(
+    name = "gh_linux_arm64",
+    build_file_content = 'exports_files(["bin/gh"])',
+    sha256 = "4c3e99a50bd8b181a3fe9d69b25dd978bac768148d88f01507c6b4d1ef61a443",
+    strip_prefix = "gh_2.103.2_linux_arm64",
+    url = "https://github.com/cli/cli/releases/download/v2.103.2/gh_2.103.2_linux_arm64.tar.gz",
 )

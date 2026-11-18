@@ -30,6 +30,18 @@ alias(
     visibility = ["//:__subpackages__"],
 )
 
+# The pinned gh (MODULE.bazel) for the machine Bazel runs on.
+alias(
+    name = "gh",
+    actual = select({
+        ":darwin_amd64": "@gh_darwin_amd64//:bin/gh",
+        ":darwin_arm64": "@gh_darwin_arm64//:bin/gh",
+        ":linux_amd64": "@gh_linux_amd64//:bin/gh",
+        ":linux_arm64": "@gh_linux_arm64//:bin/gh",
+    }),
+    visibility = ["//:__subpackages__"],
+)
+
 config_setting(
     name = "darwin_amd64",
     constraint_values = [

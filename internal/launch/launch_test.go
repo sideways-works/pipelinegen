@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/sideways-works/pipelinegen/internal/testenv"
 )
 
 func TestCheckVersions(t *testing.T) {
@@ -27,9 +29,9 @@ func TestChildEnvRunsThePinnedGoAndHidesBazelRun(t *testing.T) {
 	env := ChildEnv([]string{
 		"HOME=/home/x", "PATH=/usr/bin", "GOROOT=/other/go", "GOTOOLCHAIN=auto", "GOFLAGS=-trimpath",
 		"BUILD_WORKSPACE_DIRECTORY=/src", "BUILD_WORKING_DIRECTORY=/src/a", "RUNFILES_DIR=/r", "JAVA_RUNFILES=/r",
-	}, "/sdk/bin/go")
+	}, "/sdk/bin/go", "/gh/bin")
 
-	want := []string{"HOME=/home/x", "GOFLAGS=-trimpath", "PATH=/sdk/bin:/usr/bin", "GOTOOLCHAIN=local"}
+	want := []string{"HOME=/home/x", "GOFLAGS=-trimpath", "PATH=/sdk/bin:/gh/bin:/usr/bin", "GOTOOLCHAIN=local"}
 	if !slices.Equal(env, want) {
 		t.Errorf("got %q, want %q", env, want)
 	}
@@ -104,12 +106,14 @@ const program = `package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
 
 func main() {
 	wd, _ := os.Getwd()
-	fmt.Printf("in %s with %s; workspace %q\n", wd, strings.Join(os.Args[1:], " "), os.Getenv("BUILD_WORKSPACE_DIRECTORY"))
+	gh, _ := exec.LookPath("gh")
+	fmt.Printf("in %s with %s; workspace %q; gh %s\n", wd, strings.Join(os.Args[1:], " "), os.Getenv("BUILD_WORKSPACE_DIRECTORY"), gh)
 	os.Exit(3)
 }
 `
@@ -142,6 +146,19 @@ func TestRunBuildsTheProgramAndRunsItWhereBazelRunStarted(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	gh := filepath.Join(dir, "gh", "bin", "gh")
+	if err := os.MkdirAll(filepath.Dir(gh), 0o750); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testenv.WriteExecutable(t.Context(), gh, []byte("#!/bin/sh\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.Symlink(gh, filepath.Join(runfiles, "gh")); err != nil {
+		t.Fatal(err)
+	}
+
 	var stdout, stderr bytes.Buffer
 
 	l := &Launch{
@@ -150,8 +167,8 @@ func TestRunBuildsTheProgramAndRunsItWhereBazelRunStarted(t *testing.T) {
 		Stdout:     &stdout, Stderr: &stderr,
 	}
 
-	code := l.Main(t.Context(), []string{"--go=go_sdk/bin/go", "run", "./ci/x", "a", "b"})
-	if want := "in " + working + " with a b; workspace \"\"\n"; code != 3 || stdout.String() != want {
+	code := l.Main(t.Context(), []string{"--go=go_sdk/bin/go", "--path=gh", "run", "./ci/x", "a", "b"})
+	if want := "in " + working + " with a b; workspace \"\"; gh " + gh + "\n"; code != 3 || stdout.String() != want {
 		t.Errorf("exit %d, printed %q, want exit 3 and %q\n%s", code, stdout.String(), want, stderr.String())
 	}
 

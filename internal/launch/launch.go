@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const usage = "usage: launch --go=RLOCATION [--lint=RLOCATION] lint | gate [--proof-work DIR] [PACKAGE...] | run PACKAGE [ARG...]"
+const usage = "usage: launch --go=RLOCATION [--lint=RLOCATION] [--path=RLOCATION]... lint | gate [--proof-work DIR] [PACKAGE...] | run PACKAGE [ARG...]"
 
 var errUsage = errors.New(usage)
 
@@ -29,6 +29,8 @@ type Launch struct {
 
 	workspace, working string
 	goTool, lint       string
+	// paths are directories that come first on PATH after the Go SDK's, each a tool's (gh).
+	paths []string
 }
 
 // Main runs args (the target's own arguments, then the ones given after `bazel run ... --`) and
@@ -45,13 +47,18 @@ func (l *Launch) Main(ctx context.Context, args []string) int {
 }
 
 func (l *Launch) main(ctx context.Context, args []string) (int, error) {
-	var goPath, lintPath string
+	var (
+		goPath, lintPath string
+		tools            []string
+	)
 
 	for len(args) > 0 {
 		if v, ok := strings.CutPrefix(args[0], "--go="); ok {
 			goPath = v
 		} else if v, ok := strings.CutPrefix(args[0], "--lint="); ok {
 			lintPath = v
+		} else if v, ok := strings.CutPrefix(args[0], "--path="); ok {
+			tools = append(tools, v)
 		} else {
 			break
 		}
@@ -63,7 +70,7 @@ func (l *Launch) main(ctx context.Context, args []string) (int, error) {
 		return 2, errUsage
 	}
 
-	if err := l.setUp(goPath, lintPath); err != nil {
+	if err := l.setUp(goPath, lintPath, tools); err != nil {
 		return 2, err
 	}
 
@@ -96,7 +103,7 @@ func (l *Launch) main(ctx context.Context, args []string) (int, error) {
 	return 2, errUsage
 }
 
-func (l *Launch) setUp(goPath, lintPath string) error {
+func (l *Launch) setUp(goPath, lintPath string, tools []string) error {
 	l.workspace = getenv(l.Env, "BUILD_WORKSPACE_DIRECTORY")
 	if l.workspace == "" {
 		return errors.New("launch: run it with bazel run, which names the checkout in BUILD_WORKSPACE_DIRECTORY") //nolint:err113 // said once, to the person
@@ -114,6 +121,15 @@ func (l *Launch) setUp(goPath, lintPath string) error {
 		if l.lint, err = Rlocation(l.Env, l.Executable, lintPath); err != nil {
 			return err
 		}
+	}
+
+	for _, t := range tools {
+		p, err := Rlocation(l.Env, l.Executable, t)
+		if err != nil {
+			return err
+		}
+
+		l.paths = append(l.paths, filepath.Dir(p))
 	}
 
 	return nil
@@ -200,9 +216,10 @@ func getenv(env []string, name string) string {
 // from it that runs Bazel or reads runfiles of its own must not see them.
 var bazelRun = []string{"BUILD_WORKSPACE_DIRECTORY", "BUILD_WORKING_DIRECTORY", "BUILD_EXECROOT", "BUILD_ID", "JAVA_RUNFILES", "PYTHON_RUNFILES"}
 
-// ChildEnv is env for what a target starts: the pinned Go first on PATH and used as it is (no
-// GOROOT of another SDK, no switch to another toolchain), and nothing of `bazel run`'s own.
-func ChildEnv(env []string, goTool string) []string {
+// ChildEnv is env for what a target starts: the pinned Go first on PATH, then the directories of
+// the other pinned tools, Go used as it is (no GOROOT of another SDK, no switch to another
+// toolchain), and nothing of `bazel run`'s own.
+func ChildEnv(env []string, goTool string, tools ...string) []string {
 	out := make([]string, 0, len(env)+2)
 
 	for _, kv := range env {
@@ -214,7 +231,7 @@ func ChildEnv(env []string, goTool string) []string {
 		out = append(out, kv)
 	}
 
-	path := filepath.Dir(goTool)
+	path := strings.Join(append([]string{filepath.Dir(goTool)}, tools...), string(filepath.ListSeparator))
 	if p := getenv(env, "PATH"); p != "" {
 		path += string(filepath.ListSeparator) + p
 	}
@@ -234,7 +251,7 @@ func (l *Launch) command(ctx context.Context, dir string, env []string, name str
 	return cmd
 }
 
-func (l *Launch) env() []string { return ChildEnv(l.Env, l.goTool) }
+func (l *Launch) env() []string { return ChildEnv(l.Env, l.goTool, l.paths...) }
 
 // build builds the main package pkg of the checkout into a temporary directory, which the caller
 // removes.
