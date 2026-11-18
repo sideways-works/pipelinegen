@@ -659,7 +659,7 @@ func noticeFor(ctx context.Context, o IO, dir, name string) (string, error) {
 		var paths []string
 
 		if len(builds) > 0 {
-			if !exists(filepath.Join(dir, "node_modules")) {
+			if !installed(dir) {
 				if err := (IO{Stdout: discard{}, Stderr: o.Stderr}).run(ctx, dir, os.Environ(), "npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund"); err != nil {
 					return "", err
 				}
@@ -688,4 +688,20 @@ func checkNotice(ctx context.Context, o IO, src, name, notice string) error {
 	}
 
 	return nil
+}
+
+// installed says whether the Node package in dir has its packages installed: in its own
+// node_modules, or in its npm workspace's, beside the lockfile in the nearest directory above.
+func installed(dir string) bool {
+	if exists(filepath.Join(dir, "node_modules")) {
+		return true
+	}
+
+	for d := dir; filepath.Dir(d) != d; d = filepath.Dir(d) {
+		if exists(filepath.Join(d, "package-lock.json")) {
+			return exists(filepath.Join(d, "node_modules"))
+		}
+	}
+
+	return false
 }

@@ -32,6 +32,9 @@ func plugins(t *testing.T) (work, repo, mod string) {
 		"driver/widget/cmd/widget-driver/x.go": program,
 		"driver/widget/probe/go.mod":           "module example.com/plugins/driver/widget/probe\n\ngo 1.23\n",
 		"driver/widget/probe/probe.go":         "package probe\n",
+		// a file the module names for its release, by its path in the module's directory
+		"driver/widget/.pipelinegen-release": "marks/marks.txt\n",
+		"driver/widget/marks/marks.txt":      "marks\n",
 	} {
 		p := filepath.Join(repo, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
@@ -81,7 +84,7 @@ func TestAModuleInADirectoryIsReleasedByItsOwnTag(t *testing.T) {
 	out := filepath.Join(work, "out")
 	sums := run(t, out, "cat", "SHA256SUMS")
 
-	for _, f := range []string{"widget-driver-linux-amd64", "widget-driver-darwin-arm64", "plugin.json", "LICENSE", "NOTICE"} {
+	for _, f := range []string{"widget-driver-linux-amd64", "widget-driver-darwin-arm64", "plugin.json", "LICENSE", "NOTICE", "marks.txt"} {
 		if !strings.Contains(sums, "  "+f+"\n") {
 			t.Errorf("SHA256SUMS lists no %s:\n%s", f, sums)
 		}

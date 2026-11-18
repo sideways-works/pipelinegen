@@ -202,3 +202,26 @@ func TestAWorkspacesPackageTakesItsVersionsFromTheWorkspacesLockfile(t *testing.
 		t.Errorf("notice:\n%s", text)
 	}
 }
+
+func TestAWorkspacesPackageIsInstalledWhereTheWorkspaceIs(t *testing.T) {
+	root := t.TempDir()
+	pkg := filepath.Join(root, "tools", "widget")
+
+	for _, d := range []string{pkg, filepath.Join(root, "node_modules")} {
+		if err := os.MkdirAll(d, 0o750); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if installed(pkg) {
+		t.Error("installed without a lockfile above that says where the workspace is")
+	}
+
+	if err := os.WriteFile(filepath.Join(root, "package-lock.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if !installed(pkg) {
+		t.Error("not installed, though the workspace's node_modules is there")
+	}
+}

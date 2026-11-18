@@ -352,7 +352,8 @@ func releaseExtras(ctx context.Context, src, out string, own, paths []string) er
 			return refuse("two release files are named %s", base)
 		}
 
-		if !quiet(ctx, src, "git", "-C", src, "cat-file", "-e", "HEAD:"+extra) {
+		// ./ names the path from the module's directory, which may be one of the repository's
+		if !quiet(ctx, src, "git", "-C", src, "cat-file", "-e", "HEAD:./"+extra) {
 			return refuse("%s is named for the release but not committed", extra)
 		}
 
@@ -370,7 +371,7 @@ func releaseExtras(ctx context.Context, src, out string, own, paths []string) er
 }
 
 func sameAsCommitted(ctx context.Context, src, file string, data []byte) bool {
-	cmd := exec.CommandContext(ctx, "git", "-C", src, "show", "HEAD:"+file) //nolint:gosec // a path the repository names
+	cmd := exec.CommandContext(ctx, "git", "-C", src, "show", "HEAD:./"+file) //nolint:gosec // a path the repository names
 
 	blob, err := cmd.Output()
 
