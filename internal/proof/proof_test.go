@@ -442,9 +442,17 @@ func TestPins(t *testing.T) {
 	}
 
 	for _, name := range pieces {
-		if p := pins[name]; p.repo == "" || p.version == "" || len(p.sha) != 64 {
+		if p := pins[name]; p.repo == "" || !strings.HasPrefix(p.version, "v") || strings.Contains(p.version, "/") || len(p.sha) != 64 {
 			t.Errorf("%s: %+v", name, p)
 		}
+	}
+
+	if p := pins[pieceSBOM]; p.path != "sbom/go" || p.tag() != "sbom/go/"+p.version {
+		t.Errorf("go-sbom's release in the plugins repository: %+v, tag %s", p, p.tag())
+	}
+
+	if p := pins["pipelinegen"]; p.path != "" || p.tag() != p.version {
+		t.Errorf("pipelinegen's release: %+v, tag %s", p, p.tag())
 	}
 }
 

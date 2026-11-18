@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -54,7 +55,16 @@ var errChecksum = errors.New("checksum differs from the pin")
 
 var pieces = []string{"pipelinegen", pieceSBOM, pieceCorrelator}
 
-type pinned struct{ repo, version, sha string }
+// pinned is a release: a plugin of a repository of several has a path, which starts its tag.
+type pinned struct{ repo, path, version, sha string }
+
+func (p pinned) tag() string {
+	if p.path == "" {
+		return p.version
+	}
+
+	return p.path + "/" + p.version
+}
 
 type run struct {
 	o       Options
@@ -271,9 +281,10 @@ func (r *run) buildTools(ctx context.Context) error {
 	return r.sh(ctx, r.work, r.env, "go", "build", "-C", r.o.Root, "-tags", "pipelinegen_forward", "-buildvcs=false", "-o", r.walk, "./cmd/pipelinegen")
 }
 
-// readPins reads ci/proof/pins: name, repository, tag, checksum.
-func readPins(path string) (map[string]pinned, error) {
-	f, err := os.Open(path) //nolint:gosec // the checkout's own pins
+// readPins reads ci/proof/pins: name, repository, tag, checksum; a tag such as sbom/go/v0.4.0 is
+// the release v0.4.0 of the plugin at sbom/go.
+func readPins(file string) (map[string]pinned, error) {
+	f, err := os.Open(file) //nolint:gosec // the checkout's own pins
 	if err != nil {
 		return nil, fmt.Errorf("pins: %w", err)
 	}
@@ -290,7 +301,8 @@ func readPins(path string) (map[string]pinned, error) {
 		}
 
 		if _, seen := out[fields[0]]; !seen {
-			out[fields[0]] = pinned{repo: fields[1], version: fields[2], sha: fields[3]}
+			dir, version := path.Split(fields[2])
+			out[fields[0]] = pinned{repo: fields[1], path: strings.TrimSuffix(dir, "/"), version: version, sha: fields[3]}
 		}
 	}
 
@@ -309,7 +321,7 @@ func (r *run) releases(ctx context.Context) error {
 		p := pins[name]
 
 		if r.o.Newest {
-			v, s, err := Newest(ctx, r.o.Token, p.repo, name+"-linux-amd64")
+			v, s, err := Newest(ctx, p.repo, p.path, name+"-linux-amd64")
 			if err != nil {
 				return fmt.Errorf("kit: %w", err)
 			}
@@ -337,7 +349,7 @@ func (r *run) fetch(ctx context.Context, name, dir, copyFrom string) error {
 	out := filepath.Join(dir, name)
 
 	if copyFrom == "" {
-		if err := Fetch(ctx, r.o.Token, p.repo, p.version, name+"-linux-amd64", p.sha, out); err != nil {
+		if err := Fetch(ctx, r.o.Token, p.repo, p.tag(), name+"-linux-amd64", p.sha, out); err != nil {
 			return fmt.Errorf("kit: %w", err)
 		}
 

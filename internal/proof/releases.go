@@ -1,6 +1,7 @@
 package proof
 
 import (
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,9 +11,13 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/sideways-works/pipelinegen/internal/forge"
+	"github.com/sideways-works/plugkit/pin"
 )
 
 // The releases come through GitHub's API: the token goes only in a request's Authorization header, and
@@ -62,23 +67,22 @@ type asset struct {
 	Name string `json:"name"`
 }
 
-func latestOr(ctx context.Context, token, repo, which string) (string, []asset, error) {
-	resp, err := get(ctx, token, apiBase()+"/repos/"+repo+"/releases/"+which, "application/vnd.github+json")
+func tagged(ctx context.Context, token, repo, tag string) ([]asset, error) {
+	resp, err := get(ctx, token, apiBase()+"/repos/"+repo+"/releases/tags/"+tag, "application/vnd.github+json")
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	var rel struct {
-		Tag    string  `json:"tag_name"`
 		Assets []asset `json:"assets"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
-		return "", nil, fmt.Errorf("%s %s: %w", repo, which, err)
+		return nil, fmt.Errorf("%s %s: %w", repo, tag, err)
 	}
 
-	return rel.Tag, rel.Assets, nil
+	return rel.Assets, nil
 }
 
 func download(ctx context.Context, token, repo, tag string, assets []asset, name string) (io.ReadCloser, error) {
@@ -98,7 +102,7 @@ func download(ctx context.Context, token, repo, tag string, assets []asset, name
 // Fetch downloads a release's asset and keeps it only when its checksum is the pinned one; Go's client
 // drops the Authorization header when the download redirects to another host.
 func Fetch(ctx context.Context, token, repo, tag, name, sum, out string) error {
-	_, assets, err := latestOr(ctx, token, repo, "tags/"+tag)
+	assets, err := tagged(ctx, token, repo, tag)
 	if err != nil {
 		return err
 	}
@@ -138,31 +142,31 @@ func Fetch(ctx context.Context, token, repo, tag, name, sum, out string) error {
 	return nil
 }
 
-// Newest is the newest release's tag and the asset's checksum as that
-// release's SHA256SUMS states it.
-func Newest(ctx context.Context, token, repo, name string) (string, string, error) {
-	tag, assets, err := latestOr(ctx, token, repo, "latest")
+// Newest is the newest release of the program at dir in repo (none for a repository of one
+// program) that is no prerelease: its version and the asset's checksum as its SHA256SUMS states it.
+// The listing goes through the forge client, which sends GITHUB_TOKEN to GitHub's API alone.
+func Newest(ctx context.Context, repo, dir, name string) (string, string, error) {
+	c := forge.Client()
+
+	rs, err := forge.Releases(ctx, c, repo, dir)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("%w: %w", errAPI, err)
 	}
 
-	body, err := download(ctx, token, repo, tag, assets, "SHA256SUMS")
+	rel, ok := forge.Newest(rs, false)
+	if !ok {
+		return "", "", fmt.Errorf("%w: %s has no release of %s", errAPI, repo, cmp.Or(dir, name))
+	}
+
+	sums, err := forge.Download(ctx, c, rel, "SHA256SUMS")
 	if err != nil {
-		return "", "", err
-	}
-	defer func() { _ = body.Close() }()
-
-	sums, err := io.ReadAll(io.LimitReader(body, 1<<20))
-	if err != nil {
-		return "", "", fmt.Errorf("%s %s SHA256SUMS: %w", repo, tag, err)
+		return "", "", fmt.Errorf("%w: %w", errAPI, err)
 	}
 
-	for line := range strings.SplitSeq(string(sums), "\n") {
-		f := strings.Fields(line)
-		if len(f) == 2 && strings.TrimPrefix(f[1], "*") == name {
-			return tag, f[0], nil
-		}
+	sum, ok := pin.Listed(sums)[name]
+	if !ok {
+		return "", "", fmt.Errorf("%w: %s %s: SHA256SUMS names no %s", errAPI, repo, rel.Tag, name)
 	}
 
-	return "", "", fmt.Errorf("%w: %s %s: SHA256SUMS names no %s", errAPI, repo, tag, name)
+	return path.Base(rel.Tag), sum, nil
 }
