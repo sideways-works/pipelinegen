@@ -243,29 +243,25 @@ func TestAChangeCannotDeselectItself(t *testing.T) {
 	bz := testrepo.Bazel(t, cache+"/tree")
 	bazelOf := func(dir string) *bazel.Client { c := *bz; c.Dir = dir; return &c }
 
-	// Plan without the check, which the fixture's loose files would turn into a run of everything.
-	p, err := withBaseConfig(t.Context(), cfg, r.Dir, "", base, head, false, func(c *config.Config, _ string, _ *config.Meaning) (*affected.Plan, error) {
-		return affected.Compute(t.Context(), affected.Options{
-			Config: c, Repo: gitx.Repo{Dir: r.Dir}, Cache: cache, Base: base, Head: head, Differ: differ,
-			Bazel: bazelOf, Prepare: noPlugins(t, c, recording.Lists{"dgo/gotests/access_test.go": {}, "dgo/gotests/matrix_test.go": {}}, bazelOf),
+	// a trusted run keeps what the base's config selects of the slices its own config still has
+	for _, trusted := range []bool{false, true} {
+		// Plan without the check, which the fixture's loose files would turn into a run of everything.
+		p, err := withBaseConfig(t.Context(), cfg, r.Dir, "", base, head, trusted, func(c *config.Config, _ string, _ *config.Meaning) (*affected.Plan, error) {
+			return affected.Compute(t.Context(), affected.Options{
+				Config: c, Repo: gitx.Repo{Dir: r.Dir}, Cache: cache, Base: base, Head: head, Differ: differ,
+				Bazel: bazelOf, Prepare: noPlugins(t, c, recording.Lists{"dgo/gotests/access_test.go": {}, "dgo/gotests/matrix_test.go": {}}, bazelOf),
+			})
 		})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if got := selectedIn(p, "dgo"); got != "gotests/access_test.go" {
-		t.Fatalf("dgo selected %q: %s", got, p.Reason)
-	}
-
-	for _, sp := range p.Suites {
-		if sp.Suite != "dgo" {
-			continue
+		if err != nil {
+			t.Fatal(err)
 		}
 
-		rs := sp.Reasons[bazel.SelectorLabel("gotests/access_test.go")]
-		if len(rs) == 0 || rs[len(rs)-1].Kind != affected.KindBaseConfig {
-			t.Fatalf("reasons %+v", rs)
+		if got := selectedIn(p, "dgo"); got != "gotests/access_test.go" {
+			t.Fatalf("trusted %v: dgo selected %q: %s", trusted, got, p.Reason)
+		}
+
+		if rs := reasonsIn(p, "dgo", "gotests/access_test.go"); len(rs) == 0 || rs[len(rs)-1].Kind != affected.KindBaseConfig {
+			t.Fatalf("trusted %v: reasons %+v", trusted, rs)
 		}
 	}
 }

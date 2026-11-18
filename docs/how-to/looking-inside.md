@@ -55,7 +55,7 @@ it prints the reasons, the same ones the comment shows with
 | `plugin` | the config entry of a plugin that binds it, or of a driver that runs it, changed (its pin or its `config`) |
 | `config` | the config changed how it runs: `what` names the part, a suite's step that takes it or a setting every slice of the suite runs with |
 | `sampled` | the suite ran a sample and kept this slice |
-| `base-config` | the base's config selects it: a change that edits the config can add to what runs but never take away from it |
+| `base-config` | the base's config selects it: a change that edits the config can add to what runs but never take away from it. The default branch's own run takes from the base's config only the slices its own config still has in the suite |
 | `cannot-tell` | a correlator couldn't tell what it touched when it last recorded, so it is bound to everything until a recording tells again |
 
 For a slice that was left out it says why:

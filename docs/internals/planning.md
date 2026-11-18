@@ -168,7 +168,13 @@ Bazel's targets that hold the file see it change all the same.
 Then `plan`, `affected` and `why` plan under
 the base's config as well, read as history (`config.ParseHistory`, whose
 problems become warnings), and unite the two plans (`withBaseConfig`): a
-slice only the base's config selects has the reason `base-config`. A base
+slice only the base's config selects has the reason `base-config`. A
+trusted run unites them with `affected.UnionTrusted`: a slice the base's
+config selects is added only when the head's plan of the suite has it
+among its slices (`SuitePlan.Slices`), and a suite only the base's config
+has isn't added at all; each one left out is a warning of the plan, which
+says whether the head's config excludes the slice or no longer has it. A
+proposed change keeps the whole union (`affected.Union`). A base
 config that can't plan (it can't say which suites and test files it had,
 or planning under it fails, on a finding of the check, say) never stops
 the plan: a trusted run (the default branch's own) plans under its own
