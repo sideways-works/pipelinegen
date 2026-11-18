@@ -637,7 +637,12 @@ func withBase(ctx context.Context, cfg *config.Config, trigger, run, base, head 
 		return unfit(err.Error())
 	}
 
-	own = affected.Union(own, byBase)
+	if trusted {
+		own = affected.UnionTrusted(own, byBase, cfg, run)
+	} else {
+		own = affected.Union(own, byBase)
+	}
+
 	if meaning != nil {
 		own.Config, own.ConfigUnderstood = meaning.Parts, meaning.Understood()
 	}

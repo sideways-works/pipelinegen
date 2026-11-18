@@ -488,7 +488,14 @@ config selects carries the reason "selected by the base's configuration";
 a suite only the base's config has runs as the base defined it, and its
 slices whose files are gone are reported as removed. A change can add
 selection but never remove it for itself; a removal takes effect from the
-next change on. How Bazel runs (`bazel`) is taken from the change.
+next change on. A trusted run (the default branch's own) is planned the
+same way, since the config's meaning can change between its base and
+its head, but its config is the branch's: the base's selection adds only
+the slices its config still has in each suite, and no suite its config
+dropped, and the plan's warnings name each one left out. A suite whose
+base predates an exclude would otherwise run the excluded test until the
+suite passed again, which a test that can't pass there never lets it do.
+How Bazel runs (`bazel`) is taken from the change.
 A repository that lists its config in `everything_on` runs everything on
 any change to it, and the union never comes into play; the tool doesn't
 add its config there by itself.

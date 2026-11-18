@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/sideways-works/pipelinegen/internal/bazel"
+	"github.com/sideways-works/pipelinegen/internal/config"
 )
 
 func TestUnionKeepsWhatTheBaseSelects(t *testing.T) {
@@ -43,5 +44,49 @@ func TestUnionKeepsWhatTheBaseSelects(t *testing.T) {
 
 	if len(own.Suites[0].Selected) != 1 || len(own.Suites) != 1 {
 		t.Fatal("Union changed its argument")
+	}
+}
+
+func TestUnionTrustedAddsOnlyWhatTheHeadHas(t *testing.T) {
+	file := func(f string) bazel.Slice { return bazel.Slice{Name: f, Label: bazel.SelectorLabel(f)} }
+	a, b, x, y := file("e2e/a.spec.ts"), file("e2e/b.spec.ts"), file("e2e/x.spec.ts"), file("e2e/y.spec.ts")
+
+	own := &Plan{Warnings: []string{"own"}, Suites: []SuitePlan{
+		{Suite: "e2e", Selected: []bazel.Slice{a}, Untouched: []string{b.Label}, slices: []bazel.Slice{a, b}},
+	}}
+	byBase := &Plan{Suites: []SuitePlan{
+		{Suite: "e2e", All: true, Reason: "MODULE.bazel changed", Selected: []bazel.Slice{a, b, x, y}},
+		{Suite: "old", Selected: []bazel.Slice{a}},
+		{Suite: "idle", Selected: []bazel.Slice{}},
+	}}
+	head := &config.Config{Suites: map[string]config.Suite{"e2e": {Tests: []string{"e2e/*.spec.ts"}, Exclude: []string{"e2e/x.spec.ts"}}}}
+
+	got := UnionTrusted(own, byBase, head, "")
+
+	if len(got.Suites) != 1 {
+		t.Fatalf("suites %+v: a suite the head dropped came back", got.Suites)
+	}
+
+	s := got.Suites[0]
+	if len(s.Selected) != 2 || s.Selected[1].Label != b.Label || len(s.Untouched) != 0 || !s.All {
+		t.Fatalf("e2e: %+v", s)
+	}
+
+	if rs := s.Reasons[b.Label]; len(rs) != 1 || rs[0].Kind != KindBaseConfig {
+		t.Fatalf("reasons of b: %+v", rs)
+	}
+
+	want := []string{
+		"own",
+		"e2e/x.spec.ts: the base's configuration had it in e2e; this commit's configuration excludes it, so it no longer runs there",
+		"e2e/y.spec.ts: the base's configuration had it in e2e; this commit's configuration leaves it out, so it no longer runs there",
+		"suite old: the base's configuration had it; this commit's configuration doesn't, so it no longer runs",
+	}
+	if strings.Join(got.Warnings, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("warnings:\n%s", strings.Join(got.Warnings, "\n"))
+	}
+
+	if len(own.Warnings) != 1 {
+		t.Fatal("UnionTrusted changed its argument")
 	}
 }

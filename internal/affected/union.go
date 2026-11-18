@@ -1,11 +1,14 @@
 package affected
 
 import (
+	"fmt"
 	"maps"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/sideways-works/pipelinegen/internal/bazel"
+	"github.com/sideways-works/pipelinegen/internal/config"
 )
 
 const baseConfigReason = "selected by the base's configuration"
@@ -13,8 +16,26 @@ const baseConfigReason = "selected by the base's configuration"
 // Union plans a change that edits the config: what its own config selects plus what the base's selects
 // in the same change; a slice or suite only the base's selects runs as the base defined it.
 func Union(own, byBase *Plan) *Plan {
+	return union(own, byBase, nil)
+}
+
+// UnionTrusted plans a trusted run whose config edits the base's. Its config is the branch's own, so
+// the base's selection adds only the slices the head's config still has in each suite, and no suite
+// the head's config dropped; the plan names each one it leaves out.
+func UnionTrusted(own, byBase *Plan, head *config.Config, run string) *Plan {
+	return union(own, byBase, &trustedHead{cfg: head, run: run})
+}
+
+// trustedHead is the config of a trusted run's head, which alone says what each suite has.
+type trustedHead struct {
+	cfg *config.Config
+	run string
+}
+
+func union(own, byBase *Plan, head *trustedHead) *Plan {
 	out := *own
 	out.Suites = slices.Clone(own.Suites)
+	out.Warnings = slices.Clone(own.Warnings)
 
 	if byBase.All && !out.All {
 		out.All, out.Reason = true, byBase.Reason+" ("+baseConfigReason+")"
@@ -33,6 +54,12 @@ func Union(own, byBase *Plan) *Plan {
 
 	for _, bs := range byBase.Suites {
 		i := slices.IndexFunc(out.Suites, func(s SuitePlan) bool { return s.Suite == bs.Suite })
+		if i < 0 && head != nil {
+			out.Warnings = append(out.Warnings, head.suiteGone(bs)...)
+
+			continue
+		}
+
 		if i < 0 {
 			bs.Reason = joinReason(bs.Reason, baseConfigReason)
 			bs.Reasons = baseReasons(bs.Selected, nil)
@@ -42,6 +69,10 @@ func Union(own, byBase *Plan) *Plan {
 			continue
 		}
 
+		var notes []string
+
+		bs.Selected, notes = head.keep(out.Suites[i], bs.Selected)
+		out.Warnings = append(out.Warnings, notes...)
 		out.Suites[i] = unionSuite(out.Suites[i], bs)
 	}
 
@@ -184,4 +215,82 @@ func joinReason(r, more string) string {
 	}
 
 	return r + "; " + more
+}
+
+// keep is what of the base's selection in a suite the head's config still has in it, and a note of
+// what it left out; without a trusted head it keeps everything.
+func (h *trustedHead) keep(own SuitePlan, selected []bazel.Slice) ([]bazel.Slice, []string) {
+	if h == nil {
+		return selected, nil
+	}
+
+	member := map[string]bool{}
+	for _, sl := range own.slices {
+		member[sl.Label] = true
+	}
+
+	var (
+		kept              []bazel.Slice
+		excluded, leftOut []string
+	)
+
+	s := h.cfg.Suites[own.Suite]
+
+	for _, sl := range selected {
+		switch {
+		case member[sl.Label]:
+			kept = append(kept, sl)
+		case excludes(s, sl):
+			excluded = append(excluded, sl.Name)
+		default:
+			leftOut = append(leftOut, sl.Name)
+		}
+	}
+
+	if !h.cfg.RunCovers(h.run, own.Suite) {
+		return kept, nil
+	}
+
+	var notes []string
+	if len(excluded) > 0 {
+		notes = append(notes, leftOutNote(excluded, own.Suite, true))
+	}
+
+	if len(leftOut) > 0 {
+		notes = append(notes, leftOutNote(leftOut, own.Suite, false))
+	}
+
+	return kept, notes
+}
+
+func excludes(s config.Suite, sl bazel.Slice) bool {
+	if sl.Label == bazel.SelectorLabel(sl.Name) {
+		return matchAny(s.Exclude, sl.Name)
+	}
+
+	return s.ExcludesTarget(sl.Label)
+}
+
+func leftOutNote(names []string, suite string, excluded bool) string {
+	it, runs := "it", "it no longer runs there"
+	if len(names) > 1 {
+		it, runs = "them", "they no longer run there"
+	}
+
+	how := "leaves " + it + " out"
+	if excluded {
+		how = "excludes " + it
+	}
+
+	return fmt.Sprintf("%s: the base's configuration had %s in %s; this commit's configuration %s, so %s", strings.Join(names, ", "), it, suite, how, runs)
+}
+
+// suiteGone notes a suite the base's config has and the head's doesn't, when the base's selected
+// something in it.
+func (h *trustedHead) suiteGone(bs SuitePlan) []string {
+	if len(bs.Selected) == 0 && len(bs.WholeSuite) == 0 || !h.cfg.RunCovers(h.run, bs.Suite) {
+		return nil
+	}
+
+	return []string{fmt.Sprintf("suite %s: the base's configuration had it; this commit's configuration doesn't, so it no longer runs", bs.Suite)}
 }

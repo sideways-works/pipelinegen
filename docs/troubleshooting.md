@@ -124,6 +124,13 @@ The slice is either under `selected` with its reasons or under
    for the run itself, and `pipelinegen lists show --slice <name>` shows
    what the slice was recorded touching.
 
+On the default branch's own run, a slice the base's config had in the
+suite and the commit's config excludes or no longer has doesn't run there,
+and the plan's warnings say so: `<slice>: the base's configuration had it
+in <suite>; this commit's configuration excludes it, so it no longer runs
+there`. `affected` and `why --base` plan as a pull request does, so they
+still select it, with the reason `base-config`.
+
 What to do: an untouched slice means nothing it depends on changed, by the
 graph and by its recording. If it should have run, an edge is missing:
 
