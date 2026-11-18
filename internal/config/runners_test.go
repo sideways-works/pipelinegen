@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	concourseRunner = "  - {name: concourse, kind: runner, repository: s/pipelinegen-runner-concourse, release: {version: v1, sha256: \"4444444444444444444444444444444444444444444444444444444444444444\"}, config: {placement: {default: [big]}}}\n"
-	piperunRunner   = "  - {name: piperun, kind: runner, repository: s/pipelinegen-runner-piperun, release: {version: v1, sha256: \"5555555555555555555555555555555555555555555555555555555555555555\"}, config: {target: \"1.2.0\"}}\n"
+	concourseRunner = "  - {name: concourse, kind: runner, repository: s/plugins, path: runner/concourse, release: {version: v1, sha256: \"4444444444444444444444444444444444444444444444444444444444444444\"}, config: {placement: {default: [big]}}}\n"
+	piperunRunner   = "  - {name: piperun, kind: runner, repository: s/plugins, path: runner/piperun, release: {version: v1, sha256: \"5555555555555555555555555555555555555555555555555555555555555555\"}, config: {target: \"1.2.0\"}}\n"
 	twoRuns         = `runs:
   pr: {trigger: {pull_requests: {base: main}}, compare: merged_target, select: affected, suites: {e2e: {}}PR}
   main: {trigger: {branch: main}, compare: last_passed, select: affected, suites: {e2e: {}}MAIN}

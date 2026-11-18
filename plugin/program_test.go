@@ -4,12 +4,12 @@ import "testing"
 
 func TestARepositoryNamesItsProgramKindFirst(t *testing.T) {
 	for repository, want := range map[string]string{
-		"sideways-works/pipelinegen-sbom-go":                   "go-sbom",
-		"sideways-works/pipelinegen-correlator-react":          "react-correlator",
-		"sideways-works/pipelinegen-runner-concourse":          "concourse-runner",
-		"sideways-works/pipelinegen-driver-go":                 "go-driver",
-		"sideways-works/pipelinegen-connector-github":          "github-connector",
-		"sideways-works/pipelinegen-correlator-oapi-codegen":   "oapi-codegen-correlator",
+		"o/pipelinegen-sbom-go":                                "go-sbom",
+		"o/pipelinegen-correlator-react":                       "react-correlator",
+		"o/pipelinegen-runner-concourse":                       "concourse-runner",
+		"o/pipelinegen-driver-go":                              "go-driver",
+		"o/pipelinegen-connector-github":                       "github-connector",
+		"o/pipelinegen-correlator-oapi-codegen":                "oapi-codegen-correlator",
 		"https://github.com/o/pipelinegen-sbom-go.git":         "go-sbom",
 		"git@github.com:o/pipelinegen-correlator-gorm.git":     "gorm-correlator",
 		"o/pipelinegen-sbom-go/":                               "go-sbom",

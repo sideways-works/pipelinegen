@@ -99,7 +99,7 @@ func TestAGroupIsMadeForANewRepository(t *testing.T) {
 
 func TestARepositoryPluginIsAnEntryOfItsOwn(t *testing.T) {
 	golden(t, "config.yaml", "flat", func(d *Doc) error {
-		return d.AddFlat([]Field{{"name", "shell"}, {"kind", "driver"}, {"repository", "sideways-works/pipelinegen-driver-shell"}, {"release", release{"v0.2.1", sum4}}})
+		return d.AddFlat([]Field{{"name", "shell"}, {"kind", "driver"}, {"repository", "o/shell-driver"}, {"release", release{"v0.2.1", sum4}}})
 	})
 }
 

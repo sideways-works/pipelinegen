@@ -5,7 +5,7 @@ plugins:
   # Go: what exists and who uses it
   - name: go-sbom
     kind: sbom
-    repository: sideways-works/pipelinegen-sbom-go
+    repository: o/go-sbom
     release: {version: v0.2.1, sha256: 559212b2dbb6a47da7ee56ff68c2320b0bf8afce883886477871192545f3a832}
     config: {modules: [.]}
 
@@ -26,7 +26,7 @@ plugins:
           sums: 3333333333333333333333333333333333333333333333333333333333333333
   - name: shell
     kind: driver
-    repository: sideways-works/pipelinegen-driver-shell
+    repository: o/shell-driver
     release: {version: v0.2.1, sums: "4444444444444444444444444444444444444444444444444444444444444444"}
 
 runs: {}

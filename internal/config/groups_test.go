@@ -60,6 +60,21 @@ func TestAPathNamesAPluginOfAMonorepo(t *testing.T) {
 		t.Fatalf("a deeper path names %s", got)
 	}
 
+	for dir, want := range map[string]string{
+		"driver/go":               "go-driver",
+		"sbom/go":                 "go-sbom",
+		"correlator/oapi-codegen": "oapi-codegen-correlator",
+		"runner/concourse":        "concourse-runner",
+		"connector/github":        "github-connector",
+		"":                        "pipelinegen-plugins",
+	} {
+		for _, repository := range []string{"sideways-works/pipelinegen-plugins", "https://github.com/sideways-works/pipelinegen-plugins.git"} {
+			if got := ProgramOf(repository, dir); got != want {
+				t.Errorf("%s at %q names %s, want %s", repository, dir, got, want)
+			}
+		}
+	}
+
 	for _, p := range []string{"/driver/go", "driver/go/", "../go", "driver/../go", "driver//go", "driver/.go"} {
 		_, err := Parse([]byte(withRuns + "plugins:\n  - {name: x, kind: driver, repository: o/r, path: \"" + p + "\", release: {version: v1, sha256: " + sumA + "}}\n"))
 		if err == nil || !strings.Contains(err.Error(), "a directory of the repository") {

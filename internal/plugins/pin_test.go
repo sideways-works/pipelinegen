@@ -39,7 +39,7 @@ func TestBothSpellingsOfARepositoryPinTheSameBuild(t *testing.T) {
 
 	var keys []string
 
-	for _, repository := range []string{"sideways-works/go-sbom", "sideways-works/pipelinegen-sbom-go", "https://github.com/sideways-works/pipelinegen-sbom-go.git"} {
+	for _, repository := range []string{"o/go-sbom", "o/pipelinegen-sbom-go", "https://github.com/o/pipelinegen-sbom-go.git"} {
 		p := plugin(repository)
 
 		if got, err := PinnedSum(p, dir); err != nil || got != sum {
@@ -63,7 +63,7 @@ func TestBothSpellingsOfARepositoryPinTheSameBuild(t *testing.T) {
 		t.Errorf("the spellings key their answers apart: %v", keys)
 	}
 
-	for _, repository := range []string{"sideways-works/pipelinegen-go-sbom", "sideways-works/pipelinegen-correlator-go"} {
+	for _, repository := range []string{"o/pipelinegen-go-sbom", "o/pipelinegen-correlator-go"} {
 		if _, err := PinnedSum(plugin(repository), dir); !errors.Is(err, ErrNotListed) {
 			t.Errorf("%s: %v, want %v", repository, err, ErrNotListed)
 		}
