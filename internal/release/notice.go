@@ -279,7 +279,8 @@ func GoNotice(ctx context.Context, dir, name string, mains []string) (string, er
 }
 
 // NodeNotice is the NOTICE of a Node repository's release of the program name, whose bundle includes the
-// packages at the lockfile paths given (node_modules/x).
+// packages at the paths given, from dir (node_modules/x). A package of an npm workspace has no lockfile
+// of its own: the workspace's, in the nearest directory above that has one, names the versions.
 func NodeNotice(dir, name string, paths []string) (string, error) {
 	var lock struct {
 		Packages map[string]struct {
@@ -287,7 +288,12 @@ func NodeNotice(dir, name string, paths []string) (string, error) {
 		} `json:"packages"`
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "package-lock.json")) //nolint:gosec // the package's own lockfile
+	lockDir := dir
+	for !exists(filepath.Join(lockDir, "package-lock.json")) && filepath.Dir(lockDir) != lockDir {
+		lockDir = filepath.Dir(lockDir)
+	}
+
+	data, err := os.ReadFile(filepath.Join(lockDir, "package-lock.json")) //nolint:gosec // the package's or its workspace's lockfile
 	if err == nil {
 		err = json.Unmarshal(data, &lock)
 	}
@@ -313,7 +319,14 @@ func NodeNotice(dir, name string, paths []string) (string, error) {
 	n.header(name, "release files", own)
 
 	for _, p := range third {
-		pkg, ok := lock.Packages[p]
+		key := p
+		if lockDir != dir {
+			if rel, err := filepath.Rel(lockDir, filepath.Join(dir, p)); err == nil {
+				key = filepath.ToSlash(rel)
+			}
+		}
+
+		pkg, ok := lock.Packages[key]
 		if !ok {
 			return "", refuseNotice("package-lock.json has no %s", p)
 		}

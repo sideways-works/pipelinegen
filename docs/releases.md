@@ -64,7 +64,10 @@ commit, so a Go program records the repository's commit as its
 `vcs.revision`; it records the version as its module's when the
 repository's root has a `go.mod` that names the repository. Every build
 leaves out a `go.work` (`GOWORK=off`): a module is released as it stands
-alone. `publish` takes the whole tag, as GitHub names the release.
+alone. `publish` takes the whole tag, as GitHub names the release. A Node
+package of an npm workspace installs with the workspace (`npm ci` in its
+directory installs the workspace's lockfile at its root), and its
+`NOTICE` takes each bundled package's version from that lockfile.
 
 A Go module with `./cmd/NAME` releases every other main package under
 `cmd/` beside it, each as a program of its directory's name, in the same

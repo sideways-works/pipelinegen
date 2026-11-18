@@ -174,3 +174,31 @@ func TestARepositoryWithoutAnOriginIsNamedByItsDirectory(t *testing.T) {
 		t.Errorf("notice: %v\n%s", err, text)
 	}
 }
+
+func TestAWorkspacesPackageTakesItsVersionsFromTheWorkspacesLockfile(t *testing.T) {
+	root := t.TempDir()
+
+	for name, content := range map[string]string{
+		"package-lock.json":             `{"packages": {"node_modules/left-pad": {"version": "1.3.0"}}}`,
+		"node_modules/left-pad/LICENSE": "left-pad's licence\n",
+		"tools/widget/package.json":     `{"name": "@owner/widget"}`,
+	} {
+		p := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.WriteFile(p, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	text, err := NodeNotice(filepath.Join(root, "tools", "widget"), "widget", []string{"../../node_modules/left-pad"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(text, "left-pad 1.3.0\n") || !strings.Contains(text, "left-pad's licence") {
+		t.Errorf("notice:\n%s", text)
+	}
+}
