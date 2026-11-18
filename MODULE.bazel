@@ -1,1 +1,55 @@
 module(name = "pipelinegen")
+
+# The tools this repository's `bazel run` targets run (internal/launch), at the versions
+# .tool-versions names; the lint fails when the two disagree.
+
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_go", version = "0.64.1")
+
+go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(
+    name = "go_sdk",
+    sdks = {
+        "darwin_amd64": ("go1.27.1.darwin-amd64.tar.gz", "8f8f52c6649542cf027bbc9b9c68d1ec042f9f34808a40413f0b8b3f66f3caa4"),
+        "darwin_arm64": ("go1.27.1.darwin-arm64.tar.gz", "ee215d57e0ec269c60cc9ceca68e6bda321ba9ee5afe24f4b0988703c2d87d12"),
+        "linux_amd64": ("go1.27.1.linux-amd64.tar.gz", "63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445"),
+        "linux_arm64": ("go1.27.1.linux-arm64.tar.gz", "3450b45a3f9ee8568792736a5c5e70a1f2e9b36c35a8f74958c03e51d7d92bec"),
+    },
+    version = "1.27.1",
+)
+use_repo(go_sdk, "go_sdk")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+# golangci-lint's release archives, by the checksums its release lists
+http_archive(
+    name = "golangci_lint_darwin_amd64",
+    build_file_content = 'exports_files(["golangci-lint"])',
+    sha256 = "a5667c1c3536be1740133213e1e822bfb8f0d98ea12903174d6d5f635e4ed68d",
+    strip_prefix = "golangci-lint-2.14.0-darwin-amd64",
+    url = "https://github.com/golangci/golangci-lint/releases/download/v2.14.0/golangci-lint-2.14.0-darwin-amd64.tar.gz",
+)
+
+http_archive(
+    name = "golangci_lint_darwin_arm64",
+    build_file_content = 'exports_files(["golangci-lint"])',
+    sha256 = "5ef5f36a7147e91dc58ef9ef4d11bb7bad5ead0c76eb6c01327a73c641d1dcc3",
+    strip_prefix = "golangci-lint-2.14.0-darwin-arm64",
+    url = "https://github.com/golangci/golangci-lint/releases/download/v2.14.0/golangci-lint-2.14.0-darwin-arm64.tar.gz",
+)
+
+http_archive(
+    name = "golangci_lint_linux_amd64",
+    build_file_content = 'exports_files(["golangci-lint"])',
+    sha256 = "ab90aeb7b066f92a33415b638a50fe5344bbb75a0d32ad30cc248d88f81032ab",
+    strip_prefix = "golangci-lint-2.14.0-linux-amd64",
+    url = "https://github.com/golangci/golangci-lint/releases/download/v2.14.0/golangci-lint-2.14.0-linux-amd64.tar.gz",
+)
+
+http_archive(
+    name = "golangci_lint_linux_arm64",
+    build_file_content = 'exports_files(["golangci-lint"])',
+    sha256 = "ee7ec5f3453d15ddf106fae5a4d6c71737712348a979d1fe9cd52ec7ea299bae",
+    strip_prefix = "golangci-lint-2.14.0-linux-arm64",
+    url = "https://github.com/golangci/golangci-lint/releases/download/v2.14.0/golangci-lint-2.14.0-linux-arm64.tar.gz",
+)

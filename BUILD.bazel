@@ -1,3 +1,5 @@
+load("@rules_go//go:def.bzl", "go_library")
+
 # This repository's own targets; pipelinegen.yaml says how each suite runs.
 # Every _test.go file is a slice of the go suite, owned by :code and bound
 # by what it ran (go-correlator); the
@@ -26,7 +28,8 @@ filegroup(
 
 # golangci-lint over every package and pipelinegen's own check of this
 # repository: the lint suite's one slice. A change to the code, the tests,
-# the ignore files or the config, which the check reads, selects it.
+# the ignore files or the config, which the check reads, or to the target
+# that runs them and its pinned tools, selects it.
 filegroup(
     name = "lint",
     srcs = [".golangci.yml"],
@@ -35,6 +38,7 @@ filegroup(
         ".gitignore",
         "pipelinegen.yaml",
         ":code",
+        "//tools:lint",
     ] + glob(
         [
             "cmd/**/*_test.go",
@@ -59,7 +63,11 @@ filegroup(
             "bazel-*/**",
         ],
     ),
-    data = [":example"],
+    data = [
+        ":example",
+        "//ci/launch:files",
+        "//tools:files",
+    ],
     tags = ["slice-pipelinegen-lint"],
 )
 
@@ -129,6 +137,17 @@ filegroup(
 filegroup(
     name = "release",
     srcs = glob(["ci/release/**"]),
+)
+
+# The library of the launcher every `bazel run` target is (ci/launch).
+go_library(
+    name = "launch",
+    srcs = glob(
+        ["internal/launch/*.go"],
+        exclude = ["**/*_test.go"],
+    ),
+    importpath = "github.com/sideways-works/pipelinegen/internal/launch",
+    visibility = ["//:__subpackages__"],
 )
 
 # Prose, read by people and by the docs check.

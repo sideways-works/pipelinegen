@@ -1,0 +1,69 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+# golangci-lint over every package with a cache of its own, then
+# pipelinegen's check of the checkout: bazel run //tools:lint
+go_binary(
+    name = "lint",
+    args = [
+        "--go=$(rlocationpath @go_sdk//:bin/go)",
+        "--lint=$(rlocationpath :golangci-lint)",
+        "lint",
+    ],
+    data = [
+        ":golangci-lint",
+        "@go_sdk//:bin/go",
+        "@go_sdk//:files",
+    ],
+    embed = ["//ci/launch:lib"],
+    visibility = ["//:__subpackages__"],
+)
+
+# The pinned golangci-lint (MODULE.bazel) for the machine Bazel runs on.
+alias(
+    name = "golangci-lint",
+    actual = select({
+        ":darwin_amd64": "@golangci_lint_darwin_amd64//:golangci-lint",
+        ":darwin_arm64": "@golangci_lint_darwin_arm64//:golangci-lint",
+        ":linux_amd64": "@golangci_lint_linux_amd64//:golangci-lint",
+        ":linux_arm64": "@golangci_lint_linux_arm64//:golangci-lint",
+    }),
+    visibility = ["//:__subpackages__"],
+)
+
+config_setting(
+    name = "darwin_amd64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+config_setting(
+    name = "darwin_arm64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:aarch64",
+    ],
+)
+
+config_setting(
+    name = "linux_amd64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+config_setting(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:aarch64",
+    ],
+)
+
+filegroup(
+    name = "files",
+    srcs = glob(["**"]),
+    visibility = ["//:__pkg__"],
+)

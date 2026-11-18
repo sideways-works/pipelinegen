@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+# The main package of every `bazel run` target of this repository, each
+# target giving it its own arguments.
+go_library(
+    name = "lib",
+    srcs = ["main.go"],
+    importpath = "github.com/sideways-works/pipelinegen/ci/launch",
+    visibility = ["//:__subpackages__"],
+    deps = ["//:launch"],
+)
+
+filegroup(
+    name = "files",
+    srcs = glob(["**"]),
+    visibility = ["//:__subpackages__"],
+)
