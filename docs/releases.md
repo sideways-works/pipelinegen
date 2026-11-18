@@ -11,13 +11,14 @@ bazel run //ci/release -- publish REPO TAG OUT   # attach OUT to TAG's GitHub re
 bazel run //ci/release -- tested  REPO COMMIT CONTEXT...   # fail unless one of these statuses passed on COMMIT
 bazel run //ci/release -- notice  DIR            # write the NOTICE the release of the checkout in DIR needs
 bazel run //ci/release -- patch   DIR REPO TAG OUT   # tag main, build, publish and check by download
+bazel run //ci/release -- tagged  SOURCE REPO OUT CONTEXT...   # the release job: tested, build and publish the head's version tag
 ```
 
 The target builds the command with the Go SDK that `MODULE.bazel` pins
 and runs it where `bazel run` was started, so relative paths mean what
-they say; it puts that SDK first on `PATH`, so the release is built with
-it too. The pipeline's `release` job, which has no Bazel, runs the same
-command as `go run ./ci/release`.
+they say. It puts that SDK first on `PATH`, so the release is built with
+it too, and after it the gh that `MODULE.bazel` pins, which `tested`,
+`publish` and `patch` call.
 
 A release is made only from a commit that a run of every test passed on.
 pipelinegen's everyday runs select the tests a change reaches, so only its
@@ -110,7 +111,11 @@ release holds exactly this build and fails if it doesn't.
 
 For this repository, a version tag (`v1.2.3`) pushed on `main` starts the
 `release` job of its pipeline (`ci/root.yml`, `ci/release.yml`), which
-runs both steps with the release command from `main`. A repository without a
+runs `tagged` with the release command from `main`: it takes the version
+tag on the tagged commit, a candidate's never, checks that the nightly
+passed there, builds and publishes. The job gets bazelisk from Go's module
+proxy, and Bazel builds the command without the token, which only the
+command's own process gets. A repository without a
 pipeline is released by hand. So is this one when the job can't run soon:
 pause the `release` job, publish by hand, then unpause it, and its build
 confirms the release ("released with exactly these files"). Without the
