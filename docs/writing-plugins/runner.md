@@ -104,7 +104,11 @@ such a runner would put every step on untagged workers. Choose words that
 fit the CI system: concourse-runner's are a default and rules for kinds of
 step (`pipeline`, `planning`, `checks`, `suite`, `bookkeeping`), of a
 suite and a run. A placement changes where a step runs and nothing else:
-never which steps there are, what they run or what they hold. Refuse what
+never which steps there are, what they run or what they hold. A step
+moved to another worker may need its inputs and image fetched there: add
+a copy of the job's get of each under a name of its own, never
+triggering, and point the task's `image` and `input_mapping` at the
+copies. Refuse what
 you can't follow when asked for the pipeline (an unknown key or kind, a
 run or suite the spec lacks, a rule that never places a step); `pipelinegen
 check` asks the runner too, when it is at hand, so the config's author
@@ -285,7 +289,10 @@ and, run with a stand-in for the tool that exits 4 for a report, exits 4
 itself, so a step that could not write the run's records fails its job
 whatever else of its failures the pipeline tolerates;
 with the placement of the config the kit is given, the pipeline is the
-same but for worker tags;
+same but for worker tags and the gets a moved step needs on its worker
+(a copy of a get the job has, under a name of its own and never
+triggering, named only by a task's `image` and `input_mapping` in place of
+the get it copies);
 every `pipelinegen` call must name a command,
 subcommand and flags the tool has, every step must mount what its call
 reads and keep what it writes, and the pipeline may reference no var but

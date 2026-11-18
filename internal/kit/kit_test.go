@@ -35,6 +35,10 @@ func TestMain(m *testing.M) {
 }
 
 func fakes(kind string) map[string]plugin.Handler {
+	if strings.HasPrefix(kind, "runner-bookkeeping") {
+		return bookkeepingFake(kind)
+	}
+
 	switch kind {
 	case "runner", "runner-more", "runner-ignores", "runner-notices", "runner-sums":
 		return map[string]plugin.Handler{

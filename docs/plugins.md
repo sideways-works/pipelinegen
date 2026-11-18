@@ -607,7 +607,12 @@ fixture tree of its own. It checks:
   runs the repository's code (the pushing var no job that does). A
   runner must report `placement`; when the config the kit is
   given has a `placement`, the pipeline written with it must be the one
-  written without it but for worker tags. The connector variant's pipeline sweeps the changes (`unplanned`),
+  written without it but for worker tags and the gets a moved step needs
+  on its worker: a get the placement adds fetches a resource the pipeline
+  declares as a get of the same job already does (the same `passed`,
+  `params` and `version`) under a name of its own, never triggers, and
+  only a task's `image` and `input_mapping` may name it, in place of the
+  get it copies. The connector variant's pipeline sweeps the changes (`unplanned`),
   plans them in two steps (`plan --out`, `plan --from`), and has no
   resource of the CI system's own pull request support. Each call names a command, subcommand and flags the tool
   running the kit has. Each step mounts every directory its call reads,
@@ -1323,7 +1328,8 @@ the repository's own parts merged in.
   A runner reports the capability `placement` to say it does;
   `pipelinegen pipeline` refuses a runner without it, which would put
   every step on untagged workers. A placement moves steps between workers
-  and changes nothing else in the pipeline. The runner refuses a placement
+  and changes nothing else in the pipeline but the gets a moved step
+  needs fetched on its worker. The runner refuses a placement
   it can't follow (an unknown kind of step, a run or suite the spec lacks,
   a rule an earlier one makes unreachable) when asked for the pipeline,
   and `pipelinegen check` asks it when it is at hand.

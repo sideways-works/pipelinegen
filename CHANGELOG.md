@@ -27,6 +27,7 @@ minor version may change the config or the protocol.
 
 ### Fixed
 
+- The kit's placement check lets a placement add the gets a moved task needs on its worker, a copy of a get of its job under a name of its own that never triggers, named by the task's `image` and `input_mapping`, so concourse-runner's `bookkeeping` rules no longer fail it. Anything else that differs still fails it, and the check now names where the pipelines differ.
 - The command driver finds a bare command such as `bazelisk` on the step's PATH, which puts the tools first, rather than on pipelinegen's own, so a `run: command` step can name a tool the task fetched.
 - The kit's placement check renders the pipeline without the placement the same way as with it, its tools at the checksums the kit places, so a runner that writes its tools' checksums into the pipeline no longer fails it.
 - A trusted run (the default branch's own) whose config differs from its base's no longer runs what its config dropped: the base's config adds only the slices and whole-suite checks the head's config still has in each suite, and no suite the head's config removed, and the plan warns of each one left out (`<slice>: the base's configuration had it in <suite>; this commit's configuration excludes it, so it no longer runs there`). A suite whose base predated an exclude ran the excluded test until it passed, and a test that can't pass there kept it failing. A pull request keeps the whole union, so it still can't deselect its own tests
