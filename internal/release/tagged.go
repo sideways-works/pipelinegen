@@ -12,14 +12,15 @@ var releaseTag = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+$`)
 
 // Tagged releases the version tag (v1.2.3, never a candidate) on the head of the checkout in source
 // to repo, as the pipeline's release job does: only when one of the contexts passed on that commit,
-// built into out and then published.
+// built into out and then published. A module in a directory of the checkout (source) releases its
+// tag DIR/v1.2.3.
 func Tagged(ctx context.Context, o IO, source, repo, out string, contexts []string) error {
-	source, err := filepath.Abs(source)
+	root, sub, err := place(ctx, source)
 	if err != nil {
 		return fmt.Errorf("tagged: %w", err)
 	}
 
-	tags, err := output(ctx, source, "git", "-C", source, "tag", "--points-at", "HEAD")
+	tags, err := output(ctx, root, "git", "-C", root, "tag", "--points-at", "HEAD")
 	if err != nil {
 		return err
 	}
@@ -27,7 +28,12 @@ func Tagged(ctx context.Context, o IO, source, repo, out string, contexts []stri
 	var tag string
 
 	for t := range strings.SplitSeq(tags, "\n") {
-		if releaseTag.MatchString(t) {
+		v, ok := t, sub == ""
+		if !ok {
+			v, ok = strings.CutPrefix(t, sub+"/")
+		}
+
+		if ok && releaseTag.MatchString(v) {
 			tag = t
 
 			break
@@ -37,6 +43,8 @@ func Tagged(ctx context.Context, o IO, source, repo, out string, contexts []stri
 	if tag == "" {
 		return refuse("no version tag on the head of %s", source)
 	}
+
+	source = filepath.Join(root, filepath.FromSlash(sub))
 
 	commit, err := output(ctx, source, "git", "-C", source, "rev-parse", "HEAD")
 	if err != nil {

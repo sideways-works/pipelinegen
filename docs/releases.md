@@ -8,6 +8,7 @@ checkout:
 ```sh
 bazel run //ci/release -- build   DIR TAG OUT    # build TAG of the checkout in DIR into OUT
 bazel run //ci/release -- publish REPO TAG OUT   # attach OUT to TAG's GitHub release of REPO
+bazel run //ci/release -- check   DIR REPO TAG   # fail unless REPO's release of TAG is a fresh build of it, byte for byte
 bazel run //ci/release -- tested  REPO COMMIT CONTEXT...   # fail unless one of these statuses passed on COMMIT
 bazel run //ci/release -- notice  DIR            # write the NOTICE the release of the checkout in DIR needs
 bazel run //ci/release -- patch   DIR REPO TAG OUT   # tag main, build, publish and check by download
@@ -43,6 +44,27 @@ its own name:
 | a Go module with `./cmd/NAME` | `NAME-linux-amd64`, `NAME-linux-arm64`, `NAME-darwin-amd64` and `NAME-darwin-arm64`, static (`CGO_ENABLED=0`, `-trimpath`, no build id) |
 | a Go module whose root package is `main` | the same, NAME being the program the module path's last element names rather than the repository's, so a renamed repository changes its name in `go.mod` alone |
 | a Node package whose `build` script writes `dist/NAME.mjs` | `NAME.mjs`, one bundled file |
+
+DIR may also be a module's directory inside a checkout: a repository
+that holds several plugins, each a module of its own
+(`sideways-works/pipelinegen-plugins`, with `driver/go`, `sbom/ts` and
+the others). Such a module is released on its own, from a tag
+`DIR/vX.Y.Z` (`driver/go/v0.4.0`; `build`, `check` and `patch` take the
+whole tag or the version alone), and a module nested in it with
+`DIR/SUB/vX.Y.Z` on the same commit. The release carries the module's own
+`LICENSE` and `NOTICE`, or the repository's where the module has none,
+and its `CHANGELOG.md` entry when it has one. The module names its
+program, not the repository: a Node package by its package name without
+its scope (`@sideways-works/ts-sbom` holds `ts-sbom`), a Go module by its
+one main package under `cmd/`, or, among several, the one its module path
+names (`.../driver/go` holds `go-driver`), or by its module path when its
+root package is the program. The programs report the version, `v0.4.0`,
+not the tag. The build runs in that directory of the clone of the tagged
+commit, so a Go program records the repository's commit as its
+`vcs.revision`; it records the version as its module's when the
+repository's root has a `go.mod` that names the repository. Every build
+leaves out a `go.work` (`GOWORK=off`): a module is released as it stands
+alone. `publish` takes the whole tag, as GitHub names the release.
 
 A Go module with `./cmd/NAME` releases every other main package under
 `cmd/` beside it, each as a program of its directory's name, in the same
@@ -176,7 +198,16 @@ every run. It builds into
 downloads the release into a directory of its own, checks the files
 against their `SHA256SUMS` and that file against the build's, and prints
 the checksum of `SHA256SUMS`. Run it again after a failure: it picks up
-where it stopped.
+where it stopped. For a module in a directory, `<clone>` is that
+directory (`<clone>/driver/go`), and `patch` tags `driver/go/vX.Y.Z` and
+each nested module's tag under it.
+
+`check` builds a published release's tag afresh, as `build` does, then
+downloads the release and fails unless its files match their
+`SHA256SUMS` and that file is the fresh build's: every released file,
+a Node plugin's `.mjs` included, holds the code of its tag. `tagged`
+takes a module's directory too, and then releases the version tag of that
+directory on the head (`driver/go/vX.Y.Z`), never another module's.
 
 A pushed tag is never moved or deleted, and a published release is never
 changed. A wrong release gets a new version.

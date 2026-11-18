@@ -17,33 +17,33 @@ const mainBranch = "main"
 // for a patch release: main must be origin's main and the clone clean. The tag goes on main's head,
 // with the tag of each nested module released with it, and both are pushed, unless the tag is there
 // already. The build goes into out, unless out holds one from an earlier try; then it is published
-// to repo (owner/name), downloaded again and checked against the build's SHA256SUMS.
+// to repo (owner/name), downloaded again and checked against the build's SHA256SUMS. A module in a
+// directory of the clone (dir) is tagged DIR/vX.Y.Z, its nested modules under it.
 func Patch(ctx context.Context, o IO, dir, repo, tag, out string) error {
-	if !versionTag.MatchString(tag) {
-		return refuse("%s is no version tag (v1.2.3, or v1.2.3-rc.1 for a candidate)", tag)
+	m, err := locate(ctx, dir, tag)
+	if err != nil {
+		return err
 	}
 
-	dir, err := filepath.Abs(dir)
-	if err == nil {
-		out, err = filepath.Abs(out)
-	}
-
+	out, err = filepath.Abs(out)
 	if err != nil {
 		return fmt.Errorf("patch: %w", err)
 	}
+
+	dir, tag = m.repo, m.tag
 
 	if err := atOriginMain(ctx, o, dir); err != nil {
 		return err
 	}
 
-	if err := tagHead(ctx, o, dir, tag); err != nil {
+	if err := tagHead(ctx, o, m); err != nil {
 		return err
 	}
 
 	if exists(filepath.Join(out, sumsFile)) {
 		_, err = fmt.Fprintf(o.Stderr, "keeping the build in %s\n", out)
 	} else {
-		err = Build(ctx, o, dir, tag, out)
+		err = Build(ctx, o, m.dir(dir), tag, out)
 	}
 
 	if err != nil {
@@ -99,18 +99,20 @@ func atOriginMain(ctx context.Context, o IO, dir string) error {
 	return nil
 }
 
-// tagHead tags main's head as tag, and each nested module released with it as SUB/tag, unless tag
-// exists (a pushed tag never moves), and pushes those tags: again on every run, so a push that
-// failed before is made up, and a remote tag of the same name elsewhere fails it.
-func tagHead(ctx context.Context, o IO, dir, tag string) error {
-	subs, err := releasedWith(dir)
+// tagHead tags main's head with the module's tag, and each nested module released with it with its
+// own, unless the tag exists (a pushed tag never moves), and pushes those tags: again on every run, so
+// a push that failed before is made up, and a remote tag of the same name elsewhere fails it.
+func tagHead(ctx context.Context, o IO, m target) error {
+	subs, err := releasedWith(m.dir(m.repo))
 	if err != nil {
 		return err
 	}
 
+	dir, tag := m.repo, m.tag
+
 	names := []string{tag}
 	for _, sub := range subs {
-		names = append(names, sub+"/"+tag)
+		names = append(names, m.nestedTag(sub))
 	}
 
 	if hasTag(ctx, dir, tag) {
@@ -164,4 +166,34 @@ func verifyDownload(ctx context.Context, o IO, repo, tag, out string) (string, e
 	sum := sha256.Sum256(built)
 
 	return hex.EncodeToString(sum[:]), nil
+}
+
+// Check builds the tag of the module in dir afresh and fails unless repo's published release of it
+// holds exactly those files, byte for byte: a released file holds the code of its tag.
+func Check(ctx context.Context, o IO, dir, repo, tag string) error {
+	m, err := locate(ctx, dir, tag)
+	if err != nil {
+		return err
+	}
+
+	work, err := os.MkdirTemp("", "release-check-")
+	if err != nil {
+		return fmt.Errorf("check: %w", err)
+	}
+
+	defer func() { _ = os.RemoveAll(work) }() //nolint:errcheck // a scratch directory
+
+	out := filepath.Join(work, "out")
+	if err := Build(ctx, IO{Stdout: discard{}, Stderr: o.Stderr}, dir, m.tag, out); err != nil {
+		return err
+	}
+
+	sums, err := verifyDownload(ctx, o, repo, m.tag, out)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintf(o.Stdout, "%s %s is byte for byte a fresh build of its tag, SHA256SUMS %s\n", repo, m.tag, sums)
+
+	return err //nolint:wrapcheck // the run's own output
 }

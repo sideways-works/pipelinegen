@@ -14,7 +14,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/release"
 )
 
-const usage = "usage: bazel run //ci/release -- build DIR TAG OUT | publish REPO TAG OUT | tested REPO COMMIT CONTEXT... | notice DIR | patch DIR REPO TAG OUT | tagged SOURCE REPO OUT CONTEXT..."
+const usage = "usage: bazel run //ci/release -- build DIR TAG OUT | publish REPO TAG OUT | check DIR REPO TAG | tested REPO COMMIT CONTEXT... | notice DIR | patch DIR REPO TAG OUT | tagged SOURCE REPO OUT CONTEXT..."
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -27,6 +27,13 @@ func main() {
 func run(ctx context.Context, args []string) int {
 	o := release.IO{Stdout: os.Stdout, Stderr: os.Stderr}
 
+	// a module is released on its own: a go.work in its repository is for development
+	if err := os.Setenv("GOWORK", "off"); err != nil {
+		fmt.Fprintln(os.Stderr, "release:", err)
+
+		return 1
+	}
+
 	var err error
 
 	switch {
@@ -34,6 +41,8 @@ func run(ctx context.Context, args []string) int {
 		err = release.Build(ctx, o, args[1], args[2], args[3])
 	case len(args) == 4 && args[0] == "publish":
 		err = release.Publish(ctx, o, args[1], args[2], args[3])
+	case len(args) == 4 && args[0] == "check":
+		err = release.Check(ctx, o, args[1], args[2], args[3])
 	case len(args) >= 4 && args[0] == "tested":
 		err = release.Tested(ctx, o, args[1], args[2], args[3:])
 	case len(args) == 5 && args[0] == "patch":

@@ -595,12 +595,20 @@ func bundled(ctx context.Context, dir string, builds []json.RawMessage) ([]strin
 // what its programs link, or for what its bundle includes.
 func Notice(ctx context.Context, o IO, dir string) (string, error) {
 	// the repository is named by its directory when it has no origin
-	dir, err := filepath.Abs(dir)
+	repo, sub, err := place(ctx, dir)
 	if err != nil {
-		return "", fmt.Errorf("notice: %w", err)
+		return "", err
 	}
 
-	return noticeFor(ctx, o, dir, plugin.Program(repositoryName(ctx, dir)))
+	m := target{repo: repo, sub: sub}
+	mdir := m.dir(repo)
+
+	name, err := m.program(ctx, mdir)
+	if err != nil {
+		return "", err
+	}
+
+	return noticeFor(ctx, o, mdir, name)
 }
 
 func noticeFor(ctx context.Context, o IO, dir, name string) (string, error) {
@@ -655,13 +663,13 @@ func noticeFor(ctx context.Context, o IO, dir, name string) (string, error) {
 	return "", refuse("%s is neither a Go module with cmd/%s or a main package at its root, nor a Node package", dir, name)
 }
 
-func checkNotice(ctx context.Context, o IO, src, name string) error {
+func checkNotice(ctx context.Context, o IO, src, name, notice string) error {
 	want, err := noticeFor(ctx, o, src, name)
 	if err != nil {
 		return err
 	}
 
-	got, err := os.ReadFile(filepath.Join(src, "NOTICE")) //nolint:gosec // the release's own NOTICE
+	got, err := os.ReadFile(notice) //nolint:gosec // the release's own NOTICE
 	if err != nil || string(got) != want {
 		return refuse("NOTICE is not the one its release files need: write it with `bazel run //ci/release -- notice DIR` in pipelinegen's checkout, and commit it")
 	}

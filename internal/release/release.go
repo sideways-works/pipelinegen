@@ -72,23 +72,32 @@ func hasTag(ctx context.Context, dir, tag string) bool {
 	return quiet(ctx, dir, "git", "-C", dir, "rev-parse", "-q", "--verify", "refs/tags/"+tag+"^{commit}")
 }
 
-func legal(ctx context.Context, dir, tag string) error {
+// legal fails unless the tagged commit holds the LICENSE and NOTICE the release carries: the
+// module's own, or the repository's.
+func legal(ctx context.Context, m target) error {
 	for _, f := range []string{licenseFile, noticeFileName} {
-		if !quiet(ctx, dir, "git", "-C", dir, "cat-file", "-e", "refs/tags/"+tag+"^{commit}:"+f) {
-			return refuse("%s has no %s", tag, f)
+		at := func(p string) bool {
+			return quiet(ctx, m.repo, "git", "-C", m.repo, "cat-file", "-e", "refs/tags/"+m.tag+"^{commit}:"+p)
+		}
+
+		if !at(m.path(f)) && !at(f) {
+			return refuse("%s has no %s", m.tag, f)
 		}
 	}
 
 	return nil
 }
 
-func changelogEntry(ctx context.Context, dir, tag string) error {
-	version := strings.TrimPrefix(tag, "v")
+// changelogEntry fails unless the module's CHANGELOG.md, when it has one, has the release's entry.
+func changelogEntry(ctx context.Context, m target) error {
+	dir, tag := m.repo, m.tag
+
+	version := strings.TrimPrefix(m.version, "v")
 	if i := strings.Index(version, "-rc."); i >= 0 {
 		version = version[:i]
 	}
 
-	ref := "refs/tags/" + tag + "^{commit}:CHANGELOG.md"
+	ref := "refs/tags/" + tag + "^{commit}:" + m.path("CHANGELOG.md")
 	if !quiet(ctx, dir, "git", "-C", dir, "cat-file", "-e", ref) {
 		return nil
 	}
@@ -102,29 +111,26 @@ func changelogEntry(ctx context.Context, dir, tag string) error {
 		return nil
 	}
 
-	if candidate.MatchString(tag) && regexp.MustCompile(`(?m)^## \[Unreleased\]`).MatchString(log) {
+	if candidate.MatchString(m.version) && regexp.MustCompile(`(?m)^## \[Unreleased\]`).MatchString(log) {
 		return nil
 	}
 
 	also := ""
-	if strings.Contains(tag, "-rc") {
+	if strings.Contains(m.version, "-rc") {
 		also = ` or "## [Unreleased]"`
 	}
 
 	return refuse(`CHANGELOG.md at %s has no entry "## [%s]"%s`, tag, version, also)
 }
 
-// Build builds the tag of the repository checked out in dir into out,
-// twice, and prints SHA256SUMS once both builds gave the same files.
+// Build builds the tag of the module in dir, the root of a checkout or a module directory in one,
+// into out, twice, and prints SHA256SUMS once both builds gave the same files. A module directory's
+// tag is DIR/vX.Y.Z, given whole or as its version.
 func Build(ctx context.Context, o IO, dir, tag, out string) error {
 	// absolute, since the builds run in other directories
-	dir, err := filepath.Abs(dir)
-	if err == nil {
-		dir, err = filepath.EvalSymlinks(dir)
-	}
-
+	m, err := locate(ctx, dir, tag)
 	if err != nil {
-		return fmt.Errorf("build: %w", err)
+		return err
 	}
 
 	out, err = filepath.Abs(out)
@@ -133,21 +139,21 @@ func Build(ctx context.Context, o IO, dir, tag, out string) error {
 	}
 
 	switch {
-	case !versionTag.MatchString(tag):
-		return refuse("%s is no version tag (v1.2.3, or v1.2.3-rc.1 for a candidate)", tag)
 	case exists(out):
 		return refuse("%s exists", out)
-	case !hasTag(ctx, dir, tag):
-		return refuse("%s has no tag %s", dir, tag)
+	case !hasTag(ctx, m.repo, m.tag):
+		return refuse("%s has no tag %s", m.repo, m.tag)
 	}
 
-	if err := legal(ctx, dir, tag); err != nil {
+	if err := legal(ctx, m); err != nil {
 		return err
 	}
 
-	if err := changelogEntry(ctx, dir, tag); err != nil {
+	if err := changelogEntry(ctx, m); err != nil {
 		return err
 	}
+
+	tag = m.tag
 
 	check, err := os.MkdirTemp("", "release-check-")
 	if err != nil {
@@ -156,12 +162,12 @@ func Build(ctx context.Context, o IO, dir, tag, out string) error {
 
 	defer func() { _ = os.RemoveAll(check) }() //nolint:errcheck // a scratch directory
 
-	if err := buildOnce(ctx, o, dir, tag, out); err != nil {
+	if err := buildOnce(ctx, o, m, out); err != nil {
 		return err
 	}
 
 	again := filepath.Join(check, "again")
-	if err := buildOnce(ctx, o, dir, tag, again); err != nil {
+	if err := buildOnce(ctx, o, m, again); err != nil {
 		return err
 	}
 

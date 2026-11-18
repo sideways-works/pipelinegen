@@ -35,22 +35,23 @@ const (
 // one path per line; # starts a comment.
 const releaseList = ".pipelinegen-release"
 
-// sourceOf is a fresh clone of dir at the tag in dest, so the build sees
-// exactly the tagged commit and go build can stamp it.
-func sourceOf(ctx context.Context, o IO, dir, tag, dest string) error {
-	if !hasTag(ctx, dir, tag) {
-		return refuse("%s has no tag %s", dir, tag)
+// sourceOf is a fresh clone of the module's repository at its tag in dest, so the build sees
+// exactly the tagged commit and go build stamps it: a module in a directory is built in that
+// directory of the clone, and records the repository's commit.
+func sourceOf(ctx context.Context, o IO, m target, dest string) error {
+	if !hasTag(ctx, m.repo, m.tag) {
+		return refuse("%s has no tag %s", m.repo, m.tag)
 	}
 
-	if err := o.run(ctx, "", os.Environ(), "git", "clone", "-q", "--no-checkout", dir, dest); err != nil {
+	if err := o.run(ctx, "", os.Environ(), "git", "clone", "-q", "--no-checkout", m.repo, dest); err != nil {
 		return err
 	}
 
-	if err := o.run(ctx, "", os.Environ(), "git", "-C", dest, "checkout", "-q", "--detach", tag); err != nil {
+	if err := o.run(ctx, "", os.Environ(), "git", "-C", dest, "checkout", "-q", "--detach", m.tag); err != nil {
 		return err
 	}
 
-	return nestedTags(ctx, dest, tag)
+	return nestedTags(ctx, dest, m)
 }
 
 func moduleLine(goMod string) string {
@@ -68,25 +69,30 @@ func moduleLine(goMod string) string {
 	return ""
 }
 
-// nestedTags: a Go module nested under the root module's path (SUB/go.mod declaring ROOT/SUB) is released
-// with the repository, so its tag SUB/TAG must name the same commit; other nested modules are not.
-func nestedTags(ctx context.Context, src, tag string) error {
-	subs, err := releasedWith(src)
+// nestedTags: a Go module nested under the module's path (SUB/go.mod declaring ROOT/SUB) is released
+// with it, so its tag (SUB/TAG, under the module's directory) must name the same commit; other
+// nested modules are not.
+func nestedTags(ctx context.Context, src string, m target) error {
+	mdir := m.dir(src)
+
+	subs, err := releasedWith(mdir)
 	if err != nil || len(subs) == 0 {
 		return err
 	}
 
-	commit, err := output(ctx, src, "git", "-C", src, "rev-parse", tag+"^{commit}")
+	commit, err := output(ctx, src, "git", "-C", src, "rev-parse", m.tag+"^{commit}")
 	if err != nil {
 		return err
 	}
 
-	root := moduleLine(filepath.Join(src, "go.mod"))
+	root := moduleLine(filepath.Join(mdir, "go.mod"))
 
 	for _, sub := range subs {
-		got, err := output(ctx, src, "git", "-C", src, "rev-parse", "-q", "--verify", "refs/tags/"+sub+"/"+tag+"^{commit}")
+		tag := m.nestedTag(sub)
+
+		got, err := output(ctx, src, "git", "-C", src, "rev-parse", "-q", "--verify", "refs/tags/"+tag+"^{commit}")
 		if err != nil || got != commit {
-			return refuse("the nested module %s/%s needs the tag %s/%s on the commit of %s", root, sub, sub, tag, tag)
+			return refuse("the nested module %s/%s needs the tag %s on the commit of %s", root, sub, tag, m.tag)
 		}
 	}
 
@@ -465,7 +471,7 @@ func repositoryName(ctx context.Context, dir string) string {
 	return strings.TrimSuffix(name, ".git")
 }
 
-func buildOnce(ctx context.Context, o IO, dir, tag, out string) error {
+func buildOnce(ctx context.Context, o IO, m target, out string) error {
 	work, err := os.MkdirTemp("", "release-")
 	if err != nil {
 		return fmt.Errorf("build: %w", err)
@@ -473,12 +479,18 @@ func buildOnce(ctx context.Context, o IO, dir, tag, out string) error {
 
 	defer func() { _ = os.RemoveAll(work) }() //nolint:errcheck // a scratch directory
 
-	src := filepath.Join(work, "src")
-	if err := sourceOf(ctx, o, dir, tag, src); err != nil {
+	root := filepath.Join(work, "src")
+	if err := sourceOf(ctx, o, m, root); err != nil {
 		return err
 	}
 
-	name := plugin.Program(repositoryName(ctx, dir))
+	// the module's directory; the programs report the version, never a directory's tag
+	src, dir, tag := m.dir(root), m.repo, m.version
+
+	name, err := m.program(ctx, src)
+	if err != nil {
+		return err
+	}
 
 	if err := os.MkdirAll(out, 0o750); err != nil {
 		return fmt.Errorf("build: %w", err)
@@ -515,7 +527,7 @@ func buildOnce(ctx context.Context, o IO, dir, tag, out string) error {
 		return refuse("%s is neither a Go module with cmd/%s or a main package at its root, nor a Node package", dir, name)
 	}
 
-	return finish(ctx, o, dir, src, programs, tag, out, arch)
+	return finish(ctx, o, m, root, name, programs, out, arch)
 }
 
 // buildPrograms builds each program for every platform with its describe answer, then the files
@@ -545,21 +557,21 @@ func buildPrograms(ctx context.Context, o IO, src, tag, out, arch string, progra
 	return goExtras(ctx, src, out, own)
 }
 
-func finish(ctx context.Context, o IO, dir, src string, programs []program, tag, out, arch string) error {
+func finish(ctx context.Context, o IO, m target, root, name string, programs []program, out, arch string) error {
 	// the licence, and the notices the programs' third-party code
 	// requires, travel with the files they cover
 	for _, f := range []string{licenseFile, noticeFileName} {
-		if err := copyFile(filepath.Join(src, f), filepath.Join(out, f)); err != nil {
+		if err := copyFile(m.legalFile(root, f), filepath.Join(out, f)); err != nil {
 			return err
 		}
 	}
 
-	if err := checkNotice(ctx, o, src, plugin.Program(repositoryName(ctx, dir))); err != nil {
+	if err := checkNotice(ctx, o, m.dir(root), name, m.legalFile(root, noticeFileName)); err != nil {
 		return err
 	}
 
 	for i, p := range programs {
-		if err := checkProgram(ctx, p, i == 0, tag, out, arch); err != nil {
+		if err := checkProgram(ctx, p, i == 0, m.version, out, arch); err != nil {
 			return err
 		}
 	}
