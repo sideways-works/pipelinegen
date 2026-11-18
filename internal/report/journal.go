@@ -24,6 +24,7 @@ const (
 	eventPartEnd  = "part-end"
 	eventEnd      = "end"
 	eventFlushed  = "flushed"
+	eventForget   = "forget"
 )
 
 // The actions a collector is asked for, as the plugin protocol names them.
@@ -175,12 +176,18 @@ func (j *Journal) Ends() ([]SliceEvent, error) {
 	)
 
 	for _, l := range lines {
-		if l.Slice == nil || l.Event != eventEnd {
+		if l.Slice == nil || l.Event != eventEnd && l.Event != eventForget {
 			continue
 		}
 
 		key := l.Slice.Suite + "/" + l.Slice.Slice
-		if _, ok := last[key]; !ok {
+		if l.Event == eventForget {
+			delete(last, key)
+
+			continue
+		}
+
+		if !slices.Contains(order, key) {
 			order = append(order, key)
 		}
 
@@ -189,12 +196,90 @@ func (j *Journal) Ends() ([]SliceEvent, error) {
 		last[key] = ev
 	}
 
+	return inOrder(order, last), nil
+}
+
+func inOrder(order []string, last map[string]SliceEvent) []SliceEvent {
 	out := make([]SliceEvent, 0, len(order))
+
 	for _, k := range order {
-		out = append(out, last[k])
+		if ev, ok := last[k]; ok {
+			out = append(out, ev)
+		}
 	}
 
-	return out, nil
+	return out
+}
+
+// Unended are the slices the journal holds as started and not ended since.
+func (j *Journal) Unended() ([]SliceEvent, error) {
+	lines, err := j.read()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		order []string
+		open  = map[string]SliceEvent{}
+	)
+
+	for _, l := range lines {
+		if l.Slice == nil {
+			continue
+		}
+
+		key := l.Slice.Suite + "/" + l.Slice.Slice
+
+		switch l.Event {
+		case eventStart:
+			if !slices.Contains(order, key) {
+				order = append(order, key)
+			}
+
+			open[key] = *l.Slice
+		case eventEnd, eventForget:
+			delete(open, key)
+		}
+	}
+
+	return inOrder(order, open), nil
+}
+
+// ForgetIfHeld forgets a slice the journal holds anything of.
+func (r *Reporter) ForgetIfHeld(j *Journal, ev SliceEvent) error {
+	sum, err := j.load()
+	if err != nil {
+		return err
+	}
+
+	if _, ok := sum.Slices[key(ev)]; !ok {
+		return nil
+	}
+
+	return r.Forget(j, []SliceEvent{ev})
+}
+
+// Forget drops what the journal holds of slices its task no longer runs: a piperun session that
+// started again takes none of the items it held unreported, so their starts, parts and times are no
+// longer its own; one that comes back to the session starts anew.
+func (r *Reporter) Forget(j *Journal, evs []SliceEvent) error {
+	if len(evs) == 0 {
+		return nil
+	}
+
+	if _, err := j.load(); err != nil {
+		return err
+	}
+
+	defer j.saveSummary()
+
+	for _, ev := range evs {
+		if err := j.append(journalLine{Event: eventForget, At: r.now(), Slice: &SliceEvent{Suite: ev.Suite, Slice: ev.Slice}}); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func pending(lines []journalLine) ([]SliceEvent, time.Time) {
@@ -221,7 +306,13 @@ func pending(lines []journalLine) ([]SliceEvent, time.Time) {
 		}
 
 		key := l.Slice.Suite + "/" + l.Slice.Slice
-		if _, ok := last[key]; !ok {
+		if l.Event == eventForget {
+			delete(last, key)
+
+			continue
+		}
+
+		if !slices.Contains(order, key) {
 			order = append(order, key)
 		}
 
@@ -230,12 +321,7 @@ func pending(lines []journalLine) ([]SliceEvent, time.Time) {
 		last[key] = ev
 	}
 
-	out := make([]SliceEvent, 0, len(order))
-	for _, k := range order {
-		out = append(out, last[k])
-	}
-
-	return out, since
+	return inOrder(order, last), since
 }
 
 // SetupEnd closes what the batch's setup ran into dir (coverage/_setup) through every collector,

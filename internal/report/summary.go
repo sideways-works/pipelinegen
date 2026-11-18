@@ -51,6 +51,17 @@ func (s *summary) add(l journalLine) {
 	}
 
 	ev := *l.Slice
+
+	if l.Event == eventForget {
+		delete(s.Slices, key(ev))
+
+		if s.Active != nil && same(*s.Active, ev) {
+			s.Active = nil
+		}
+
+		return
+	}
+
 	ss := s.slice(ev)
 
 	if ss.Trouble == "" {

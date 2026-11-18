@@ -496,3 +496,84 @@ func TestABatchClosesEachPartBeforeTheNextStarts(t *testing.T) {
 		t.Fatalf("observed %v, want %v", observed, want)
 	}
 }
+
+func TestAForgottenSliceStartsAnew(t *testing.T) {
+	ctx := t.Context()
+	r, _, c, j := journalSetup(t)
+	r.NoFlush = true
+
+	a, lost := sliceEv(t, "e2e.a", `{"passed": true}`), sliceEv(t, "e2e.lost", `{"passed": true}`)
+
+	if err := r.SetupEnd(ctx, j, t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, step := range []func() error{
+		func() error { return r.Started(ctx, j, a, false, time.Hour) },
+		func() error { _, err := r.Ended(ctx, j, a, time.Hour); return err },
+		func() error { return r.Started(ctx, j, lost, false, time.Hour) },
+	} {
+		c.t = c.t.Add(time.Hour)
+
+		if err := step(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	open, err := j.Unended()
+	if err != nil || len(open) != 1 || open[0].Slice != "e2e.lost" {
+		t.Fatalf("unended: %+v %v", open, err)
+	}
+
+	if err := r.Forget(j, open); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := r.ForgetIfHeld(j, sliceEv(t, "e2e.never", `{}`)); err != nil {
+		t.Fatal(err)
+	}
+
+	if open, err := j.Unended(); err != nil || len(open) != 0 {
+		t.Fatalf("still unended: %+v %v", open, err)
+	}
+
+	sum, err := j.load()
+	if err != nil || sum.Active != nil || sum.Slices["e2e/e2e.lost"] != nil || sum.Slices["e2e/e2e.never"] != nil {
+		t.Fatalf("the summary still holds it: %+v %v", sum, err)
+	}
+
+	// it comes back: one part, timed from its new start
+	c.t = c.t.Add(time.Hour)
+	if err := r.Started(ctx, j, lost, false, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+
+	c.t = c.t.Add(time.Minute)
+	if _, err := r.Ended(ctx, j, lost, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+
+	ends, err := j.Ends()
+	if err != nil || len(ends) != 2 || ends[1].Slice != "e2e.lost" || ends[1].Seconds != 60 || len(ends[1].Parts) != 1 {
+		t.Fatalf("ends: %+v %v", ends, err)
+	}
+
+	// the summary made again from the journal forgets alike
+	if err := os.Remove(j.summaryPath()); err != nil {
+		t.Fatal(err)
+	}
+
+	// a lost slice that never comes back is in nothing a flush writes
+	if err := r.Started(ctx, j, sliceEv(t, "e2e.gone", `{}`), false, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := r.ForgetIfHeld(j, SliceEvent{Suite: "e2e", Slice: "e2e.gone"}); err != nil {
+		t.Fatal(err)
+	}
+
+	states, err := r.Flush(ctx, j)
+	if err != nil || len(states) != 2 || states["e2e/e2e.gone"] != "" {
+		t.Fatalf("flushed: %v %v", states, err)
+	}
+}
