@@ -244,3 +244,31 @@ func TestUpgradeNamesWhatItCantMove(t *testing.T) {
 		t.Fatalf("the config changed: %v", err)
 	}
 }
+
+// A plugin whose releases can't be listed, or whose newest release fails its check, is said and
+// left as it was; the others move, and the command fails at the end.
+func TestUpgradeMovesWhatItCanAndNamesTheRest(t *testing.T) {
+	g := pinsHost(t)
+
+	files := forgetest.Plugin("go-correlator", "go-correlator", "correlator", "v0.1.2", "linux-amd64")
+	files["SHA256SUMS"] = []byte(strings.Repeat("0", 64) + "  go-correlator-linux-amd64\n")
+	g.Release("o/plugins", "correlator/go/v0.1.2", false, files)
+
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, config.FileName), pinsConfig+
+		"  - {name: lint, kind: driver, repository: https://git.example.com/o/lint, release: {version: v1.0.0, sums: 3333333333333333333333333333333333333333333333333333333333333333}}\n")
+
+	stdout, stderr, code := pinsRun(t, "plugin", "upgrade", "--root", root)
+	if code != 1 || !strings.Contains(stderr, "2 of 3 plugins not moved: go-correlator, lint") {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) != 3 || lines[0] != "go-sbom: v0.1.0 -> v0.2.0" ||
+		!strings.HasPrefix(lines[1], "go-correlator: not moved: ") || !strings.Contains(lines[1], "checksum mismatch") ||
+		!strings.HasPrefix(lines[2], "lint: not moved: ") || !strings.Contains(lines[2], "a plain git server") {
+		t.Fatalf("printed:\n%s", stdout)
+	}
+
+	pinsGolden(t, root, "upgraded-partly")
+}

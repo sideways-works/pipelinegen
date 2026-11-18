@@ -79,7 +79,10 @@ prerelease, and prints each plugin's old and new version, or that it is at
 the newest already. Name plugins to move only those
 (`pipelinegen plugin upgrade go-sbom go-correlator`). `--pre` takes a
 prerelease too when it is the newest. Each new release is checked the way
-`add` checks one, and a pin keeps its form: a pin by `sums` gets the new
+`add` checks one. A plugin that can't be moved, because its releases
+can't be listed or its newest release fails the check, is named with the
+reason and keeps its pin; the others still move, and the command exits 1
+at the end. A pin keeps its form: a pin by `sums` gets the new
 `SHA256SUMS`'s checksum, a pin by `sha256` the new `linux-amd64` file's (or
 the Node script's). A plugin pinned by commit is left to you.
 

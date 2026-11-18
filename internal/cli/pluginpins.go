@@ -304,10 +304,13 @@ func pluginUpgrade(ctx context.Context, args []string, stdout io.Writer) error {
 		moved bool
 	)
 
+	var failed []string
+
+	// a plugin that can't be moved is said and left as it was; the others still move
 	for _, p := range targets {
 		line, changed, err := upgradeOne(ctx, k, doc, p, pre)
 		if err != nil {
-			return err
+			failed, line = append(failed, p.Name), fmt.Sprintf("%s: not moved: %v\n", p.Name, err)
 		}
 
 		lines, moved = append(lines, line), moved || changed
@@ -319,7 +322,11 @@ func pluginUpgrade(ctx context.Context, args []string, stdout io.Writer) error {
 		}
 	}
 
-	return say(stdout, "%s", strings.Join(lines, ""))
+	if err := say(stdout, "%s", strings.Join(lines, "")); err != nil || len(failed) == 0 {
+		return err
+	}
+
+	return fmt.Errorf("%w: %d of %d plugins not moved: %s", errPin, len(failed), len(targets), strings.Join(failed, ", "))
 }
 
 // upgradeTargets are the named plugins, or every plugin pinned by a release.
