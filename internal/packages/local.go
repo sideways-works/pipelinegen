@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/container"
+	"github.com/sideways-works/plugkit/container"
 )
 
 // LocalRepository is where the local image store keeps the cached images, each tagged by its key:
@@ -27,7 +27,7 @@ func Local(ctx context.Context, tool, base string, ps config.Packages, log io.Wr
 	}
 
 	r := container.Run{
-		Tool: tool, Image: base, Name: container.Name("packages"), Dir: "/", Keep: true,
+		Tool: tool, Image: base, Name: container.Name("pipelinegen-packages"), Dir: "/", Keep: true,
 		Env: map[string]string{EnvClean: "1"},
 		Cmd: []string{"sh", "-c", Script(ps)},
 	}

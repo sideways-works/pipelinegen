@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/container"
+	"github.com/sideways-works/plugkit/container"
 )
 
 // tool is docker or podman, when it answers; the tests that need it skip without.

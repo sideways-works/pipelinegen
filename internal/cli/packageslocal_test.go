@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/container"
 	"github.com/sideways-works/pipelinegen/internal/packages"
+	"github.com/sideways-works/plugkit/container"
 )
 
 // Steps that run on this machine install nothing: the packages it lacks are named, once a build.
@@ -216,5 +216,17 @@ func TestASuiteWhosePackagesFailIsNotRun(t *testing.T) {
 	var out strings.Builder
 	if err := localSummary(&out, strings.Repeat("a", 40), []suiteTally{tally}, false); err == nil || !strings.Contains(out.String(), "unit: 1 not run: ") {
 		t.Fatalf("%v: %s", err, out.String())
+	}
+}
+
+func TestTheNamedContainerToolMustBeOnPath(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+
+	if _, err := findTool("no-such-tool"); err == nil || !strings.HasPrefix(err.Error(), "--container-tool no-such-tool: ") {
+		t.Fatalf("%v", err)
+	}
+
+	if _, err := findTool(""); !errors.Is(err, container.ErrNoTool) {
+		t.Fatalf("%v", err)
 	}
 }

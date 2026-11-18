@@ -16,10 +16,10 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/container"
 	"github.com/sideways-works/pipelinegen/internal/gitx"
 	"github.com/sideways-works/pipelinegen/internal/packages"
 	"github.com/sideways-works/pipelinegen/plugin"
+	"github.com/sideways-works/plugkit/container"
 	"github.com/sideways-works/plugkit/pin"
 )
 
@@ -221,13 +221,23 @@ func (b *localBuild) inImage(ctx context.Context, img taskImage, kind, dir strin
 
 // packaged pulls img and makes it the image with the suite's packages, once a build: a run makes its
 // tasks' images before its memory check, and the tasks find them made.
+// findTool is the container tool the --container-tool flag names, or else docker or podman.
+func findTool(name string) (string, error) {
+	tool, err := container.Find(name)
+	if err != nil && name != "" {
+		return "", fmt.Errorf("--container-tool %w", err)
+	}
+
+	return tool, err
+}
+
 func (b *localBuild) packaged(ctx context.Context, img taskImage, kind string) (packaged, error) {
 	if p, ok := b.box.made[img.ref]; ok {
 		return p, nil
 	}
 
 	if b.box.tool == "" {
-		tool, err := container.Find(b.box.flags.tool)
+		tool, err := findTool(b.box.flags.tool)
 		if err != nil {
 			return packaged{}, fmt.Errorf("%w: suite %s's %s runs in an image (%s), and %w: install docker or podman, or pass --no-image to run on this machine",
 				errImage, b.suite, kind, img.named, err)
@@ -419,7 +429,7 @@ func (b *localBuild) containerRun(ctx context.Context, img taskImage, kind, dir 
 	maps.Copy(env, b.ownEnv())
 
 	r := container.Run{
-		Tool: b.box.tool, Image: img.ref, Name: container.Name(b.suite + "-" + kind), Dir: dir,
+		Tool: b.box.tool, Image: img.ref, Name: container.Name("pipelinegen-" + b.suite + "-" + kind), Dir: dir,
 		Mounts: mounts, Env: env, User: user, UserNS: userns, Privileged: privileged, Cmd: cmd,
 	}
 
