@@ -1,0 +1,15 @@
+{
+  "label": "internal/cli/data_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-18T17:26:32.898408783Z",
+  "failures": [
+    {
+      "test": "TestABaseConfigIsHistory",
+      "tail": "=== RUN   TestABaseConfigIsHistory\n=== PAUSE TestABaseConfigIsHistory\n=== CONT  TestABaseConfigIsHistory\n    data_test.go:324: dgo selected \"gotests/access_test.go,gotests/matrix_test.go\" (the base df16e1cfaa79 could not be hashed: prepare df16e1cfaa79: data of specs: bazel query: bazelisk query set(//e2e:checkout //e2e:orders) --output=streamed_jsonproto --keep_going=false: exit status 37: $TEST_TMPDIR defined, some defaults will be overridden\n        \n        Server terminated abruptly (error code: 14, error message: 'Socket closed', log file: '/tmp/pipelinegen-test-3849480230/bazel/_bazel_root/8c520d38b16ddfed5f4809fc846d3dad/server/jvm.out') (selected by the base's configuration)): the base's edge must still count\n--- FAIL: TestABaseConfigIsHistory (213.62s)"
+    }
+  ],
+  "seconds": 750.2099999999999,
+  "recorded": true,
+  "cpu_seconds": 436.15108299999997
+}
