@@ -29,6 +29,7 @@ type kitDriver struct {
 	Config  map[string]any       `json:"config"`
 	Setup   map[string]any       `json:"setup"`
 	Prepare map[string]any       `json:"prepare"`
+	Render  *kitRender           `json:"render"`
 }
 
 func (k *kit) driverFixture() (kitDriver, bool) {
@@ -49,6 +50,10 @@ func describeDriver(d plugin.Description) []string {
 
 	if len(d.Verbs) == 0 {
 		problems = append(problems, "a driver names its verbs")
+	}
+
+	if p := plugin.RendersProblem(d.Renders); p != "" {
+		problems = append(problems, "renders: "+p)
 	}
 
 	for _, v := range d.Verbs {
@@ -85,7 +90,15 @@ func (k *kit) driverChecks(ctx context.Context) {
 			k.Check("the fixture exercises every verb the driver declares", "no driver section in %s of --tree, so its verbs never ran", kitFile)
 		}
 
+		if len(k.desc.Renders) > 0 {
+			k.Check(renderCheck, "no driver section in %s of --tree, so render never ran", kitFile)
+		}
+
 		return
+	}
+
+	if len(k.desc.Renders) > 0 {
+		k.driverRender(ctx, f.Render)
 	}
 
 	if k.desc.Validates {

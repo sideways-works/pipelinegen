@@ -196,6 +196,10 @@ func (k *kit) describe(ctx context.Context) bool {
 		problems = append(problems, "observe_reads names an empty key")
 	}
 
+	if d.Kind != plugin.KindDriver && len(d.Renders) > 0 {
+		problems = append(problems, "only a driver renders")
+	}
+
 	if d.Kind == plugin.KindConnector {
 		if len(d.Namespaces) > 0 {
 			problems = append(problems, "a connector owns no namespace")

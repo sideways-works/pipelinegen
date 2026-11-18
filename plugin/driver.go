@@ -77,6 +77,8 @@ type DriverDescription struct {
 	// Validates says the driver answers CallValidate, checking steps' settings at every depth
 	// before anything runs; without it a driver is checked against Settings alone.
 	Validates bool `json:"validates,omitempty"`
+	// Renders are the CI systems the driver answers CallRender for.
+	Renders []Render `json:"renders,omitempty"`
 }
 
 type Routes struct {
@@ -173,7 +175,11 @@ type DriverHandlers struct {
 	// Validate checks a step's settings for a verb without the machine (no tool looked up, no
 	// file read); a SettingError names the place, any other error is the whole step's.
 	Validate func(verb string, settings map[string]any) error
+	// Render answers CallRender for the targets describe's Renders name.
+	Render func(ctx context.Context, req RenderRequest) (RenderAnswer, error)
 }
+
+var errRenders = errors.New("describe names renders, and the driver has no render to answer them")
 
 var ErrNoVerb = errors.New("no such verb")
 
@@ -187,23 +193,15 @@ func ServeDriver(ctx context.Context, args []string, stdin io.Reader, stdout, st
 	}
 
 	if args[0] == CallDescribe {
-		if h.Describe == nil {
-			say(stderr, "no describe")
-
-			return 1
-		}
-
-		d, err := h.Describe()
-		if err == nil {
-			d.Validates = h.Validate != nil
-			err = json.NewEncoder(stdout).Encode(d)
-		}
-
-		return exitFor(stderr, err)
+		return serveDescribe(stdout, stderr, h)
 	}
 
 	if args[0] == CallValidate && h.Validate != nil {
 		return exitFor(stderr, serveValidate(stdin, stdout, h.Validate))
+	}
+
+	if args[0] == CallRender && h.Render != nil {
+		return exitFor(stderr, serveRender(ctx, stdin, stdout, h.Render))
 	}
 
 	known := map[string]bool{CallRun: h.Run != nil, CallSetup: h.Setup != nil, CallPrepare: h.Prepare != nil}
@@ -249,6 +247,26 @@ func ServeDriver(ctx context.Context, args []string, stdin io.Reader, stdout, st
 	}
 }
 
+func serveDescribe(stdout, stderr io.Writer, h DriverHandlers) int {
+	if h.Describe == nil {
+		say(stderr, "no describe")
+
+		return 1
+	}
+
+	d, err := h.Describe()
+	if err == nil && len(d.Renders) > 0 && h.Render == nil {
+		err = errRenders
+	}
+
+	if err == nil {
+		d.Validates = h.Validate != nil
+		err = json.NewEncoder(stdout).Encode(d)
+	}
+
+	return exitFor(stderr, err)
+}
+
 func serveValidate(stdin io.Reader, stdout io.Writer, validate func(string, map[string]any) error) error {
 	var req ValidateRequest
 	if err := json.NewDecoder(stdin).Decode(&req); err != nil {
@@ -265,6 +283,24 @@ func serveValidate(stdin io.Reader, stdout io.Writer, validate func(string, map[
 		}
 
 		answer.Steps = append(answer.Steps, ValidateResult{Problems: SettingProblems(validate(st.Verb, st.Settings))})
+	}
+
+	if err := json.NewEncoder(stdout).Encode(answer); err != nil {
+		return fmt.Errorf("answer: %w", err)
+	}
+
+	return nil
+}
+
+func serveRender(ctx context.Context, stdin io.Reader, stdout io.Writer, render func(context.Context, RenderRequest) (RenderAnswer, error)) error {
+	var req RenderRequest
+	if err := json.NewDecoder(stdin).Decode(&req); err != nil {
+		return fmt.Errorf("request: %w", err)
+	}
+
+	answer, err := render(ctx, req)
+	if err != nil {
+		return err
 	}
 
 	if err := json.NewEncoder(stdout).Encode(answer); err != nil {

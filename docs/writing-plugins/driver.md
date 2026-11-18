@@ -23,7 +23,7 @@ end, since a set-up's stdin stays open until the batch ends. A Go
 driver's `main` is `plugin.ServeDriver`, which does this; `plugin.Serve`
 is for the other kinds. Ignore event kinds and fields you don't know, in
 what you read, as the core ignores them in what you write, so additions
-to protocol 1 break nothing. A driver answers up to five calls:
+to protocol 1 break nothing. A driver answers up to six calls:
 
 - `describe`: as for every plugin, plus the calls it answers (`verbs`),
   what it can run (`routes`), whether a bundle keeps its slices'
@@ -38,6 +38,9 @@ to protocol 1 break nothing. A driver answers up to five calls:
 - `validate`: checks steps' settings, without running anything, for a
   driver that says `validates` (see [settings](#settings)). It is no verb
   of a step.
+- `render`: writes a suite's run step in a CI system's own steps, for a
+  driver whose `describe` names `renders` (see [rendering](#rendering)).
+  It is no verb of a step either.
 
 A driver answers any subset: the go driver answers `run` only, the
 command driver and the shell driver all three. `pipelinegen check` refuses a step that names a
@@ -438,6 +441,75 @@ The request and its answer:
 {"steps":[{"problems":[{"place":"checks[0].timout","problem":"unknown key; the keys of a check are name, run, timeout, need"}]}]}
 ```
 
+## Rendering
+
+A runner normally runs a suite's drivers through `pipelinegen slice run`
+in a container step. A CI system with test plugins of its own can run the
+test tool itself, and a driver that knows how says so in `describe`:
+
+```json
+{"name": "playwright", "kind": "driver", "version": "v0.4.0",
+ "renders": [
+   {"target": "piperun", "versions": ">=1.2 <2", "plugins": {"playwright": ">=1.0 <2"}},
+   {"target": "github-actions", "versions": "*"}
+ ]}
+```
+
+`target` names the CI system. `versions` is a semver range of the
+target's versions the driver renders for: comparators separated by spaces
+must all hold (`>=1.2 <2`), `||` separates alternatives, `!=1.3.2`
+excludes one version, a bare version is exactly that one, and `*` is any;
+a pre-release matches only a range that names a pre-release of the same
+version, as npm reads ranges. `plugins` names the target's own plugins
+the rendered steps use, each with the range of its versions the steps
+work with. A range that doesn't parse fails `describe`'s check, and so
+does a target named twice. `plugin.ServeDriver` refuses a `describe` with
+`renders` from a driver that has no `Render` handler.
+
+The runner calls `render` with one suite's step:
+
+```json
+{"target": "piperun", "target_version": "1.2.0",
+ "suite": "e2e", "step": {"run": "playwright", "with": {"config": "e2e/playwright.config.ts"}},
+ "setup": [{"setup": "command", "with": {"start": ["{prepared}/shop"], "ready": {"http": "http://127.0.0.1:8080/health"}}}],
+ "shape": {"kind": "pool"},
+ "record": true, "observed_by": ["go-correlator", "react-correlator"],
+ "image": "playwright", "packages": ["postgresql-client-17"],
+ "params": {"PROJECTS": "phone-dark,desktop-light"}, "secrets": ["STRIPE_KEY"]}
+```
+
+`shape` is `pool` when the target learns a batch's slices only as it
+expands the step and feeds them in chunks, so the driver writes a
+template, not a list of slices; `batch` is a fixed list, for a target
+without pools. `secrets` are names only: the pipeline is written long
+before any value exists, and the rendered steps name each secret for the
+target to fill in. The answer:
+
+```json
+{"steps": [{"uses": "playwright", "with": {"config": "e2e/playwright.config.ts"}, "secrets": ["STRIPE_KEY"]}],
+ "marks": "protocol", "results": "results",
+ "caches": {"npm": "/root/.npm"}}
+```
+
+`steps` are the target's own steps, each a JSON object of the target's
+schema. `marks` says how the steps report where each slice starts and
+ends: `protocol`, through the target's plugin protocol, or `file`, in a
+marks file the target reads after the step. `results` is the directory,
+inside the step's own, that holds one result file per slice in a batch's
+result format. `caches` are the caches the steps mount, by name, at
+absolute paths.
+
+The runner decides per driver whether to render or to fall back to
+`slice run`, with `plugin.RenderTarget.Choose` in Go. It renders when
+three things hold: the driver's range for the target admits the target
+version the runner writes for, the runner's own range for the driver (if
+it restricts which versions it renders) admits the driver's version, and
+every plugin in `plugins` is pinned in the target's config at a version
+its range admits. Otherwise it falls back, and the pipeline's notices name
+the first of them that failed: `go-driver v0.4.0 renders piperun >=1.3
+<2; this runner targets 1.2.0: fallback`. A missing renderer never fails
+a pipeline.
+
 ## Where a driver runs
 
 A driver runs in the suite's own tasks, on the test machine: `prepare` in
@@ -542,6 +614,28 @@ ok    a recorded bundle of a suite with correlators marks each slice's start and
 ok    a recorded bundle of a suite with correlators, marked, gives each slice its result on its own
 ok    no answer or message carries the token
 ```
+
+For a driver that names `renders`, the `driver` section also has a
+`render` section: per target the `versions` to render for, each inside
+the declared range since a range alone names none, and the `shapes`
+(both when left out), and the suite's `step`, `setup`, `record`,
+`observed_by`, `image`, `packages`, `params` and `secrets` as a request
+carries them:
+
+```json
+{"driver": {"slices": [...], "render": {
+  "targets": {"piperun": {"versions": ["1.2.0", "1.9.3"], "shapes": ["pool"]}},
+  "step": {"run": "go-driver", "with": {"packages": "./..."}},
+  "secrets": ["STRIPE_KEY"]}}}
+```
+
+The kit calls `render` for each target, version and shape, and checks
+that each answer is a render answer and nothing else, with at least one
+step, each a JSON object, `marks` one of the two, `results` a relative
+directory and each cache at an absolute path. Each request names the
+secrets with the kit's canary in their variables, which the driver never
+gets: neither the request nor any answer may carry it. A driver without
+`renders` is never asked to render.
 
 A driver that declares `run`, `setup` or `prepare` and whose fixture has
 no `driver` section fails the kit, and so does one that declares

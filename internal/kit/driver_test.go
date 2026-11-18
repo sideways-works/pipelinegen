@@ -22,12 +22,13 @@ func fakeDriver(kind string) plugin.DriverHandlers {
 		verbs = append(verbs, plugin.CallPrepare)
 	}
 
-	return plugin.DriverHandlers{
+	h := plugin.DriverHandlers{
 		Validate: fakeValidate(kind),
 		Describe: func() (plugin.Description, error) {
 			return plugin.Description{
 				Protocol: plugin.Protocol, Kind: plugin.KindDriver, Name: "fake-driver", Version: "v0",
 				Verbs: verbs, Routes: &plugin.Routes{Files: []string{"**"}}, Apart: kind != "together",
+				Renders: fakeRenders(kind),
 			}, nil
 		},
 		Prepare: func(_ context.Context, req plugin.DriverRequest) error {
@@ -59,6 +60,12 @@ func fakeDriver(kind string) plugin.DriverHandlers {
 			return nil
 		},
 	}
+
+	if strings.HasPrefix(kind, "render") {
+		h.Render = fakeRender(kind)
+	}
+
+	return h
 }
 
 type fakeSettings struct {

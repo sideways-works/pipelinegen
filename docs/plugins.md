@@ -1386,6 +1386,20 @@ answer.
   `problems`, each a `place` in the settings (`checks[2].timout`) and the
   `problem`. It is the check every verb makes of its settings before it
   runs anything, without the machine: `pipelinegen check` calls it.
+- `render`, for a driver whose `describe` names `renders`, writes a
+  suite's run step in a CI system's own steps, so that system runs the
+  test tool itself instead of pipelinegen's `slice run`. A runner calls it
+  while it writes the pipeline, never a step. `renders` lists each
+  `target` (a CI system, such as `piperun`) with `versions`, a semver
+  range of the target's versions, and `plugins`, the target's own plugins
+  the steps use with a range each. The request names the target and its
+  version, the suite, its run step and set-ups as the config writes them,
+  the `shape` (`pool` or `batch`), `record`, `observed_by`, `image`,
+  `packages`, `params`, and the names of the batch's `secrets`, never
+  their values. The answer is the target's `steps`, how they report each
+  slice's start and end (`marks`: `protocol` or `file`), the directory of
+  their per-slice `results`, and the `caches` they mount, by name.
+  [Rendering](writing-plugins/driver.md#rendering) has the shapes.
 
 The rules every driver keeps, which the kit checks:
 
