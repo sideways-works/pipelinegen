@@ -952,9 +952,8 @@ func (s *step) noted(ctx context.Context, j *report.Journal, ev report.SliceEven
 		return report.Running, err
 	}
 
-	// a slice whose start was refused has no recording: its end is refused
-	// the same way, so the batch's end closes it as errored and this step
-	// never calls it passed.
+	// a slice whose start was refused has no recording, and its end is refused alike: the batch's end
+	// closes it as errored, never passed
 	if recording {
 		if err := setupEnded(j); err != nil {
 			return "", err

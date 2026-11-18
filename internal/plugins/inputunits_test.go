@@ -33,12 +33,8 @@ func TestWhatAnInputUnitIsKeyedOn(t *testing.T) {
 	}
 }
 
-// importer is a links correlator with a set per text; b.txt's set names
-// FAKE_UNIT (default a.txt's api unit) as an input unit instead of a.txt,
-// as a Go package names what its imports declare, and the sets of b.txt
-// and doc.txt name the units in FAKE_UNITS too. With FAKE_SHARED every
-// set holds that file too; with FAKE_MARK every set links to doc.txt, an
-// answer other than the one before. Each call's paths go to FAKE_LOG.
+// importer is a links correlator with a set per text: b.txt's names FAKE_UNIT (a.txt's api unit)
+// as an input unit instead of a.txt, as a Go package names what its imports declare.
 func importer() map[string]plugin.Handler {
 	return map[string]plugin.Handler{
 		plugin.CallDescribe: describe(plugin.Description{

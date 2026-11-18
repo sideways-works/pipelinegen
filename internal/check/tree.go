@@ -26,7 +26,6 @@ type Tree struct {
 	Read  func(string) ([]byte, error)
 }
 
-// ErrGit wraps a git command that failed.
 var ErrGit = errors.New("git")
 
 func git(ctx context.Context, root string, args ...string) ([]byte, error) {
@@ -58,9 +57,8 @@ func nulSplit(b []byte) []string {
 	return out
 }
 
-// WorkTree is the work tree at root: the tracked files and the new ones git
-// doesn't ignore, read from disk. A new symlink is left out: a link such as
-// tools/plugins is a tool beside the tree.
+// WorkTree is root's tracked files and the new ones git doesn't ignore, read from disk; a new
+// symlink such as tools/plugins is a tool beside the tree, left out.
 func WorkTree(ctx context.Context, root string) (Tree, error) {
 	tracked, err := git(ctx, root, "ls-files", "-z", "--cached")
 	if err != nil {
@@ -96,7 +94,6 @@ func WorkTree(ctx context.Context, root string) (Tree, error) {
 	return DirTree(root, files), nil
 }
 
-// DirTree reads the given files from the directory root.
 func DirTree(root string, files []string) Tree {
 	return Tree{
 		Files: files,
@@ -111,9 +108,8 @@ func DirTree(root string, files []string) Tree {
 	}
 }
 
-// IndexTree is what the next commit holds: git's index at root. A commit
-// hook checks this, not the work tree, so a change left unstaged can't make
-// a staged one pass. closeFn ends the git process it reads through.
+// IndexTree is git's index at root, which a commit hook checks so an unstaged change can't make a
+// staged one pass; closeFn ends the git process it reads through.
 func IndexTree(ctx context.Context, root string) (tree Tree, closeFn func() error, err error) {
 	out, err := git(ctx, root, "ls-files", "-z", "--cached", "--stage")
 	if err != nil {

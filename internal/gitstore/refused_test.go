@@ -16,10 +16,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/tries"
 )
 
-// refusing gives a bare remote a pre-receive hook that refuses pushes the
-// way a host busy with another push to the same repository does: with
-// firstK > 0, the first firstK pushes it gets; with firstK 0, the first push
-// of every writer (told apart by the first ref it pushes).
+// refusing gives a bare remote a pre-receive hook that refuses pushes as a busy host does: the first
+// firstK pushes, or with firstK 0 the first push of every writer (told apart by its first ref).
 func refusing(t *testing.T, firstK int) string {
 	t.Helper()
 
@@ -48,9 +46,8 @@ exit 1
 	return remote
 }
 
-// dropping gives a bare remote a pre-receive hook that drops the first k
-// pushes' connections, as a host busy with other pushes does: nothing of
-// such a push is stored.
+// dropping gives a bare remote a pre-receive hook that drops the first k pushes' connections, as a
+// busy host does: nothing of such a push is stored.
 func dropping(t *testing.T, k int) string {
 	t.Helper()
 
@@ -205,9 +202,8 @@ func TestOnlyALostLeaseIsStale(t *testing.T) {
 	}
 }
 
-// hostRefusing puts a git first on PATH that answers the first k pushes
-// as the hosting service did, with "[remote rejected] (<why>)" for every
-// ref and nothing stored, and runs the real git for everything else.
+// hostRefusing puts a git first on PATH that answers the first k pushes as the hosting service did,
+// "[remote rejected] (<why>)" for every ref with nothing stored, and runs the real git otherwise.
 func hostRefusing(t *testing.T, k int, why string) {
 	t.Helper()
 
@@ -271,9 +267,8 @@ func syncBranch(s *Store) {
 	}
 }
 
-// readsDropping puts a git first on PATH whose reads of a batch's ref
-// (ls-remote) lose their connection the first k times, and runs the real
-// git for everything else.
+// readsDropping puts a git first on PATH whose reads of a batch's ref (ls-remote) lose their
+// connection the first k times, and runs the real git otherwise.
 func readsDropping(t *testing.T, k int) {
 	t.Helper()
 

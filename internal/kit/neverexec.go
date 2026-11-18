@@ -49,9 +49,8 @@ func markerFiles(marks string) map[string]string {
 	}
 }
 
-// neverExecutes runs the plugin's tree calls and observe on a copy of the
-// fixture holding files that leave a marker when run. It proves only what
-// these files would show.
+// neverExecutes runs the plugin's tree calls and observe on a fixture copy holding files that leave a
+// marker when run; it proves only what these files would show.
 func (k *kit) neverExecutes(ctx context.Context) {
 	marks, tree := k.work(), k.work()
 

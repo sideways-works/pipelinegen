@@ -24,9 +24,8 @@ type Snapshot struct {
 	Commit string                   `json:"commit"`
 	Slices map[string][]bazel.Slice `json:"slices"`
 	Owned  map[string]bool          `json:"owned"`
-	// DepsTargets counts the targets of the deps repository bazel-diff
-	// hashed: a snapshot with fewer than the tree should hold was made
-	// from a half-written repository and is never trusted.
+	// DepsTargets counts the deps repository's targets bazel-diff hashed: a snapshot with fewer than
+	// the tree should hold was made from a half-written repository and is never trusted.
 	DepsTargets int         `json:"deps_targets"`
 	Macros      *MacroCheck `json:"macros,omitempty"`
 	Hashes      string      `json:"-"`
@@ -49,9 +48,8 @@ func prepareTreeKeys(ctx context.Context, o Options, commit string) (string, str
 		return "", "", nil, err
 	}
 
-	// the slices depend on the config too: a plan under the base's config
-	// never takes a snapshot made under the change's; and on the tools: a
-	// snapshot an older build or another bazel-diff made hashes differently
+	// the slices depend on the config too, so a plan under the base's config never takes one made
+	// under the change's; and on the tools: an older build or another bazel-diff hashes differently
 	cfg, err := configKey(struct {
 		Config any
 		Tools  string
@@ -131,10 +129,8 @@ func slicesOnly(ctx context.Context, o Options, commit string) (*Snapshot, error
 	return &Snapshot{Commit: commit, Slices: all}, nil
 }
 
-// snapshot returns a commit's snapshot, from the cache when an earlier plan
-// made it with the same key and it holds the deps repository it should. A
-// snapshot is made only from a tree that stayed as Prepare left it while
-// bazel-diff hashed it.
+// snapshot returns a commit's snapshot, from the cache when made with the same key and holding the deps
+// repository it should; one is made only from a tree that stayed as Prepare left it while hashed.
 func snapshot(ctx context.Context, o Options, commit string) (*Snapshot, error) {
 	key, prepared, tests, err := prepareTreeKeys(ctx, o, commit)
 	if err != nil {

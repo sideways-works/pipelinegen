@@ -117,7 +117,6 @@ func encode(v any) ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-// Start sets every suite's status and the run's, and makes the comment.
 func (r *Reporter) Start(ctx context.Context) error {
 	if err := r.ID.Check(); err != nil {
 		return err
@@ -138,9 +137,8 @@ type SliceEvent struct {
 	// Result is the slice's result file; a missing one makes the slice
 	// errored.
 	Result string `json:"result,omitempty"`
-	// Source is the tree under test, and Coverage the slice's coverage
-	// directory, then the batch's setup's; a recording run records only when
-	// it is set.
+	// Source is the tree under test, and Coverage the slice's coverage directory, then the batch's
+	// setup's; a recording run records only when it is set.
 	Source       string   `json:"source,omitempty"`
 	Coverage     []string `json:"coverage,omitempty"`
 	CoverageRoot string   `json:"coverage_root,omitempty"`
@@ -159,7 +157,6 @@ type SliceEvent struct {
 	Used *Use `json:"used,omitempty"`
 }
 
-// Slice reports one slice; see Slices.
 func (r *Reporter) Slice(ctx context.Context, ev SliceEvent) (State, error) {
 	states, err := r.Slices(ctx, []SliceEvent{ev})
 	if err != nil {
@@ -169,9 +166,8 @@ func (r *Reporter) Slice(ctx context.Context, ev SliceEvent) (State, error) {
 	return states[ev.Suite+"/"+ev.Slice], nil
 }
 
-// Slices writes each slice's ref, its state and in a recording run its
-// recording, in one atomic push, and shows the run again. It returns the
-// states written, by "<suite>/<slice>".
+// Slices writes each slice's ref, its state and in a recording run its recording, in one
+// atomic push, and shows the run again; the states are keyed "<suite>/<slice>".
 func (r *Reporter) Slices(ctx context.Context, evs []SliceEvent) (map[string]State, error) {
 	if err := r.ID.Check(); err != nil {
 		return nil, err
@@ -297,10 +293,8 @@ func (r *Reporter) Close(ctx context.Context, evs []SliceEvent) (map[string]Stat
 	return states, nil
 }
 
-// ended reads how a slice ended into its state and its ref's files, and
-// returns the failure files of a slice that failed or errored, read and
-// within the slice's cap; the run's cap is applied to every slice of a
-// write together.
+// ended reads how a slice ended into its state and its ref's files, and returns a failed slice's
+// failure files within its cap; the run's cap applies to every slice of a write together.
 func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, files map[string][]byte) []candidate {
 	if ev.NotRun {
 		notRunIn(sf, ev)
@@ -317,9 +311,8 @@ func (r *Reporter) ended(ctx context.Context, ev SliceEvent, sf *StateFile, file
 	sf.Seconds = ev.Seconds
 	usedIn(sf, ev.Used)
 
-	// a slice that passed without running a test records nothing, so its
-	// list stays as it was, and says so: a test file that runs nothing is
-	// a finding
+	// a slice that passed without running a test records nothing, so its list stays, and says
+	// so: a test file that runs nothing is a finding
 	noTests := sf.State == Passed && RanNoTests(ev.Result)
 	if noTests {
 		zero := 0
@@ -504,9 +497,8 @@ func nothingRecorded(result string) string {
 
 var errNoObserver = errors.New("no configured correlator observes")
 
-// observe asks the correlators what the slice touched over its setup and
-// every part. One correlator that couldn't tell leaves the slice's list as
-// it was.
+// observe asks the correlators what the slice touched over its setup and every part; one that
+// couldn't tell leaves the slice's list as it was.
 func (r *Reporter) observe(ctx context.Context, ev SliceEvent) (recording.Recording, error) {
 	setup, parts := ObserveInputs(ev)
 
@@ -544,9 +536,8 @@ func (r *Reporter) observe(ctx context.Context, ev SliceEvent) (recording.Record
 		return rec, nil
 	}
 
-	// tests that ran and touched nothing at all are far likelier a
-	// correlator that answered wrongly than a test file that runs nothing
-	// of the tree; an empty list would bind the slice to nothing
+	// tests that touched nothing at all are far likelier a correlator that answered wrongly than a
+	// test file that runs none of the tree; an empty list would bind the slice to nothing
 	if len(touched) == 0 && len(setupLike) == 0 && r.Config.Suites[ev.Suite].EmptyRecordings != config.EmptyAllow {
 		rec.CannotTell = []recording.Mark{{Plugin: "correlators", Reason: nothingRecorded(ev.Result), Since: r.now()}}
 
@@ -581,9 +572,8 @@ func ObserveInputs(ev SliceEvent) (setup string, parts []string) {
 	return setup, parts
 }
 
-// Suite ends a suite: it marks the end, so the suite's slices that never
-// reported show as errored, sets the suite's status and the run's, and
-// tells whether every slice of the suite passed.
+// Suite marks a suite's end, so its slices that never reported show as errored, sets its
+// status and the run's, and tells whether every slice of it passed.
 func (r *Reporter) Suite(ctx context.Context, suite string) (bool, error) {
 	if err := errors.Join(r.ID.Check(), checkName("suite", suite)); err != nil {
 		return false, err
@@ -620,16 +610,14 @@ func (r *Reporter) Suite(ctx context.Context, suite string) (bool, error) {
 	return passed(run, []string{suite}), nil
 }
 
-// ErrUnrecorded is a step whose records could not be written to the store
-// after every retry: what it ran is not lost, but the run doesn't know it,
-// and a rerun of the build runs it again.
+// ErrUnrecorded is a step whose records couldn't be written after every retry: the run doesn't
+// know what it ran, and a rerun of the build runs it again.
 var ErrUnrecorded = errors.New("the records could not be written")
 
 const unrecordedText = "the suite's end could not be recorded: rerun the build"
 
-// endUnrecorded is a suite's end whose mark could not be written: the
-// statuses still turn to error, so neither shows a state the run's refs
-// don't back.
+// endUnrecorded is a suite's end whose mark couldn't be written: the statuses still turn to
+// error, so neither shows a state the run's refs don't back.
 func (r *Reporter) endUnrecorded(ctx context.Context, suite string, cause error) error {
 	missed := []string{"the suite's end mark", "its status and the run's as the run stands"}
 
@@ -684,10 +672,8 @@ func (r *Reporter) Finish(ctx context.Context) (bool, error) {
 	return passed(run, nil), nil
 }
 
-// ending does what a suite's end does once the run is over: a branch's
-// recording run hangs its recordings on its commit once the run passed, or
-// once every suite of a failed run ended with a slice that passed. The run
-// is red then whatever the attach does, so a failed attach is a warning.
+// ending hangs a branch's recordings on its commit once the run passed, or once every suite of a
+// failed run ended with a slice that passed; the run is red then, so a failed attach only warns.
 func (r *Reporter) ending(ctx context.Context, run Run, snap snapshot) {
 	if r.attaches() && !r.attachTried {
 		switch end := endingOf(run, snap.plan.All); {
@@ -743,16 +729,14 @@ type scope struct {
 	suites []string
 	run    bool
 	final  bool
-	// throttle lets a slice's report skip a pending update GitHub got
-	// moments ago: a hundred slices would otherwise run into GitHub's limits
-	// on writes.
+	// throttle lets a slice's report skip a pending update GitHub got moments ago: a hundred
+	// slices would otherwise run into GitHub's limits on writes
 	throttle bool
 	attach   bool
 }
 
-// publish shows the run as its refs hold it. When the refs moved meanwhile
-// it renders again from the new listing, so the last writer always leaves
-// the newest state.
+// publish shows the run as its refs hold it, rendering again when they moved meanwhile, so the
+// last writer always leaves the newest state.
 func (r *Reporter) publish(ctx context.Context, sc scope) (Run, error) {
 	snap, err := readSnapshot(ctx, r.Store, r.Config, r.ID)
 	if err != nil {
@@ -910,9 +894,8 @@ func (r *Reporter) show(ctx context.Context, sc scope, statuses []CommitStatus, 
 	return errors.Join(errs...)
 }
 
-// setStatuses posts the statuses that differ from what the commit shows; a
-// change of state always goes, a new count of a pending suite may wait
-// for the next report. It returns when the commit last got one of them.
+// setStatuses posts the statuses that differ from the commit's: a change of state always goes, a
+// pending suite's new count may wait. It returns when the commit last got one of them.
 func (r *Reporter) setStatuses(ctx context.Context, sc scope, statuses []CommitStatus) (time.Time, error) {
 	var last time.Time
 
@@ -952,7 +935,6 @@ func (r *Reporter) setStatuses(ctx context.Context, sc scope, statuses []CommitS
 	return last, nil
 }
 
-// lastStatus is when the commit last got one of the run's statuses.
 func (r *Reporter) lastStatus(ctx context.Context) (time.Time, error) {
 	var last time.Time
 

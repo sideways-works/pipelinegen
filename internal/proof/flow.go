@@ -43,10 +43,8 @@ func (r *run) main() *planner {
 	return &planner{r: r, fixture: filepath.Join(r.work, "fixture"), cache: filepath.Join(r.work, "cache"), env: r.env}
 }
 
-// record plans every slice of the commit under run "full", records each
-// batch through the correlator as a CI worker would, and attaches the lists.
-// FIXTURE_LOSE_COVERAGE names a slice whose coverage is lost;
-// FIXTURE_SYMLINK_SOURCE gives the batches their tree as a symlink.
+// record plans every slice under run "full", records each batch through the correlator as a CI worker would,
+// and attaches the lists; FIXTURE_LOSE_COVERAGE and FIXTURE_SYMLINK_SOURCE make the lost and symlinked cases.
 func (r *run) record(ctx context.Context, name, commit, cache string, env []string) error {
 	rec := filepath.Join(r.work, name)
 	gitURL := strings.TrimPrefix(envOf(env, "PIPELINEGEN_GIT_URL"), "file://")
@@ -236,10 +234,8 @@ func (r *run) jobs(ctx context.Context, m *planner) ([]job, error) {
 	return out, writeFile(filepath.Join(r.work, "jobs"), text.String())
 }
 
-// planAll plans the first job, which warms the cache; each worker then plans
-// every Nth of the rest in a worktree of the fixture and a copy of that
-// cache of its own. A worker that fails stops only itself, and the run then
-// fails with each failed worker's log.
+// planAll plans the first job, which warms the cache; each worker then plans every Nth of the rest in its
+// own worktree and cache copy, and a failed worker stops only itself, its log in the run's failure.
 func (r *run) planAll(ctx context.Context, m *planner, jobs []job) error {
 	if err := m.plan(ctx, jobs[0].label, jobs[0].base, jobs[0].head, jobs[0].why); err != nil {
 		return err
@@ -407,10 +403,8 @@ func (r *run) safety(ctx context.Context, m *planner) (movedResult, error) {
 
 	_ = c1
 
-	// Safety 2: a change that edits the config can't deselect its own
-	// tests: it drops app/greet_test.go from the suite and changes Greet,
-	// which the greet and report tests ran. Then the same where the config
-	// names itself under everything_on.
+	// Safety 2: a change editing the config can't deselect its own tests: it drops app/greet_test.go and
+	// changes Greet, which the greet and report tests ran; then again with the config under everything_on
 	if err := m.commitChange(ctx, "selfdrop", "selfdrop"); err != nil {
 		return res, err
 	}
@@ -432,9 +426,8 @@ func (r *run) safety(ctx context.Context, m *planner) (movedResult, error) {
 		return res, err
 	}
 
-	// Safety 2b: a change of the config itself is planned by what it
-	// means: a step's slices, a driver's, nothing for a comment, and the
-	// config as a changed file where a part isn't understood.
+	// Safety 2b: a config change is planned by what it means: a step's slices, a driver's, nothing for a
+	// comment, and the config as a changed file where a part isn't understood
 	if err := r.configRows(ctx, m); err != nil {
 		return res, err
 	}
@@ -445,19 +438,14 @@ func (r *run) safety(ctx context.Context, m *planner) (movedResult, error) {
 		return res, err
 	}
 
-	// Safety 4: a work tree changed underneath the plan while bazel-diff
-	// hashed it fails the plan and caches nothing of it; the next plan is
-	// right.
+	// Safety 4: a work tree changed while bazel-diff hashed it fails the plan and caches nothing of it;
+	// the next plan is right
 	if res.cached, err = r.movedTree(ctx, m); err != nil {
 		return res, err
 	}
 
-	// Safety 5: a recording that says nothing about a slice is never an
-	// empty list: the price slice keeps its units, or is marked and the
-	// plan warns, and a change to the helper selects it. The batches get
-	// their tree as a symlink; then the price slice's coverage names a
-	// module the tree doesn't hold; then its tests run and its coverage
-	// counts nothing.
+	// Safety 5: a recording that says nothing of a slice is never an empty list: the price slice keeps its
+	// units or is marked and warned of; cases: a symlinked tree, a foreign module, coverage counting nothing
 	for _, a := range []struct{ name, setting, message string }{
 		{"symlink", "FIXTURE_SYMLINK_SOURCE=1", "a link"},
 		{"foreign", "FIXTURE_FOREIGN_COVERAGE=app/price_test.go", "another module"},
@@ -649,9 +637,8 @@ func (r *run) lockDied(ctx context.Context, m *planner) error {
 	return nil
 }
 
-// movingScript is bazel-diff as it is, except that once it has hashed the
-// head, the work tree is moved to the head's parent, as another process
-// might.
+// movingScript is bazel-diff as it is, except that once it hashed the head the work tree moves to the
+// head's parent, as another process might.
 const movingScript = `#!/bin/sh
 "%[1]s" "$@"
 status=$?

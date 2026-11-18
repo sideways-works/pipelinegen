@@ -12,8 +12,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/container"
 )
 
-// tool is docker or podman, when it answers; the tests that need it skip
-// without.
+// tool is docker or podman, when it answers; the tests that need it skip without.
 func tool(t *testing.T) string {
 	t.Helper()
 
@@ -34,9 +33,8 @@ var managerImages = []struct{ manager, image string }{
 	{"yum", "amazonlinux:2"},
 }
 
-// TestScriptInImages installs jq with each manager, twice: the second run
-// finds it and installs nothing. Each image is removed again unless it was
-// here before.
+// TestScriptInImages installs jq with each manager twice, the second run installing nothing; each
+// image is removed again unless it was here before.
 func TestScriptInImages(t *testing.T) {
 	tl := tool(t)
 	script := Script(config.Packages{{Name: "jq"}})
@@ -115,7 +113,6 @@ func filesUnder(t *testing.T, dir string) int {
 	return n
 }
 
-// TestLocal installs jq on alpine once and reuses the image after.
 func TestLocal(t *testing.T) {
 	tl := tool(t)
 

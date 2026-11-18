@@ -22,10 +22,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Command is the driver built into the tool: a suite's own commands. A
-// prepare step runs `run`; a set-up starts `start`, waits until `ready`,
-// exports `export` and stops with `stop` (then signals); a run step runs
-// `each` once per slice or `all` once per bundle.
+// Command is the built-in driver, a suite's own commands: prepare runs `run`; a set-up starts `start`,
+// waits for `ready`, exports `export`, stops with `stop`; a run step runs `each` per slice or `all` per bundle.
 type Command struct {
 	Env    []string
 	Log    io.Writer
@@ -35,10 +33,8 @@ type Command struct {
 // ErrCommand is a command step the config or its command got wrong.
 var ErrCommand = errors.New("command")
 
-// Name is the built-in driver's name.
 func (c *Command) Name() string { return "command" }
 
-// CommandDescription is what the command driver says of itself.
 func CommandDescription() plugin.Description {
 	return plugin.Description{
 		Protocol: plugin.Protocol, Kind: plugin.KindDriver, Name: "command", Version: "builtin",
@@ -56,7 +52,6 @@ func CommandDescription() plugin.Description {
 	}
 }
 
-// Describe answers for the built-in driver.
 func (c *Command) Describe(context.Context) (plugin.Description, error) {
 	return CommandDescription(), nil
 }
@@ -253,7 +248,6 @@ func common(req plugin.DriverRequest) map[string]string {
 	return map[string]string{"source": req.Tree, "prepared": req.Prepared, "work": req.Work, "cache": req.Cache}
 }
 
-// Prepare runs `run`.
 func (c *Command) Prepare(ctx context.Context, req plugin.DriverRequest) error {
 	conf, err := confOf(req, plugin.CallPrepare)
 	if err != nil {

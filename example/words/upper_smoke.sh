@@ -1,4 +1,4 @@
-# Smoke tests of /upper, against the server the batch started.
+# WORDS is the address of the server the batch started.
 
 test_upper() {
 	got=$(wget -qO- "$WORDS/upper?s=hey+you")

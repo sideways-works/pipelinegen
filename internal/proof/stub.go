@@ -13,9 +13,8 @@ import (
 	"time"
 )
 
-// stub is a stand-in for the GitHub API: it takes every status and
-// comment a run posts, keeps none, and answers reads with nothing. It
-// logs each request to its log file.
+// stub is a stand-in for the GitHub API: it takes every status and comment a run posts, keeps none,
+// answers reads with nothing, and logs each request.
 type stub struct {
 	srv *http.Server
 	ln  net.Listener

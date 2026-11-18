@@ -71,10 +71,8 @@ func sampleOnHit(cfg *config.Config, suite string, changes []gitx.Change) *sampl
 	return hit
 }
 
-// sampleSuite turns a change to what every slice of the suite exercises the
-// same into a sample: the slices the change selected on their own, and up to
-// N more spread over the groups, the pick fixed by the head commit so a
-// rerun picks the same.
+// sampleSuite turns a change to what every slice exercises alike into a sample: the slices it selected
+// on their own and up to N more over the groups, picked by the head commit so a rerun picks the same.
 func sampleSuite(sp *SuitePlan, s config.Suite, suite string, all []bazel.Slice, impacted map[string]bool, rule *SampleRule, head string, on *sampleOn, changes []gitx.Change, entry entrySide) {
 	var by, reason string
 
@@ -86,9 +84,8 @@ func sampleSuite(sp *SuitePlan, s config.Suite, suite string, all []bazel.Slice,
 	case rule.On && impacted[bazel.SelectorLabel(recording.SetupTarget(suite))]:
 		by, reason = SampledBySetup, "code only the suite's setup runs changed"
 	case impacted[bazel.SelectorLabel(EntryTarget(suite))] || entry.drivers:
-		// the target exists only where planning had plugin-entry on, and
-		// it holds what the suite's slices gave up: it samples whatever
-		// the rule says
+		// the target exists only where planning had plugin-entry on, and holds what the suite's
+		// slices gave up: it samples whatever the rule says
 		by, reason = SampledByPluginEntry, "a plugin's entry changed"
 	case on != nil:
 		by, reason = SampledByConfig, on.what+" changed (sample_on "+on.entry+")"
@@ -174,10 +171,8 @@ func unite(a, b map[string]bool) map[string]bool {
 	return out
 }
 
-// entrySample is a changed entry's sample of a suite: N of the slices the
-// entry reached, on top of every slice that runs for another reason. A slice
-// the entry doesn't reach tells nothing of the new entry, so it takes no
-// place of the sample's.
+// entrySample is N of the slices a changed entry reached, on top of every slice that runs for another
+// reason; a slice it doesn't reach tells nothing of the new entry, so it takes no place of the sample's.
 func entrySample(all []bazel.Slice, rule *SampleRule, head string, must []string, reached map[string]bool) []string {
 	var from []bazel.Slice
 
@@ -200,10 +195,8 @@ func entrySample(all []bazel.Slice, rule *SampleRule, head string, must []string
 	return picked
 }
 
-// mustRun are the slices a sample keeps whatever it picks: those the change
-// selected on its own. When the change is nothing but sample_on files, only
-// the slices whose own test files changed must run, and those a changed
-// plugin entry reached.
+// mustRun are the slices a sample keeps whatever it picks, those the change selected on its own; for
+// sample_on files alone, those whose own test files changed and those a changed plugin entry reached.
 func mustRun(selected []bazel.Slice, on *sampleOn, by string, changes []gitx.Change, entry func(bazel.Slice) bool) []string {
 	own := func(sl bazel.Slice) bool {
 		return slices.ContainsFunc(changes, func(c gitx.Change) bool { return slices.Contains(sl.Sources, c.Path) })

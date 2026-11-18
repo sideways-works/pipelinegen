@@ -35,8 +35,7 @@ type passed struct {
 }
 
 // rebase leaves out the reached slices whose own later pass covers the change, before reasons and the
-// sample: a whole-suite check that needs every slice, and a suite its setup's change runs whole, keep the
-// plan's base.
+// sample; a whole-suite check and a suite its setup's change runs whole keep the plan's base.
 func (o Options) rebase(suite string, sp SuitePlan, all []bazel.Slice, seen map[string]bool, rule *SampleRule, on *sampleOn) (SuitePlan, map[string]bool, passed) {
 	if o.Rebase == nil || len(sp.Selected) == 0 || sp.All && (sp.Reason != ReachesEverySlice || len(sp.WholeSuite) > 0) {
 		return sp, seen, passed{}

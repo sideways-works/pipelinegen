@@ -1,8 +1,5 @@
-// Package gitstore keeps small records for state that CI steps write while a
-// run goes, each a compare-and-swap cell: a write names the value it expects
-// and applies only then. Records live as refs of a remote, each pointing at
-// a parentless commit (git's force-with-lease guards a write), or as
-// directories of one branch (branch.go).
+// Package gitstore keeps small records CI steps write while a run goes, each a compare-and-swap cell:
+// a ref of a remote at a parentless commit (guarded by force-with-lease), or a directory of a branch.
 package gitstore
 
 import (
@@ -31,40 +28,32 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/tries"
 )
 
-// Store is a remote repository's refs, read and written through a scratch
-// repository of its own. A Store serves one goroutine at a time: each
-// process makes its own, in a directory no other store shares.
+// Store is a remote's refs, read and written through a scratch repository of its own. It serves one
+// goroutine at a time: each process makes its own, in a directory no other store shares.
 type Store struct {
 	// Remote is the repository's URL. It never carries a token.
 	Remote string
-	// Token, when set, authenticates to an HTTPS remote as a GitHub token.
-	// It reaches git through the environment, never through its arguments,
-	// a URL or a log.
+	// Token authenticates to an HTTPS remote as a GitHub token; it reaches git through the
+	// environment, never through its arguments, a URL or a log.
 	Token string
 	Env   []string
 	Dir   string
 	Clock func() time.Time
-	// Retries is how often a write that failed in passing goes again at
-	// least (0: tried once); a refusal by a rule of the remote's goes again
-	// only a few times, a defect never, and a write whose ref moved is never
-	// retried here.
+	// Retries is how often a write that failed in passing goes again at least (0: once); a remote's
+	// refusal goes again only a few times, a defect never, and a write whose ref moved never here.
 	Retries  int
 	Backoff  time.Duration
 	RetryFor time.Duration
 	Until    time.Time
 
-	// Seed, when set and Dir is not, is where a scratch repository waits
-	// between jobs on one machine: a job takes it by renaming it, so two
-	// jobs never share one, and puts it back at Close.
+	// Seed, when set and Dir is not, is where a scratch repository waits between jobs on one machine:
+	// a job takes it by renaming it, so two jobs never share one, and puts it back at Close.
 	Seed string
 
 	Branch *branchstore.Store
 
-	// Proposed marks a store used for a proposed change's run, or any run
-	// that isn't trusted: its caller writes the run's own records and
-	// nothing later plans bind with (answers, lists, the sweep's deletes).
-	// A store kept apart for trusted records would refuse such a caller
-	// its writes; one shared store relies on its callers asking this.
+	// Proposed marks a store of a run that isn't trusted: its caller writes the run's own records and
+	// nothing later plans bind with (answers, lists, the sweep's deletes); the callers enforce it.
 	Proposed bool
 
 	Batch string
@@ -80,7 +69,6 @@ type Store struct {
 	b       branched
 }
 
-// Retried says how many retries the store's writes needed so far.
 func (s *Store) Retried() int {
 	if s.onBranch() {
 		return s.Branch.Retried()
@@ -89,10 +77,8 @@ func (s *Store) Retried() int {
 	return int(s.retried.Load())
 }
 
-// ErrGit wraps a git command that failed.
 var ErrGit = errors.New("git")
 
-// ErrReadOnly is a write to a store opened read only.
 var ErrReadOnly = errors.New("the store is read only here")
 
 // ErrStale is returned when a ref no longer had the value a write expected:
@@ -107,14 +93,12 @@ const (
 	authorEmail    = "pipelinegen@users.noreply.github.com"
 )
 
-// Ref is a ref of the remote and the commit it points at.
 type Ref struct {
 	Name   string
 	Commit string
 	Time   time.Time
 }
 
-// Update writes or removes one ref.
 type Update struct {
 	Ref string
 	// Old is the commit the ref must point at for the write to apply; empty,
@@ -123,13 +107,11 @@ type Update struct {
 	// Any applies the write whatever the ref holds: for a ref only one
 	// writer ever writes, or a removal by hand.
 	Any bool
-	// Files are the record's content; a nil map with Delete removes the
-	// ref.
+	// Files are the record's content; a nil map with Delete removes the ref.
 	Files  map[string][]byte
 	Delete bool
 }
 
-// Close removes the scratch repository when the store made it.
 func (s *Store) Close() error {
 	if s.onBranch() {
 		return s.Branch.Close()
@@ -193,9 +175,8 @@ func (s *Store) init(ctx context.Context) error {
 		return err
 	}
 
-	// a scratch repository lives for one job: a garbage collection that a
-	// fetch starts in the background only costs time, and still runs
-	// when the job removes the repository
+	// a scratch repository lives for one job: a background gc a fetch starts only costs time, and
+	// still runs when the job removes the repository
 	_, err := s.git(ctx, nil, nil, "config", "gc.auto", "0")
 
 	return err
@@ -366,14 +347,12 @@ func (s *Store) local(ctx context.Context, patterns []string) (map[string]Ref, e
 	return refs, nil
 }
 
-// Files reads a record: every file of a commit that List or First
-// returned.
+// Files reads every file of a record, a commit List or First returned.
 func (s *Store) Files(ctx context.Context, commit string) (map[string][]byte, error) {
 	return s.FilesBut(ctx, commit, "")
 }
 
-// FilesBut reads a record as Files does, but for what lies under dir,
-// which it never fetches.
+// FilesBut reads a record as Files does, but for what lies under dir, which it never fetches.
 func (s *Store) FilesBut(ctx context.Context, commit, dir string) (map[string][]byte, error) {
 	dir = strings.Trim(dir, "/")
 
@@ -421,8 +400,7 @@ func (s *Store) FilesBut(ctx context.Context, commit, dir string) (map[string][]
 
 func under(p, dir string) bool { return dir != "" && (p == dir || strings.HasPrefix(p, dir+"/")) }
 
-// Under reads the files of a record under one directory of it, by their
-// paths in the record, and nothing else of it.
+// Under reads only the files of a record under dir, by their paths in the record.
 func (s *Store) Under(ctx context.Context, commit, dir string) (map[string][]byte, error) {
 	dir = strings.Trim(dir, "/")
 
@@ -465,7 +443,6 @@ func (s *Store) Under(ctx context.Context, commit, dir string) (map[string][]byt
 	return s.read(ctx, commit, names)
 }
 
-// File reads one file of a record; false when it has none at that path.
 func (s *Store) File(ctx context.Context, commit, path string) ([]byte, bool, error) {
 	read := s.read
 	if s.onBranch() {
@@ -599,11 +576,11 @@ func (s *Store) batch(ctx context.Context, keys []string) (map[string][]byte, er
 	return files, nil
 }
 
+// firstBatch is how many refs one ls-remote asks about, so its command line stays short.
 const firstBatch = 100
 
-// First returns the first of the refs named, in their order, that exists
-// on the remote, fetched so its files can be read: given a commit's ref
-// and then its ancestors', the nearest one that has a record.
+// First returns the first of the refs, in order, that exists on the remote, fetched so its files can be
+// read: given a commit's ref and then its ancestors', the nearest one that has a record.
 func (s *Store) First(ctx context.Context, refs []string) (Ref, bool, error) {
 	if s.onBranch() {
 		return s.branchFirst(ctx, refs)
@@ -712,9 +689,8 @@ func (s *Store) retry(ctx context.Context, args []string) (string, error) {
 	return out, err
 }
 
-// Write applies the updates in one atomic push: all of them or, when any
-// ref no longer holds the value its update expects, none (ErrStale). It
-// returns the new commit of every ref written.
+// Write applies the updates in one atomic push: all of them or, when any ref no longer holds what its
+// update expects, none (ErrStale). It returns the new commit of every ref written.
 func (s *Store) Write(ctx context.Context, message string, updates ...Update) (map[string]string, error) {
 	if s.ReadOnly {
 		return nil, fmt.Errorf("%w: %s", ErrReadOnly, message)
@@ -825,10 +801,8 @@ func (s *Store) refsWrite(ctx context.Context, message string, updates []Update)
 
 	var err error
 
-	// every new commit is unique, so a try after a push that did land is
-	// "up to date" and succeeds rather than failing its lease; a push the
-	// remote refused for a reason of its own applied none of its refs, so
-	// what is still missing is the whole write, and it goes again
+	// every new commit is unique, so a try after a push that did land is "up to date" rather than
+	// failing its lease; a refused push applied none of its refs, so the whole write goes again
 	run := s.policy().Start()
 
 	for {
@@ -908,9 +882,8 @@ func (s *Store) push(ctx context.Context, args []string) (stale bool, err error)
 
 var errRefused = errors.New("the remote refused the push")
 
-// ErrNoAtomic is a remote that takes no atomic pushes: a write of several
-// refs could land in part, so the records can't be kept in refs there.
-// Trying again changes nothing.
+// ErrNoAtomic is a remote that takes no atomic pushes: a write of several refs could land in part,
+// so the records can't be kept in refs there, and trying again changes nothing.
 var ErrNoAtomic = errors.New("the remote takes no atomic pushes, which keeping the records in refs needs: set store.backend: branch")
 
 const noAtomicPush = "does not support --atomic push"
@@ -931,9 +904,8 @@ func remoteSaid(stderr string) string {
 	return " (the remote said: " + strings.Join(said, "; ") + ")" + refusedHint(stderr)
 }
 
-// refusedHint is what to do about a remote that declined pipelinegen's refs
-// by a rule of its own; a busy remote declines the same way, so the refusal
-// is retried all the same.
+// refusedHint is what to do about a remote that declined pipelinegen's refs by a rule of its own; a
+// busy remote declines the same way, so the refusal is retried all the same.
 func refusedHint(stderr string) string {
 	for _, why := range []string{"hook declined", "hidden ref", "denied", "not allowed"} {
 		if strings.Contains(stderr, why) {
@@ -964,9 +936,8 @@ func leaseLost(line string) bool {
 	return false
 }
 
-// commit makes a parentless commit holding files; a nonce in its message
-// makes it unique, since a push of the value a ref already holds would pass
-// whatever its lease.
+// commit makes a parentless commit holding files; a nonce in its message makes it unique, since a
+// push of the value a ref already holds would pass whatever its lease.
 func (s *Store) commit(ctx context.Context, message string, files map[string][]byte) (string, error) {
 	index, err := s.tempIndex()
 	if err != nil {

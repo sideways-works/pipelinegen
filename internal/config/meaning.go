@@ -11,38 +11,32 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// The meanings of a changed part of the config: what a change to it can
-// change in what a test observes.
+// The meanings of a changed part of the config: what a change to it can change in what a test
+// observes.
 const (
-	// MeansNothing is a part no test can observe: where results go, how
-	// long records are kept, how slices are dealt into batches.
+	// MeansNothing is a part no test can observe: where results go, how long records are kept,
+	// how slices are dealt into batches.
 	MeansNothing = "nothing"
-	// MeansSelection is a part that decides which tests a change selects,
-	// not how they run: a change plans under both configs and unites the
-	// plans, so it can't deselect its own tests.
+	// MeansSelection decides which tests a change selects, not how they run: a change plans under
+	// both configs and unites the plans, so it can't deselect its own tests.
 	MeansSelection = "selection"
-	// MeansSlices is a part that decides how some slices run (a suite's
-	// steps, their settings, its environment): those slices run, never
-	// sampled away.
+	// MeansSlices decides how some slices run (a suite's steps, their settings, its environment):
+	// those slices run, never sampled away.
 	MeansSlices = "slices"
-	// MeansEntry is a plugin's entry, its pin or its config block: what
-	// it reaches runs, or its sample while plugin-entry is on.
+	// MeansEntry is a plugin's entry, its pin or its config block: what it reaches runs, or its
+	// sample while plugin-entry is on.
 	MeansEntry = "plugin-entry"
 	// MeansFile is a part the planner doesn't understand.
 	MeansFile = "file"
 )
 
-// Part is one changed part of the config, by its key path, and what it
-// means for the tests.
 type Part struct {
 	Path  string `json:"path"`
 	Means string `json:"means"`
 }
 
-// Meaning is what a change of the config means for the tests: each changed
-// part, and per suite and slice what runs differently. A proposed change's
-// head config carries the trusted keys, so a part it can't change in its own
-// run is no difference there.
+// Meaning is what a config change means for the tests, part by part and per suite and slice. A
+// proposed change's head carries the trusted keys, so a part it can't change in its run is none.
 type Meaning struct {
 	Parts []Part `json:"parts"`
 
@@ -51,8 +45,8 @@ type Meaning struct {
 	drivers    map[string]bool
 }
 
-// MeaningOf compares two configs part by part. run is the run the plan
-// is for, empty for a plan for no run, which counts every run's settings.
+// MeaningOf compares two configs part by part for run; for no run ("") every run's settings
+// count.
 func MeaningOf(base, head *Config, run string) *Meaning {
 	m := &Meaning{base: base, head: head, run: run, drivers: map[string]bool{}}
 
@@ -80,10 +74,8 @@ func MeaningOf(base, head *Config, run string) *Meaning {
 	return m
 }
 
-// Understood tells whether every changed part has a meaning the planner
-// acts on: then the config is no changed file. A base read with warnings
-// (a key this pipelinegen doesn't know, a value of another type) is not
-// understood whole.
+// Understood tells whether every changed part has a meaning the planner acts on, so the config is
+// no changed file. A base read with warnings is not understood whole.
 func (m *Meaning) Understood() bool {
 	if m == nil {
 		return false
@@ -100,12 +92,10 @@ func historyWarning(w string) bool {
 	return strings.HasPrefix(w, "keys this pipelinegen doesn't read") || strings.HasPrefix(w, "values of another type")
 }
 
-// Changed tells whether the configs differ in any part.
 func (m *Meaning) Changed() bool { return m != nil && len(m.Parts) > 0 }
 
-// tree is a config as a tree of maps, lists and values, with the plugins
-// keyed by name: comments, layout, key order and YAML's alternative forms
-// are gone.
+// tree is a config as maps, lists and values, plugins keyed by name: comments, layout, key order
+// and YAML's alternative forms are gone.
 func tree(c *Config) any {
 	data, err := yaml.Marshal(c)
 	if err != nil {
@@ -202,8 +192,8 @@ var (
 	suiteSelection  = append([]string{
 		"tests", "tag", "exclude", "helpers", "owner", "extra_deps", "text_inputs", "durations", "group", "bind", "sample",
 	}, sharedSelection...)
-	// how slices are dealt into batches and share machines: a slice must
-	// pass beside any other, in any batch, so none of it is observable.
+	// how slices are dealt into batches and share machines: a slice must pass beside any other,
+	// in any batch, so none of it is observable.
 	suiteNothing = []string{"run_on", "parallel", "batches", "batch_minutes", "empty_recordings"}
 	topSelection = append([]string{
 		"everything_on", "untested", "macros", "uncovered", "narrowing_alarm", "narrowings", "explain_limit", "rebuild_check",
@@ -220,8 +210,8 @@ func suiteRuns(key string) bool {
 	})
 }
 
-// means classifies one changed path; what isn't named here is not
-// understood, and the config then counts as a changed file.
+// means classifies one changed path; what isn't named here is not understood, and the config
+// then counts as a changed file.
 func (m *Meaning) means(p []string) string {
 	switch p[0] {
 	case "suites":
@@ -231,8 +221,8 @@ func (m *Meaning) means(p []string) string {
 	case "runs":
 		return runMeans(p)
 	case "concourse":
-		// the root pipeline file declares the images; the bootstrap is
-		// the pipelinegen every step runs, slice run included
+		// the root pipeline file declares the images; the bootstrap is the pipelinegen every step
+		// runs, slice run included
 		if len(p) < 2 || p[1] == "include" || p[1] == "planner" && (len(p) < 3 || p[2] == "bootstrap") {
 			return MeansFile
 		}
@@ -255,8 +245,7 @@ func (m *Meaning) means(p []string) string {
 
 func (m *Meaning) suiteMeans(p []string) string {
 	if len(p) < 3 {
-		// a suite added or removed: its slices run differently from not
-		// at all, which SliceRuns tells
+		// a suite added or removed: its slices run differently from not at all, which SliceRuns tells
 		return MeansSlices
 	}
 
@@ -272,17 +261,15 @@ func (m *Meaning) suiteMeans(p []string) string {
 			return MeansNothing
 		}
 	case key == "lock":
-		// no longer read but for its minutes, the old spelling of the
-		// suite's: a lock added or removed whole is a time limit's change
-		// only when its minutes were one
+		// no longer read but for its minutes, the old spelling of the suite's: a lock added or
+		// removed whole is a time limit's change only when its minutes were one
 		if lockMinutes(m.base, p[1]) == lockMinutes(m.head, p[1]) {
 			return MeansNothing
 		}
 	}
 
-	// a time limit can end a batch that passed before, and the
-	// correlators that collect in every batch can fail a slice: no slice
-	// in particular, so the config is a changed file
+	// a time limit can end a batch that passed before, and the correlators that collect in every
+	// batch can fail a slice: no slice in particular, so the config is a changed file
 	return MeansFile
 }
 
@@ -325,8 +312,8 @@ func (m *Meaning) pluginMeans(p []string) string {
 		case "include", "exclude", "fill", "repository", "name":
 			return MeansNothing
 		case "collect_seconds":
-			// a shorter limit can fail the recording of a slice that passed
-			// before, in any batch: no slice in particular
+			// a shorter limit can fail the recording of a slice that passed before, in any batch:
+			// no slice in particular
 			return MeansFile
 		}
 	case KindConnector:
@@ -350,8 +337,7 @@ func (m *Meaning) pluginMeans(p []string) string {
 
 func runMeans(p []string) string {
 	if len(p) < 3 {
-		// a run added or removed: its suites' settings, which SliceRuns
-		// tells
+		// a run added or removed: its suites' settings, which SliceRuns tells
 		return MeansSlices
 	}
 
@@ -401,8 +387,8 @@ func samePin(a, b Plugin) bool {
 	return a.Repository == b.Repository && a.Commit == b.Commit && reflect.DeepEqual(a.Release, b.Release)
 }
 
-// SliceRuns says why a slice of a suite runs differently under the head's
-// config than under the base's, by the first part that differs.
+// SliceRuns says why a slice runs differently under the head's config than the base's, by the
+// first part that differs.
 func (m *Meaning) SliceRuns(suite string, sl RoutedSlice) (string, bool) {
 	if m == nil {
 		return "", false
@@ -534,8 +520,7 @@ func (m *Meaning) runStep(suite string, sl RoutedSlice) (string, bool) {
 	return fmt.Sprintf("suites.%s.steps[%d] (run %s), which takes it, changed", suite, i, st.Driver()), true
 }
 
-// Drivers are the drivers whose entry's pin changed that run a slice of
-// a suite.
+// Drivers are the drivers that run a slice of the suite whose entry's pin changed.
 func (m *Meaning) Drivers(suite string, sl RoutedSlice) []string {
 	if m == nil || len(m.drivers) == 0 {
 		return nil
@@ -569,8 +554,8 @@ func (m *Meaning) Drivers(suite string, sl RoutedSlice) []string {
 	return out
 }
 
-// WholeChecks are a suite's whole-suite checks whose entry is new or
-// changed: each is a test of its own, which runs.
+// WholeChecks are a suite's whole-suite checks whose entry is new or changed: each is a test of
+// its own, which runs.
 func (m *Meaning) WholeChecks(suite string) []string {
 	if m == nil {
 		return nil

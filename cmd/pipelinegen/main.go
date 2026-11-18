@@ -1,5 +1,4 @@
-// Command pipelinegen makes a CI pipeline run only the tests a change can
-// break.
+// Command pipelinegen makes a CI pipeline run only the tests a change can break.
 package main
 
 import (

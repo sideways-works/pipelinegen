@@ -140,9 +140,8 @@ func TestContentDecidesAsTheDepsRepository(t *testing.T) {
 		}
 	}
 
-	// the trees are sparse enough that most pairs select some slices and
-	// leave out others: a check that only ever sees all or nothing proves
-	// little
+	// the trees are sparse enough that most pairs select some slices and leave out others: a check
+	// that only ever sees all or nothing proves little
 	if partial < 20 {
 		t.Fatalf("only %d of 40 pairs select some slices and not others", partial)
 	}

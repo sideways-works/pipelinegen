@@ -8,27 +8,26 @@ import (
 	"strings"
 )
 
-// Usage is what the reading process's own cgroup has used, at one moment: in a CI task, the task's
+// Usage is what the reading process's own cgroup has used at one moment: in a CI task, the task's
 // container.
 type Usage struct {
-	// CPU is the seconds of CPU the cgroup used since it began.
 	CPU float64
 	// Set is its working set now, in MB: its usage less the file cache the kernel reclaims first.
 	Set int64
-	// Peak is the most it used since it began, less the file cache it holds now: an approximation, as
-	// the cache at the peak isn't known. 0 where the kernel keeps no peak.
+	// Peak is the most it used since it began less the file cache it holds now, an approximation;
+	// 0 where the kernel keeps no peak.
 	Peak int64
-	// OOM counts its processes the OOM killer killed since it began.
+	// OOM counts the processes of it the OOM killer killed since it began.
 	OOM int64
 	// Free is what the machine, or a cgroup's limit above, leaves it now (Reading.Free).
 	Free int64
-	// Pressure is the machine's memory pressure: the share of the last 10 seconds some task waited for
-	// memory (PSI "some avg10"), in percent; -1 where the kernel doesn't say.
+	// Pressure is the share of the last 10 seconds some task waited for memory (PSI "some avg10"),
+	// in percent; -1 where the kernel doesn't say.
 	Pressure float64
 }
 
-// Measure reads the cgroup of the reading process under root, v2 or v1. A machine whose memory can't
-// be read has no Usage.
+// Measure reads the cgroup of the reading process under root, v2 or v1; a machine whose memory
+// can't be read has no Usage.
 func Measure(root string) (Usage, error) {
 	r, err := Read(root)
 	if err != nil {
@@ -39,8 +38,8 @@ func Measure(root string) (Usage, error) {
 	cg := filepath.Join(root, "sys", "fs", "cgroup")
 
 	if p, ok := unifiedPath(root); ok {
-		// a container without its own cgroup namespace names the host's path, and mounts its own cgroup
-		// at the root
+		// a container without its own cgroup namespace names the host's path, and mounts its own
+		// cgroup at the root
 		dir := filepath.Join(cg, filepath.FromSlash(p))
 		if _, err := os.Stat(dir); err != nil {
 			dir = cg
@@ -105,7 +104,6 @@ func atoi(s string) int64 {
 	return n
 }
 
-// fieldsOf is a file's fields, none for a file the kernel doesn't keep.
 func fieldsOf(p, sep string) map[string]string {
 	f, err := fields(p, sep)
 	if err != nil {
@@ -118,8 +116,8 @@ func fieldsOf(p, sep string) map[string]string {
 // Headroom is the share, in percent, a prediction adds to the peaks it is made from.
 const Headroom = 10
 
-// Predict is the peak to expect from recent ones: their 90th percentile by nearest rank, and Headroom
-// more; 0 without any.
+// Predict is the peak to expect from recent ones: their 90th percentile by nearest rank, and
+// Headroom more; 0 without any.
 func Predict(peaks []int64) int64 {
 	if len(peaks) == 0 {
 		return 0

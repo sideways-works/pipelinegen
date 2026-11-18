@@ -12,9 +12,8 @@ import (
 	"time"
 )
 
-// JournalDir is where a batch keeps its journal, inside its result directory
-// so the batch's ensure step gets it with the results. No slice can be named
-// so (checkSlice refuses it).
+// JournalDir is where a batch keeps its journal, in its result directory so the batch's ensure step
+// gets it with the results; checkSlice refuses a slice of that name.
 const JournalDir = ".pipelinegen"
 
 const journalFile = "journal.jsonl"
@@ -40,10 +39,8 @@ type Collector interface {
 	Collect(ctx context.Context, action, slice, dir string) error
 }
 
-// PartDir is where the k-th part of a slice (from 1) leaves its coverage
-// under root: the first in <root>/<slice>, where the task writes, every
-// later one in a directory of its own, so a collector that writes a fixed
-// name never overwrites an earlier part's.
+// PartDir is where the k-th part of a slice (from 1) leaves its coverage: the first in <root>/<slice>,
+// each later one apart, so a collector that writes a fixed name never overwrites an earlier part's.
 func PartDir(root, slice string, k int) string {
 	if k <= 1 {
 		return filepath.Join(root, filepath.FromSlash(slice))
@@ -56,7 +53,6 @@ func PartDir(root, slice string, k int) string {
 // setup was closed.
 var ErrNoSetupEnd = errors.New("the batch's setup hasn't ended")
 
-// SetupEnded tells whether the batch's setup was closed.
 func (j *Journal) SetupEnded() (bool, error) {
 	sum, err := j.load()
 	if err != nil {
@@ -66,7 +62,6 @@ func (j *Journal) SetupEnded() (bool, error) {
 	return sum.SetupEnded, nil
 }
 
-// ErrSetup wraps a batch's setup that couldn't be closed.
 var ErrSetup = errors.New("setup")
 
 type journalLine struct {
@@ -76,10 +71,8 @@ type journalLine struct {
 	Slice *SliceEvent `json:"slice,omitempty"`
 }
 
-// Journal is a batch's record of its slices' starts and ends not yet in
-// their refs. Each line is appended and synced before the step that wrote it
-// returns, so whatever kills the batch, its ensure finds every start and
-// end.
+// Journal is a batch's record of its slices' starts and ends not yet in their refs; each line is
+// synced before its step returns, so whatever kills the batch, its ensure finds every one.
 type Journal struct {
 	Path string
 
@@ -87,7 +80,6 @@ type Journal struct {
 	dirty bool
 }
 
-// JournalIn is the journal of the batch whose result directory is dir.
 func JournalIn(dir string) *Journal {
 	return &Journal{Path: filepath.Join(dir, JournalDir, journalFile)}
 }
@@ -246,9 +238,8 @@ func pending(lines []journalLine) ([]SliceEvent, time.Time) {
 	return out, since
 }
 
-// SetupEnd closes what the batch's setup ran (start-up, seeding) into dir,
-// coverage/_setup, through every collector. It comes once, before the first
-// slice, so each slice's own recording holds only what its tests ran.
+// SetupEnd closes what the batch's setup ran into dir (coverage/_setup) through every collector,
+// once, before the first slice, so each slice's own recording holds only what its tests ran.
 func (r *Reporter) SetupEnd(ctx context.Context, j *Journal, dir string) error {
 	for _, c := range r.Collectors {
 		if err := c.Collect(ctx, CollectSetupEnd, "", dir); err != nil {
@@ -265,9 +256,8 @@ func (r *Reporter) SetupEnd(ctx context.Context, j *Journal, dir string) error {
 	return j.append(journalLine{Event: eventSetupEnd, At: r.now()})
 }
 
-// Started notes that a slice's tests run now: its first part, or its next
-// one when its tests come round again. The slice that ran until now is
-// closed first; a collector that fails leaves that slice unrecordable.
+// Started notes that a slice's tests run now, its first part or a later one; the slice that ran
+// until now is closed first, and a collector that fails leaves it unrecordable.
 func (r *Reporter) Started(ctx context.Context, j *Journal, ev SliceEvent, needSetup bool, every time.Duration) error {
 	sum, err := j.load()
 	if err != nil {
@@ -302,9 +292,8 @@ func (r *Reporter) Started(ctx context.Context, j *Journal, ev SliceEvent, needS
 		return err
 	}
 
-	// flush at a switch once the period is over, so a batch whose slices end
-	// only after its whole run still shows progress; without a token nothing
-	// could be written, and the batch's end writes it
+	// flush at a switch once the period is over, so a batch whose slices end only after its whole
+	// run still shows progress; without a token the batch's end writes it
 	if !r.NoToken && !r.NoFlush && r.now().Sub(sum.Since) >= every {
 		if _, err := r.Flush(ctx, j); err != nil {
 			r.warnf("flush at %s's start: %v", ev.Slice, err)
@@ -339,17 +328,14 @@ func (r *Reporter) collect(ctx context.Context, action string, ev SliceEvent) st
 	return why
 }
 
-// Ended notes a slice's end in the journal, with how long its parts took,
-// closing the part still running first. It flushes at once when the slice
-// did not pass or the last flush is older than every; otherwise it returns
-// the state the slice's result says, still unwritten.
+// Ended journals a slice's end with its parts' times, closing the running part first; it flushes at
+// once when the slice didn't pass or the last flush is older than every, else returns unwritten.
 func (r *Reporter) Ended(ctx context.Context, j *Journal, ev SliceEvent, every time.Duration) (State, error) {
 	return r.endPart(ctx, j, ev, every, true)
 }
 
-// EndedApart notes a slice's end as Ended does, but leaves another slice's
-// part running: a driver may report a slice's result after the next slice
-// started.
+// EndedApart is Ended leaving another slice's part running: a driver may report a slice's result
+// after the next slice started.
 func (r *Reporter) EndedApart(ctx context.Context, j *Journal, ev SliceEvent, every time.Duration) (State, error) {
 	return r.endPart(ctx, j, ev, every, false)
 }
@@ -462,10 +448,8 @@ func (r *Reporter) closeOther(ctx context.Context, j *Journal, open SliceEvent) 
 	return j.load()
 }
 
-// Flush writes every start and end the journal holds since its last flush,
-// in one push of the slices' refs and one render, and notes the flush.
-// Writing again after a crash between the push and the note is harmless:
-// each write replaces the slice's ref.
+// Flush writes the journal's starts and ends since its last flush in one push and one render; a crash
+// between the push and the note is harmless, since each write replaces the slice's ref.
 func (r *Reporter) Flush(ctx context.Context, j *Journal) (map[string]State, error) {
 	lines, err := j.read()
 	if err != nil {

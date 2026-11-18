@@ -1,8 +1,5 @@
-// Package packages installs what a suite's steps declare they need: the
-// shell script that installs the missing packages with the image's package
-// manager, the key of an image with them installed, that image built once in
-// the local image store, and the check of a machine that runs the steps
-// itself.
+// Package packages installs what a suite's steps declare: the install script, the key of an image
+// with them installed, that image built locally, and the check of a machine running steps itself.
 package packages
 
 import (
@@ -16,14 +13,12 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Manager is a package manager the install looks for, and the family whose
-// names it installs.
+// Manager is a package manager the install looks for, and the family whose names it installs.
 type Manager struct {
 	Command, Family string
 }
 
-// Managers are looked for in this order: the first on the image's PATH
-// installs.
+// Managers are looked for in this order: the first on the image's PATH installs.
 var Managers = []Manager{
 	{"apt-get", config.FamilyApt},
 	{"apk", config.FamilyApk},
@@ -32,16 +27,13 @@ var Managers = []Manager{
 	{"yum", config.FamilyRPM},
 }
 
-// The install script's environment.
 const (
 	EnvCache = plugin.EnvPackageCache
 	EnvClean = plugin.EnvPackageClean
 )
 
-// Script is a POSIX shell script that installs the packages ps the image
-// lacks with the first manager of Managers it has, and does nothing when it
-// has them all. It runs in a subshell: it sets nothing for what follows it,
-// and fails when a package can't be installed.
+// Script is a POSIX shell script that installs what the image lacks with its first manager, in a
+// subshell, so it sets nothing for what follows and fails when a package can't be installed.
 func Script(ps config.Packages) string {
 	ps = ps.Sorted()
 	if len(ps) == 0 {
@@ -76,8 +68,8 @@ func Script(ps config.Packages) string {
 	return b.String()
 }
 
-// The body after the manager is found: pg_m is its command, pg_want the
-// names it installs, pg_none the packages that name none for its family.
+// The body after the manager is found: pg_m is its command, pg_want the names it installs,
+// pg_none the packages that name none for its family.
 const scriptBody = `if [ -n "$pg_none" ]; then
   echo "pipelinegen: these packages name nothing for $pg_m: $pg_none" >&2
   exit 1
@@ -133,8 +125,7 @@ done
 )
 `
 
-// spelled are the names of ps for a family, and the packages that name
-// none for it.
+// spelled are the names of ps for a family, and the packages that name none for it.
 func spelled(ps config.Packages, family string) (want, none []string) { //nolint:nonamedreturns // two lists of names
 	for _, p := range ps {
 		n, ok := p.For(family)
@@ -152,8 +143,7 @@ func spelled(ps config.Packages, family string) (want, none []string) { //nolint
 	return want, none
 }
 
-// names are the packages as a person reads them: the plain name, else the
-// first family's spelling.
+// names are the packages as a person reads them: the plain name, else the first family's spelling.
 func names(ps config.Packages) []string {
 	out := make([]string, 0, len(ps))
 
@@ -175,13 +165,10 @@ func names(ps config.Packages) []string {
 	return out
 }
 
-// Names are the packages as a person reads them.
 func Names(ps config.Packages) []string { return names(ps.Sorted()) }
 
-// Key is the key of an image with the packages ps installed on base, an
-// image's digest: the same base and packages in any order, installed the
-// same way, give the same key, and another base digest, another package or
-// another install gives another.
+// Key is the key of an image with ps installed on base, a digest: the same base and packages in
+// any order, installed the same way, give the same key, and any difference another.
 func Key(base string, ps config.Packages) string {
 	ps = ps.Sorted()
 

@@ -7,17 +7,15 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 )
 
-// A run whose only gap is slices whose batches found the worker short of memory says so at a suite's
-// end, in a record the sweep judges by its name and time alone: newer than every suite build's start
-// and end, it is the last word on the run, which the sweep then hands on again.
+// shortFile is a suite end's record that the run's only gap is slices short of memory: newer than
+// every suite build's start and end, it is the run's last word, and the sweep hands it on again.
 const shortFile = "short.json"
 
 // ShortRef marks a run left with only slices not run for want of memory.
 func (id ID) ShortRef() string { return id.Prefix() + "_short" }
 
-// ShortOnly tells a run every slice of which ended, and passed but those whose batches never started
-// for want of memory, of which there is one at least. A slice that failed keeps the run from being
-// handed on again, so no failing test runs again unasked.
+// ShortOnly tells a run whose slices all ended and passed but at least one never started for want of
+// memory; a failed slice keeps it from being handed on, so no failing test runs again unasked.
 func ShortOnly(run Run) bool {
 	short := false
 

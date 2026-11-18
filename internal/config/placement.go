@@ -11,9 +11,8 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// PlacementKey is the key of a runner's own config block that says where the
-// pipeline's steps run; the core reads nothing inside it, only whether it is
-// there.
+// PlacementKey is the key of a runner's own config block that says where steps run; the core
+// reads nothing inside it, only whether it is there.
 const PlacementKey = "placement"
 
 func retiredPlacement(data []byte) []string {
@@ -27,9 +26,8 @@ func retiredPlacement(data []byte) []string {
 		Plugins []namedPlugin             `yaml:"plugins"`
 	}
 
-	// a config this can't read is refused by the decoding that follows,
-	// with its own message; a value of another type only leaves its key
-	// out here
+	// a config this can't read is refused by the decoding that follows, with its own message;
+	// a value of another type only leaves its key out here
 	var te *yaml.TypeError
 	if err := yaml.Unmarshal(data, &doc); err != nil && !errors.As(err, &te) {
 		return nil
@@ -106,9 +104,8 @@ func flowList(v any) string {
 	return "[" + strings.Join(tags, ", ") + "]"
 }
 
-// runnerConfig is the runner's whole config block as canonical JSON for the
-// trusted keys, so the same block gives the same bytes however the file
-// orders it. Only a config without a runner has none.
+// runnerConfig is the runner's config block as canonical JSON for the trusted keys, the same
+// bytes however the file orders it; nil only without a runner.
 func (c *Config) runnerConfig() *json.RawMessage {
 	p, ok := c.Runner()
 	if !ok {
@@ -137,9 +134,8 @@ func (c *Config) runnerConfigKey() string {
 	return "plugins.<runner>.config"
 }
 
-// trustRunnerConfig gives the runner the trusted config block and names the
-// block when the change edits it. The pipeline is made from it, so a
-// change's own block takes effect once merged.
+// trustRunnerConfig gives the runner the trusted block and names it when the change edits it:
+// the pipeline is made from it, so a change's own block takes effect once merged.
 func (c *Config) trustRunnerConfig(raw *json.RawMessage, same func(key string, a, b any)) {
 	if raw == nil {
 		return

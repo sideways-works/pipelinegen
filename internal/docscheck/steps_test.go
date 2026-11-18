@@ -60,8 +60,7 @@ func TestTheStepTableIsTheTools(t *testing.T) {
 
 			seen[c.Command] = true
 
-			// the batch task is the repository's own: section (a) says
-			// what it has
+			// the batch task is the repository's own: section (a) says what it has
 			if cells[2] == "see (a)" {
 				continue
 			}

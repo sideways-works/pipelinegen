@@ -20,12 +20,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/tries"
 )
 
-// A run's records are kept in few refs rather than one per record, since
-// every push to the repository is told of every ref it has. While the run
-// goes each batch writes its slices' records into a ref of its own, and a
-// suite's end moves them into the run's one ref (Compact). Each record is a
-// directory of the ref with a marker <dir>:<unix>.<nonce> beside it, and
-// readers see every record under its own name whichever ref holds it.
+// A run's records live in few refs, as every push is told of every ref: each batch writes a ref of its own,
+// moved into the run's one ref at the suite's end (Compact); each record is a directory with a marker beside.
 
 const (
 	gitFetch    = "fetch"
@@ -331,10 +327,8 @@ func (s *Store) oneRefEach(ctx context.Context, run string) (bool, error) {
 // two are written apart.
 var ErrMixed = errors.New("a write mixes a run's records with other refs")
 
-// groupedWrite writes a run's records into the grouped refs: a slice's state
-// into its batch's ref when the store writes for a batch, the rest into the
-// run's ref. After a lost race it reads again and applies itself again; a
-// guarded update whose record changed meanwhile ends it with ErrStale.
+// groupedWrite writes a slice's state into its batch's ref when the store writes for a batch, the rest
+// into the run's ref; after a lost race it applies itself again, and a changed guarded record is ErrStale.
 func (s *Store) groupedWrite(ctx context.Context, message string, updates []Update) (map[string]string, error) {
 	// writes of one store share its scratch repository for the grouped
 	// refs, whose fetches and indexes must not interleave
@@ -431,6 +425,7 @@ func (s *Store) again(ctx context.Context, what string, try func() error) error 
 
 var errTransport = errors.New("reading the remote's refs failed")
 
+// groupDeadline bounds how long a grouped write or read keeps trying, unless the step ends sooner.
 const groupDeadline = 10 * time.Minute
 
 var errLostRace = errors.New("lost race")
@@ -511,10 +506,8 @@ func (s *Store) groupedTry(ctx context.Context, message string, edits map[string
 		return out, nil
 	}
 
-	// over HTTP git pushes a thin pack whatever it is told (its remote
-	// helper takes no thin option), which reads each file the push
-	// replaces, at the same path, as the base of the new one's delta:
-	// those few files are fetched first, and nothing else ever is
+	// over HTTP git pushes a thin pack whatever it is told, reading each file the push replaces as
+	// its delta base: those few files are fetched first, and nothing else ever is
 	if err := g.fetchMissing(ctx, bases); err != nil {
 		return nil, err
 	}
@@ -526,10 +519,8 @@ func (s *Store) groupedTry(ctx context.Context, message string, edits map[string
 	return out, nil
 }
 
-// fetchMissing fetches, in one fetch, those of ids the partial scratch
-// repository lacks, learned from the objects it holds and never by asking
-// git about an object it may lack: a git before 2.45 dies on that with lazy
-// fetching off.
+// fetchMissing fetches, at once, those of ids the partial repository lacks, known from the objects it
+// holds, never by asking git of a missing one: a git before 2.45 dies on that with lazy fetching off.
 func (s *Store) fetchMissing(ctx context.Context, ids []string) error {
 	want, err := s.lacking(ctx, ids)
 	if err != nil || len(want) == 0 {
@@ -589,10 +580,8 @@ func (s *Store) lacking(ctx context.Context, ids []string) ([]string, error) {
 }
 
 func (s *Store) pushGroups(ctx context.Context, args []string) error {
-	// a thin pack makes new files deltas against the files they replace,
-	// so groupedTry fetches those first. Over HTTP git pushes thin packs
-	// whatever it is told (its remote helper takes no thin option): the
-	// store asks for them on every remote, so all behave as HTTP does.
+	// a thin pack makes new files deltas against the ones they replace, fetched first; git pushes
+	// thin packs over HTTP whatever it is told, so every remote is asked for them alike
 	args = append([]string{args[0], "--thin"}, args[1:]...)
 
 	_, err := s.git(ctx, []string{noLazyFetch}, nil, args...)
@@ -630,9 +619,8 @@ var ErrMissing = errors.New("a defect of pipelinegen, please report it: a push n
 
 var missingRE = regexp.MustCompile(`could not fetch ([0-9a-f]{40,64}) from promisor remote`)
 
-// partial is the store's second scratch repository: a partial clone that
-// reads the grouped refs' trees and never their files' contents, so a
-// write on a run's ref downloads nothing of what the run recorded.
+// partial is the store's second scratch repository, a partial clone that reads the grouped refs' trees
+// and never their files, so a write on a run's ref downloads nothing of what the run recorded.
 func (s *Store) partial(ctx context.Context) (*Store, error) {
 	if err := s.init(ctx); err != nil {
 		return nil, err
@@ -658,10 +646,8 @@ func (s *Store) partial(ctx context.Context) (*Store, error) {
 		{config, "remote." + promisor + ".partialclonefilter", "blob:none"},
 		{config, "extensions.partialClone", promisor},
 		{config, "gc.auto", "0"},
-		// a push leaves out what its parents hold: git's sparse walk
-		// proves that only path by path, and would send a file the remote
-		// has at another path, which this repository never fetched. The
-		// whole walk proves it for every file, and the trees are small.
+		// git's sparse walk proves a file the remote holds only path by path, and would send one it
+		// has at another path, which this repository never fetched; the whole walk is cheap here
 		{config, "pack.useSparse", "false"},
 	} {
 		if _, err := g.git(ctx, nil, nil, args...); err != nil {
@@ -699,9 +685,8 @@ func (s *Store) fetch(ctx context.Context, refs []string) (map[string]string, er
 		return nil, fmt.Errorf("%w: %w", errTransport, err)
 	}
 
-	// what the fetch brought, which is newer than what ls-remote said when
-	// a ref moved in between: a commit without a parent brings nothing of
-	// the one before it
+	// what the fetch brought, newer than what ls-remote said when a ref moved in between: a commit
+	// without a parent brings nothing of the one before it
 	for ref := range tips {
 		out, err := s.git(ctx, nil, nil, "rev-parse", "--verify", groups+strings.TrimPrefix(ref, "refs/"))
 		if err != nil {
@@ -780,11 +765,11 @@ func (s *Store) applyGroup(ctx context.Context, message, tip string, edits []gro
 	return commit, replaced, err
 }
 
+// emptyTree is git's id of the tree that holds nothing: a ref whose last record went.
 const emptyTree = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
-// edit adds one record's change to the index lines; a guarded edit whose
-// record changed since it was read is a lost race the caller can't win:
-// ErrStale.
+// edit adds one record's change to the index lines; a guarded edit whose record changed since it was
+// read is a lost race the caller can't win: ErrStale.
 func (s *Store) edit(ctx context.Context, tip string, have map[string]string, e groupEdit, info *bytes.Buffer) ([]string, error) {
 	dir := e.rec.dir
 	cur := ""
@@ -854,6 +839,7 @@ func (s *Store) edit(ctx context.Context, tip string, have map[string]string, e 
 	return replaced, nil
 }
 
+// zeroID with mode 0 is how update-index --index-info removes a path.
 const zeroID = "0000000000000000000000000000000000000000"
 
 func (s *Store) hashObjects(ctx context.Context, files map[string][]byte) (map[string]string, error) {
@@ -895,8 +881,7 @@ func (s *Store) hashObjects(ctx context.Context, files map[string][]byte) (map[s
 	return byPath, nil
 }
 
-// commitTree makes a commit of tree, dated by the clock, on the commits
-// whose files it keeps: git sends with a push only what those commits
+// commitTree makes a commit of tree on the commits whose files it keeps: a push sends only what those
 // don't hold, so the files stay on the remote and never come here.
 func (s *Store) commitTree(ctx context.Context, message, tree string, parents ...string) (string, error) {
 	nonce, err := newToken(s.now())
@@ -927,10 +912,8 @@ func (s *Store) commitTree(ctx context.Context, message, tree string, parents ..
 	return strings.TrimSpace(out), nil
 }
 
-// Compact moves the records of a suite's batches into the run's ref in one
-// push that also deletes the batches' refs, each guarded by what was read: a
-// batch that writes meanwhile fails the push, which is made again. A record
-// the run's ref holds newer stays, and nothing is downloaded but trees.
+// Compact moves a suite's batches' records into the run's ref in one push deleting the batches' refs,
+// each guarded, so a batch writing meanwhile fails it and it goes again; a newer record stays.
 func (s *Store) Compact(ctx context.Context, runPrefix, suite string) (int, error) {
 	if s.ReadOnly {
 		return 0, fmt.Errorf("%w: compact %s", ErrReadOnly, runPrefix)
@@ -1011,6 +994,7 @@ func (s *Store) compactTry(ctx context.Context, run, suite string) (int, error) 
 
 		newest(moved, entries)
 
+		// the batches' tips are parents too, so the push sends none of their files again
 		parents = append(parents, tips[b])
 		args = append(args, "--force-with-lease="+b+":"+tips[b], ":"+b)
 	}

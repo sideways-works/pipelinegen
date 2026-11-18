@@ -99,8 +99,8 @@ func TestSpecPackages(t *testing.T) {
 	}
 }
 
-// A config without packages gives the spec it gave before: a runner that
-// knows nothing of them reads the same.
+// A config without packages gives the spec it gave before: a runner that knows nothing of them
+// reads the same.
 func TestSpecWithoutPackages(t *testing.T) {
 	cfg, err := config.Parse([]byte(strings.NewReplacer(
 		"packages: [git]\n", "", "images: {registry: ghcr.io/owner/ci-images, credentials: registry_push, pull_credentials: registry_pull}\n", "",

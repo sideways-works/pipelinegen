@@ -41,8 +41,8 @@ func TestTheCommandLineMountsPassesTheEnvironmentAndPullsByDigest(t *testing.T) 
 	}
 }
 
-// A step that runs before the suite's (installing what it declares, later) runs in the same
-// container, by a shell, ahead of the command, and what runs after it whatever its status.
+// A step before the suite's (installing what it declares) runs in the same container by a shell,
+// ahead of the command, and what runs after it whatever its status.
 func TestBeforeAndAfterRunInTheSameContainer(t *testing.T) {
 	r := Run{Tool: "podman", Image: "alpine:3", Name: "n", Dir: "/", Before: []string{"apk add git"}, After: []string{"echo done"}, Cmd: []string{"make", "test"}}
 
@@ -81,9 +81,8 @@ func TestFindTakesTheNamedTool(t *testing.T) {
 	}
 }
 
-// One container from a light image, when docker or podman runs here: it runs as root, as a CI task
-// does, what it wrote is this machine's user's once handed back, and only the environment given
-// reaches it.
+// One container from a light image, when docker or podman runs here: root, as on CI, what it wrote
+// is the user's once handed back, and only the environment given reaches it.
 func TestATinySuiteRunsInBusybox(t *testing.T) {
 	tool, err := Find("")
 	if err != nil || !Reachable(t.Context(), tool) {

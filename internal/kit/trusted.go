@@ -13,9 +13,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// trustedProblems are the tool's own calls in a pipeline that don't get the
-// spec's trusted keys, byte for byte, in plugin.EnvTrusted; a call without a
-// path is a command a message names for a person.
+// trustedProblems are the tool's calls that don't get the spec's trusted keys byte for byte in
+// plugin.EnvTrusted; a call without a path is a command a message names for a person.
 func trustedProblems(s plugin.Spec, steps []stepCall) []string {
 	var out []string
 
@@ -37,10 +36,8 @@ func trustedProblems(s plugin.Spec, steps []stepCall) []string {
 	return out
 }
 
-// pipelineStepProblems are the tool's own calls that aren't told, with
-// plugin.EnvPipelineStep=1, that they run as a pipeline's step: without it a
-// planning step keeps no Bazel output in its cache and starts Bazel cold on
-// every build.
+// pipelineStepProblems are the tool's calls not told by plugin.EnvPipelineStep=1 that they are a
+// pipeline's step: a planning step then keeps no Bazel output and starts Bazel cold every build.
 func pipelineStepProblems(steps []stepCall) []string {
 	var out []string
 
@@ -57,9 +54,8 @@ func pipelineStepProblems(steps []stepCall) []string {
 	return out
 }
 
-// repoTaskProblems are the repository's own tasks that the pipeline hands a
-// var the spec declares for no task: a runner gives them their declared
-// secrets and nothing else.
+// repoTaskProblems are the repository's own tasks handed a var the spec declares for no task: a
+// runner gives them their declared secrets and nothing else.
 func repoTaskProblems(s plugin.Spec, text []byte) []string {
 	declared := declaredSecrets(s)
 
@@ -164,9 +160,8 @@ func writingTokens() []string {
 	return append(out, toolcalls.EnvToken, gitssh.KeyEnv(plugin.PurposeStore))
 }
 
-// proposedPlanProblems are, with the tokens split by purpose, the steps
-// that plan a change's own tree (plan --out, which runs its code) and hold
-// a token that writes: they may read, and nothing more.
+// proposedPlanProblems are, with tokens split by purpose, the steps that plan a change's own tree
+// (plan --out, which runs its code) holding a token that writes: they may only read.
 func proposedPlanProblems(steps []stepCall) []string {
 	var out []string
 
@@ -241,9 +236,8 @@ func (h *holdings) add(v specVariant, text []byte) {
 	}
 }
 
-// sshKeyProblems are, with ssh keys in the spec, the tool's steps that hold
-// a purpose's token without that purpose's key, or a key that isn't the
-// spec's var.
+// sshKeyProblems are, with ssh keys in the spec, the tool's steps holding a purpose's token without
+// its key, or a key that isn't the spec's var.
 func sshKeyProblems(s plugin.Spec, steps []stepCall) []string {
 	var out []string
 

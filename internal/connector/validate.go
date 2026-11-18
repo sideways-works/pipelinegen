@@ -26,9 +26,8 @@ var requestID = regexp.MustCompile(`^[A-Za-z0-9._-]{1,64}$`)
 
 var methods = []string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"}
 
-// neverLiteral are header names no request may set itself, declared or
-// not: credentials go only where the core puts them, and Host would point a
-// request somewhere its URL doesn't say.
+// neverLiteral are header names no request may set, declared or not: credentials go only where the core
+// puts them, and Host would point a request somewhere its URL doesn't say.
 var neverLiteral = []string{"Authorization", "Cookie", "Host"}
 
 func (c *callState) problem(r plugin.HTTPRequest) string {
@@ -143,10 +142,8 @@ func normalOrigin(raw string) (string, error) {
 	return strings.ToLower(u.Scheme) + "://" + host, nil
 }
 
-// Origin is the web origin of a git remote, where its host's API is when
-// it is on the same host: an https or http remote keeps its scheme and
-// port; an ssh or scp-form remote (git@host:owner/name) is reached over
-// https on the default port. A file path or file:// remote has none.
+// Origin is a git remote's web origin, where its host's API is: an http(s) remote keeps scheme and port, an
+// ssh or scp-form one (git@host:owner/name) is https on the default port, a file remote has none.
 func Origin(remote string) (string, error) {
 	if u, err := url.Parse(remote); err == nil && u.Scheme != "" && u.Host != "" {
 		switch u.Scheme {

@@ -24,8 +24,7 @@ import (
 // Differ is bazel-diff: it hashes a workspace, compares two hash files and
 // explains what made a target differ.
 type Differ interface {
-	// Hashes writes the hashes of the workspace in dir to hashes and its
-	// dependency edges to edges.
+	// Hashes writes dir's workspace hashes to the file hashes and its dependency edges to edges.
 	Hashes(ctx context.Context, bz *bazel.Client, dir, hashes, edges string) error
 	// Impacted lists the labels of the targets that differ between the
 	// workspaces two hash files were made from.
@@ -62,23 +61,20 @@ type Plan struct {
 	// which of their impacted labels anything else that changed reaches.
 	LabelGroups      int       `json:"label_groups,omitempty"`
 	LabelHashSeconds []float64 `json:"label_hash_seconds,omitempty"`
-	// Config is each part of the config the change edited and what it means
-	// for the tests; ConfigUnderstood tells whether the planner understood
-	// every part.
+	// Config is each part of the config the change edited and what it means for the tests;
+	// ConfigUnderstood tells whether the planner understood every part.
 	Config           []config.Part `json:"config,omitempty"`
 	ConfigUnderstood bool          `json:"config_understood,omitempty"`
 }
 
-// Rebuild is what a cold rebuild of the head's graph found: each answer that
-// differs from what the cache serves, and the error that kept it from
-// finishing. Check is the config's rebuild_check.
+// Rebuild is what a cold rebuild of the head's graph found: each answer that differs from the
+// cache's, and the error that kept it from finishing. Check is the config's rebuild_check.
 type Rebuild struct {
 	Check       string               `json:"check"`
 	Differences []plugins.Difference `json:"differences,omitempty"`
 	Error       string               `json:"error,omitempty"`
 }
 
-// SuitePlan is one suite's part of a plan.
 type SuitePlan struct {
 	Suite      string              `json:"suite"`
 	All        bool                `json:"all"`
@@ -98,8 +94,8 @@ type SuitePlan struct {
 	slices []bazel.Slice
 }
 
-// Slices are the suite's slices at the head, selected or not. A plan that selected every slice may not
-// keep them: Selected holds them all.
+// Slices are the suite's slices at the head, selected or not. A plan that selected every
+// slice may not keep them: Selected holds them all.
 func (sp SuitePlan) Slices() []bazel.Slice { return sp.slices }
 
 // Narrowed is a selection made smaller than what the change reaches: sampled
@@ -113,7 +109,6 @@ type Narrowed struct {
 	Dropped   []string `json:"dropped"`
 }
 
-// The kinds of Narrowed.
 const (
 	NarrowedSampled = "sampled"
 	NarrowedBy      = "narrowed"
@@ -141,7 +136,6 @@ type Hop struct {
 	File   string `json:"file,omitempty"`
 }
 
-// The kinds of Reason.
 const (
 	KindEverything  = "everything"
 	KindNewSlice    = "new-slice"
@@ -152,26 +146,22 @@ const (
 	KindDepends     = "depends"
 	KindOpens       = "opens"
 	KindTarget      = "target"
-	// KindInputAdded, KindInputRemoved and KindInputUnknown are a Bazel
-	// label of a slice's inputs (What) that the head's inputs gained, that
-	// they lost, or that the head's hashes don't hold, so whether it
-	// changed can't be told.
+	// KindInputAdded, KindInputRemoved and KindInputUnknown are a Bazel label of the slice's inputs
+	// (What) that the head gained, lost, or holds no hash of, so whether it changed can't be told.
 	KindInputAdded   = "input-added"
 	KindInputRemoved = "input-removed"
 	KindInputUnknown = "input-unknown"
 	// KindPlugin is a changed entry of a plugin that binds the slice:
 	// What is the plugin's name.
 	KindPlugin = "plugin"
-	// KindTextInput is a changed file the suite's text_inputs say the
-	// slice reads as text (What): a change its sbom calls unobservable is
-	// one such a test can observe, so the labels holding it select.
+	// KindTextInput is a changed file the suite's text_inputs say the slice reads as text (What):
+	// a change its sbom calls unobservable is one such a test can observe.
 	KindTextInput = "text-input"
 	// KindBaseConfig is a slice the base's configuration selects: a change
 	// that edits the config can add selection but never remove it for itself.
 	KindBaseConfig = "base-config"
 )
 
-// Options are one planning's inputs.
 type Options struct {
 	Config    *config.Config
 	Repo      gitx.Repo
@@ -182,20 +172,17 @@ type Options struct {
 	AllReason string
 	Differ    Differ
 	Bazel     func(dir string) *bazel.Client
-	// Claimed are the head's files an sbom plugin claims, with the plugin:
-	// such a change is carried by its units, so no Bazel target needs to own
-	// it.
+	// Claimed are the head's files an sbom plugin claims, with the plugin: such a change is
+	// carried by its units, so no Bazel target needs to own it.
 	Claimed map[string]string
 	Written func(tree string) (string, error)
 	Expect  func(commit string) int
 	Warn    func(format string, args ...any)
-	// ToolKey names the tools a snapshot depends on besides the commit and
-	// the config (pipelinegen's build, bazel-diff): cached snapshots are
-	// reused only under the same key.
+	// ToolKey names the tools a snapshot depends on besides the commit and the config
+	// (pipelinegen's build, bazel-diff): cached snapshots are reused only under the same key.
 	ToolKey string
-	// Prepare, when set, writes what a work tree needs before Bazel reads it
-	// (the deps repository) and returns a key for it: snapshots are cached
-	// by commit and key.
+	// Prepare writes what a work tree needs before Bazel reads it (the deps repository) and
+	// returns a key for it: snapshots are cached by commit and key.
 	Prepare func(ctx context.Context, tree, commit string, tests map[string][]bazel.Slice) (string, error)
 	Stub    func(tree string) error
 	Reasons func(base, head, target string) ([]Reason, bool)
@@ -214,24 +201,21 @@ type Options struct {
 	// Follow, when set, says how far a change is followed in a suite; unset
 	// is executed.
 	Follow func(suite string) string
-	// Select, when set, is the walk over the plugins' graph that selects the
-	// slices of recorded suites; unset, those suites are selected by their
-	// selectors.
+	// Select is the walk over the plugins' graph that selects the slices of recorded suites;
+	// unset, those suites are selected by their selectors.
 	Select *graph.Selection
 	// Alone, when set, names a suite's slices in a tree that nothing but
 	// their own files binds; each is selected whenever any file changed.
 	Alone func(commit, suite string) []string
-	// Inputs are, while Select is set, the Bazel labels a recorded slice
-	// depends on whatever its list says; it fails for a tree or slice whose
-	// inputs were never recorded.
+	// Inputs are, while Select is set, the Bazel labels a recorded slice depends on whatever its
+	// list says; it fails for a tree or slice whose inputs were never recorded.
 	Inputs func(commit, suite, slice string) ([]string, error)
 	// Through, when set, names the filegroups a slice's input label was
 	// found through at a commit, innermost first.
 	Through      func(commit, suite, slice, label string) []string
 	Unobservable func(base, head string, changes []gitx.Change) UnobservableRule
-	// Declared, when set, are the labels a recorded slice's test file names
-	// in its own pipelinegen:data lines, which stay a reason whatever the
-	// files behind them.
+	// Declared are the labels a recorded slice's test file names in its own pipelinegen:data
+	// lines, which stay a reason whatever the files behind them.
 	Declared func(commit, suite, slice string) []string
 	// Rebase, when set, compares each reached slice from a later pass of
 	// its own.
@@ -240,7 +224,6 @@ type Options struct {
 	pinned func(repo string) (changed bool, why string)
 }
 
-// SampleRule is how a suite picks its sample.
 type SampleRule struct {
 	// On tells whether the sample narrowings are in force; a sample_on entry
 	// samples either way.
@@ -264,9 +247,8 @@ const (
 // suite's recorded slices all ran.
 func SampleTarget(suite string) string { return "_sample." + suite }
 
-// SampleBoundTarget is the target bound to the units a suite's recorded
-// slices all bind only through what they all ran, or because they run at
-// start-up.
+// SampleBoundTarget is bound to the units a suite's recorded slices all bind only through
+// what they all ran, or because they run at start-up.
 func SampleBoundTarget(suite string) string { return "_sample-bound." + suite }
 
 // EntryTarget is the target bound to the plugin entries a suite's
@@ -335,9 +317,8 @@ var ErrHead = errors.New("head")
 
 const noSelectors = "no selectors for the test files: learn's stub did not run"
 
-// explainBudget is how many targets bazel-diff may still explain in one
-// plan; what it explained is kept by target, so every slice selected through
-// the same label shares one answer.
+// explainBudget is how many targets bazel-diff may still explain in one plan; answers are
+// kept by target, so every slice selected through the same label shares one.
 type explainBudget struct {
 	limited       bool
 	left, skipped int
@@ -361,7 +342,6 @@ func withExplainBudget(o Options) (Options, func()) {
 
 const maxRootCauses = 3
 
-// Compute plans a run.
 func Compute(ctx context.Context, o Options) (*Plan, error) {
 	// git runs in the repository, so a relative cache would land inside it
 	cache, err := filepath.Abs(o.Cache)
@@ -495,9 +475,8 @@ func selectSuites(ctx context.Context, o Options, b, h *Snapshot, impacted map[s
 	}
 
 	for _, name := range o.Config.SuiteNames() {
-		// a test file's selector exists only once Prepare wrote it: without
-		// one nothing could select the file, so every file runs (a walked
-		// suite needs none)
+		// a test file's selector exists only once Prepare wrote it: without one nothing could
+		// select the file, so every file runs (a walked suite needs none)
 		if o.Config.Suites[name].Implicit() && o.Prepare == nil && !o.walks(name) {
 			for _, s := range everything(&Plan{}, o.Config, map[string][]bazel.Slice{name: h.Slices[name]}, noSelectors).Suites {
 				if s.Suite == name {
@@ -637,9 +616,8 @@ func impactedTargets(ctx context.Context, o Options, b, h *Snapshot) (map[string
 	}
 
 	for _, c := range changes {
-		// a sample_on file needs no target: its change samples; the
-		// config, when what its change means is understood, needs none
-		// either: it selects by meaning
+		// a sample_on file needs no target: its change samples; nor does the config when what
+		// its change means is understood: it selects by meaning
 		if h.Owned[c.Path] || b.Owned[c.Path] || o.Config.MatchesSampleOn(c.Path) || c.Path == config.FileName && o.understood() {
 			continue
 		}
@@ -740,9 +718,8 @@ func selectSuite(name string, s config.Suite, all []bazel.Slice, impacted map[st
 	return sp
 }
 
-// leftOut are the Narrowed hook's entries for the slices of a suite the plan
-// left out. A slice the sample left out is the sample's: the change reached
-// it, so no narrowing left it out.
+// leftOut are the Narrowed hook's entries for the slices a plan left out; one the sample left
+// out is the sample's: the change reached it, so no narrowing left it out.
 func (o Options) leftOut(b, h *Snapshot, name string, sp SuitePlan) []Narrowed {
 	rest := left(h.Slices[name], sp.Selected)
 	for _, n := range sp.Narrowed {

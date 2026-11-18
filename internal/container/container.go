@@ -1,6 +1,5 @@
-// Package container runs a command in an image with docker or podman, the
-// way a CI task runs in its image: the build's directories mounted, the
-// task's environment and nothing else of this machine's.
+// Package container runs a command in an image with docker or podman as a CI task runs: the
+// build's directories mounted, the task's environment and nothing else of this machine's.
 package container
 
 import (
@@ -20,17 +19,13 @@ import (
 	"time"
 )
 
-// ErrNoTool is a machine with neither docker nor podman on its PATH.
 var ErrNoTool = errors.New("neither docker nor podman is on PATH")
 
-// ErrImage is an image that can't be pulled or read.
 var ErrImage = errors.New("image")
 
 // Tools are the container tools looked for, in order.
 var Tools = []string{"docker", "podman"}
 
-// Find is the container tool to run with: name when given, else the first
-// of Tools on PATH.
 func Find(name string) (string, error) {
 	if name != "" {
 		p, err := exec.LookPath(name)
@@ -50,7 +45,6 @@ func Find(name string) (string, error) {
 	return "", ErrNoTool
 }
 
-// Mount is a host path seen at At in the container.
 type Mount struct {
 	Host, At string
 	ReadOnly bool
@@ -65,15 +59,13 @@ type Run struct {
 	// Mounts are bound in order; a path holding a colon can't be bound and is refused by Args.
 	Mounts []Mount
 	// Env is the container's whole environment besides the image's own.
-	Env map[string]string
-	// User and UserNS are --user and --userns, when set.
+	Env          map[string]string
 	User, UserNS string
 	Privileged   bool
 	// Keep leaves the container once it ends, for a commit; whoever keeps it removes it.
 	Keep bool
-	// Before are shell lines run in the same container ahead of Cmd, stopping at the first that
-	// fails: where installing what a suite declares goes. After are run once Cmd ends, whatever
-	// its status, which the container then exits with. Either needs a shell in the image.
+	// Before runs in the same shell ahead of Cmd, stopping at the first failure; After runs once
+	// Cmd ends, whatever its status, which the container then exits with.
 	Before, After []string
 	Cmd           []string
 }
@@ -159,13 +151,11 @@ func (r Run) Command(ctx context.Context) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
-// Name is a container's name for a run of what: unique on this machine.
 func Name(what string) string {
 	return "pipelinegen-" + what + "-" + strconv.Itoa(os.Getpid()) + "-" + strconv.FormatInt(time.Now().UnixNano()%1_000_000_000, 36)
 }
 
-// Ensure pulls ref unless the tool has it already, and returns its
-// platform, as os/arch.
+// Ensure pulls ref unless the tool has it, and returns its platform as os/arch.
 func Ensure(ctx context.Context, tool, ref string, log io.Writer) (string, error) {
 	if p, err := platform(ctx, tool, ref); err == nil {
 		return p, nil
@@ -204,11 +194,8 @@ func platform(ctx context.Context, tool, ref string) (string, error) {
 	return p, nil
 }
 
-// Owner says how what a container writes comes to be this machine's user's. Its processes are root by
-// default, as a CI task's are: on a rootful Linux tool what they write is then root's, and handBack
-// says to give it back once the container ends; rootless docker or podman maps root to the user
-// already. asMe runs them as the user instead: --user on a rootful tool, --userns keep-id with
-// rootless podman. Elsewhere than Linux the tool's file sharing gives the user what they write.
+// Owner says how what a container's root writes becomes the user's: handBack after a rootful Linux
+// tool; asMe runs as the user (--user, or --userns keep-id on rootless podman) instead.
 func Owner(ctx context.Context, tool string, asMe bool) (user, userns string, handBack bool) {
 	if runtime.GOOS != "linux" {
 		return "", "", false
@@ -229,8 +216,8 @@ func Owner(ctx context.Context, tool string, asMe bool) (user, userns string, ha
 	return "", "", true
 }
 
-// HandBack is the container that gives this machine's user back what r's root wrote under dirs: run
-// once r has ended, however it ended, in r's image, which has chown as any image with a shell does.
+// HandBack is the container that gives the user back what r's root wrote under dirs, run once r
+// has ended, in r's image, which has chown as any image with a shell does.
 func HandBack(r Run, dirs ...string) Run {
 	mounts := make([]Mount, 0, len(dirs))
 	for _, d := range dirs {
@@ -269,7 +256,6 @@ func rootless(ctx context.Context, tool string) bool {
 	return strings.Contains(s, "rootless") || strings.TrimSpace(s) == "true"
 }
 
-// Reachable says whether the tool's daemon or service answers.
 func Reachable(ctx context.Context, tool string) bool {
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
@@ -277,13 +263,12 @@ func Reachable(ctx context.Context, tool string) bool {
 	return exec.CommandContext(ctx, tool, "info").Run() == nil
 }
 
-// ImageID is the content digest of the image ref the tool has: another
-// image under the same tag has another.
+// ImageID is the content digest of the image ref the tool has: another image under the same tag
+// has another.
 func ImageID(ctx context.Context, tool, ref string) (string, error) {
 	return inspect(ctx, tool, ref, "{{.Id}}")
 }
 
-// HasImage tells whether the tool has the image ref.
 func HasImage(ctx context.Context, tool, ref string) bool {
 	_, err := inspect(ctx, tool, ref, "{{.Id}}")
 
@@ -309,8 +294,8 @@ func Remove(ctx context.Context, tool, name string) {
 	_ = rm.Run()                                                                  //nolint:errcheck // nothing left to remove
 }
 
-// Commit makes the container name, which has ended, the image ref, with
-// the entrypoint and command of the image base it ran, and removes it.
+// Commit makes the ended container name the image ref, with the entrypoint and command of the
+// image base it ran, and removes it.
 func Commit(ctx context.Context, tool, name, base, ref string, log io.Writer) error {
 	defer Remove(ctx, tool, name)
 

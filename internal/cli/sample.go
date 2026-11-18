@@ -42,9 +42,8 @@ func sampleRule(cfg *config.Config, set *plugins.Set) func(suite string) *affect
 	}
 }
 
-// toSample moves the units a suite's recorded slices all bind the same way onto its sample targets: those
-// every slice ran to affected.SampleTarget and, with sample-bound, those bound only through the sample or
-// at start-up to affected.SampleBoundTarget. A unit a slice binds for another reason too stays that slice's.
+// toSample moves units every recorded slice binds alike onto the sample targets: those all ran, and with
+// bound those bound only through the sample or start-up; a unit bound for another reason too stays.
 func toSample(t *deps.Tree, ss []deps.Slice, sample, bound bool) []deps.Slice {
 	if !sample {
 		return ss

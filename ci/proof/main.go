@@ -1,18 +1,5 @@
-// Command proof plans changes to a small fixture repository through the
-// released Go plugins, after recording what its tests ran, and prints what
-// each plan selected (docs/proof.md).
-//
-//	go run ./ci/proof [--newest | --source] <work dir>
-//
-// --newest plans with each piece's newest release instead of the pins;
-// --source plans with the tool built from this checkout. It needs git, flock,
-// ps, Go 1.27.1 and bazelisk. PIPELINEGEN, PLUGINS and BAZEL_DIFF name
-// binaries to use instead of the pinned releases, each checked against its
-// pin; GITHUB_TOKEN goes only in a request header. PROOF_WORKERS (default 3)
-// workers plan side by side with two Bazel servers each, whose Java heap
-// PROOF_BAZEL_HEAP (default 1g) bounds. Every plan is also made with the tool
-// built to bind forward (the pipelinegen_forward build tag) and compared. The
-// work directory must be empty or missing.
+// Command proof plans changes to a small fixture repository through the released Go plugins and
+// prints what each plan selected; docs/proof.md describes it, its flags and its variables.
 package main
 
 import (

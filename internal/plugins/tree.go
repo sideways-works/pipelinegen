@@ -21,9 +21,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Tree asks every plugin about the tree checked out at root (its HEAD is the
-// commit planned) and assembles the answers at the narrowing level: units
-// with resolved digests, the links in force, and what can't be told.
+// Tree asks every plugin about the tree at root (its HEAD the commit planned) and assembles at
+// the narrowing level the units with resolved digests, the links in force, and the untold.
 func (s *Set) Tree(ctx context.Context, root, commit string, level int) (*deps.Tree, error) {
 	root = RealPath(root)
 
@@ -32,9 +31,8 @@ func (s *Set) Tree(ctx context.Context, root, commit string, level int) (*deps.T
 		return nil, err
 	}
 
-	// paths a Mac holds as one file are no plugin's: none is asked about
-	// them, so no answer about them is kept, and a change to one is a
-	// change to a file no plugin claims
+	// paths a Mac holds as one file are no plugin's: none is asked about them, so a change to one
+	// is a change to a file no plugin claims
 	asked := s.apartOnEveryFilesystem(files)
 
 	g := &gather{
@@ -61,8 +59,8 @@ func (s *Set) Tree(ctx context.Context, root, commit string, level int) (*deps.T
 
 	s.pins(root, t)
 
-	// typed links stay apart from plain ones: the forward closure follows
-	// every plain link, and must not follow a typed one as if it were
+	// typed links stay apart from plain ones: the forward closure follows every plain link, and
+	// must not follow a typed one as if it were
 	plain, typed := splitTyped(g.links)
 
 	if t.Links, t.RuledOut, err = s.inForce(plain, level); err != nil {
@@ -73,8 +71,8 @@ func (s *Set) Tree(ctx context.Context, root, commit string, level int) (*deps.T
 		return nil, err
 	}
 
-	// in one order whether the sets came from the cache or the plugin
-	// (the walk's reasons follow it), each link once
+	// in one order whether the sets came from the cache or the plugin (the walk's reasons follow
+	// it), each link once
 	t.Typed = mergeLinks(t.Typed)
 
 	for n, links := range t.TypedRuledOut {
@@ -87,8 +85,8 @@ func (s *Set) Tree(ctx context.Context, root, commit string, level int) (*deps.T
 		}
 	}
 
-	// a typed link to nothing is a naming convention that didn't hold, as
-	// for a plain one: its source binds wide, and the plan says which
+	// a typed link to nothing is a naming convention that didn't hold, as for a plain one: its
+	// source binds wide, and the plan says which
 	for _, ln := range t.Typed {
 		if dangling(t, ln.To) {
 			cannotTell(t, ln.From, g.typedBy[[2]string{ln.From, ln.To}], "links to "+ln.To+", which no plugin describes")
@@ -127,8 +125,8 @@ func (s *Set) byUnitsInForce(t *deps.Tree, g *gather, level int) {
 	}
 }
 
-// gatherAll asks every plugin about the tree, the sboms first: a
-// correlator's set may be keyed on the digests of units they list.
+// gatherAll asks every plugin about the tree, the sboms first: a correlator's set may be keyed
+// on the digests of units they list.
 func (s *Set) gatherAll(ctx context.Context, root string, files map[string]string, g *gather) error {
 	for _, sbom := range []bool{true, false} {
 		if !sbom {
@@ -192,19 +190,18 @@ type gather struct {
 	inputs            unitDigests
 }
 
-// unitDigests are the digests a correlator's set with input units is keyed
-// on: the sboms' units, before any correlator's digest_from, which comes
-// from the very answers being keyed.
+// unitDigests are what a correlator's set with input units is keyed on: the sboms' units, before
+// any correlator's digest_from, which comes from the very answers being keyed.
 type unitDigests struct {
 	digest map[string]string
 	files  map[string]string
-	// covered are the namespaces whose sboms told about every file asked
-	// about: only there is a unit's absence known.
+	// covered are the namespaces whose sboms told about every file asked about: only there is a
+	// unit's absence known.
 	covered map[string]bool
 }
 
-// of is the digest a set naming id as an input unit is keyed on; false when
-// nothing can be said, and the set is then neither served nor kept.
+// of is the digest a set naming id as an input unit is keyed on; false when nothing can be
+// said, and the set is then neither served nor kept.
 func (u unitDigests) of(id string) (string, bool) {
 	if p, ok := strings.CutPrefix(id, "file:"); ok {
 		if blob, ok := u.files[p]; ok {
@@ -443,9 +440,8 @@ func (g *gather) noteTyped(name string, links []plugin.Link) {
 	}
 }
 
-// untoldFiles gives the tree a unit file:<path> for each file a plugin
-// couldn't tell about, with the file's blob as digest, so a change to it is
-// seen at all.
+// untoldFiles gives each file a plugin couldn't tell about a unit file:<path> digesting its blob,
+// so a change to it is seen at all.
 func untoldFiles(t *deps.Tree, untold map[string][]string, files map[string]string) {
 	t.Untold = map[string][]string{}
 
@@ -466,13 +462,10 @@ func untoldFiles(t *deps.Tree, untold map[string][]string, files map[string]stri
 	}
 }
 
-// PinID is the unit of a plugin's entry in the config.
 func PinID(plugin string) string { return "plugin:" + plugin }
 
-// pins gives each sbom and correlator plugin a unit whose digest is its
-// entry in the tree's own config, so a changed entry selects every slice the
-// plugin binds. The config is read as history: a base with a key retired
-// since still names its plugins.
+// pins gives each plugin a unit digesting its entry in the tree's config, so a changed entry
+// selects every slice it binds; read as history, so a base with a retired key still names them.
 func (s *Set) pins(root string, t *deps.Tree) {
 	t.Pins = map[string]string{}
 
@@ -519,8 +512,8 @@ func pinDigest(p config.Plugin) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// RealPath is a tree's root with every symlink resolved, as handed to
-// plugins, so a plugin sees the same paths as the tool that wrote them.
+// RealPath is a tree's root with every symlink resolved, as handed to plugins, so a plugin sees
+// the same paths as the tool that wrote them.
 func RealPath(root string) string {
 	if resolved, err := filepath.EvalSymlinks(root); err == nil {
 		return resolved
@@ -535,15 +528,13 @@ func (s *Set) on(narrowing string, level int) bool {
 	return ok && level < off
 }
 
-// On tells whether a narrowing is in force at a level: a narrowing no
-// plugin declares never is, so its wide rule applies.
+// On tells whether a narrowing is in force at a level: one no plugin declares never is, so its
+// wide rule applies.
 func (s *Set) On(narrowing string, level int) bool { return s.on(narrowing, level) }
 
-// OffAt is the level that switches a narrowing off, 0 for one nobody
-// declares.
+// OffAt is the level that switches a narrowing off, 0 for one nobody declares.
 func (s *Set) OffAt(narrowing string) int { return s.offAt[narrowing] }
 
-// InForce names the narrowings in force at a level, sorted.
 func (s *Set) InForce(level int) []string {
 	out := []string{}
 
@@ -592,9 +583,8 @@ func (s *Set) inForce(links []plugin.Link, level int) ([]plugin.Link, map[string
 	return out, ruled, nil
 }
 
-// mergeLinks sorts links and makes links alike in ends, kind and tags one,
-// so equal answers give equal lists whether the sets came from the cache or
-// the plugin.
+// mergeLinks sorts links and merges those alike in ends, kind and tags, so equal answers give
+// equal lists whether the sets came from the cache or the plugin.
 func mergeLinks(links []plugin.Link) []plugin.Link {
 	same := func(a, b plugin.Link) int {
 		return cmp.Or(cmp.Compare(a.From, b.From), cmp.Compare(a.To, b.To), cmp.Compare(a.Kind, b.Kind),

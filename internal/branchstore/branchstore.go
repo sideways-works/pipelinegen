@@ -1,9 +1,5 @@
-// Package branchstore keeps pipelinegen's records as ordinary files on one
-// branch of a repository that shares no history with the code. A write is a
-// commit on the tip it read, pushed only if nobody moved the branch first;
-// when someone did, the write reads the new tip and applies itself again by
-// paths. Readers fetch the tip without file contents and read the few files
-// they need.
+// Package branchstore keeps pipelinegen's records as files on a branch that shares no history with
+// the code: a write is a commit on the tip it read, applied again by paths when the tip moved first.
 package branchstore
 
 import (
@@ -45,18 +41,15 @@ type Store struct {
 	Branch string
 	Dir    string
 	Clock  func() time.Time
-	// Retries is how often a write that failed in passing goes again at
-	// least (0: once); a refusal by a rule of the remote's goes again only a
-	// few times, and a push refused because another writer landed first is
-	// not counted here.
+	// Retries is how often a write that failed in passing goes again at least (0: once); a remote's
+	// refusal goes again only a few times, and a push that lost a race isn't counted.
 	Retries  int
 	Backoff  time.Duration
 	RetryFor time.Duration
 	Until    time.Time
 	Deadline time.Duration
-	// Roots makes every write a commit without a parent, pushed in place of
-	// the tip it read: the branch keeps no history. For a branch whose
-	// content is small and whose past is of no use, such as leases.
+	// Roots makes every write a parentless commit pushed in place of the tip it read, so the branch
+	// keeps no history: for small content whose past is of no use.
 	Roots bool
 
 	mu      sync.Mutex
@@ -79,10 +72,8 @@ func (s *Store) Tries(p tries.Policy) {
 // store names no deadline.
 const DefaultDeadline = 10 * time.Minute
 
-// ErrGit wraps a git command that failed.
 var ErrGit = errors.New("git")
 
-// ErrDeadline is a write that kept losing races past its deadline.
 var ErrDeadline = errors.New("the branch kept moving under the write")
 
 const (
@@ -97,7 +88,6 @@ const (
 // refusals and transport failures; Replays how many after lost races.
 func (s *Store) Retried() int { return int(s.retried.Load()) }
 
-// Replays says how often a write was applied again on a newer tip.
 func (s *Store) Replays() int { return int(s.replays.Load()) }
 
 func (s *Store) local() string { return "refs/remotes/" + remoteName + "/" + s.Branch }
@@ -278,9 +268,8 @@ func (s *Store) fetch(ctx context.Context) (string, error) {
 
 var errTransport = errors.New("fetching the branch failed")
 
-// replayWait is how long a write waits before it is applied again after its
-// n-th lost race: a random time up to a bound that doubles with every loss,
-// so writers that collided spread out.
+// replayWait is the wait before the n-th replay after a lost race: random up to a bound that
+// doubles with every loss, so writers that collided spread out.
 func replayWait(n int) time.Duration {
 	bound := replayBase << min(n-1, 6)
 
@@ -440,7 +429,6 @@ func (v *View) Files(ctx context.Context, dir string) ([]string, error) {
 	return out, nil
 }
 
-// Get reads one file; false when the view has none at that path.
 func (v *View) Get(ctx context.Context, p string) ([]byte, bool, error) {
 	got, err := v.Read(ctx, []string{p})
 	if err != nil {
@@ -452,10 +440,8 @@ func (v *View) Get(ctx context.Context, p string) ([]byte, bool, error) {
 	return data, ok, nil
 }
 
-// Read reads files, fetching the contents the scratch repository lacks in
-// one round trip; paths the view lacks are left out. A file the view's
-// tree names is always read or an error: never taken for one that isn't
-// there.
+// Read reads files, fetching what the scratch repository lacks in one round trip; paths the view
+// lacks are left out, and one its tree names is read or an error, never taken as missing.
 func (v *View) Read(ctx context.Context, paths []string) (map[string][]byte, error) {
 	files := map[string][]byte{}
 	if v.tip == "" || len(paths) == 0 {
@@ -509,10 +495,8 @@ func (v *View) Read(ctx context.Context, paths []string) (map[string][]byte, err
 	return files, nil
 }
 
-// fetchMissing fetches, in one fetch, the contents of ids the scratch
-// repository lacks, learned from the objects it holds and never by asking
-// git about an object it may lack: a git before 2.45 dies on that with lazy
-// fetching off.
+// fetchMissing fetches in one go the contents of ids the scratch repository lacks, learned from the
+// objects it holds: a git before 2.45 dies when asked of a missing object with lazy fetch off.
 func (s *Store) fetchMissing(ctx context.Context, ids []string) error {
 	want, err := s.lacking(ctx, ids)
 	if err != nil || len(want) == 0 {
@@ -629,7 +613,6 @@ func (v *View) entries(ctx context.Context, paths []string) (map[string]entry, e
 	return out, nil
 }
 
-// ErrPath wraps a path a store can't hold.
 var ErrPath = errors.New("bad path")
 
 func checkPath(p string) error {
@@ -653,20 +636,16 @@ type Change struct {
 	Deletes []string
 }
 
-// Empty tells whether the change does nothing.
 func (c Change) Empty() bool { return len(c.Files) == 0 && len(c.Deletes) == 0 }
 
-// Write applies a change that owns its paths: after a lost race it is
-// applied again, unchanged, to the newer tip. A change the tip already
-// holds writes nothing, so a write whose push landed though its answer
-// was lost ends there.
+// Write applies a change that owns its paths, again unchanged on the newer tip after a lost race; a
+// change the tip already holds writes nothing, so a push that landed unanswered ends there.
 func (s *Store) Write(ctx context.Context, message string, c Change) error {
 	return s.Update(ctx, message, func(context.Context, *View) (Change, error) { return c, nil })
 }
 
-// Update applies the change decide makes from the branch as it stands,
-// deciding again on the newer tip after every lost race. An empty change
-// writes nothing. decide must be safe to call more than once.
+// Update applies the change decide makes from the branch, deciding again on the newer tip after
+// every lost race, so decide must be safe to call twice; an empty change writes nothing.
 func (s *Store) Update(ctx context.Context, message string, decide func(context.Context, *View) (Change, error)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -761,10 +740,8 @@ func (s *Store) commit(ctx context.Context, v *View, message string, c Change) (
 		return "", err
 	}
 
-	// a nonce makes every commit unique: two writers that decided the same
-	// change on the same tip in the same second would otherwise make the
-	// same commit, and the second push would find it there already and
-	// pass, taking the first writer's commit for its own
+	// a nonce makes every commit unique: two writers deciding the same change on the same tip in the
+	// same second would make one commit, and the second push would take the first's for its own
 	nonce := make([]byte, 8)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("nonce: %w", err)
@@ -931,10 +908,8 @@ func (s *Store) prepare(ctx context.Context, message string, decide func(context
 	return v, commit, s.fetchBases(ctx, v.tip, commit)
 }
 
-// fetchBases fetches what a push of commit on tip reads that the scratch
-// repository lacks: a thin push, git's only kind over HTTP, reads each
-// replaced file as the base of its new one's delta, and a Roots commit
-// shares no history with the tip, so its push sends every file it holds.
+// fetchBases fetches what a push of commit on tip reads that is missing: a thin push (git's only
+// kind over HTTP) reads each replaced file as a delta base, and a Roots commit sends every file.
 func (s *Store) fetchBases(ctx context.Context, tip, commit string) error {
 	var ids []string
 

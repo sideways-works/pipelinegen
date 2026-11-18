@@ -10,9 +10,8 @@ import (
 	"testing"
 )
 
-// httpRemote serves a bare remote over git's smart HTTP from the test's own
-// server and returns its URL; with anyWant false it serves no object by id
-// that no ref advertises, as some hosts don't.
+// httpRemote serves a bare remote over git's smart HTTP from the test's own server; with anyWant
+// false it serves no object by id that no ref advertises, as some hosts don't.
 func httpRemote(t *testing.T, anyWant bool) string {
 	t.Helper()
 

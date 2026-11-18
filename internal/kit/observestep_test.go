@@ -15,10 +15,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// stepReaderFakes is a correlator that, while it observes, reads its
-// build_root relative to its working directory and refuses to run where
-// that directory holds anything but the tree and the coverage output: it
-// passes only where the kit observes as the pipeline's step does.
+// stepReaderFakes is a correlator that reads its build_root relative to its working directory and refuses
+// to run where that holds more than the tree and coverage output, as only the pipeline's step leaves it.
 func stepReaderFakes() map[string]plugin.Handler {
 	h := fakes("correlator")
 	d := plugin.Description{Kind: plugin.KindCorrelator, Protocol: plugin.Protocol, Name: "stepreader", Version: "1",

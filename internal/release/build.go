@@ -66,9 +66,8 @@ func moduleLine(goMod string) string {
 	return ""
 }
 
-// nestedTags: a Go module nested under the root module's path (SUB/go.mod
-// declaring ROOT/SUB) is released with the repository, so its tag SUB/TAG
-// must name the same commit; other nested modules are not released.
+// nestedTags: a Go module nested under the root module's path (SUB/go.mod declaring ROOT/SUB) is released
+// with the repository, so its tag SUB/TAG must name the same commit; other nested modules are not.
 func nestedTags(ctx context.Context, src, tag string) error {
 	if !exists(filepath.Join(src, "go.mod")) {
 		return nil
@@ -133,6 +132,7 @@ func buildGo(ctx context.Context, o IO, src, name, tag, out, main string) error 
 
 	var ldflags strings.Builder
 
+	// no symbol table and no build id, so the two builds of a tag give the same bytes
 	ldflags.WriteString("-s -w -buildid=")
 
 	var files []string
@@ -267,9 +267,8 @@ func goExtras(ctx context.Context, src, out string, own []string) error {
 	return releaseExtras(ctx, src, out, own, paths)
 }
 
-// releaseExtras copies the files a repository names for its release into out
-// under their base names; each must be committed and left as committed by
-// the build.
+// releaseExtras copies the files a repository names for its release into out by base name; each must be
+// committed, and the build must leave it as committed.
 func releaseExtras(ctx context.Context, src, out string, own, paths []string) error {
 	for _, extra := range paths {
 		if extra == "" {
@@ -332,10 +331,8 @@ type discard struct{}
 
 func (discard) Write(p []byte) (int, error) { return len(p), nil }
 
-// describe writes a plugin's answer to describe, without toolchains, as its
-// plugin.json: the versions one machine resolved say nothing about the
-// release, and two machines would publish different bytes. Whether a program
-// is a plugin is never read from whether it answered.
+// describe writes a plugin's describe answer without toolchains as its plugin.json: one machine's versions
+// say nothing of the release and would differ between machines. Being a plugin is never read from answering.
 func describe(ctx context.Context, name, exe, out string) error {
 	if name == "pipelinegen" {
 		return nil

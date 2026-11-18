@@ -6,31 +6,25 @@ import (
 	"slices"
 )
 
-// Limits are the time limits, in minutes, of the steps a pipeline runs
-// besides a suite's own tasks, so a step that hangs ends and says which
-// limit it reached.
+// Limits are the time limits, in minutes, of a pipeline's steps besides a suite's own tasks, so
+// a step that hangs ends and says which limit it reached.
 type Limits struct {
-	// Plan bounds each task of a run's planning (the prepare command and
-	// the plan) and of its sweep (default DefaultPlanMinutes).
-	Plan int `yaml:"plan"`
-	// Steps bounds each of pipelinegen's own steps in a suite's job (default
-	// DefaultStepMinutes).
+	// Plan bounds each task of a run's planning (the prepare command and the plan) and of its
+	// sweep.
+	Plan  int `yaml:"plan"`
 	Steps int `yaml:"steps"`
 }
 
 // The default time limits, in minutes.
 const (
-	// DefaultSuiteMinutes bounds each of a suite's tasks: its prepare,
-	// each batch and each whole-suite check.
+	// DefaultSuiteMinutes bounds each of a suite's tasks: its prepare, each batch and each
+	// whole-suite check.
 	DefaultSuiteMinutes = 120
 	DefaultPlanMinutes  = 120
 	DefaultStepMinutes  = 20
-	// DefaultWaitMinutes is how long a continuous run's build waits for
-	// the round in progress to end.
-	DefaultWaitMinutes = 480
+	DefaultWaitMinutes  = 480
 )
 
-// PlanMinutes is the planning tasks' limit.
 func (l Limits) PlanMinutes() int {
 	if l.Plan > 0 {
 		return l.Plan
@@ -39,7 +33,6 @@ func (l Limits) PlanMinutes() int {
 	return DefaultPlanMinutes
 }
 
-// StepMinutes is the limit of each of pipelinegen's own steps.
 func (l Limits) StepMinutes() int {
 	if l.Steps > 0 {
 		return l.Steps
@@ -48,8 +41,7 @@ func (l Limits) StepMinutes() int {
 	return DefaultStepMinutes
 }
 
-// WaitLength is how long, in minutes, a continuous run's build waits for
-// the round in progress to end.
+// WaitLength is how many minutes a continuous run's build waits for the round in progress.
 func (r Run) WaitLength() int {
 	if r.WaitMinutes > 0 {
 		return r.WaitMinutes
@@ -58,9 +50,8 @@ func (r Run) WaitLength() int {
 	return DefaultWaitMinutes
 }
 
-// SuiteMinutes is a suite's time limit in a run: the run's minutes for it,
-// else the suite's, else the default. It bounds each of the suite's tasks.
-// lock.minutes, the old spelling of minutes, is still read.
+// SuiteMinutes bounds each of a suite's tasks in a run: the run's minutes for it, else the
+// suite's (or lock.minutes, its old spelling), else the default.
 func (c *Config) SuiteMinutes(run, suite string) int {
 	s := c.Suites[suite]
 	rs := c.Runs[run].Suites[suite]
@@ -79,8 +70,8 @@ func (c *Config) SuiteMinutes(run, suite string) int {
 	return DefaultSuiteMinutes
 }
 
-// SuiteMinutesKey is the key a suite's limit in a run is raised by: the
-// run's own when it sets one, else the suite's.
+// SuiteMinutesKey is the key a suite's limit in a run is raised by: the run's own when it sets
+// one, else the suite's.
 func (c *Config) SuiteMinutesKey(run, suite string) string {
 	if rs := c.Runs[run].Suites[suite]; rs.Minutes > 0 || rs.LockMinutes > 0 {
 		return fmt.Sprintf("runs.%s.suites.%s.minutes", run, suite)

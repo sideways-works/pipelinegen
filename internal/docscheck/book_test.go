@@ -19,8 +19,8 @@ import (
 const (
 	summaryPage    = "docs/SUMMARY.md"
 	transcriptsDir = "docs/transcripts"
-	// outputToCome marks a block whose real output needs a live CI system
-	// and a git host; the book says so instead of showing invented output.
+	// outputToCome marks a block whose real output needs a live CI system and a git host; the book
+	// says so instead of showing invented output.
 	outputToCome = "**Output to come.**"
 )
 
@@ -111,10 +111,8 @@ func TestSummaryListsEveryPage(t *testing.T) {
 	}
 }
 
-// commandLineRE finds pipelinegen called in a line of a code block or an
-// inline code span: at the start, after a prompt, after an environment
-// assignment, or as tools/pipelinegen. Output that mentions pipelinegen in
-// a sentence ("this pipelinegen plans by links") is no call.
+// commandLineRE finds pipelinegen called at a line's start, after a prompt or an environment
+// assignment, or as tools/pipelinegen; a sentence that mentions pipelinegen is no call.
 var commandLineRE = regexp.MustCompile(`(?:^\s*|\$ |=\S+\s+|tools/)pipelinegen\s+([a-z-]+)((?:\s+\S+)*)`)
 
 var inlineCodeRE = regexp.MustCompile("`([^`\n]+)`")
@@ -302,8 +300,8 @@ func TestConfigKeysShownExist(t *testing.T) {
 				continue
 			}
 
-			// only snippets of pipelinegen.yaml: a mapping with a top-level
-			// key of the config (task files and plugin configs are others)
+			// only snippets of pipelinegen.yaml: a mapping with a top-level key of the config (task
+			// files and plugin configs are others)
 			if len(doc.Content) == 0 || doc.Content[0].Kind != yaml.MappingNode {
 				continue
 			}
@@ -374,8 +372,8 @@ func TestPinsShownAreTheExamples(t *testing.T) {
 	}
 
 	for _, p := range bookPages(t, root) {
-		// the worked example shows the pins its conversion was measured
-		// with, and sends the reader to the book's for the current ones
+		// the worked example shows the pins its conversion was measured with, and sends the reader
+		// to the book's for the current ones
 		if strings.HasPrefix(p, "docs/worked-example/") {
 			continue
 		}

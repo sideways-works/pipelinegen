@@ -1,5 +1,5 @@
-// Package connectortest serves tests the connectors the tool pins, the way
-// the tool downloads a release.
+// Package connectortest serves tests the connectors the tool pins, the way the tool downloads a
+// release.
 package connectortest
 
 import (
@@ -18,19 +18,15 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Env names the variable that holds a built binary of the connector name,
-// served in place of its pinned release.
+// Env names the variable that holds a built binary of the connector, served in place of its
+// pinned release.
 func Env(name string) string { return "PIPELINEGEN_TEST_" + strings.ToUpper(name) + "_CONNECTOR" }
 
 // pinsEnv hands the served pins to the processes a test starts.
 const pinsEnv = "PIPELINEGEN_TEST_CONNECTOR_PINS"
 
-// Serve points the pinned connectors at a server of this process's: each
-// connector whose Env names a binary is served at its release's path, and
-// its pin is that binary's checksum, so a command under test downloads and
-// checks it as it would the release. A connector no Env names keeps its
-// pin, fetched from its release. In a process a test started, Serve takes
-// the pins its parent served. stop ends the server.
+// Serve serves each connector whose Env names a binary at its release's path, pinned by that
+// binary's checksum, others keeping their pin; a child process takes the pins its parent served.
 func Serve() (stop func(), err error) { //nolint:nonamedreturns // what it does and how to end it
 	if data := os.Getenv(pinsEnv); data != "" {
 		var pins map[string]config.ConnectorPin

@@ -7,11 +7,8 @@ import (
 	"sort"
 )
 
-// Trusted are the keys that decide where a run reads and writes, which
-// credential serves which purpose, which binary a step runs, which suites
-// each run waits for, and the runner's config. In a proposed change's run
-// they come from the config the pipeline was generated from, never the
-// change's own.
+// Trusted are the keys deciding where a run reads and writes, which credential serves what, which
+// binaries run, which suites each run waits for, and the runner's config: never the change's own.
 type Trusted struct {
 	GitRemote       string          `json:"git_remote,omitempty"`
 	SSHKey          SSHKeys         `json:"ssh_key"`
@@ -29,14 +26,12 @@ type Trusted struct {
 	Bootstrap       json.RawMessage `json:"concourse_planner_bootstrap,omitempty"`
 	Connectors      []Connector     `json:"connectors,omitempty"`
 	ConcourseBranch string          `json:"concourse_branch,omitempty"`
-	// RunSuites are the suites each run names; a change can't take a suite
-	// out of its own run.
+	// RunSuites are the suites each run names; a change can't take a suite out of its own run.
 	RunSuites    map[string][]string `json:"run_suites,omitempty"`
 	Steps        map[string][]Step   `json:"suite_steps,omitempty"`
 	RunnerConfig *json.RawMessage    `json:"runner_config,omitempty"`
 }
 
-// TrustedPlugin is where a plugin comes from.
 type TrustedPlugin struct {
 	Name       string         `json:"name"`
 	Repository string         `json:"repository"`
@@ -89,9 +84,8 @@ func (c *Config) Trusted() Trusted {
 	return t
 }
 
-// WithTrusted puts the trusted keys into a proposed change's config and says
-// which keys the change edits: a key spelled otherwise, in another order or
-// with its default written out counts as unedited.
+// WithTrusted puts the trusted keys into a proposed change's config and names the keys it edits:
+// one spelled otherwise, in another order or with its default written out is unedited.
 func (c *Config) WithTrusted(t Trusted) []string {
 	own := c.Trusted()
 
@@ -148,9 +142,8 @@ func (c *Config) trustPlain(t Trusted) {
 	}
 }
 
-// trustRunSuites gives each run the trusted config's suites besides its own
-// and names the runs the change took a suite out of; a suite the change adds
-// stays, since it only waits for more.
+// trustRunSuites gives each run the trusted config's suites besides its own and names the runs
+// the change took a suite out of; a suite it adds stays, since it only waits for more.
 func (c *Config) trustRunSuites(trusted map[string][]string) []string {
 	var edited []string
 
@@ -186,9 +179,8 @@ func (c *Config) trustRunSuites(trusted map[string][]string) []string {
 	return edited
 }
 
-// comparedPlugins are the plugins as WithTrusted compares them: a repository
-// under either spelling of its program's is no edit, since both hold the
-// same program.
+// comparedPlugins are the plugins as WithTrusted compares them: a repository under either
+// spelling of its program's is no edit, since both hold the same program.
 func comparedPlugins(ps []TrustedPlugin) []TrustedPlugin {
 	out := slices.Clone(ps)
 	for i := range out {
@@ -198,8 +190,8 @@ func comparedPlugins(ps []TrustedPlugin) []TrustedPlugin {
 	return out
 }
 
-// trustPlugins pins each plugin where the trusted config does; a plugin
-// only the change adds is left out, since no step fetched it.
+// trustPlugins pins each plugin where the trusted config does; a plugin only the change adds is
+// left out, since no step fetched it.
 func (c *Config) trustPlugins(trusted []TrustedPlugin) {
 	kept := c.Plugins[:0]
 

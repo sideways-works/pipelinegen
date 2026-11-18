@@ -115,8 +115,8 @@ func TestACallReadsWhatItsFlagsDefaultsAndEnvironmentName(t *testing.T) {
 		}
 	}
 
-	// a step given the store's own token, the token split by purpose,
-	// writes as one given the one token
+	// a step given the store's own token, the token split by purpose, writes as one given the one
+	// token
 	if _, _, p := mounts("slice start db --root source", map[string]string{PurposeEnv("store"): "", EnvRunFile: "batches/run.json"}, false); strings.Contains(p, "without") {
 		t.Errorf("the store's own token: %s", p)
 	}

@@ -20,9 +20,8 @@ import (
 
 const defaultGitHubAPI = "https://api.github.com"
 
-// openConnector fetches the connector the config pins under name and
-// describes it. Its options come from the trusted config and the step's
-// environment alone.
+// openConnector fetches and describes the connector the config pins under name, with options from the
+// trusted config and the step's environment alone.
 func openConnector(ctx context.Context, cfg *config.Config, name string, o connector.Options) (*connector.Host, error) {
 	path, err := connector.Fetch(ctx, &http.Client{Timeout: 5 * time.Minute}, pluginsDir(), defaultCache(), cfg.ConnectorPin(name))
 	if err != nil {
@@ -34,10 +33,8 @@ func openConnector(ctx context.Context, cfg *config.Config, name string, o conne
 	return connector.Open(ctx, o)
 }
 
-// gitHubHost is the github section's host: the GitHub connector, fetched
-// and described on its first call, so a step that never talks to GitHub
-// never fetches it. It reports through the connector's calls and lists the
-// pull requests with them.
+// gitHubHost is the github section's host: the GitHub connector, fetched and described on its first
+// call, so a step that never talks to GitHub never fetches it.
 type gitHubHost struct {
 	cfg    *config.Config
 	api    string

@@ -15,9 +15,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/testrepo"
 )
 
-// TestReplayWalkedAgainstSelectors runs only when PIPELINEGEN_TEST_REPLAY_REPO names a clone, which it
-// never changes. PIPELINEGEN_TEST_REPLAY_PAIRS bounds the commits (15), PIPELINEGEN_TEST_REPLAY_REF names
-// the ref (main), and PIPELINEGEN_TEST_REPLAY_TABLE a file for the table of what each side selected.
+// TestReplayWalkedAgainstSelectors runs on the clone PIPELINEGEN_TEST_REPLAY_REPO names, never changing
+// it; _PAIRS bounds the commits (15), _REF names the ref (main), _TABLE a file for the table.
 func TestReplayWalkedAgainstSelectors(t *testing.T) {
 	src := os.Getenv("PIPELINEGEN_TEST_REPLAY_REPO")
 	if src == "" {

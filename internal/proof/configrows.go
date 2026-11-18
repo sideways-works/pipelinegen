@@ -9,9 +9,8 @@ import (
 	"strings"
 )
 
-// The config rows plan changes of the config itself on a setting that adds a
-// suite of two checks run by steps; the suite is in no run, so only these
-// plans read it.
+// The config rows plan changes of the config on a setting adding a suite of two step-run checks; the
+// suite is in no run, so only these plans read it.
 const (
 	checkLint     = "checks/lint_check.sh"
 	checkVet      = "checks/vet_check.sh"
@@ -49,9 +48,8 @@ var configCases = []struct {
 	{"driver-pin", "release: {version: v0.1.0,", "release: {version: v0.1.1,"},
 	// a comment: nothing
 	{"comment", "  checks:\n", "  # two checks, run by steps\n  checks:\n"},
-	// a time limit, which the planner doesn't understand, beside the run
-	// step: the config is a sample_on file again, and the step's slice
-	// runs whatever the sample picks
+	// a time limit, which the planner doesn't understand, beside the run step: the config is a sample_on
+	// file again, and the step's slice runs whatever the sample picks
 	{configMixed, `    sample: 1
     steps:`, `    sample: 1
     minutes: 30
@@ -140,9 +138,8 @@ filegroup(name = "vet_check", srcs = ["vet_check.sh"])
 
 var errNoEdit = errors.New("the edit changed nothing")
 
-// editText changes a file of the fixture as a whole; an edit that
-// changes nothing is an error, so a row can't plan a change it never
-// made.
+// editText changes a fixture file as a whole; an edit that changes nothing is an error, so a row can't
+// plan a change it never made.
 func (p *planner) editText(file string, edit func(string) string) error {
 	path := filepath.Join(p.fixture, filepath.FromSlash(file))
 

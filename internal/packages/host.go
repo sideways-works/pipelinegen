@@ -10,12 +10,10 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/config"
 )
 
-// Present tells whether a package of this name is on a machine.
 type Present func(name string) bool
 
-// Missing are the packages of ps that present finds under none of their
-// names: steps that run on the machine itself install nothing, so a person
-// is told what to install.
+// Missing are the packages of ps that present finds under none of their names: steps on the
+// machine itself install nothing, so a person is told what to install.
 func Missing(ps config.Packages, present Present) []string {
 	var out []string
 
@@ -35,8 +33,8 @@ func Missing(ps config.Packages, present Present) []string {
 	return out
 }
 
-// hostQueries ask the machine's own package database whether a package is
-// installed; a machine without one of them skips it.
+// hostQueries ask the machine's package database whether a package is installed; a machine
+// without one of them skips it.
 var hostQueries = [][]string{
 	{"dpkg-query", "-W", "-f", "${Status}"},
 	{"rpm", "-q"},
@@ -45,8 +43,7 @@ var hostQueries = [][]string{
 	{"brew", "list", "--versions"},
 }
 
-// OnHost finds a package on this machine as a command on PATH, or in its
-// package database.
+// OnHost finds a package on this machine as a command on PATH, or in its package database.
 func OnHost(ctx context.Context) Present {
 	return func(name string) bool {
 		if _, err := exec.LookPath(name); err == nil {

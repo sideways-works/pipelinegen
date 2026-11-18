@@ -9,9 +9,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// tailWriter passes what a driver writes on to the batch's log, a line at
-// a time under the driver's name, redacted, and keeps the last lines for a
-// slice the driver left without a result.
+// tailWriter passes what a driver writes to the batch's log a line at a time under its name, redacted,
+// and keeps the last lines for a slice the driver left without a result.
 type tailWriter struct {
 	mu     sync.Mutex
 	out    io.Writer

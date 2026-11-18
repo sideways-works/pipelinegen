@@ -1,6 +1,5 @@
-// Package kit checks that a plugin keeps the protocol: what every plugin
-// shares, and per kind what the core relies on. A plugin repository runs it
-// with `pipelinegen plugin test`.
+// Package kit checks that a plugin keeps the protocol: what every plugin shares, and per kind what
+// the core relies on; a plugin repository runs it with `pipelinegen plugin test`.
 package kit
 
 import (
@@ -23,7 +22,6 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Result is one check's outcome.
 type Result struct {
 	Check   string
 	Problem string
@@ -31,25 +29,21 @@ type Result struct {
 	Note    bool
 }
 
-// Options say what to check.
 type Options struct {
 	Path string
-	// Tree is a fixture tree of the plugin's own, for sboms and
-	// correlators; without one only describe and the calls' refusals are
-	// checked.
+	// Tree is a fixture tree of the plugin's own, for sboms and correlators; without one only
+	// describe and the calls' refusals are checked.
 	Tree   string
 	Config map[string]any
 	Work   string
 	// Commands are the tool's own commands and flags: a runner's pipeline
 	// may call only those. Without them that check is left out.
 	Commands Commands
-	// Cache is the plugin's cache directory, filled by the caller the way
-	// the planning job's prepare fills it (a Go module cache in
-	// <cache>/gomodcache, say); default a fresh one under Work.
+	// Cache is the plugin's cache directory, filled as the planning job's prepare fills it (a Go
+	// module cache in <cache>/gomodcache, say); default a fresh one under Work.
 	Cache string
-	// SBOM is an sbom plugin a correlator's links name units of, run
-	// beside it through the core's cache, with SBOMConfig as its config
-	// block: the checks that compare unit digests need it.
+	// SBOM is an sbom plugin a correlator's links name units of, run beside it through the core's
+	// cache with SBOMConfig: the checks that compare unit digests need it.
 	SBOM       string
 	SBOMConfig map[string]any
 }
@@ -82,7 +76,6 @@ func (k *kit) call(ctx context.Context, call string, req any, answer any) error 
 
 func (k *kit) can(call string) bool { return slices.Contains(k.desc.Capabilities, call) }
 
-// Run runs the checks for the plugin's kind and returns them in order.
 func Run(ctx context.Context, o Options) []Result {
 	// the kit walks the fixture and hands it to the plugin by its real
 	// path, as the core hands a tree to plugins
@@ -340,9 +333,8 @@ func brokenNotices(notices []string) string {
 	return strings.Join(firstFew(bad), "; ")
 }
 
-// steps checks every call of the tool in the pipelines the runner writes for
-// the fixture spec and its variants: the tool has each command and flag, and
-// each step mounts what its command reads and keeps what it writes.
+// steps checks every call of the tool in the pipelines written for the fixture spec and its variants:
+// the tool has each command and flag, and each step mounts what it reads and keeps what it writes.
 func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 	var (
 		calls, mounts []string
@@ -461,10 +453,8 @@ func (v specVariant) label() string {
 	return "(" + v.name + ") "
 }
 
-// specVariants are the fixture spec as it is, set by itself, and the
-// others below: together they hold every kind of step a runner writes. An
-// older tool's spec with locks, per build or per batch, is one a runner
-// must still take, writing no lock step for it.
+// specVariants are the fixture spec, set by itself, and the others below: together every kind of step a
+// runner writes; an older tool's spec with locks must still be taken, writing no lock step.
 func specVariants() []specVariant {
 	self := Spec()
 	self.CI["self_set"] = true
@@ -657,11 +647,8 @@ func (k *kit) sbom(ctx context.Context) {
 	})
 }
 
-// claimedOnly runs answer against a copy of the fixture in which every file
-// the plugin didn't claim or declare as an input holds other bytes: an
-// answer that changes reads beyond what the content cache keys it on. Each
-// declared input must be a file of the fixture or listed in the set's
-// absent, since the core keys a set on those.
+// claimedOnly runs answer on a fixture copy where every file not claimed or declared as input holds other
+// bytes: a changed answer reads beyond the cache's key. Declared inputs must exist or be in absent.
 func (k *kit) claimedOnly(claimed []plugin.Claim, sets []plugin.Set, answer func() string) {
 	if len(claimed) == 0 || (!k.can(plugin.CallDetect) && len(k.desc.Candidates) == 0) {
 		return
@@ -1165,9 +1152,8 @@ func (k *kit) fixtureSlices() []any {
 	return f.Slices
 }
 
-// observe: missing data can't tell, and existing empty data is an empty
-// answer. Each observe runs as the observing step does, in a directory that
-// holds only the tree and the coverage output.
+// observe: missing data can't tell, and existing empty data is an empty answer; each runs as the
+// observing step does, in a directory holding only the tree and the coverage output.
 func (k *kit) observe(ctx context.Context) {
 	reads := k.desc.ObserveReadsOutside(k.o.Config)
 	outside := make([]string, 0, len(reads))
@@ -1199,9 +1185,8 @@ type kitObserve struct {
 	Dirs  []string `json:"dirs"`
 }
 
-// observeFixture: a recording of the fixture's own tree is attributed to
-// some of its units; the same recording against an empty tree can't be told,
-// but is never an empty answer, which would empty the slice's list.
+// observeFixture: a recording of the fixture's tree is attributed to some of its units; against an
+// empty tree it can't be told, but is never an empty answer, which would empty the slice's list.
 func (k *kit) observeFixture(ctx context.Context) {
 	var f struct {
 		Observe *kitObserve `json:"observe"`
@@ -1343,9 +1328,8 @@ func firstFew[T any](s []T) []T {
 	return s
 }
 
-// observeCall calls observe as the observing step runs it: its working
-// directory holds only the tree and the coverage output, so a plugin that
-// reads what another step made fails here as in the pipeline.
+// observeCall calls observe as the observing step runs it, in a directory of only the tree and the
+// coverage output, so a plugin that reads what another step made fails here as in the pipeline.
 func (k *kit) observeCall(ctx context.Context, req plugin.ObserveRequest, answer any) error {
 	step := k.work()
 	coverage := filepath.Join(step, plugin.ObserveCoverage)
@@ -1401,10 +1385,8 @@ func absOrEmpty(p string) string {
 	return p
 }
 
-// recordedClaims: only a correlator that observes may mark a claim recorded,
-// and each file it marks must appear in the fixture's recording. A claim
-// marked erased must not be recorded too, and the companion sbom may list no
-// unit of it that could run.
+// recordedClaims: only an observing correlator may mark a claim recorded, each file of it in the recording;
+// a claim marked erased is not recorded too, and the companion sbom lists no unit of it that could run.
 func (k *kit) recordedClaims(ctx context.Context, claimed []plugin.Claim) {
 	var problems, erased []string
 

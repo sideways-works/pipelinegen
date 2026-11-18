@@ -21,12 +21,10 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitssh"
 )
 
-// FileName is the config file's name at the repository's root.
 const FileName = "pipelinegen.yaml"
 
 const defaultBranch = "main"
 
-// Config is the whole of pipelinegen.yaml.
 type Config struct {
 	// Warnings are what loading met and let pass: a key going away or, in a
 	// config read as history, anything this pipelinegen no longer takes.
@@ -56,9 +54,8 @@ type Config struct {
 	Store    Store          `yaml:"store"`
 	Runs     map[string]Run `yaml:"runs"`
 	Untested []Untested     `yaml:"untested"`
-	// Macros declares what a macro of another repository reads in the
-	// package that calls it, by "<.bzl label>%<name>": the check can't see
-	// inside such a macro.
+	// Macros declares, by "<.bzl label>%<name>", what another repository's macro reads in the
+	// package that calls it: the check can't see inside such a macro.
 	Macros      map[string]Macro `yaml:"macros"`
 	Uncovered   string           `yaml:"uncovered"`
 	Follow      string           `yaml:"follow"`
@@ -70,13 +67,11 @@ type Config struct {
 	// Narrowings set, by name, the level a plugin's narrowing or the core's
 	// is switched off at, in place of the level its declarer gives.
 	Narrowings map[string]NarrowingLevel `yaml:"narrowings"`
-	// RebuildCheck is what a difference between the cached graph and the
-	// nightly's cold rebuild does to the run: error (the default) turns it
-	// red, warning only warns.
+	// RebuildCheck is what a difference between the cached graph and the nightly's cold
+	// rebuild does: error (the default) turns the run red, warning only warns.
 	RebuildCheck string `yaml:"rebuild_check"`
-	// ExplainLimit is how many selected slices a plan asks bazel-diff to
-	// explain (default DefaultExplainLimit; 0 none). A pointer keeps 0 apart
-	// from left out.
+	// ExplainLimit is how many selected slices a plan asks bazel-diff to explain (0 none);
+	// a pointer keeps 0 apart from left out.
 	ExplainLimit *int             `yaml:"explain_limit"`
 	SampleOn     []string         `yaml:"sample_on"`
 	Plugins      []Plugin         `yaml:"plugins"`
@@ -92,14 +87,11 @@ type Learn struct {
 	Files   []FileUnits `yaml:"files"`
 }
 
-// FileUnits are plain files bound as units, normalised alike.
 type FileUnits struct {
 	Paths     []string `yaml:"paths"`
 	Normalize string   `yaml:"normalize"`
 }
 
-// Plugin is one plugin executable, pinned by a release and its checksum or
-// by a commit to build.
 type Plugin struct {
 	Name           string         `yaml:"name"`
 	Kind           string         `yaml:"kind"`
@@ -120,12 +112,10 @@ func (p Plugin) Fills() bool { return p.Fill == nil || *p.Fill }
 // entry says otherwise: a collector that hangs must not hold its batch.
 const DefaultCollectSeconds = 10
 
-// MaxCollectSeconds is how long the collect calls of a suite's correlators
-// may take together: a mark waits for each in turn, and the playwright
-// driver's hook (marks.mjs) waits 120 seconds for a mark at most.
+// MaxCollectSeconds bounds a suite's collect calls together: a mark waits for each in turn,
+// and the playwright driver's hook (marks.mjs) waits 120 seconds for one at most.
 const MaxCollectSeconds = 90
 
-// CollectLimit is how long each of the plugin's collect calls may take.
 func (p Plugin) CollectLimit() time.Duration {
 	if p.CollectSeconds > 0 {
 		return time.Duration(p.CollectSeconds) * time.Second
@@ -134,14 +124,12 @@ func (p Plugin) CollectLimit() time.Duration {
 	return DefaultCollectSeconds * time.Second
 }
 
-// The kinds of plugin.
 const (
 	KindCorrelator = "correlator"
 	KindSBOM       = "sbom"
 	KindRunner     = "runner"
 )
 
-// Runner is the configured runner plugin; false without one.
 func (c *Config) Runner() (Plugin, bool) {
 	for _, p := range c.Plugins {
 		if p.Kind == KindRunner {
@@ -159,8 +147,7 @@ type Keep struct {
 	// newest lists of each branch are kept whatever this says.
 	Lists ListsRetention `yaml:"lists"`
 	Cache Size           `yaml:"cache"`
-	// Files caps what a failed slice's failure files keep in the store.
-	Files KeepFiles `yaml:"files"`
+	Files KeepFiles      `yaml:"files"`
 }
 
 // KeepFiles caps the failure files a run keeps: each slice's, and the
@@ -170,7 +157,6 @@ type KeepFiles struct {
 	Run   Size `yaml:"run"`
 }
 
-// The defaults of keep.files.slice and keep.files.run.
 const (
 	DefaultFilesSlice = Size("2MB")
 	DefaultFilesRun   = Size("50MB")
@@ -180,8 +166,6 @@ const (
 // one file fail every push of the run's records.
 const maxFilesSlice = 100 << 20
 
-// FilesCaps are keep.files.slice and keep.files.run in bytes, with their
-// defaults.
 func (c *Config) FilesCaps() (slice, run int64) {
 	return c.Keep.Files.Slice.or(DefaultFilesSlice), c.Keep.Files.Run.or(DefaultFilesRun)
 }
@@ -204,7 +188,6 @@ const DefaultCacheBudget = Size("8GB")
 // (powers of 1024), or 0.
 type Size string
 
-// Bytes is the size in bytes; false when it is empty or malformed.
 func (s Size) Bytes() (int64, bool) {
 	if s == "0" {
 		return 0, true
@@ -238,21 +221,18 @@ func (c *Config) CacheBudget() int64 {
 	return n
 }
 
-// ListsRetention keeps lists as a Retention does, and besides: those of
-// the default branch's last Commits first-parent commits, whatever their
-// age, and none of its commits before those.
+// ListsRetention keeps what a Retention keeps and, whatever their age, the lists of the
+// default branch's last Commits first-parent commits; none of its commits before those.
 type ListsRetention struct {
 	Retention `yaml:",inline"`
 
 	Commits int `yaml:"commits"`
 }
 
-// DefaultListsCommits is how many of the default branch's last commits
-// keep their lists: a pull request not rebased for a while still finds its
-// base's.
+// DefaultListsCommits is how many of the default branch's last commits keep their lists:
+// a pull request not rebased for a while still finds its base's.
 const DefaultListsCommits = 200
 
-// ListsCommits is keep.lists.commits with its default.
 func (c *Config) ListsCommits() int {
 	if c.Keep.Lists.Commits > 0 {
 		return c.Keep.Lists.Commits
@@ -268,26 +248,20 @@ type Retention struct {
 	For  Period `yaml:"for"`
 }
 
-// Writes is how a failed write to the store goes again: one that failed in
-// passing until its deadline, one the remote refused by a rule of its own
-// only a few times. A write whose ref moved under it reads again instead.
+// Writes is how a failed store write goes again: one that failed in passing until its
+// deadline, one the remote refused only a few times; one whose ref moved reads again.
 type Writes struct {
-	// Retries is how often a write that failed in passing goes again at
-	// least, however long that takes (default DefaultRetries; 0 tries
-	// once). A pointer keeps 0 apart from left out.
+	// Retries is how often a write that failed in passing goes again at least, however long
+	// that takes (0 tries once); a pointer keeps 0 apart from left out.
 	Retries *int `yaml:"retries"`
-	// Backoff is the wait before the first retry (default
-	// DefaultBackoff); each later one doubles it up to 30 seconds, cut to
-	// a random part of it so writers that met don't meet again in step.
+	// Backoff is the first retry's wait; each later one doubles it up to 30 seconds, cut to a
+	// random part of it so writers that met don't meet again in step.
 	Backoff Period `yaml:"backoff"`
-	// Deadline is how long after its first try a write that failed in
-	// passing keeps going again once Retries are spent (default
-	// DefaultWriteDeadline, or half of limits.steps when that is shorter).
-	// It must be shorter than limits.steps.
+	// Deadline is how long after its first try a write that failed in passing keeps going
+	// once Retries are spent; it must be shorter than limits.steps.
 	Deadline Period `yaml:"deadline"`
 }
 
-// The defaults of writes.backoff and writes.deadline.
 const (
 	DefaultBackoff       = time.Second
 	DefaultWriteDeadline = 10 * time.Minute
@@ -296,14 +270,12 @@ const (
 // Store is where pipelinegen keeps its records in the repository.
 type Store struct {
 	Backend string `yaml:"backend"`
-	// Branch names the branch (default DefaultStoreBranch). An older
-	// pipelinegen kept the leases of its locks on the branch of the same
-	// name with "-locks" added, which the plan step sweeps.
+	// Branch is the records' branch; an older pipelinegen kept its locks' leases on it with
+	// "-locks" added, which the plan step sweeps.
 	Branch   string `yaml:"branch"`
 	Deadline Period `yaml:"deadline"`
 }
 
-// The store's backends and its default branch.
 const (
 	StoreRefs          = "refs"
 	StoreBranch        = "branch"
@@ -311,10 +283,8 @@ const (
 	defaultDeadline    = 10 * time.Minute
 )
 
-// OnBranch tells whether the records live on a branch.
 func (c *Config) OnBranch() bool { return c.Store.Backend == StoreBranch }
 
-// StoreBranchName is store.branch with its default.
 func (c *Config) StoreBranchName() string {
 	if c.Store.Branch == "" {
 		return DefaultStoreBranch
@@ -327,7 +297,6 @@ func (c *Config) StoreBranchName() string {
 // locks on.
 func (c *Config) LocksBranchName() string { return c.StoreBranchName() + "-locks" }
 
-// StoreDeadline is store.deadline with its default.
 func (c *Config) StoreDeadline() time.Duration {
 	if d, ok := c.Store.Deadline.Duration(); ok && c.Store.Deadline != "" {
 		return d
@@ -336,13 +305,11 @@ func (c *Config) StoreDeadline() time.Duration {
 	return defaultDeadline
 }
 
-// DefaultRetries and MaxRetries bound writes.retries.
 const (
 	DefaultRetries = 10
 	MaxRetries     = 50
 )
 
-// DefaultExplainLimit is explain_limit's default.
 const DefaultExplainLimit = 25
 
 // ExplainLimitOrDefault is explain_limit with its default, as planning's
@@ -358,7 +325,6 @@ func (c *Config) ExplainLimitOrDefault() int {
 	return *c.ExplainLimit
 }
 
-// WriteRetries is writes.retries with its default.
 func (c *Config) WriteRetries() int {
 	if c.Writes.Retries == nil {
 		return DefaultRetries
@@ -367,7 +333,6 @@ func (c *Config) WriteRetries() int {
 	return *c.Writes.Retries
 }
 
-// WriteBackoff is writes.backoff with its default.
 func (c *Config) WriteBackoff() time.Duration {
 	if d, ok := c.Writes.Backoff.Duration(); ok && d > 0 {
 		return d
@@ -376,9 +341,8 @@ func (c *Config) WriteBackoff() time.Duration {
 	return DefaultBackoff
 }
 
-// WriteDeadline is writes.deadline with its default: DefaultWriteDeadline,
-// or half of limits.steps when that is shorter, so a step that writes
-// keeps time for its other work.
+// WriteDeadline is DefaultWriteDeadline, or half of limits.steps when that is shorter, so a
+// step that writes keeps time for its other work.
 func (c *Config) WriteDeadline() time.Duration {
 	if d, ok := c.Writes.Deadline.Duration(); ok && d > 0 {
 		return d
@@ -390,7 +354,6 @@ func (c *Config) WriteDeadline() time.Duration {
 // Period is a length of time written with a unit: 30s, 5m, 12h, 5d, 2w.
 type Period string
 
-// Duration is the period's length; false when it is empty or malformed.
 func (p Period) Duration() (time.Duration, bool) {
 	m := periodRE.FindStringSubmatch(string(p))
 	if m == nil {
@@ -425,7 +388,6 @@ func (r Retention) valid() bool {
 	return r.Last > 0
 }
 
-// Untested is a group of files no test covers, and why.
 type Untested struct {
 	Paths  []string `yaml:"paths"`
 	Reason string   `yaml:"reason"`
@@ -438,9 +400,8 @@ type Macro struct {
 	Reason string   `yaml:"reason"`
 }
 
-// MacroKey splits a macros key, "@repo//pkg:file.bzl%name", into the .bzl
-// file's label and the macro's name. ok is false for a key of another form
-// or a .bzl file of this repository, whose macros the check reads itself.
+// MacroKey splits "@repo//pkg:file.bzl%name" into the .bzl file's label and the macro's name;
+// not ok for another form or a .bzl file of this repository, whose macros the check reads.
 func MacroKey(key string) (module, name string, ok bool) {
 	module, name, found := strings.Cut(key, "%")
 	if !found || name == "" || strings.Contains(name, "%") ||
@@ -465,7 +426,6 @@ const (
 	MaxNarrowing     = 5
 )
 
-// NarrowingFor is the level a suite is narrowed at.
 func (c *Config) NarrowingFor(suite string) int {
 	if n := c.Suites[suite].Narrowing; n > 0 {
 		return n
@@ -474,50 +434,41 @@ func (c *Config) NarrowingFor(suite string) int {
 	return c.Narrowing
 }
 
-// The values of Suite.Bind.
 const (
 	BindGraph    = "graph"
 	BindRecorded = "recorded"
 )
 
-// The values of Suite.EmptyRecordings.
 const (
 	EmptyAllow  = "allow"
 	EmptyRefuse = "refuse"
 )
 
-// Records tells whether run records coverage for suite: only recorded
-// suites do, in runs that record.
 func (c *Config) Records(run, suite string) bool {
 	return c.Runs[run].Record && c.Suites[suite].Bind == BindRecorded
 }
 
-// The values of Follow.
 const (
 	FollowExecuted   = "executed"
 	FollowDependents = "dependents"
 )
 
-// The values of RebuildCheck.
 const (
 	RebuildError   = "error"
 	RebuildWarning = "warning"
 )
 
-// The values of Uncovered.
 const (
 	UncoveredFail       = "fail"
 	UncoveredEverything = "everything"
 )
 
-// Bazel says how to run Bazel in the repository.
 type Bazel struct {
 	Workspace    string   `yaml:"workspace"`
 	Bazelisk     string   `yaml:"bazelisk"`
 	StartupFlags []string `yaml:"startup_flags"`
 }
 
-// BazelDiff names a bazel-diff release and its checksum.
 type BazelDiff struct {
 	Version string `json:"version" yaml:"version"`
 
@@ -533,15 +484,13 @@ type Suite struct {
 	// is a slice of its own. A suite has tests or a tag, never both.
 	Tests   []string `yaml:"tests"`
 	Exclude []string `yaml:"exclude"`
-	// Helpers are patterns of matching files that hold no test of their
-	// own (shared helpers): inputs of the slices that use them, never
-	// slices. Go test files are told apart by their test names instead.
+	// Helpers are patterns of files that hold no test of their own: inputs of the slices that
+	// use them, never slices. Go test files are told apart by their test names instead.
 	Helpers   []string    `yaml:"helpers"`
 	Owner     string      `yaml:"owner"`
 	ExtraDeps []ExtraDeps `yaml:"extra_deps"`
-	// TextInputs are files some test files read as text: a change to their
-	// comments or layout is one those tests can observe, so no narrowing
-	// drops it.
+	// TextInputs are files some test files read as text: a change to their comments or layout
+	// is one those tests can observe, so no narrowing drops it.
 	TextInputs []TextInputs `yaml:"text_inputs"`
 	Durations  string       `yaml:"durations"`
 	Group      string       `yaml:"group"`
@@ -565,24 +514,18 @@ type Suite struct {
 	SampleOn    []string          `yaml:"sample_on"`
 	Bind        string            `yaml:"bind"`
 	Parallel    int               `yaml:"parallel"`
-	// Batches is how many batches a job deals the suite's slices into
-	// (default Parallel), every one run at once: more, smaller batches lose
-	// less unflushed work when a worker goes away.
+	// Batches is how many batches a job deals the slices into (default Parallel), all run at
+	// once: more, smaller batches lose less unflushed work when a worker goes away.
 	Batches int `yaml:"batches"`
-	// BatchMinutes, when set, deals the suite's selected slices into
-	// batches of about this many minutes each by their recorded durations,
-	// so a run of everything gets many small batches and a change of a few
-	// slices few; Batches is then the most it deals.
+	// BatchMinutes deals the selected slices into batches of about this many minutes by their
+	// recorded durations, Batches at most.
 	BatchMinutes int  `yaml:"batch_minutes"`
 	Privileged   bool `yaml:"privileged"`
-	// Stack says the suite's batches run long-lived processes (servers,
-	// workers) whose coverage only a correlator's collect can take: a
-	// recording run of it refuses to start without one.
+	// Stack says the batches run long-lived processes whose coverage only a correlator's
+	// collect can take: a recording run of the suite refuses to start without one.
 	Stack bool `yaml:"stack"`
-	// EmptyRecordings says whether a recording in which the correlators saw
-	// nothing may become an empty list (allow) or counts as one they
-	// couldn't tell (refuse, the default): a correlator that wrongly answers
-	// empty would bind its slice to nothing.
+	// EmptyRecordings is whether a recording the correlators saw nothing in may become an
+	// empty list (allow) or not (refuse, the default): a wrong empty answer binds to nothing.
 	EmptyRecordings string `yaml:"empty_recordings"`
 	Lock            *Lock  `yaml:"lock"`
 	Minutes         int    `yaml:"minutes"`
@@ -601,8 +544,6 @@ type TextInputs struct {
 	Paths []string `yaml:"paths"`
 }
 
-// ReadsText tells whether the suite declares that the test file reads
-// the file's text.
 func (s Suite) ReadsText(test, file string) bool {
 	for _, ti := range s.TextInputs {
 		if len(ti.Tests) > 0 && !slices.ContainsFunc(ti.Tests, func(p string) bool { return MatchGlob(p, test) }) {
@@ -648,8 +589,6 @@ func (s Suite) ParallelOrDefault() int {
 	return DefaultParallel
 }
 
-// BatchCount is how many batches a job deals the suite's slices into:
-// batches, else as many as run at once.
 func (s Suite) BatchCount() int {
 	if s.Batches > 0 {
 		return s.Batches
@@ -658,8 +597,6 @@ func (s Suite) BatchCount() int {
 	return s.ParallelOrDefault()
 }
 
-// DefaultParallel is how many batches a build of a suite is dealt unless the
-// suite says otherwise.
 const DefaultParallel = 4
 
 // WholeSuiteCheck runs only when every slice of its suite is selected, or
@@ -679,7 +616,6 @@ var (
 // ErrInvalid wraps every problem Validate finds.
 var ErrInvalid = errors.New("invalid config")
 
-// Load reads and checks the config file at p.
 func Load(p string) (*Config, error) {
 	data, err := os.ReadFile(p) //nolint:gosec // the path is the config the caller names
 	if err != nil {
@@ -719,9 +655,8 @@ func Parse(data []byte) (*Config, error) {
 	return &c, nil
 }
 
-// EnvConcourseURL holds Concourse's address when the config leaves
-// concourse.url out: a host is the CI's, not the repository's. Only
-// generating the pipeline needs it.
+// EnvConcourseURL holds Concourse's address when the config leaves concourse.url out:
+// a host is the CI's, not the repository's.
 const EnvConcourseURL = "PIPELINEGEN_CONCOURSE_URL"
 
 func (c *Config) learnGoingAway() {
@@ -734,10 +669,8 @@ func (c *Config) learnGoingAway() {
 // files it had.
 var ErrUnreadable = errors.New("config can't be read")
 
-// ParseHistory reads a config as an earlier commit has it. History must
-// always load: unknown, refused or invalid keys become Warnings, and only a
-// config that can't say which suites and test files it had fails
-// (ErrUnreadable).
+// ParseHistory reads an earlier commit's config, which must always load: what is unknown,
+// refused or invalid becomes a warning; only one without its suites fails (ErrUnreadable).
 func ParseHistory(data []byte) (*Config, error) {
 	var c Config
 
@@ -983,7 +916,6 @@ func (c *Config) validateMacros(bad func(string, ...any)) {
 	}
 }
 
-// SuiteNames lists the suites in a stable order.
 func (c *Config) SuiteNames() []string {
 	names := make([]string, 0, len(c.Suites))
 	for name := range c.Suites {
@@ -1007,9 +939,8 @@ func (c *Config) SampleOnFor(suite, file string) (string, bool) {
 	return "", false
 }
 
-// Rebuilds tells whether run builds the graph cold to check the cached
-// one: a run that selects everything and records, never one of pull
-// requests, in a repository whose suites bind through plugins.
+// Rebuilds tells whether run builds the graph cold to check the cached one: a run that
+// selects everything and records, never of pull requests, in a repository bound by plugins.
 func (c *Config) Rebuilds(run string) bool {
 	r := c.Runs[run]
 
@@ -1034,8 +965,6 @@ func (c *Config) bindsByPlugins() bool {
 	return slices.ContainsFunc(c.Plugins, func(p Plugin) bool { return p.Kind == KindSBOM || p.Kind == KindCorrelator })
 }
 
-// MatchesSampleOn tells whether a changed file matches any suite's
-// sample_on or the top level's.
 func (c *Config) MatchesSampleOn(file string) bool {
 	if _, ok := c.SampleOnFor("", file); ok {
 		return true
@@ -1050,8 +979,6 @@ func (c *Config) MatchesSampleOn(file string) bool {
 	return false
 }
 
-// UntestedFor is the untested entry a file (a path relative to the
-// repository's root) matches.
 func (c *Config) UntestedFor(file string) (Untested, bool) {
 	for _, u := range c.Untested {
 		if slices.ContainsFunc(u.Paths, func(p string) bool { return MatchGlob(p, file) }) {
@@ -1062,9 +989,8 @@ func (c *Config) UntestedFor(file string) (Untested, bool) {
 	return Untested{}, false
 }
 
-// MatchesEverythingOn tells whether a changed file (a path relative to the
-// repository's root) is one whose change selects every slice, and which
-// pattern matched.
+// MatchesEverythingOn tells whether a changed file is one whose change selects every
+// slice, and by which pattern.
 func (c *Config) MatchesEverythingOn(file string) (string, bool) {
 	if idx := slices.IndexFunc(c.EverythingOn, func(p string) bool { return MatchGlob(p, file) }); idx >= 0 {
 		return c.EverythingOn[idx], true
@@ -1174,8 +1100,6 @@ func validateTextInputs(name string, tis []TextInputs, bad func(string, ...any))
 	}
 }
 
-// ExcludesTarget tells whether a tagged target is left out of the suite by
-// its exclude patterns.
 func (s Suite) ExcludesTarget(label string) bool {
 	pkg, _, _ := strings.Cut(strings.TrimPrefix(label, "//"), ":")
 
@@ -1184,10 +1108,8 @@ func (s Suite) ExcludesTarget(label string) bool {
 	})
 }
 
-// OwnerOf fills the suite's owner template for a test file: {dir} is the
-// file's directory, {file} its path, {base} its name, {stem} its name cut
-// at the first dot (checkout.spec.ts is checkout). False without a
-// template: the file's package owns it.
+// OwnerOf fills the suite's owner template for a file: {dir}, {file}, {base}, and {stem},
+// its name cut at the first dot. False without a template: the file's package owns it.
 func (s Suite) OwnerOf(file string) (string, bool) {
 	if s.Owner == "" {
 		return "", false

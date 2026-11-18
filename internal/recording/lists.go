@@ -19,10 +19,8 @@ func SetupTarget(suite string) string {
 	return SetupList + "." + suite
 }
 
-// Merge folds one run's recordings into the lists. A list only grows,
-// except for a slice the run recorded in a run that selected everything:
-// then its recording is its whole list, and what it no longer executes
-// drops out. A slice the run did not record keeps its list as it is.
+// Merge folds one run's recordings into the lists, which only grow, except that a slice recorded in a
+// run that selected everything takes its recording as its whole list.
 func Merge(lists, recordings Lists, selectedAll bool) Lists {
 	out := make(Lists, len(lists)+len(recordings))
 

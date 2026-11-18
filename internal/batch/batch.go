@@ -1,5 +1,5 @@
-// Package batch deals a run's selected slices into batches of near-equal
-// time, so that one task can set up once and run a whole batch.
+// Package batch deals a run's selected slices into batches of near-equal time, so that one task
+// can set up once and run a whole batch.
 package batch
 
 import (
@@ -8,20 +8,16 @@ import (
 	"sort"
 )
 
-// Slice is one selected slice and its recorded seconds.
 type Slice struct {
 	Name string
 	Secs float64
-	// Recorded is false for a slice with no recorded time: it counts as the
-	// median of the recorded ones (as one second when none is recorded).
+	// Recorded is false for a slice with no recorded time: it counts as the median of the recorded
+	// ones (one second when none is).
 	Recorded bool
 }
 
-// Deal deals slices into at most n batches of near-equal time: the longest
-// slice first, each into the batch with the least time so far (ties go to
-// the lower batch). The same slices give the same batches in any order.
-// Each batch lists its slices by name, the batches in the order of their
-// first slice; empty batches are left out.
+// Deal deals the longest slice first into the batch with the least time so far (ties to the lower);
+// the same slices in any order give the same batches, ordered by first slice, none empty.
 func Deal(in []Slice, n int) [][]string {
 	if n < 1 {
 		n = 1
@@ -61,12 +57,8 @@ func Deal(in []Slice, n int) [][]string {
 	return batches
 }
 
-// Count is how many batches slices are dealt into when each should take
-// about minutes: their total time (an unrecorded slice at the median of
-// the recorded ones) divided by minutes, rounded up; never fewer than
-// parallel (so a change of a few slices still runs them side by side),
-// never more than upper when upper is set, and never more than there are
-// slices (Deal leaves no batch empty).
+// Count is how many batches of about minutes the slices' total time needs, rounded up: at least
+// parallel, so a few slices still run side by side; at most upper, if set, and the slices.
 func Count(in []Slice, minutes, parallel, upper int) int {
 	total := 0.0
 	for _, s := range withMedian(in) {

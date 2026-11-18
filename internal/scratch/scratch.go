@@ -1,7 +1,5 @@
-// Package scratch makes the directories a step works in for a while, under
-// the step's TMPDIR and named by nothing the step was handed, and removes
-// them when the step ends, fails or is interrupted or terminated: a checkout
-// of a proposed change must not outlive the step that made it.
+// Package scratch makes a step's work directories under its TMPDIR and removes them when it ends,
+// fails or is stopped: a checkout of a proposed change must not outlive the step that made it.
 package scratch
 
 import (
@@ -15,18 +13,16 @@ import (
 	"syscall"
 )
 
-// ErrScratch is a scratch directory that can't be made.
 var ErrScratch = errors.New("scratch directory")
 
-// Dirs are a step's scratch directories.
 type Dirs struct {
 	mu   sync.Mutex
 	dirs []string
 	stop chan os.Signal
 }
 
-// Make makes a directory readable by this user only, under TMPDIR, named
-// by prefix and a random part.
+// Make makes a directory readable by this user only, under TMPDIR, named by prefix and a random
+// part.
 func (d *Dirs) Make(prefix string) (string, error) {
 	dir, err := os.MkdirTemp("", prefix+"-")
 	if err != nil {
@@ -73,7 +69,6 @@ func (d *Dirs) onSignal(stop chan os.Signal) {
 	}
 }
 
-// Close removes every directory made and stops watching for signals.
 func (d *Dirs) Close() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()

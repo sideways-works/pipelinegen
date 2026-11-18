@@ -11,8 +11,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// SSHKeys name the CI var of the ssh key per purpose: read fetches the
-// code, store writes the records. One var serves both.
+// SSHKeys name the CI var of the ssh key per purpose: read fetches the code, store writes the
+// records. One var serves both.
 type SSHKeys struct {
 	Read  string `json:"read"  yaml:"read"`
 	Store string `json:"store" yaml:"store"`
@@ -20,8 +20,8 @@ type SSHKeys struct {
 
 var errSSHKey = errors.New("git.ssh_key")
 
-// UnmarshalYAML takes one var's name for both purposes, or a mapping by
-// purpose; changes and report mean nothing to a plain git server.
+// UnmarshalYAML takes one var for both purposes, or a mapping by purpose; changes and report
+// mean nothing to a plain git server.
 func (k *SSHKeys) UnmarshalYAML(n *yaml.Node) error {
 	if n.Kind == yaml.ScalarNode {
 		k.Read, k.Store = n.Value, n.Value
@@ -51,7 +51,6 @@ func (k *SSHKeys) UnmarshalYAML(n *yaml.Node) error {
 	return nil
 }
 
-// For is the var of a purpose's key, "" when the config names none.
 func (k SSHKeys) For(purpose string) string {
 	switch purpose {
 	case plugin.PurposeRead:
@@ -63,7 +62,6 @@ func (k SSHKeys) For(purpose string) string {
 	return ""
 }
 
-// UsesSSH tells whether git reaches one of the config's remotes over ssh.
 func (c *Config) UsesSSH() bool { return len(c.sshRemotes()) > 0 }
 
 func (c *Config) sshRemotes() []string {
@@ -82,8 +80,8 @@ func (c *Config) sshRemotes() []string {
 	return out
 }
 
-// validateSSH checks what an ssh remote needs: a key's var for each purpose
-// and the server's host keys, since no host key is accepted on first use.
+// validateSSH checks what an ssh remote needs: a key's var for each purpose and the server's
+// host keys, since no host key is accepted on first use.
 func (c *Config) validateSSH(bad func(string, ...any)) {
 	remotes := c.sshRemotes()
 	g := c.Git

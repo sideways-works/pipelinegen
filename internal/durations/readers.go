@@ -9,10 +9,8 @@ import (
 	"strings"
 )
 
-// GoTests reads `go test -json` output: per package import path, the
-// seconds of each top-level test. A subtest's time is inside its parent's,
-// so subtests are left out; a test run several times (-count) adds up.
-// Lines that are not JSON events (a build's own output) are skipped.
+// GoTests reads `go test -json` output into each package's top-level test seconds: subtests are in
+// their parent's time, reruns (-count) add up, and lines that aren't JSON events are skipped.
 func GoTests(r io.Reader) (map[string]map[string]float64, error) {
 	out := map[string]map[string]float64{}
 
@@ -60,9 +58,8 @@ func GoTests(r io.Reader) (map[string]map[string]float64, error) {
 	return out, nil
 }
 
-// GoFiles turns one package's test times into test file times, given which
-// file declares each test. Tests no file declares (removed since the run)
-// are returned by name.
+// GoFiles turns one package's test times into test file times by which file declares each test;
+// tests no file declares (removed since the run) are returned by name.
 func GoFiles(tests map[string]float64, fileOf map[string]string, param string) (measured map[string]map[string]float64, unknown []string) {
 	measured = map[string]map[string]float64{}
 
@@ -84,10 +81,8 @@ func GoFiles(tests map[string]float64, fileOf map[string]string, param string) (
 	return measured, unknown
 }
 
-// Playwright reads a report of Playwright's JSON reporter: per spec file,
-// the milliseconds of every attempt of its tests (retries cost time too),
-// as seconds per project. base is the directory, from the repository's
-// root, that the report's file names are relative to (its rootDir).
+// Playwright reads a JSON reporter's report as each spec file's seconds per project, every attempt
+// counted (retries cost time too); base is the report's rootDir from the repository's root.
 func Playwright(r io.Reader, base string) (map[string]map[string]float64, error) {
 	var rep struct {
 		Suites []pwSuite `json:"suites"`

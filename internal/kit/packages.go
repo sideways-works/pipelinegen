@@ -15,9 +15,8 @@ import (
 
 const packagesRun = "packages and cached images"
 
-// packagesSpec is the spec of suites run by drivers that declare packages,
-// one of them with a cached image on the planner's base, and planner
-// packages of its own.
+// packagesSpec is a spec of suites run by drivers that declare packages, one with a cached image on
+// the planner's base, and planner packages of its own.
 func packagesSpec() plugin.Spec {
 	s := stepsSpec()
 
@@ -48,10 +47,8 @@ func packagesSpec() plugin.Spec {
 	return s
 }
 
-// packageProblems are, in a pipeline written for packagesSpec, the steps
-// the runner wrote that don't install their packages first, the cached
-// images it never names, and the registry's credentials where they don't
-// belong.
+// packageProblems are the steps that don't install their packages first, the cached images the
+// runner never names, and the registry's credentials where they don't belong.
 func packageProblems(s plugin.Spec, steps []stepCall, text []byte) []string {
 	var out []string
 
@@ -87,9 +84,8 @@ func packageProblems(s plugin.Spec, steps []stepCall, text []byte) []string {
 	return append(out, credentialProblems(s, text)...)
 }
 
-// credentialProblems are the steps that hold the registry's credentials
-// and run the repository's code: a task file, or a task given its source.
-// The pushing var reaches no job that does, the pulling var no such task.
+// credentialProblems are steps holding registry credentials that run the repository's code (a task file,
+// or a task given its source): the pushing var reaches no such job, the pulling var no such task.
 func credentialProblems(s plugin.Spec, text []byte) []string {
 	var doc struct {
 		Jobs []map[string]any `yaml:"jobs"`
@@ -136,7 +132,6 @@ func credentialProblems(s plugin.Spec, text []byte) []string {
 	return out
 }
 
-// varsOf are the references a var's fields are given by.
 func varsOf(v string) []string {
 	if v == "" {
 		return nil
@@ -161,8 +156,7 @@ func codeTask(step map[string]any) bool {
 	return slices.Contains(names(cfg["inputs"], "name"), "source")
 }
 
-// walkSteps calls f with every step of a job, hooks and nested steps
-// included, the job's own map first.
+// walkSteps calls f with every step of a job, hooks and nested steps included, the job's own map first.
 func walkSteps(v any, f func(map[string]any)) {
 	switch x := v.(type) {
 	case map[string]any:
@@ -178,7 +172,6 @@ func walkSteps(v any, f func(map[string]any)) {
 	}
 }
 
-// installsOf are the spec's install scripts.
 func installsOf(s plugin.Spec) []string {
 	var out []string
 

@@ -1,9 +1,5 @@
-// Package gitssh has git reach an ssh remote in a pipeline's step: with
-// the private key of the git operation's purpose from the step's
-// environment, written to a file only this user can read in a directory
-// the tool removes again, and the host keys the config lists, checked
-// strictly. A host key that isn't listed fails the fetch: never accepted on
-// first use, never skipped.
+// Package gitssh has git reach an ssh remote in a pipeline's step with the purpose's key from the
+// environment and the config's host keys, checked strictly: never accepted on first use.
 package gitssh
 
 import (
@@ -21,20 +17,17 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// KeyEnv is the variable a step finds the private key of a purpose in
-// (PIPELINEGEN_SSH_KEY_READ, PIPELINEGEN_SSH_KEY_STORE), put there by the
-// runner from the var git.ssh_key names for it.
+// KeyEnv is the variable a step finds a purpose's private key in, put there by the runner from
+// the var git.ssh_key names for it.
 func KeyEnv(purpose string) string { return "PIPELINEGEN_SSH_KEY_" + strings.ToUpper(purpose) }
 
-// Purposes are the purposes an ssh key serves: fetching the code, and
-// writing the records.
+// Purposes are those an ssh key serves: fetching the code, and writing the records.
 var Purposes = []string{plugin.PurposeRead, plugin.PurposeStore}
 
-// ErrSSH is an ssh setup that can't be made.
 var ErrSSH = errors.New("ssh")
 
-// IsSSH tells whether git reaches a remote over ssh: an ssh:// URL, or
-// the scp form (git@host:owner/name).
+// IsSSH tells whether git reaches a remote over ssh: an ssh:// URL, or the scp form
+// (git@host:owner/name).
 func IsSSH(remote string) bool {
 	if u, err := url.Parse(remote); err == nil && u.Scheme != "" {
 		return u.Scheme == "ssh" || u.Scheme == "git+ssh" || u.Scheme == "ssh+git"
@@ -45,8 +38,7 @@ func IsSSH(remote string) bool {
 	return at > 0 && !strings.Contains(remote[:at], "/") && !strings.Contains(remote, "://")
 }
 
-// Valid tells whether an ssh remote names a host and a path, and no
-// password.
+// Valid tells whether an ssh remote names a host and a path, and no password.
 func Valid(remote string) bool {
 	if u, err := url.Parse(remote); err == nil && u.Scheme != "" {
 		_, hasPassword := u.User.Password()
@@ -59,8 +51,8 @@ func Valid(remote string) bool {
 	return IsSSH(remote) && ok && host != "" && path != "" && !strings.ContainsAny(remote, " \t\n")
 }
 
-// KnownHostsProblem is what is wrong with a known_hosts line, empty when
-// nothing is: hosts, a key type and a key, after an optional marker.
+// KnownHostsProblem is what is wrong with a known_hosts line, empty when nothing is: hosts, a key
+// type and a key, after an optional marker.
 func KnownHostsProblem(line string) string {
 	f := strings.Fields(line)
 	if len(f) > 0 && strings.HasPrefix(f[0], "@") {
@@ -77,9 +69,8 @@ func KnownHostsProblem(line string) string {
 	return ""
 }
 
-// Keys hands out, per purpose, the ssh command git runs with: the purpose's
-// key from the environment, written once into a directory made for this
-// process, which Close, an interrupt or a termination removes.
+// Keys hands out, per purpose, the ssh command git runs with: the key written once into a
+// directory of this process's, which Close, an interrupt or a termination removes.
 type Keys struct {
 	KnownHosts []string
 
@@ -89,9 +80,8 @@ type Keys struct {
 	stop     chan os.Signal
 }
 
-// Env is the environment git needs for the purpose's key: GIT_SSH_COMMAND,
-// or nothing when the step's environment holds no key for it, so git runs
-// with the person's own ssh setup.
+// Env is GIT_SSH_COMMAND for the purpose's key, or nothing when the step holds no key for it, so
+// git runs with the person's own ssh setup.
 func (k *Keys) Env(purpose string) ([]string, error) {
 	key := os.Getenv(KeyEnv(purpose))
 	if key == "" {
@@ -136,9 +126,8 @@ func (k *Keys) Dir() string {
 	return k.dir
 }
 
-// makeDir makes the keys' directory, readable by this user only, outside
-// any work tree, and removes it again if the process is interrupted or
-// terminated.
+// makeDir makes the keys' directory, this user's only, outside any work tree, and removes it
+// again if the process is interrupted or terminated.
 func (k *Keys) makeDir() error {
 	if k.dir != "" {
 		return nil
@@ -181,7 +170,6 @@ func (k *Keys) makeDir() error {
 	return nil
 }
 
-// Close removes the keys' directory and stops watching for signals.
 func (k *Keys) Close() error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -203,10 +191,8 @@ func (k *Keys) Close() error {
 	return nil
 }
 
-// Command writes key and the known hosts into dir, readable by this user
-// only, and returns what GIT_SSH_COMMAND takes: ssh with that key alone,
-// no agent and no password, those hosts alone, strict checking, no prompt
-// and none of the person's ssh config.
+// Command writes key and the known hosts into dir and returns GIT_SSH_COMMAND: that key alone, no
+// agent, no password, no prompt, those hosts strictly, and none of the person's ssh config.
 func Command(dir, key string, knownHosts []string) (string, error) {
 	if strings.TrimSpace(key) == "" {
 		return "", fmt.Errorf("%w: no private key", ErrSSH)

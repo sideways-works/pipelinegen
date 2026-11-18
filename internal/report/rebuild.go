@@ -9,9 +9,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// Rebuild is what the nightly's cold rebuild of the head's graph found:
-// every answer that differs from what the cache serves, and the error that
-// kept the rebuild from finishing.
+// Rebuild is what the nightly's cold rebuild of the head's graph found: every answer that differs
+// from the cache's, and the error that kept it from finishing.
 type Rebuild struct {
 	Check       string              `json:"check"`
 	Differences []RebuildDifference `json:"differences,omitempty"`

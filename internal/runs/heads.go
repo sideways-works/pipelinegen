@@ -12,7 +12,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/config"
 )
 
-// Head is the head of an open pull request.
 type Head struct {
 	PR int
 	// Change is the head's change id when a connector listed it
@@ -23,9 +22,8 @@ type Head struct {
 	Updated time.Time
 }
 
-// OpenHeads lists the heads of the open pull requests into a run's base
-// that pass its filters and come from the repository itself: the pull
-// request resource leaves forks out.
+// OpenHeads lists the heads of the open pull requests into a run's base that pass its filters and
+// aren't forks, which the pull request resource leaves out.
 func OpenHeads(ctx context.Context, host Changes, pr *config.PullRequests) ([]Head, error) {
 	changes, err := host.Changes(ctx, changesArgs(pr, false))
 	if err != nil {
@@ -65,8 +63,7 @@ func (h Head) Label() string {
 	return "#" + strconv.Itoa(h.PR)
 }
 
-// Files writes into dir/.git/resource what the pull request resource
-// leaves there for a head (version.json, metadata.json and head_name), so
+// Files writes into dir/.git/resource what the pull request resource leaves there for a head, so
 // FromTrigger reads it as the resource's own checkout.
 func (h Head) Files(dir string) error {
 	res := filepath.Join(dir, ".git", "resource")
@@ -98,10 +95,8 @@ func (h Head) Files(dir string) error {
 	return nil
 }
 
-// CheckoutHead makes dir a checkout of a pull request's head, fetched from
-// remote with the token, with origin pointing there (planning fetches the
-// base's tip from it) and the resource's files, as the pull request
-// resource would leave it.
+// CheckoutHead makes dir a checkout of a pull request's head as the pull request resource would, with
+// origin pointing at remote, where planning fetches the base's tip.
 func CheckoutHead(ctx context.Context, dir, remote string, h Head, auth Auth) error {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("checkout of #%d: %w", h.PR, err)

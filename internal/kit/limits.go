@@ -8,14 +8,12 @@ import (
 
 var stepKinds = []string{"task", "get", "put", "set_pipeline"}
 
-// hookKeys are a step's hooks. Concourse runs a hook after the step even
-// when the step's time limit ended it, with a fresh context, so no limit
-// around the step reaches its hooks: every step in one needs its own.
+// hookKeys are a step's hooks. Concourse runs them after the step even when its time limit ended it,
+// with a fresh context, so no limit around the step reaches them: each needs its own.
 var hookKeys = []string{"ensure", "on_success", "on_failure", "on_error", "on_abort"}
 
-// unlimitedSteps are the steps of a pipeline with no time limit of their own
-// or on a step around them: a step that hangs without one holds its build,
-// and its run's statuses pending, for ever.
+// unlimitedSteps are the steps with no time limit of their own or around them: one that hangs holds its
+// build, and its run's statuses pending, for ever.
 func unlimitedSteps(text []byte) []string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(text, &doc); err != nil {

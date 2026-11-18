@@ -124,10 +124,8 @@ func causeReasons(ctx context.Context, o Options, b, h *Snapshot, sl bazel.Slice
 	return rs
 }
 
-// causeTargets are the reasons a root cause stands for: its own files that
-// changed, when Bazel can name them, else the cause itself. bazel-diff
-// hashes a rule's own files into the rule, so the rule is the deepest cause
-// it names.
+// causeTargets are the reasons a root cause stands for: its own changed files when Bazel can name them,
+// else the cause; bazel-diff hashes a rule's files into the rule, so the rule is its deepest cause.
 func (o Options) causeTargets(ctx context.Context, c RootCause) []Reason {
 	files := o.quiet.observable(o.Config, o.filesBehind(ctx, c.Label))
 	if len(files) == 0 {

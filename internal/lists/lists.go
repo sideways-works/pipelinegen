@@ -1,6 +1,5 @@
-// Package lists reads and writes the lists of what each slice executed, kept
-// as refs of the code repository: refs/pipelinegen/lists/<commit> for a
-// branch's commits, and the recordings of the runs whose refs still exist.
+// Package lists reads and writes the lists of what each slice executed: refs/pipelinegen/lists/
+// <commit> for a branch's commits, and the recordings of the runs whose refs still exist.
 package lists
 
 import (
@@ -19,7 +18,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/runs"
 )
 
-// The refs this package reads and writes.
 const (
 	// RefPrefix holds the lists attached to a branch's commits.
 	RefPrefix = "refs/pipelinegen/lists/"
@@ -33,15 +31,12 @@ const (
 	endPart        = "_end"
 )
 
-// Walk is how many first-parent ancestors a lookup tries before it gives
-// up and finds no lists: as many as a branch keeps the lists of, so a
-// pull request whose base is some way back still finds them.
+// Walk is how many first-parent ancestors a lookup tries: as many as a branch keeps the lists of,
+// so a pull request whose base is some way back still finds them.
 const Walk = 200
 
-// Ref is the ref that holds the lists attached to a commit.
 func Ref(commit string) string { return RefPrefix + commit }
 
-// AttachedRef is the ref that names the runs attached to a commit.
 func AttachedRef(commit string) string { return attached.Ref(commit) }
 
 // Source says where a commit's lists came from.
@@ -52,17 +47,14 @@ type Source struct {
 	Back   int       `json:"back"`
 	Live   []LiveRun `json:"live,omitempty"`
 	Walk   int       `json:"walk,omitempty"`
-	// Gone is set when no commit within the walk has lists: every recorded
-	// slice then runs as without a list, and live runs' recordings narrow
-	// nothing.
+	// Gone is set when no commit within the walk has lists: every recorded slice then runs as
+	// without a list, and live runs' recordings narrow nothing.
 	Gone bool `json:"gone,omitempty"`
-	// CannotTell are the slices, by "<suite>/<slice>", whose last recording
-	// a correlator couldn't tell: their lists are kept as they were, and
-	// planning samples them for that correlator.
+	// CannotTell are the slices whose last recording a correlator couldn't tell: their lists are
+	// kept as they were, and planning samples them for that correlator.
 	CannotTell Marks `json:"cannot_tell,omitempty"`
-	// Replaced is, by slice key, the commit whose run of everything last
-	// replaced the list with a whole recording: older runs of that commit's
-	// history no longer add to it.
+	// Replaced is, by slice key, the commit whose run of everything last replaced the list with a
+	// whole recording: older runs of that commit's history no longer add to it.
 	Replaced map[string]string `json:"-"`
 	Written  time.Time         `json:"-"`
 }
@@ -114,12 +106,10 @@ type LiveRun struct {
 	Slices int    `json:"slices"`
 }
 
-// ErrLists wraps lists that can't be read or written.
 var ErrLists = errors.New("lists")
 
-// Nearest reads the lists of commit: its own ref, else the nearest
-// first-parent ancestor's within Walk commits of the repository at repo.
-// None found is empty lists, with an empty Source.Ref.
+// Nearest reads the lists of commit, else of its nearest first-parent ancestor within Walk; none
+// found is empty lists with an empty Source.Ref.
 func Nearest(ctx context.Context, store *gitstore.Store, repo, commit string) (recording.Lists, Source, error) {
 	return NearestWithin(ctx, store, repo, commit, Walk)
 }
@@ -203,9 +193,8 @@ func read(ctx context.Context, store *gitstore.Store, ref gitstore.Ref) (recordi
 	return l, marks, replaced, nil
 }
 
-// replacedFile is the file of a lists ref that says which lists a run of
-// everything replaced, and at which commit: the commit, then its slice keys.
-// A ref without it has nothing known to be replaced.
+// replacedFile says which lists a run of everything replaced, and at which commit: the commit,
+// then its slice keys. A ref without it has nothing known to be replaced.
 const replacedFile = "_replaced.json"
 
 func decodeReplaced(data []byte) (map[string]string, error) {
@@ -256,10 +245,8 @@ func Decode(files map[string][]byte) (recording.Lists, error) {
 	return l, err
 }
 
-// DecodeMarked reads lists and their marks from a ref's files: a slice's
-// list in `<suite>/<slice>.txt` (an empty one says the slice touched
-// nothing a correlator sees), and beside it `<suite>/<slice>.cannot-tell`
-// when its last recording couldn't be told.
+// DecodeMarked also reads each slice's `<suite>/<slice>.cannot-tell` mark; an empty .txt says the
+// slice touched nothing a correlator sees.
 func DecodeMarked(files map[string][]byte) (recording.Lists, Marks, error) {
 	l, marks := recording.Lists{}, Marks{}
 
@@ -313,15 +300,12 @@ func strs(ids []recording.ID) []string {
 	return out
 }
 
-// Encode writes lists as a ref's files, `<suite>/<slice>.txt` each. Every
-// slice that has a list has a file, an empty list too: it was recorded,
-// and touched nothing. A slice without a list has none: no data is never
-// an empty list.
+// Encode writes lists as `<suite>/<slice>.txt` files: a recorded slice that touched nothing gets
+// an empty one, a slice without a list none, since no data is never an empty list.
 func Encode(l recording.Lists) map[string][]byte {
 	return EncodeMarked(l, nil)
 }
 
-// EncodeMarked writes lists and their marks as a ref's files.
 func EncodeMarked(l recording.Lists, marks Marks) map[string][]byte {
 	out := make(map[string][]byte, len(l)+len(marks))
 
@@ -339,10 +323,8 @@ func EncodeMarked(l recording.Lists, marks Marks) map[string][]byte {
 	return out
 }
 
-// Kept says what of one live run's recording of a slice joins a plan's
-// lists: its own units, what its batch's setup ran, and its mark. Before and
-// At place the run's commit against the lists' commit, which decides whose
-// reason a mark shows.
+// Kept says what of a live run's recording of a slice joins a plan's lists; Before and At place
+// the run's commit against the lists', which decides whose reason a mark shows.
 type Kept struct {
 	Own, Setup, Mark bool
 	Before, At       bool
@@ -356,10 +338,8 @@ type LiveMark struct {
 	Before, At bool
 }
 
-// Live reads the recordings of every run whose refs still exist, passed,
-// failed or still going: unioned into a plan's lists they close the window
-// between a merge and its lists, and can only select more. keep (nil:
-// everything) leaves out what the lists hold a newer whole recording of.
+// Live reads the recordings of every run whose refs still exist, which close the window between a
+// merge and its lists and can only select more; keep (nil: all) drops what the lists hold newer.
 func Live(ctx context.Context, store *gitstore.Store, keep func(LiveRun, string) Kept) (recording.Lists, []LiveMark, []LiveRun, error) {
 	refs, err := store.List(ctx, runsPrefix)
 	if err != nil {
@@ -479,12 +459,8 @@ func recordingOf(name string) (LiveRun, string, bool) {
 	return LiveRun{Run: parts[0], Change: change, Commit: parts[2]}, parts[3] + "/" + slice, true
 }
 
-// Recordings reads a run's recordings (report.Recordings: the files
-// `<suite>/<slice>.txt`) as lists: each slice's own units under its key,
-// and what its batch's setup ran under `<suite>/_setup`, the setups of all
-// the run's batches together; and the slices a correlator couldn't tell.
-// An empty file is no data and adds nothing; a recording the correlators
-// finished with nothing in it is an empty list.
+// Recordings reads a run's recordings as lists, each slice's under its key and its batches' setups
+// under `<suite>/_setup`, with the marks; an empty file is no data, not an empty list.
 func Recordings(files map[string][]byte) (recording.Lists, Marks, error) {
 	out, marks := recording.Lists{}, Marks{}
 
@@ -536,14 +512,12 @@ func addParsed(l recording.Lists, key string, rec recording.Recording) {
 	}
 }
 
-// For reads the lists planning uses for commit: Nearest, with the
-// recordings of every live run unioned in where they only add
-// (onlyAdding) and the lists hold no newer whole recording (liveKept).
+// For reads the lists planning uses for commit: Nearest, with live runs' recordings unioned in
+// where they only add (onlyAdding) and the lists hold no newer whole recording (liveKept).
 func For(ctx context.Context, store *gitstore.Store, repo, commit string) (recording.Lists, Source, error) {
 	return ForWithin(ctx, store, repo, commit, Walk)
 }
 
-// ForWithin is For within walk first parents.
 func ForWithin(ctx context.Context, store *gitstore.Store, repo, commit string, walk int) (recording.Lists, Source, error) {
 	l, src, err := NearestWithin(ctx, store, repo, commit, walk)
 	if err != nil {
@@ -591,10 +565,8 @@ func withLiveMarks(listed Marks, live []LiveMark, written time.Time) Marks {
 	return out
 }
 
-// onlyAdding is what of the live runs' recordings may join the lists: units
-// added to a slice that has a list, and setup lists. A list made from a live
-// run, maybe a proposed change's, would bind a list-less slice to less than
-// everything.
+// onlyAdding keeps of the live runs' recordings the units added to a slice that has a list, and
+// setup lists: a list made from a live run would bind a list-less slice to less than everything.
 func onlyAdding(live, l recording.Lists) recording.Lists {
 	out := recording.Lists{}
 
@@ -610,7 +582,6 @@ func onlyAdding(live, l recording.Lists) recording.Lists {
 	return out
 }
 
-// GoneText is the plan's warning when a commit's lists are gone.
 func GoneText(src Source) string {
 	c := src.Commit
 	if len(c) > 12 {
@@ -625,12 +596,8 @@ func GoneText(src Source) string {
 	return fmt.Sprintf("the lists of %s are gone (none within %d first parents): every recorded slice runs as without a list", c, walk)
 }
 
-// Bound is the lists as planning binds them at its level. With the setup
-// split on, each slice keeps only what its own tests ran, and each suite's
-// setup list comes back apart, to bind the suite's setup (which a sample
-// covers). With it off, a suite's setup list is in the list of every slice
-// of that suite that has one: setup code binds the slices it ran for. A
-// slice without a list stays without: it is bound to everything anyway.
+// Bound is the lists as planning binds them: with the setup split on, slices keep only their own
+// tests' units and setup lists come back apart; off, a suite's setup joins each slice's list.
 func Bound(l recording.Lists, split bool) (recording.Lists, map[string][]recording.ID) {
 	out, setup := recording.Lists{}, map[string][]recording.ID{}
 
@@ -661,11 +628,8 @@ func Bound(l recording.Lists, split bool) (recording.Lists, map[string][]recordi
 	return out, map[string][]recording.ID{}
 }
 
-// liveKept says what of each live run's recordings joins the lists of
-// commit. A mark is kept only for a run of commit's own history the lists
-// hold no newer told recording of. Units are kept unless a run of everything
-// replaced the slice's list at or after the run's commit: that whole
-// recording already dropped what the test no longer runs.
+// liveKept keeps a live run's mark only for a run of commit's history the lists hold no newer told
+// recording of, and its units unless a run of everything replaced the list at or after its commit.
 func liveKept(ctx context.Context, repo, commit string, l recording.Lists, src Source) func(LiveRun, string) Kept {
 	if repo == "" || commit == "" {
 		return nil
@@ -694,9 +658,8 @@ func liveKept(ctx context.Context, repo, commit string, l recording.Lists, src S
 		case known && !ok, told != nil && told(r, key):
 			kept.Mark = false
 		case !kept.Own:
-			// the list was replaced by a recording that told the slice on
-			// a tree that holds the run's: the run's attempt failing to
-			// tell says nothing the lists don't know better
+			// the list was replaced by a recording that told the slice on a tree holding the run's:
+			// the run failing to tell says nothing the lists don't know better
 			kept.Mark = false
 		}
 

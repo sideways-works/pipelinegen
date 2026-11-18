@@ -11,11 +11,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/config"
 )
 
-// Run checks the repository at root: its work tree, or with staged what the
-// next commit holds (git's index), reporting every finding about a staged
-// file and, when the commit changes a BUILD or .bzl file, the setup or the
-// config, every finding it brings that HEAD lacks. With staged, each tree is
-// checked under its own config. An error means the check could not run.
+// Run checks root's work tree, or with staged the index: every finding about a staged file and,
+// when the commit changes BUILD, .bzl, setup or config, every finding it brings that HEAD lacks.
 func Run(ctx context.Context, cfg *config.Config, root string, staged bool, o Options) ([]Finding, error) {
 	if !staged {
 		tree, err := WorkTree(ctx, root)
@@ -120,9 +117,8 @@ func reshapes(p string) bool {
 	return buildfile.IsBuildFile(p) || path.Ext(p) == ".bzl"
 }
 
-// commitFindings are the findings a commit already had, by key. Its config
-// is read as history, so the commit that moves a config with retired keys
-// passes; a config that can't say what it held leaves nothing known.
+// commitFindings are a commit's findings by key; its config is read as history so a commit moving
+// retired keys passes, and a config that can't say what it held leaves nothing known.
 func commitFindings(ctx context.Context, fallback *config.Config, root, rev string, o Options) (map[string]bool, error) {
 	tree, closeTree, err := CommitTree(ctx, root, rev)
 	if err != nil {

@@ -18,9 +18,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/recording"
 )
 
-// walks tells whether a suite's slices are selected by the walk and the main
-// repository's impacted targets rather than by selectors in the deps
-// repository: a suite of test files while Select is set.
+// walks tells whether a suite's slices are selected by the walk and the impacted targets rather than
+// by selectors in the deps repository: a suite of test files while Select is set.
 func (o Options) walks(suite string) bool {
 	return o.Select != nil && o.Config.Suites[suite].Implicit()
 }
@@ -31,10 +30,8 @@ type joined struct {
 	quiet   map[string][]string
 }
 
-// join selects a recorded suite's slices without selectors: by the walk
-// reaching a listed unit, by its own file changing or being new, or by one
-// of its Bazel input labels being impacted or in one tree only. A label the
-// head's hashes don't hold can't be told, so it selects its slice.
+// join selects a recorded suite's slices without selectors: by the walk, by its own file, or by an input
+// label impacted or in one tree only; a label the head's hashes don't hold selects its slice.
 func (o Options) join(ctx context.Context, suite string, b, h *Snapshot, impacted map[string]bool, changes []gitx.Change, hashed func() (map[string]bool, error)) (joined, error) {
 	width := o.width(suite)
 
@@ -161,9 +158,8 @@ func (o Options) withThrough(suite, slice, base, head string, rs []Reason) []Rea
 	return out
 }
 
-// inputReasons says why a slice's Bazel labels select it, unless no file
-// changed. A tree whose inputs were never recorded fails the plan: comparing
-// with nothing would take every label for a new one.
+// inputReasons says why a slice's Bazel labels select it, unless no file changed; a tree whose inputs
+// were never recorded fails the plan, as comparing with nothing would make every label new.
 func (o Options) inputReasons(suite, slice, base, head string, impacted map[string]bool, hashed func() (map[string]bool, error), unchanged bool) ([]Reason, error) {
 	if o.Inputs == nil {
 		return nil, nil
@@ -222,9 +218,8 @@ func (o Options) inputReasons(suite, slice, base, head string, impacted map[stri
 	return rs, nil
 }
 
-// mainLabel writes a label of the main repository one way, //pkg:name,
-// whether Bazel printed it with @@ or @, and whether it was written //pkg
-// for the target named after its package.
+// mainLabel writes a main repository's label as //pkg:name, whether Bazel printed it with @@ or @,
+// and whether it was written //pkg for the target named after its package.
 func mainLabel(l string) string {
 	for _, p := range []string{"@@//", "@//"} {
 		if rest, ok := strings.CutPrefix(l, p); ok {
@@ -312,9 +307,8 @@ func readHashedLabels(path string) (map[string]bool, error) {
 	return have, nil
 }
 
-// hashKeys reads an object of target hashes into have. bazel-diff writes
-// the hashes at the top, or under "hashes" beside other keys: at the top
-// a key that is no label is read only if it holds the hashes.
+// hashKeys reads target hashes into have; bazel-diff writes them at the top or under "hashes" beside
+// other keys, and at the top a key that is no label is read only if it holds the hashes.
 func hashKeys(dec *json.Decoder, have map[string]bool, top bool) error {
 	if _, err := dec.Token(); err != nil { // {
 		return err //nolint:wrapcheck // wrapped by the caller

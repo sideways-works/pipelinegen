@@ -17,10 +17,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// packages is an sbom that answers per package, as a Go sbom does: a set
-// per directory under pkgs/, whose inputs are every file in it, with a
-// unit per file. Asked about a path whose directory is gone, it answers
-// that directory as an empty set.
+// packages answers per package as a Go sbom does: a set per directory under pkgs/, a unit per
+// file; asked about a path whose directory is gone, it answers it as an empty set.
 func packages() map[string]plugin.Handler {
 	return map[string]plugin.Handler{
 		plugin.CallDescribe: describe(plugin.Description{

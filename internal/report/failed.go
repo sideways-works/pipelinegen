@@ -11,9 +11,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// PlanFailed shows that planning failed: every suite the run lists and the
-// run itself get an error status saying why, so none is left pending. What
-// it says is masked, since an error may quote a plugin's or a tool's output.
+// PlanFailed gives every suite the run lists, and the run, an error status saying why, so none is left
+// pending; it is masked, since an error may quote a plugin's or a tool's output.
 func (r *Reporter) PlanFailed(ctx context.Context, cause error) error {
 	if err := r.ID.Check(); err != nil {
 		return err
@@ -76,9 +75,8 @@ func readAlsoTo(ctx context.Context, store *gitstore.Store, id ID) ([]int, error
 	return a.AlsoTo, nil
 }
 
-// CheckPlan tells whether the plan the run's steps report under exists: a
-// step that reports under a change no plan was made for loses its recording.
-// A store that can't be read is that, never "no plan".
+// CheckPlan tells whether the plan the run's steps report under exists, lest a step lose its
+// recording; a store that can't be read is an error, never "no plan".
 func (r *Reporter) CheckPlan(ctx context.Context) error {
 	refs, err := r.Store.List(ctx, PlansPrefix(r.ID.Run, r.ID.Change))
 	if err != nil {

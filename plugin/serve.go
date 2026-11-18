@@ -7,13 +7,11 @@ import (
 	"io"
 )
 
-// Handler answers one call: it reads its request from in and returns the
-// answer to write as JSON, or ErrCantTell.
+// Handler answers one call from its request, or returns ErrCantTell.
 type Handler func(in []byte) (any, error)
 
-// Serve is a plugin's main: it runs the call named by args[0] and returns
-// the exit code. Unknown calls and failures write to stderr and exit 1;
-// ErrCantTell exits ExitCantTell.
+// Serve is a plugin's main, returning the exit code: unknown calls and failures write to stderr
+// and exit 1, ErrCantTell exits ExitCantTell.
 func Serve(args []string, stdin io.Reader, stdout, stderr io.Writer, handlers map[string]Handler) int {
 	if len(args) == 0 {
 		say(stderr, "a plugin needs the name of a call")
@@ -39,8 +37,7 @@ func Serve(args []string, stdin io.Reader, stdout, stderr io.Writer, handlers ma
 
 	switch {
 	case errors.Is(err, ErrCantTell):
-		// why it can't tell goes with the answer: the plan's warning
-		// carries it
+		// why it can't tell goes with the answer: the plan's warning carries it
 		say(stderr, err.Error())
 
 		return ExitCantTell
@@ -59,8 +56,8 @@ func Serve(args []string, stdin io.Reader, stdout, stderr io.Writer, handlers ma
 	return 0
 }
 
-// say writes a message for the person reading the plugin's stderr; a
-// failed write there leaves nowhere to report it.
+// say writes for whoever reads the plugin's stderr; a failed write there leaves nowhere to
+// report it.
 func say(w io.Writer, msg string) {
 	if _, err := fmt.Fprintln(w, msg); err != nil {
 		return

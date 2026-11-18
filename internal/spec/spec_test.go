@@ -253,9 +253,8 @@ func TestTheRunnerLearnsTheDraftState(t *testing.T) {
 	}
 }
 
-// A config's github section runs the pinned GitHub connector, so the spec
-// names it for the bootstrap to fetch; a plugins entry by its name pins
-// another in its place.
+// A config's github section runs the pinned GitHub connector, which the spec names for the
+// bootstrap to fetch; a plugins entry by its name pins another in its place.
 func TestTheSpecFetchesTheConnector(t *testing.T) {
 	base, err := os.ReadFile("../../testdata/kit/pipelinegen.yaml")
 	if err != nil {

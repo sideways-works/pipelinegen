@@ -448,9 +448,8 @@ func TestPins(t *testing.T) {
 	}
 }
 
-// fixtureSums are the fixture's files as the proof has always written
-// them, by their SHA-256, with the pins tv, ts, sv, ss, cv, cs, the output
-// root /out/root and a heap of 2g: the tables are about this fixture.
+// fixtureSums are the fixture's files by SHA-256 as the proof has always written them (pins tv, ts, sv,
+// ss, cv, cs, output root /out/root, heap 2g): the tables are about this fixture.
 var fixtureSums = map[string]string{
 	"app/config.go":         "32d81a9feef7d5c16c9924928607fc64e46be2af7e8c58bd2497715a98270b1a",
 	"app/greet.go":          "0e178790d9a18c9f4d516ac8bd2139a529c6d502ae7bf6c95aa2319b8c4c6309",

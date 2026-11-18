@@ -1,9 +1,5 @@
-// Package tries decides whether a failed write to a remote goes again and
-// how long it waits first. A passing failure (a dropped connection, a busy
-// host) goes again with growing waits, at least the retries asked for and on
-// until a deadline; a refusal by a rule of the remote's goes again only a
-// few times; a defect never. No retry waits past a hard end, such as the
-// step's time limit.
+// Package tries decides whether a failed write goes again and after what wait: a passing failure
+// with growing waits until a deadline, a remote's rule a few times, a defect never.
 package tries
 
 import (
@@ -15,46 +11,38 @@ import (
 	"time"
 )
 
-// Kind is what a failure says about trying again.
 type Kind int
 
-// The kinds of failure.
 const (
-	// Passing is a failure another try may not meet: a dropped
-	// connection, a host busy with other pushes.
+	// Passing is a failure another try may not meet: a dropped connection, a host busy with other
+	// pushes.
 	Passing Kind = iota
-	// Ruled is the remote's refusal by a rule of its own, a hook's or a
-	// permission's: tried again at most RuledRetries times, since a host
-	// under load declines the same way now and then.
+	// Ruled is a refusal by a rule of the remote's, a hook's or a permission's: retried at most
+	// RuledRetries times, since a host under load declines the same way now and then.
 	Ruled
-	// Defect is a failure trying again repeats: never retried.
+	// Defect is a failure trying again repeats.
 	Defect
 )
 
-// RuledRetries is how often a refusal by a rule goes again at most.
 const RuledRetries = 2
 
-// MaxWait is the longest wait between two tries.
 const MaxWait = 30 * time.Second
 
-// Policy is how a write tries again.
 type Policy struct {
-	// Retries is how often a passing failure goes again at least, however
-	// long that takes within Until; 0 tries once, whatever the deadline.
+	// Retries is how often a passing failure goes again at least, however long that takes within
+	// Until; 0 tries once, whatever the deadline.
 	Retries int
-	// First is the wait before the first retry; each later one doubles it
-	// up to MaxWait, and each is cut to a random length between half of
-	// it and all of it, so writers that met don't meet again in step.
+	// First is the first retry's wait; each later one doubles it up to MaxWait, cut to a random
+	// length between half and all of it, so writers that met don't meet again in step.
 	First time.Duration
-	// Deadline is how long after the first try a passing failure keeps
-	// going again once Retries are spent; zero, Retries alone bound it.
+	// Deadline is how long after the first try a passing failure keeps going once Retries are
+	// spent; zero, Retries alone bound it.
 	Deadline time.Duration
-	// Until, when set, is the hard end: no wait goes past it, nor past the
-	// context's deadline, the step's time limit.
+	// Until is the hard end: no wait goes past it, nor past the context's deadline, the step's
+	// time limit.
 	Until time.Time
 }
 
-// Run is one write's tries.
 type Run struct {
 	p              Policy
 	start          time.Time
@@ -65,13 +53,12 @@ type Run struct {
 	sleep func(context.Context, time.Duration)
 }
 
-// Start begins a write's tries.
 func (p Policy) Start() *Run {
 	return &Run{p: p, start: time.Now(), now: time.Now, sleep: sleep}
 }
 
-// Again tells whether the write goes again after a failure of kind k,
-// having waited when it does. It says no once ctx is done.
+// Again tells whether the write goes again after a failure of kind k, having waited when it does;
+// no once ctx is done.
 func (r *Run) Again(ctx context.Context, k Kind) bool {
 	if ctx.Err() != nil {
 		r.stop = "its context ended"
@@ -115,8 +102,7 @@ func (r *Run) Again(ctx context.Context, k Kind) bool {
 
 const stopLimit = "the step's time limit is near"
 
-// HardEnd is the earlier of until and ctx's deadline, the step's time
-// limit when the command runs within one; zero for neither.
+// HardEnd is the earlier of until and ctx's deadline (the step's time limit); zero for neither.
 func HardEnd(ctx context.Context, until time.Time) time.Time {
 	if dl, ok := ctx.Deadline(); ok && (until.IsZero() || dl.Before(until)) {
 		return dl
@@ -137,7 +123,6 @@ func (r *Run) spent() string {
 	return fmt.Sprintf("its deadline of %s is near", r.p.Deadline)
 }
 
-// Retries is how many times the write went again.
 func (r *Run) Retries() int { return r.retries }
 
 func (r *Run) wait() time.Duration {
@@ -166,9 +151,8 @@ func (r *Run) jittered() time.Duration {
 	return w/2 + time.Duration(mrand.Int64N(int64(w-w/2))) //nolint:gosec // jitter, not a secret
 }
 
-// Err is the write's last failure, saying how many tries it made, for how
-// long, and why it stopped there. A write that never went again is said
-// as it failed, unless its step's time limit stopped it.
+// Err is the write's last failure with how many tries, how long, and why it stopped; a write that
+// never went again is said as it failed, unless its step's time limit stopped it.
 func (r *Run) Err(err error) error {
 	if err == nil || r.retries == 0 && r.stop != stopLimit {
 		return err
@@ -207,13 +191,12 @@ var ruledWords = []string{
 	"could not read Username", "terminal prompts disabled",
 }
 
-// named are the parts of git's words that name things rather than say
-// what happened: refs and quoted URLs, which could hold any word.
+// named are the parts of git's words that name things rather than say what happened: refs and
+// quoted URLs, which could hold any word.
 var named = regexp.MustCompile(`refs/\S+|'[^']*'`)
 
-// Of tells the kind of a git command's failure from what git printed (an
-// error that holds it will do): a refusal by a rule, or else a passing
-// failure.
+// Of tells the kind of a git command's failure from what git printed: a refusal by a rule, or
+// else a passing failure.
 func Of(printed string) Kind {
 	printed = named.ReplaceAllString(printed, "")
 

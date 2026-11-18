@@ -16,16 +16,13 @@ const (
 	kStr
 	kList
 	kDict
-	// kExt is a name loaded from another repository's .bzl file, or an
-	// attribute of one: a tool from outside (an npm package's bin, a
-	// toolchain), never a file of this tree. str holds the module's label,
-	// which counts as an outside input and so covers nothing here.
+	// kExt is a name loaded from another repository's .bzl file, or its attribute: a tool from outside, never
+	// a file here; str holds the module's label, an outside input that covers nothing here.
 	kExt
 )
 
-// value is an expression's value in the static subset the reader follows:
-// strings, lists and dicts of them. bad says why an expression is outside
-// it; a target holding such a value is unreadable, never empty.
+// value is an expression's value in the static subset the reader follows, strings and lists and dicts of
+// them; bad says why one is outside it, which makes a target holding it unreadable, never empty.
 type value struct {
 	kind kind
 	str  string
@@ -34,9 +31,8 @@ type value struct {
 	// kw are the arguments a macro's **kwargs holds, passed on by name.
 	kw  map[string]value
 	bad string
-	// outside is set when a value from another repository went into this
-	// one: besides the strings it shows, it may hold strings nobody here
-	// can tell.
+	// outside is set when a value from another repository went into this one: besides its strings it may
+	// hold some nobody here can tell.
 	outside bool
 }
 
@@ -344,9 +340,8 @@ func (s scope) glob(x *build.CallExpr) value {
 	return list(s.g.glob(s.pkg, include.strings(), exclude.strings()))
 }
 
-// comprehension evaluates [body for name in xs] and {key: value for name
-// in xs} over lists the reader knows; a condition it can't decide makes the
-// whole comprehension unreadable rather than guessed.
+// comprehension evaluates [body for name in xs] and {key: value for ...} over known lists; a condition it
+// can't decide makes the whole comprehension unreadable rather than guessed.
 func (s scope) comprehension(x *build.Comprehension) value {
 	scopes, bad := s.clauses(x)
 	if bad.bad != "" {
@@ -448,9 +443,8 @@ func (s scope) clauses(x *build.Comprehension) ([]scope, value) {
 	return scopes, value{}
 }
 
-// outsideItems is the value of iterating over a name from another
-// repository: what it holds is only known by running that repository's
-// Starlark, and it may well hold this tree's files.
+// outsideItems is iterating over a name from another repository: only running that repository's Starlark
+// knows what it holds, and it may well hold this tree's files.
 func outsideItems(x build.Expr) value {
 	return unreadable(build.FormatString(x) + " iterates over a value from another repository, which cannot be read without running Starlark")
 }
@@ -469,10 +463,8 @@ func dedup(in []string) []string {
 	return out
 }
 
-// test decides a comprehension's condition when it is made of string tests
-// on values the reader knows: s.startswith(p), s.endswith(p) (p a string
-// or a tuple of them), a in b for a string or a list b, == and !=, joined by
-// not, and, or. ok is false for anything else.
+// test decides a comprehension's condition made of string tests on known values: startswith, endswith (a
+// string or tuple), in (a string or list), == and !=, joined by not, and, or; false for anything else.
 func (s scope) test(e build.Expr) (result, ok bool) {
 	switch x := e.(type) {
 	case *build.ParenExpr:

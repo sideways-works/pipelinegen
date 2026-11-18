@@ -20,7 +20,6 @@ func Forward(ctx context.Context, set *plugins.Set, base, head *deps.Tree, ss []
 	return ForwardWith(func(t *deps.Tree) ([]deps.Slice, error) { return bindIn(ctx, set, t, ss) }, base, head, after...)
 }
 
-// Binder binds the slices in one tree.
 type Binder func(t *deps.Tree) ([]deps.Slice, error)
 
 // ForwardWith is Forward with another binding, such as the Model's.

@@ -20,9 +20,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// FailureFile is a file a result names for its slice, by its path from the
-// result directory, with a short label: what a failed test left to show
-// why (a screenshot, a trace).
+// FailureFile is what a failed test left to show why (a screenshot, a trace), by its path from the
+// result directory, with a short label.
 type FailureFile struct {
 	Path  string `json:"path"`
 	Label string `json:"label,omitempty"`
@@ -52,9 +51,8 @@ const (
 	maxWhy           = 300
 )
 
-// FilesDir is where a driver leaves a slice's failure files: pipelinegen's
-// own part of the batch's result directory, which no slice's extras take
-// in and no slice may be named.
+// FilesDir is where a driver leaves a slice's failure files: pipelinegen's own part of the batch's
+// result directory, which no slice's extras take in and no slice may be named.
 func FilesDir(result, slice string) string {
 	return filepath.Join(result, JournalDir, "files", filepath.FromSlash(slice))
 }
@@ -63,9 +61,8 @@ func FilesDir(result, slice string) string {
 // directory.
 func FilesPrefix(slice string) string { return JournalDir + "/files/" + slice + "/" }
 
-// resultRoot is the directory a result's files are named from: the batch's
-// result directory, which holds result/<slice>.json, or a whole-suite
-// check's, which holds result.json.
+// resultRoot is the directory a result names its files from: the batch's result directory, which
+// holds result/<slice>.json, or a whole-suite check's, which holds result.json.
 func resultRoot(ev SliceEvent) string {
 	if root, ok := strings.CutSuffix(ev.Result, filepath.FromSlash(ev.Slice)+".json"); ok && root != "" {
 		return filepath.Clean(root)
@@ -74,9 +71,8 @@ func resultRoot(ev SliceEvent) string {
 	return filepath.Dir(ev.Result)
 }
 
-// checkFilePath refuses what could leave the result directory or can't be
-// a path in a ref: an absolute path, a part that is empty, "." or "..",
-// ".git", a backslash or a control character.
+// checkFilePath refuses what could leave the result directory or can't be in a ref: an absolute
+// path, an empty, "." or ".." part, ".git", a backslash or a control character.
 func checkFilePath(p string) error {
 	if p == "" || len(p) > maxFilePath || path.IsAbs(p) || filepath.IsAbs(p) || strings.ContainsRune(p, '\\') {
 		return errOutside
@@ -103,15 +99,13 @@ var (
 	errNoFile   = errors.New("no such file")
 )
 
-// candidate is a failure file read and ready to keep.
 type candidate struct {
 	kept KeptFile
 	data []byte
 }
 
-// readFailureFiles reads the files a result names, through the result
-// directory as a root: no path, symlink included, reaches outside it. It
-// reads none larger than limit, and none beyond the first few.
+// readFailureFiles reads the files a result names through the result directory as a root, so no
+// path or symlink reaches outside it; none larger than limit, and none beyond the first few.
 func readFailureFiles(root string, slice string, list []FailureFile, limit int64) ([]candidate, []DroppedFile) {
 	var (
 		got     []candidate
@@ -170,9 +164,8 @@ func readFailureFiles(root string, slice string, list []FailureFile, limit int64
 	return got, dropped
 }
 
-// readInRoot reads a regular file whose size is at most limit. The size is
-// asked before reading, so a file over the cap is never read, and checked
-// again on what was opened, so nothing swapped in between is read either.
+// readInRoot reads a regular file of at most limit bytes: the size is asked before reading and
+// checked again on what was opened, so neither a file over the cap nor one swapped in is read.
 func readInRoot(r *os.Root, p string, limit int64) ([]byte, int64, error) {
 	// a FIFO or a device would block or never end: only a regular file,
 	// after any symlink inside the root, is opened at all
@@ -233,9 +226,8 @@ var (
 	errOverRun   = errors.New("over keep.files.run")
 )
 
-// storedName is a file's path in the slice's ref: a driver's files by
-// their path in the slice's files directory, a task's by their path from
-// the result directory.
+// storedName is a file's path in the slice's ref: a driver's by its path in the slice's files
+// directory, a task's by its path from the result directory.
 func storedName(slice, p string) string {
 	if rest, ok := strings.CutPrefix(p, FilesPrefix(slice)); ok && rest != "" {
 		return rest
@@ -314,8 +306,7 @@ func (c candidate) dropped(why string) DroppedFile {
 	return DroppedFile{Path: c.kept.Path, Label: c.kept.Label, Bytes: c.kept.Bytes, Why: why}
 }
 
-// redactText masks secrets in a file that reads as text. A binary file
-// (a screenshot, a zipped trace) goes as it is: masking would break it,
+// redactText masks secrets in a text file; a binary one goes as it is: masking would break it,
 // and its secrets are past finding by a pattern anyway.
 func redactText(data []byte) []byte {
 	if !utf8.Valid(data) || slices.Contains(data, 0) {
@@ -353,11 +344,8 @@ func (e *ending) dropAll(why string) {
 	e.found = nil
 }
 
-// filesUntil ends the retries of a write that carries failure files at
-// half the store's retry time, so a slow store leaves the write without
-// them time of its own within the step's limit. It bounds the retries, never
-// a git process under way: one killed could leave a lock that fails the
-// write without them too. It returns what puts the store's bound back.
+// filesUntil ends a write's retries with failure files at half the store's retry time, leaving the
+// write without them time of its own; a git process under way is never killed, lest it leave a lock.
 func filesUntil(store *gitstore.Store, ends []*ending, now time.Time) func() {
 	if !withFiles(ends) {
 		return func() {}
@@ -382,7 +370,6 @@ func withFiles(ends []*ending) bool {
 	return slices.ContainsFunc(ends, func(e *ending) bool { return len(e.found) > 0 })
 }
 
-// updates are the writes of the slices' refs, each with its failure files.
 func updates(id ID, ends []*ending) ([]gitstore.Update, error) {
 	ups := make([]gitstore.Update, 0, len(ends))
 
@@ -409,11 +396,8 @@ func updates(id ID, ends []*ending) ([]gitstore.Update, error) {
 	return ups, nil
 }
 
-// capRun keeps the write's failure files within what keep.files.run leaves
-// the run, by what the run's other slices hold already, dropping the
-// largest first. Batches write side by side with no lock between them, so
-// two that count at once may each take what is left: the run may hold up
-// to one write's files more per batch writing at that moment.
+// capRun keeps the write's failure files within what keep.files.run leaves the run, largest first.
+// Batches count side by side unlocked, so the run may exceed it by a write's files per batch.
 func (r *Reporter) capRun(ctx context.Context, ends []*ending) {
 	if !withFiles(ends) {
 		return
@@ -500,8 +484,6 @@ func (r *Reporter) heldFiles(ctx context.Context, ends []*ending) (int64, error)
 	return held, nil
 }
 
-// SliceFiles is what one slice of a run keeps of its failure files, and
-// what it dropped.
 type SliceFiles struct {
 	Suite   string        `json:"suite"`
 	Slice   string        `json:"slice"`
@@ -585,10 +567,8 @@ func RunFiles(ctx context.Context, store *gitstore.Store, id ID, suite, slice st
 	return out, nil
 }
 
-// WriteFiles writes each slice's kept files into out, at
-// <suite>/<slice>/<path>, and returns how many it wrote. It writes only
-// what the slice's state names, each at a path checked again, through out
-// as a root.
+// WriteFiles writes the files each slice's state names into out, at <suite>/<slice>/<path>, each
+// path checked again and written through out as a root.
 func WriteFiles(ctx context.Context, store *gitstore.Store, list []SliceFiles, out string) (int, error) {
 	if err := os.MkdirAll(out, 0o750); err != nil {
 		return 0, fmt.Errorf("files: %w", err)

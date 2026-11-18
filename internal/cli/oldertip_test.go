@@ -9,9 +9,8 @@ import (
 	"testing"
 )
 
-// The target moved on between the two steps: a plan of the change merged
-// into the older tip is still this change's, and one against a tip off the
-// target's history is not.
+// The target moved on between the two steps: a plan merged into the older tip is still this change's,
+// and one against a tip off the target's history is not.
 func TestASecondStepTakesAPlanAgainstAnOlderTip(t *testing.T) {
 	root, s, trigger, ch, _ := proposedChange(t)
 	cfg := loadConfig(t, root)

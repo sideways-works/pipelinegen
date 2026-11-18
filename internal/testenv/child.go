@@ -6,11 +6,8 @@ import (
 	"testing"
 )
 
-// ExitChild ends a test binary that its own tests started as a child (a
-// command run in a process of its own, a fake plugin) with code. In a
-// coverage build a test binary writes what it ran only when its tests end,
-// which such a child never reaches, so it ends its tests first, running
-// none, into GOCOVERDIR or the coverage directory beside the test binary.
+// ExitChild ends a child the test binary started of itself: in a coverage build a test binary
+// writes its coverage only when its tests end, so it ends them first, running none.
 func ExitChild(m *testing.M, code int) {
 	if dir := coverDir(); dir != "" && testing.CoverMode() != "" {
 		os.Args = []string{os.Args[0], "-test.run=^$", "-test.gocoverdir=" + dir}

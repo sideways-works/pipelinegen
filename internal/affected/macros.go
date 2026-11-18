@@ -17,9 +17,8 @@ import (
 // counts files as covered by a call that doesn't read them.
 var ErrDeclared = errors.New("a macros declaration claims files the macro doesn't read")
 
-// MacroCheck is what Bazel says of the commit's macros declarations: each
-// file a call is declared to read but doesn't (an error), and each file of
-// the call's package it reads that the declaration leaves out (a warning).
+// MacroCheck is what Bazel says of the macros declarations: each file a call is declared to read but
+// doesn't (an error), and each file of its package it reads that the declaration leaves out (a warning).
 type MacroCheck struct {
 	Unconfirmed []string `json:"unconfirmed,omitempty"`
 	LeftOut     []string `json:"left_out,omitempty"`
@@ -72,9 +71,8 @@ func checkMacros(ctx context.Context, o Options, bz *bazel.Client, commit string
 	return out, nil
 }
 
-// macroReads are the tree's source files the targets a call made depend on:
-// those its macro marked with the call's name (a legacy macro's
-// generator_name) or named after it (a symbolic macro's targets).
+// macroReads are the tree's source files the targets a call made depend on: those its macro marked
+// with the call's name (a legacy macro's generator_name) or named after it (a symbolic macro's).
 func macroReads(ctx context.Context, bz *bazel.Client, workspace string, c check.DeclaredCall) (map[string]bool, error) {
 	pkg := "//" + c.Pkg
 	name := regexp.QuoteMeta(c.Name)

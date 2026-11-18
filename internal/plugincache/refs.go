@@ -15,10 +15,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 )
 
-// RefPrefix is where the cache refs live.
 const RefPrefix = "refs/pipelinegen/cache/"
 
-// Ref is the ref holding one plugin build's answers.
 func Ref(b Build) string {
 	sha := b.SHA256
 	if len(sha) > 12 {
@@ -28,12 +26,10 @@ func Ref(b Build) string {
 	return RefPrefix + b.Plugin + "/" + b.Version + "-" + sha
 }
 
-// ReplacedPrefix is where the records of replaced keys live, one ref per
-// plugin build, apart from the build's answers so a plan reads the small
-// record without fetching every answer.
+// ReplacedPrefix holds the records of replaced keys, one ref per build, apart from its answers so a plan
+// reads the small record without fetching every answer.
 const ReplacedPrefix = "refs/pipelinegen/replaced/"
 
-// ReplacedRef is the ref of one build's record of replaced keys.
 func ReplacedRef(b Build) string {
 	return ReplacedPrefix + strings.TrimPrefix(Ref(b), RefPrefix)
 }
@@ -53,11 +49,8 @@ func Generation(t time.Time) string {
 	return fmt.Sprintf("%04d-W%02d", y, w)
 }
 
-// Refs keeps the remote level in refs of a repository, one per plugin build
-// and generation (an ISO week), each a parentless commit holding the answers
-// plans wrote or used that week. A read looks in this week's ref, then last
-// week's, and the next Save carries what it found only there into this
-// week's; Drop removes older generations, so a ref holds what is in use.
+// Refs keeps the remote level as one ref per plugin build and ISO week, holding the answers plans wrote or
+// used that week; a read falls back to last week's and Save carries it over, and Drop removes older ones.
 type Refs struct {
 	Store *gitstore.Store
 	Clock func() time.Time
@@ -147,7 +140,6 @@ func (r *Refs) Using() []Build {
 	return slices.SortedFunc(slices.Values(out), compareBuilds)
 }
 
-// Items reads an item record of a build's ref.
 func (r *Refs) Items(ctx context.Context, b Build, hash string) ([]string, bool, error) {
 	data, ok, err := r.Answer(ctx, b, hash)
 	if err != nil || !ok {
@@ -162,10 +154,8 @@ func (r *Refs) Items(ctx context.Context, b Build, hash string) ([]string, bool,
 	return items, true, nil
 }
 
-// Save writes a build's answers and edits by compare-and-swap: when the
-// ref moved meanwhile, it reads it again, applies the edits to the records
-// as they stand now, and writes again, so two plans both land. An answer
-// the ref holds with other bytes stays, and is a Conflict.
+// Save writes a build's answers and edits by compare-and-swap: when the ref moved it reads again and applies
+// the edits to the records as they stand, so two plans both land. An answer held with other bytes conflicts.
 func (r *Refs) Save(ctx context.Context, b Build, answers map[string][]byte, edits map[string]Edit) ([]Conflict, error) {
 	return r.save(ctx, b, answers, edits, false)
 }
@@ -178,7 +168,6 @@ func (r *Refs) Replace(ctx context.Context, b Build, answers map[string][]byte) 
 	return err
 }
 
-// Replaced reads a build's record of replaced keys; none without one.
 func (r *Refs) Replaced(ctx context.Context, b Build) (map[string]string, error) {
 	got, err := r.entries(ctx, ReplacedRef(b))
 	if err != nil {
@@ -426,14 +415,12 @@ func (r *Refs) entries(ctx context.Context, ref string) (refEntries, error) {
 	return got, nil
 }
 
-// replacedKeep is how long the record of a build's replaced keys outlives
-// the build's last generation: a machine still holding a stale local copy
-// of that build would plan with it only on a branch that old.
+// replacedKeep is how long a build's replaced keys outlive its last generation: a machine with a stale
+// local copy would plan with it only on a branch that old.
 const replacedKeep = 90 * 24 * time.Hour
 
-// Drop removes the answers refs of generations before last week's, refs of
-// the layout without generations, and old records of replaced keys. A ref
-// written meanwhile is left for the next time.
+// Drop removes answer refs of generations before last week's or without one, and old records of
+// replaced keys; a ref written meanwhile is left for the next time.
 func Drop(ctx context.Context, store *gitstore.Store, now time.Time) (int, error) {
 	refs, err := store.List(ctx, RefPrefix, ReplacedPrefix)
 	if err != nil {

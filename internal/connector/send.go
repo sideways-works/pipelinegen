@@ -134,10 +134,8 @@ func unwrapURL(err error) error {
 	return err
 }
 
-// client is the exchange's HTTP client with a redirect policy that never
-// leaves the request's origin: the token may sit in any header a host
-// names, and Go's client keeps a custom header on a redirect to another
-// host.
+// client is the exchange's HTTP client whose redirects never leave the request's origin: the token may sit
+// in any header a host names, and Go's client keeps a custom header on a redirect to another host.
 func (e *Exchange) client() *http.Client {
 	hc := http.Client{Timeout: 30 * time.Second}
 	if e.HTTP != nil {
@@ -165,9 +163,8 @@ func (e *Exchange) client() *http.Client {
 	return &hc
 }
 
-// retryable says whether an answer may pass on another try, and how long the
-// host asked to wait: its own errors, and its rate limits (429, or a 403
-// that says so).
+// retryable says whether an answer may pass on another try, and how long the host asked to wait: its own
+// errors, and its rate limits (429, or a 403 that says so).
 func (e *Exchange) retryable(a *attempt) (bool, time.Duration) {
 	if a.status >= 500 {
 		return true, e.retryAfter(a.header)

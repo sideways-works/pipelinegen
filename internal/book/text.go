@@ -1,7 +1,5 @@
-// Package book checks that the book shows what the tool prints: it runs
-// every step of the book's guide on a fresh copy of example-notes, trims
-// each output to what the book shows, and compares it with docs/transcripts,
-// or with --update fills the transcripts and the pages.
+// Package book checks that the book shows what the tool prints: it runs the guide on a fresh copy
+// of example-notes, trims each output and compares it with docs/transcripts, or fills them.
 package book
 
 import (
@@ -13,10 +11,8 @@ import (
 	"strings"
 )
 
-// splitLines splits text at line boundaries as Python's text files and
-// str.splitlines do: \n, \r\n and \r, and the other boundaries Python
-// counts (vertical tab, form feed, the file, group and record separators,
-// next line, and the line and paragraph separators).
+// splitLines splits text at line boundaries as Python's str.splitlines does: \n, \r\n, \r and the
+// other boundaries Python counts (\v, \f, \x1c-\x1e, \x85,  ,  ).
 func splitLines(text string) []string {
 	text = strings.ReplaceAll(text, "\r\n", "\n")
 
@@ -51,8 +47,8 @@ var (
 	progress = regexp.MustCompile(`^pipelinegen \w+: .*, (\d+h)?(\d+m)?\d+(\.\d+)?s so far$`)
 	// bazelisk's download of Bazel, stamped with the time it ran.
 	bazeliskLine = regexp.MustCompile(`^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} (Downloading https://|Signed by )`)
-	// how long a driver's tool took: go test's package and test lines,
-	// Playwright's summary and npm's install.
+	// how long a driver's tool took: go test's package and test lines, Playwright's summary and
+	// npm's install.
 	toolTime = regexp.MustCompile(`(ok  \t\S+\t|--- (?:PASS|FAIL|SKIP): \S+ \(|passed \(|packages in )\d+(\.\d+)?m?s`)
 )
 
@@ -80,8 +76,8 @@ func trimmed(name, raw, work string) string {
 
 		skipPlugins = false
 
-		// what the go driver downloads depends on what its module cache
-		// held, and npm's notices on what the registry has published since
+		// what the go driver downloads depends on what its module cache held, and npm's notices on
+		// what the registry has published since
 		if strings.HasPrefix(l, "go run: go: downloading ") || strings.HasPrefix(l, "playwright run: npm notice") || progress.MatchString(l) || bazeliskLine.MatchString(l) ||
 			strings.HasPrefix(l, "... still trying to connect to local Bazel server") {
 			continue
@@ -138,8 +134,8 @@ func first(list []string) string {
 	return list[0]
 }
 
-// Trim writes each raw output of raw into out as the book shows it; work
-// is the scratch directory the steps ran in.
+// Trim writes each raw output of raw into out as the book shows it; work is the scratch
+// directory the steps ran in.
 func Trim(raw, out, work string) error {
 	if err := os.MkdirAll(out, 0o750); err != nil {
 		return fmt.Errorf("trim: %w", err)
@@ -171,9 +167,8 @@ func Trim(raw, out, work string) error {
 
 var outputBlock = regexp.MustCompile("(?s)(<!-- output: ([A-Za-z0-9_-]+) -->\n```[a-z]*\n)(.*?)(```\n)")
 
-// Fill puts each transcript of transcripts into the fenced block after
-// its <!-- output: NAME --> marker, in the pages given, or in every page
-// under docs when none is. It returns the pages it changed.
+// Fill puts each transcript into the fenced block after its <!-- output: NAME --> marker in the
+// pages given, or every page under docs; it returns the pages it changed.
 func Fill(docs, transcripts string, pages ...string) ([]string, error) {
 	if len(pages) == 0 {
 		err := filepath.WalkDir(docs, func(p string, d os.DirEntry, err error) error {
@@ -232,9 +227,8 @@ var (
 	pinnedPlugin     = regexp.MustCompile(`- name: (\S+)\n(?:\s+\S.*\n)*?\s+release: \{version: \S+, sha256: ([0-9a-f]{64})\}`)
 )
 
-// PinProblems are what keeps the outputs from being the pinned
-// releases': the pipelinegen on PATH must be the version config pins, and
-// each plugin in plugins its pinned binary.
+// PinProblems are what keeps the outputs from being the pinned releases': the pipelinegen on PATH
+// must be the version config pins, and each plugin in plugins its pinned binary.
 func PinProblems(config, plugins, version string, sum func(string) (string, error)) []string {
 	var bad []string
 

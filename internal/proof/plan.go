@@ -33,8 +33,8 @@ type planJSON struct {
 
 const depsPrefix = "@pipelinegen_deps//slices:"
 
-// Plan is what the proof reads of one plan: the selected and untouched
-// slices, the reasons, what the narrowings left out, and the warnings.
+// Plan is what the proof reads of one plan: the selected and untouched slices, the reasons, what the
+// narrowings left out, and the warnings.
 type Plan struct {
 	p                             planJSON
 	selected, untouched, warnings []string
@@ -83,10 +83,8 @@ func (p *Plan) Shown() string {
 	return strings.Join(p.selected, ", ")
 }
 
-// FirstSelected is the first selected slice, if any.
 func (p *Plan) FirstSelected() string { return first(p.selected) }
 
-// FirstUntouched is the first slice left untouched, if any.
 func (p *Plan) FirstUntouched() string { return first(p.untouched) }
 
 func first(list []string) string {
@@ -97,10 +95,8 @@ func first(list []string) string {
 	return list[0]
 }
 
-// Count is how many slices the plan selected.
 func (p *Plan) Count() int { return len(p.selected) }
 
-// Total is how many slices the plan names, selected or not.
 func (p *Plan) Total() int { return len(p.selected) + len(p.untouched) }
 
 // Sampled is how many entries the narrowing sampled.
@@ -174,7 +170,6 @@ func (p *Plan) NarrowedShown() string {
 	return strings.Join(out, "; ")
 }
 
-// Warnings are the plan's warnings.
 func (p *Plan) Warnings() []string { return p.warnings }
 
 // Warned tells whether a warning names the slice.
@@ -185,7 +180,6 @@ func (p *Plan) Warned(slice string) bool {
 // Reason is why the plan selected everything, if it did.
 func (p *Plan) Reason() string { return p.p.Reason }
 
-// Reasons are the reasons the slice was selected.
 func (p *Plan) Reasons(slice string) []string {
 	var out []string
 
@@ -198,8 +192,6 @@ func (p *Plan) Reasons(slice string) []string {
 	return out
 }
 
-// HasReasonKind tells whether the slice was selected for a reason of the
-// kind.
 func (p *Plan) HasReasonKind(slice, kind string) bool {
 	for _, s := range p.p.Suites {
 		for _, r := range s.Reasons[depsPrefix+slice] {

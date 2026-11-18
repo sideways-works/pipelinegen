@@ -1,8 +1,5 @@
-// Package proof is the plugin proof: it plans changes to a small fixture
-// repository through the released Go plugins after recording what its tests
-// ran, and prints each plan's selection against a table of what it should
-// select (docs/proof.md). It also plans every plan again with the tool built
-// to bind forward (the pipelinegen_forward build tag) and compares the two.
+// Package proof plans changes to a small fixture through the released Go plugins after recording its tests,
+// against a table of what each should select (docs/proof.md), and again with the forward-binding build.
 package proof
 
 import (
@@ -23,29 +20,23 @@ import (
 	"syscall"
 )
 
-// Options say how the proof runs.
 type Options struct {
 	// Newest plans with each piece's newest release instead of the pins,
 	// checked against that release's SHA256SUMS.
 	Newest bool
-	// Source plans with the tool built from the checkout at Root, so a
-	// change to the planning code is proved by its own commit; the
-	// plugins stay the pinned releases.
+	// Source plans with the tool built from the checkout at Root, so a change to the planning code is
+	// proved by its own commit; the plugins stay the pinned releases.
 	Source bool
 	// Work is the work directory: empty or missing, and everything the
 	// run makes stays in it.
 	Work string
 	// Root is the tool's checkout; its ci/proof/pins are the pins.
 	Root string
-	// Tool names a pipelinegen binary to use instead of the pinned
-	// release, Plugins a directory that already holds go-sbom and
-	// go-correlator, BazelDiff a bazel-diff binary (default: the pinned
-	// release). Every given binary is checked against its pin.
+	// Tool, Plugins (holding go-sbom and go-correlator) and BazelDiff replace the pinned releases;
+	// every given binary is checked against its pin.
 	Tool, Plugins, BazelDiff string
-	// Workers is how many workers plan the cases side by side (3 when 0),
-	// each in a worktree of the fixture and a copy of the warm cache of
-	// its own, with two Bazel servers. Heap bounds each Bazel server's
-	// Java heap (1g when empty).
+	// Workers plan the cases side by side (3 when 0), each in its own worktree and warm cache copy with
+	// two Bazel servers; Heap bounds each Bazel server's Java heap (1g when empty).
 	Workers int
 	Heap    string
 	Token   string
@@ -53,7 +44,6 @@ type Options struct {
 	Stdout, Stderr io.Writer
 }
 
-// ErrUsage is a run the options can't make.
 var ErrUsage = errors.New("usage")
 
 // ErrDiffers is a proof whose plans differ from the table or between the
@@ -91,8 +81,8 @@ type planner struct {
 	out     io.Writer
 }
 
-// Run runs the proof. It returns ErrDiffers when a plan differs from the
-// table or the two tools plan differently, after printing the table.
+// Run runs the proof; after printing the table it returns ErrDiffers when a plan differs from the table
+// or the two tools plan differently.
 func Run(ctx context.Context, o Options) error {
 	if o.Newest && o.Source {
 		return fmt.Errorf("%w: --newest or --source, not both", ErrUsage)

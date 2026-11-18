@@ -43,9 +43,8 @@ type rebuild struct {
 	done    func()
 }
 
-// Keeping the graph up to date rests on every answer depending on its declared inputs only; a cold
-// rebuild is where a plugin that reads more shows. Nothing is written yet: the plan must hold what was
-// found first.
+// A cold rebuild shows a plugin whose answers depend on more than their declared inputs; nothing is
+// written yet, since the plan must hold what was found first.
 func rebuildGraph(ctx context.Context, cfg *config.Config, store *gitstore.Store, trigger, head, cache, pluginsAt string) *rebuild {
 	rb := &rebuild{Found: &affected.Rebuild{Check: cfg.RebuildCheck}, done: func() {}}
 

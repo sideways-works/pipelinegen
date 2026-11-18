@@ -13,10 +13,8 @@ import (
 	"time"
 )
 
-// Daemon serves an empty bare repository through git's own daemon, set up
-// the way a plain git server is: stock upload and receive settings, so no
-// partial fetches and no fetches of commits no ref names. It returns the
-// repository's git:// URL; the daemon stops when the test ends.
+// Daemon serves an empty bare repository through git's daemon with stock settings, as a plain git
+// server does (no partial fetches, no unnamed commits), and returns its git:// URL.
 func Daemon(t *testing.T) string {
 	t.Helper()
 
@@ -74,9 +72,8 @@ func serve(t *testing.T, base string, port int) (string, error) {
 		return "", err
 	}
 
-	// git-daemon itself, not `git daemon`, which would leave it a child of
-	// a git process: it dies with the test binary, even one a timeout or
-	// a kill ends before its cleanups run
+	// git-daemon itself, not `git daemon`, which would leave it a child of a git process: it dies
+	// with the test binary, even one a timeout or a kill ends before its cleanups run
 	//nolint:gosec // git's daemon with the test's own arguments
 	cmd := exec.CommandContext(context.WithoutCancel(t.Context()), daemon, "--reuseaddr", "--listen=127.0.0.1",
 		"--port="+strconv.Itoa(port), "--base-path="+base, "--export-all", "--enable=receive-pack", "--informative-errors", base)

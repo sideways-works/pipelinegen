@@ -14,13 +14,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// fakeDriver runs a slice by recording its name and failing it when its
-// name holds "bad". The "honest" kind gives each slice the same result
-// bundled or not; the "lenient" one passes every slice of a bundle.
-// Given marks, both mark every slice through the marks directory. The
-// "preparing" kind also prepares, leaving a file in the prepared
-// directory; the "idle" kind prepares and leaves nothing there. The
-// "together" kind keeps no recording apart in a bundle.
+// fakeDriver records each slice's name and fails it when the name holds "bad": "honest" bundled or not
+// alike, "lenient" passes a bundle, "preparing"/"idle" prepare with/without a file, "together" never apart.
 func fakeDriver(kind string) plugin.DriverHandlers {
 	verbs := []string{plugin.CallRun}
 	if kind == "preparing" || kind == "idle" {

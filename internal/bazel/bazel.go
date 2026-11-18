@@ -18,14 +18,12 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/progress"
 )
 
-// Client runs Bazel queries in one workspace.
 type Client struct {
 	Bazelisk     string
 	Dir          string
 	StartupFlags []string
-	// Env is Bazel's environment, nil for the process's: the tool gives
-	// it one without credentials (secret.ChildEnv), since Bazel runs a
-	// tree's repository rules.
+	// Env is Bazel's environment, nil for the process's; the tool gives it one without credentials
+	// (secret.ChildEnv), since Bazel runs a tree's repository rules.
 	Env []string
 }
 
@@ -46,15 +44,12 @@ type Slice struct {
 	Tests   []string `json:"tests,omitempty"`
 }
 
-// SelectorLabel is the label of a test file's selector in the deps
-// repository.
 func SelectorLabel(name string) string {
 	return "@pipelinegen_deps//slices:" + name
 }
 
-// NormalLabel writes a label of the deps repository the way SelectorLabel
-// does, whatever form of the repository's name it came in (@@ and the
-// canonical names Bazel gives repositories made by a module's rules).
+// NormalLabel writes a deps repository label as SelectorLabel does, whatever form of the repository's name
+// it came in (@@, or the canonical names Bazel gives repositories a module's rules make).
 func NormalLabel(label string) string {
 	repo, rest, ok := strings.Cut(label, "//")
 	if !ok || !strings.Contains(repo, "pipelinegen_deps") {
@@ -64,11 +59,9 @@ func NormalLabel(label string) string {
 	return "@pipelinegen_deps//" + rest
 }
 
-// ErrQuery wraps a Bazel query that failed or printed something unexpected.
 var ErrQuery = errors.New("bazel query")
 
-// Run runs Bazel with args in the workspace and returns what it printed on
-// stdout. Its stderr goes into the error when it fails.
+// Run runs Bazel with args in the workspace and returns its stdout; its stderr goes into the error.
 func (c *Client) Run(ctx context.Context, args ...string) ([]byte, error) {
 	defer progress.Stage(ctx, "Bazel %s", command(args))()
 
@@ -95,7 +88,6 @@ func (c *Client) Run(ctx context.Context, args ...string) ([]byte, error) {
 	return stdout.Bytes(), nil
 }
 
-// TagExpr is the query expression for every target carrying tag.
 func TagExpr(tag string) string {
 	return fmt.Sprintf(`attr(tags, "[\[ ]%s[,\]]", //...)`, regexp.QuoteMeta(tag))
 }
@@ -261,7 +253,6 @@ type Rule struct {
 	Data  []string
 }
 
-// Rules runs a query and returns the rules it matches.
 func (c *Client) Rules(ctx context.Context, expr string) ([]Rule, error) {
 	out, err := c.Run(ctx, "query", expr, "--output=streamed_jsonproto", "--keep_going=false")
 	if err != nil {
@@ -291,9 +282,8 @@ func SliceName(label string) string {
 	return strings.NewReplacer("/", ".", ":", ".").Replace(strings.TrimLeft(label, "/@"))
 }
 
-// LabelPath turns a label of a file in the main repository into its path
-// relative to the workspace: //pkg/sub:file.go is pkg/sub/file.go. Labels of
-// other repositories have no path here.
+// LabelPath turns a main repository file's label into its workspace path, //pkg/sub:file.go into
+// pkg/sub/file.go; other repositories' labels have none here.
 func LabelPath(label string) (string, bool) {
 	rest, ok := strings.CutPrefix(label, "//")
 	if !ok {

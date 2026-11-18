@@ -9,10 +9,8 @@ import (
 
 var errEmptyPattern = errors.New("empty pattern")
 
-// MatchGlob matches a slash-separated path against a pattern in which "*"
-// and the other path.Match forms stay inside one path element and "**"
-// stands for any number of elements, none included. A pattern ending in "/"
-// matches everything below that directory.
+// MatchGlob matches a slash-separated path: "*" and path.Match's other forms stay inside one
+// element, "**" stands for any number of them, and a pattern ending in "/" matches all below.
 func MatchGlob(pattern, name string) bool {
 	if strings.HasSuffix(pattern, "/") {
 		pattern += "**"

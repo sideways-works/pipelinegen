@@ -1,6 +1,5 @@
-// Package progress says on stderr where a long step is: once a minute after
-// the first, which stage it is in, how far it got and how long it has run,
-// so a slow step can be told from a stuck one.
+// Package progress says on stderr, once a minute after the first, which stage a long step is in,
+// how far it got and how long it has run, so a slow step can be told from a stuck one.
 package progress
 
 import (
@@ -13,7 +12,6 @@ import (
 
 var every = time.Minute
 
-// Meter is what one step says about itself.
 type Meter struct {
 	mu     sync.Mutex
 	prefix string
@@ -25,9 +23,8 @@ type Meter struct {
 
 type key struct{}
 
-// Start begins saying where the step is, on out, each line starting with
-// prefix ("pipelinegen plan"). The returned context carries the meter for
-// Stage and Count; stop ends it, and the step says nothing after.
+// Start begins saying where the step is on out, each line after prefix; the context carries the
+// meter for Stage and Count, and stop ends it.
 func Start(ctx context.Context, out io.Writer, prefix string) (context.Context, func()) {
 	m := &Meter{prefix: prefix, out: out, start: time.Now()}
 
@@ -61,10 +58,8 @@ func from(ctx context.Context) *Meter {
 	return m
 }
 
-// Stage says which stage the step is in now ("reading the lists",
-// "bazel-diff generate-hashes", "plugin go-sbom: units"), and returns what
-// puts the stage before back, with its count, for a stage within another:
-// defer it. A count stays through the stages within its own.
+// Stage names the stage the step is in now and returns what restores the one before, with its
+// count, for a stage within another: defer it.
 func Stage(ctx context.Context, format string, args ...any) func() {
 	m := from(ctx)
 	if m == nil {
@@ -83,8 +78,8 @@ func Stage(ctx context.Context, format string, args ...any) func() {
 	}
 }
 
-// Count says how far the step got, where it can tell: done of total
-// things ("2 of 5 plugins"); a total of 0 clears it.
+// Count says how far the step got, where it can tell: done of total things ("2 of 5 plugins"); a
+// total of 0 clears it.
 func Count(ctx context.Context, done, total int, things string) {
 	if m := from(ctx); m != nil {
 		m.mu.Lock()

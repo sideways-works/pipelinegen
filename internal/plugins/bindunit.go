@@ -6,9 +6,8 @@ import (
 	"strconv"
 )
 
-// bindUnit is one [index, kind, via, [vias]] entry of a bind record. Answers
-// hold one per bound unit, so the common shape is read by hand and anything
-// else as JSON values.
+// bindUnit is one [index, kind, via, [vias]] entry of a bind record, one per bound unit: the
+// common shape is read by hand, anything else as JSON values.
 type bindUnit struct {
 	index    int
 	hasIndex bool

@@ -1,5 +1,3 @@
-# Integer arithmetic.
-
 add() {
 	echo $(($1 + $2))
 }

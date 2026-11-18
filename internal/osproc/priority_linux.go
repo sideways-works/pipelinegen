@@ -2,17 +2,15 @@ package osproc
 
 import "syscall"
 
-// ioprioSet and its values are Linux's ioprio_set: the idle class for the
-// whole process.
+// ioprioSet and its values are Linux's ioprio_set: the idle class for the whole process.
 const (
 	ioprioWhoProcess = 1
 	ioprioClassIdle  = 3
 	ioprioClassShift = 13
 )
 
-// LowestPriority makes this process the machine's last in line for CPU
-// (nice 19) and disk (the idle I/O class). Either may be refused, which
-// leaves it at its priority.
+// LowestPriority makes this process the machine's last in line for CPU (nice 19) and disk (the
+// idle I/O class); either may be refused.
 func LowestPriority() {
 	_ = syscall.Setpriority(syscall.PRIO_PROCESS, 0, 19) //nolint:errcheck // best effort
 

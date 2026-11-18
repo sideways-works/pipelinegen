@@ -23,7 +23,6 @@ type Comparison struct {
 	BadPaths    map[Key]string
 }
 
-// OK tells whether nothing failed.
 func (c Comparison) OK() bool {
 	return len(c.Missing) == 0 && len(c.Unexplained) == 0 && len(c.BadPaths) == 0
 }

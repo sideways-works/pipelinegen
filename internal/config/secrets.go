@@ -11,8 +11,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Secrets name the Concourse vars one suite's tasks get, by kind of task:
-// each maps an environment variable's name to a var's name, never a value.
+// Secrets name the Concourse vars one suite's tasks get, by kind of task: each maps an
+// environment variable's name to a var's name, never a value.
 type Secrets struct {
 	Prepare map[string]string `yaml:"prepare"`
 	Batch   map[string]string `yaml:"batch"`
@@ -23,8 +23,8 @@ func (s Secrets) kinds() map[string]map[string]string {
 	return map[string]map[string]string{"prepare": s.Prepare, "batch": s.Batch, "whole": s.Whole}
 }
 
-// SecretsFor merges a suite's secrets with the run's for it, kind by
-// kind; the run's win per variable.
+// SecretsFor merges a suite's secrets with the run's for it, kind by kind; the run's win per
+// variable.
 func (c *Config) SecretsFor(run, suite string) Secrets {
 	merge := func(a, b map[string]string) map[string]string {
 		if len(a)+len(b) == 0 {
@@ -50,8 +50,8 @@ var (
 
 const ownPrefix = "PIPELINEGEN_"
 
-// validateParams refuses a var reference in plain params, which would put a
-// secret into every task, and pipelinegen's own variables.
+// validateParams refuses a var reference in plain params, which would put a secret into every
+// task, and pipelinegen's own variables.
 func validateParams(where string, params map[string]string, bad func(string, ...any)) {
 	for _, k := range slices.Sorted(maps.Keys(params)) {
 		if strings.HasPrefix(k, ownPrefix) {
@@ -79,7 +79,6 @@ func validateSecrets(where string, secrets, params map[string]string, bad func(s
 	}
 }
 
-// CorrelatorsFor are the correlator entries that observe a suite's slices.
 func (c *Config) CorrelatorsFor(suite string) []string {
 	var out []string
 
@@ -196,10 +195,8 @@ func (c *Config) writingTokenVars() map[string]bool {
 	return out
 }
 
-// WritingSecrets names, for run (every run for ""), each repository task
-// that a run taking pull requests gives a writing token as a secret. Such a
-// run executes a change's own scripts in those tasks, so a token there must
-// only read.
+// WritingSecrets names each repository task that a run taking pull requests (every such run for
+// "") gives a writing token: it runs a change's own scripts, so its token must only read.
 func (c *Config) WritingSecrets(run string) []string {
 	writing := c.writingTokenVars()
 
@@ -229,9 +226,8 @@ func (c *Config) WritingSecrets(run string) []string {
 	return slices.Compact(out)
 }
 
-// StoreKeySecrets names each repository task given the var of the ssh key
-// that writes the store as a secret; nothing of the repository's may hold
-// it.
+// StoreKeySecrets names each repository task given the var of the ssh key that writes the
+// store; nothing of the repository's may hold it.
 func (c *Config) StoreKeySecrets() []string {
 	key := c.Git.SSHKey.Store
 	if key == "" {
@@ -260,9 +256,8 @@ func (c *Config) StoreKeySecrets() []string {
 	return slices.Compact(out)
 }
 
-// validateTaskSecrets refuses a repository task a credential that writes: in
-// a run that takes pull requests a writing token, in any run the ssh key
-// that writes the store or the var that pushes cached images.
+// validateTaskSecrets refuses a repository task a writing credential: a writing token in a pull
+// request run, and in any run the store's ssh key or the var that pushes cached images.
 func (c *Config) validateTaskSecrets(bad func(string, ...any)) {
 	if c.GitHub.SplitTokens() != nil {
 		for _, line := range c.WritingSecrets("") {

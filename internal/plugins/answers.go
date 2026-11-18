@@ -154,14 +154,14 @@ func (s *Set) detected(ctx context.Context, l *Loaded, root string, files map[st
 	return byPath, nil, nil
 }
 
-// detectKey keys a detect answer on the path as well as the blob: the answer
-// names the path, so two files with the same content each need their own.
+// detectKey keys a detect answer on the path as well as the blob: the answer names the path, so
+// two files with the same content each need their own.
 func detectKey(l *Loaded, p, blob string) plugincache.Key {
 	return l.key(plugin.CallDetect, p, blob, detectSchema)
 }
 
-// detectSchema versions the cached detect answer's shape: an answer kept
-// before claims carried recorded would read as one without it.
+// detectSchema versions the cached detect answer's shape: an answer kept before claims carried
+// recorded would read as one without it.
 const detectSchema = "claims with recorded and erased"
 
 func (s *Set) detect(ctx context.Context, l *Loaded, root string, paths []string) (claims map[string][]plugin.Claim, cacheable, told bool, err error) { //nolint:nonamedreturns // what it says and how far to trust it
@@ -218,8 +218,8 @@ func (s *Set) sets(ctx context.Context, l *Loaded, call, root string, files map[
 
 	defer func() { s.count(l.Conf.Name, call, len(asked), max(len(claims)-len(asked), 0)) }()
 
-	// content outside sets (and digest_from) can't be cached by file: a
-	// plugin that ever answered some is asked about every claim each time
+	// content outside sets (and digest_from) can't be cached by file: a plugin that ever answered
+	// some is asked about every claim each time
 	flag := l.key(call + "-rest-bearing")
 	_, flagErr := s.o.Answers.Get(ctx, flag)
 	restBearing := flagErr == nil
@@ -283,17 +283,16 @@ func (s *Set) keepFresh(ctx context.Context, l *Loaded, call string, files map[s
 		return untold, nil
 	}
 
-	// a path of a set kept out of the cache isn't recorded as answered
-	// either, or the next plan would take it for one holding no set
+	// a path of a set kept out of the cache isn't recorded as answered either, or the next plan
+	// would take it for one holding no set
 	wide := untold[before:]
 	answered := slices.DeleteFunc(slices.Clone(asked), func(p string) bool { return slices.Contains(wide, p) })
 
 	return untold, s.keep(ctx, l, call, files, units, fresh.Sets, answered)
 }
 
-// treeInputs keys each set on its absent paths as on its inputs. A set
-// naming a path outside the tree can't be keyed: its files join untold, it
-// is never cached, and the plan warns.
+// treeInputs keys each set on its absent paths as on its inputs. A set naming a path outside the
+// tree can't be keyed: its files join untold, it is never cached, and the plan warns.
 func (s *Set) treeInputs(l *Loaded, call string, sets []plugin.Set, files map[string]string, untold []string) ([]plugin.Set, []string) {
 	kept := make([]plugin.Set, 0, len(sets))
 
@@ -332,10 +331,8 @@ func inTree(p string) bool {
 
 const settleRounds = 3
 
-// settle makes sure every set the asked paths were in last time comes back:
-// a plugin asked about one path of a set must answer every set that holds
-// it. What isn't answered after a few rounds comes back as untold, which
-// binds it wide.
+// settle makes every set the asked paths were in last time come back, since a plugin asked about
+// one path must answer every set holding it; what isn't after a few rounds is untold, bound wide.
 func (s *Set) settle(ctx context.Context, l *Loaded, call, root string, claims []plugin.Claim, have []plugin.Set, asked []string, owed [][]string) ([]plugin.Set, []string, []string, error) {
 	var more []plugin.Set
 
@@ -394,8 +391,8 @@ func unanswered(owed [][]string, sets []plugin.Set, isClaim map[string]bool) []s
 	return out
 }
 
-// firstRest asks about all claims the first time a plugin answers content
-// outside sets: the rest may hold what the cached sets' files say.
+// firstRest asks about all claims the first time a plugin answers content outside sets: the rest
+// may hold what the cached sets' files say.
 func (s *Set) firstRest(ctx context.Context, l *Loaded, call, root string, flag plugincache.Key, fresh asked, paths []string, claims []plugin.Claim) (asked, []string, bool, error) {
 	if err := s.o.Answers.Put(flag, []byte("1")); err != nil {
 		return fresh, paths, true, err
@@ -414,8 +411,7 @@ func (s *Set) firstRest(ctx context.Context, l *Loaded, call, root string, flag 
 func (s *Set) cachedSets(ctx context.Context, l *Loaded, call string, files map[string]string, units unitDigests, claims []plugin.Claim) (answer, []string, [][]string) {
 	c := s.lookup(ctx, l, call, files, units, claims)
 
-	// a set loaded through one claim may name one asked again: the fresh
-	// answer replaces it
+	// a set loaded through one claim may name one asked again: the fresh answer replaces it
 	out := answer{Sets: slices.DeleteFunc(slices.Clone(c.served), func(set plugin.Set) bool {
 		return slices.ContainsFunc(set.Inputs, func(in string) bool { return c.missing[in] })
 	})}
@@ -430,13 +426,11 @@ type lookedUp struct {
 	owed    [][]string
 }
 
-// lookup finds each claim's sets in the cache and decides which claims to
-// ask about. A stale set is asked through the input the fewest sets hold: a
-// plugin asked about a path answers every set holding it, so asking through
-// a file every set holds would ask for every set.
+// lookup finds each claim's sets in the cache and picks the claims to ask about. A stale set is
+// asked through its input the fewest sets hold: one every set holds would ask for every set.
 func (s *Set) lookup(ctx context.Context, l *Loaded, call string, files map[string]string, units unitDigests, claims []plugin.Claim) lookedUp {
-	// every claim is looked up on its own: sets may share an input, and a
-	// set one claim found says nothing of the others another claim names
+	// every claim is looked up on its own: sets may share an input, and a set one claim found
+	// says nothing of the others another claim names
 	entries := map[string][]memberEntry{}
 	missing := map[string]bool{}
 
@@ -522,10 +516,8 @@ func askStale(stale []memberEntry, entries map[string][]memberEntry, owed map[st
 	}
 }
 
-// askUncovered asks about each claim whose sets are neither served from the
-// cache nor owed by this answer. Two sets of one package can each lose to
-// the other's newer record, and without this the package would have no set
-// at all.
+// askUncovered asks about each claim whose sets are neither served nor owed: two sets of one
+// package can each lose to the other's newer record, leaving the package with none.
 func askUncovered(claims []plugin.Claim, entries map[string][]memberEntry, served []plugin.Set, owed map[string][]string, missing map[string]bool) {
 	covered := map[string]bool{}
 
@@ -548,8 +540,8 @@ func askUncovered(claims []plugin.Claim, entries map[string][]memberEntry, serve
 	}
 }
 
-// superseded says a set is no longer the plugin's: an input of it with a
-// record doesn't name it. Asking about it again would never end.
+// superseded says a set is no longer the plugin's: an input of it with a record doesn't name it.
+// Asking about it again would never end.
 func superseded(e memberEntry, entries map[string][]memberEntry) bool {
 	for _, in := range e.list.inputs {
 		held, ok := entries[in]
@@ -574,9 +566,8 @@ func fewestHeld(e memberEntry, entries map[string][]memberEntry) string {
 	return best
 }
 
-// keep caches fresh sets and records under each input every set that names
-// it. Each record is changed by an edit applied to the record as it stands
-// when written, so another plan's answers added meanwhile stay named.
+// keep caches fresh sets and records under each input every set naming it, each record edited as
+// it stands when written, so another plan's answers added meanwhile stay named.
 func (s *Set) keep(ctx context.Context, l *Loaded, call string, files map[string]string, units unitDigests, sets []plugin.Set, asked []string) error {
 	lists := map[string]inputList{}
 	inAnswer := map[string]bool{}
@@ -642,8 +633,8 @@ func (s *Set) keep(ctx context.Context, l *Loaded, call string, files map[string
 // checkStored makes keep read back what it stored: tests set it.
 var checkStored = false
 
-// findable fails when a set just stored can't be found from one of its
-// inputs, which would silently drop its answer.
+// findable fails when a set just stored can't be found from one of its inputs, which would
+// silently drop its answer.
 func (s *Set) findable(ctx context.Context, l *Loaded, call string, files map[string]string, sets []plugin.Set) error {
 	records := map[string]map[string]bool{}
 
@@ -669,21 +660,18 @@ func (s *Set) findable(ctx context.Context, l *Loaded, call string, files map[st
 	return nil
 }
 
-// The cache's records of a per-set answer: one path table per answer
-// (-paths), each input list once as gaps between indices into it (-inputs),
-// one record per answer (-answer), and per input and blob an item record of
-// the answers that hold it (-members). A path then costs a few bytes however
-// many sets name it.
+// A per-set answer's records: a path table (-paths), each input list once as gaps between its
+// indices (-inputs), the answer (-answer), and per input and blob the answers holding it (-members).
 
 type answerRecord struct {
 	Lists []string `json:"lists"`
-	// Paths names the path table its lists index. A record without it is
-	// older, its lists keyed by their digest alone.
+	// Paths names the path table its lists index; without it the record is older, its lists keyed
+	// by their digest alone.
 	Paths string `json:"paths,omitempty"`
 }
 
-// listRecord is an input list: sorted indices into a path table, each
-// stored as its gap from the one before, and the input units, sorted.
+// listRecord is an input list: sorted indices into a path table, each stored as its gap from the
+// one before, and the input units, sorted.
 type listRecord struct {
 	Paths string   `json:"paths"`
 	Gaps  []int    `json:"gaps"`
@@ -704,8 +692,8 @@ type memberEntry struct {
 	list inputList
 }
 
-// listID names a set's input list, whatever the order of its files and
-// units; a list without units is named by its files alone.
+// listID names a set's input list whatever the order of its files and units; a list without
+// units is named by its files alone.
 func listID(inputs, units []string) string {
 	if len(units) == 0 {
 		return inputsID(inputs)
@@ -850,8 +838,7 @@ func (s *Set) getJSON(ctx context.Context, k plugincache.Key, v any) bool {
 	return err == nil && json.Unmarshal(data, v) == nil
 }
 
-// listKey is the key of an input list stored with its path table; without a
-// table, the older key.
+// listKey is the key of an input list stored with its path table; without a table, the older key.
 func listKey(l *Loaded, call, table, id string) plugincache.Key {
 	if table == "" {
 		return l.key(call+"-inputs", id)
@@ -967,9 +954,8 @@ func (s *Set) storedSet(ctx context.Context, l *Loaded, call string, files map[s
 	return set, json.Unmarshal(data, &set) == nil
 }
 
-// stored is the answer planning reads for k. A cold pass reads the shared
-// level's bytes, past the local directory, to compare with what other
-// machines would read.
+// stored is the answer planning reads for k; a cold pass reads the shared level past the local
+// directory, to compare with what other machines would read.
 func (s *Set) stored(ctx context.Context, k plugincache.Key) ([]byte, error) {
 	if !s.o.Cold || s.o.Answers.Remote == nil {
 		return s.o.Answers.Get(ctx, k)
@@ -1073,8 +1059,8 @@ func (s *Set) ask(ctx context.Context, l *Loaded, call, root string, paths []str
 		s.notCacheable(l.Conf.Name, call)
 	}
 
-	// only an sbom's units can say a file holds nothing else a test
-	// observes: a correlator's word is not taken
+	// only an sbom's units can say a file holds nothing else a test observes: a correlator's word
+	// is not taken
 	if l.Desc.Kind != plugin.KindSBOM {
 		raw.Complete = nil
 
@@ -1094,8 +1080,8 @@ func (s *Set) ask(ctx context.Context, l *Loaded, call, root string, paths []str
 	return out, true, nil
 }
 
-// checkLinks fails a malformed link before it is cached or used: a misspelt
-// kind would be a plain link, followed further than the plugin meant.
+// checkLinks fails a malformed link before it is cached or used: a misspelt kind would be a plain
+// link, followed further than the plugin meant.
 func checkLinks(l *Loaded, call string, links []plugin.Link, sets []plugin.Set) error {
 	for _, set := range sets {
 		links = slices.Concat(links, set.Links)
@@ -1110,8 +1096,8 @@ func checkLinks(l *Loaded, call string, links []plugin.Link, sets []plugin.Set) 
 	return nil
 }
 
-// checkInputUnits sorts each set's input units and fails an sbom's set that
-// names any: an sbom's digests are what input units are keyed on.
+// checkInputUnits sorts each set's input units and fails an sbom's set that names any: an sbom's
+// digests are what input units are keyed on.
 func checkInputUnits(l *Loaded, call string, sets []plugin.Set) error {
 	for i := range sets {
 		if len(sets[i].InputUnits) == 0 {
@@ -1206,9 +1192,8 @@ func (s *Set) putSet(l *Loaded, call string, files map[string]string, units unit
 	return s.o.Answers.Put(k, data)
 }
 
-// setKey is a set's key: its inputs with their blobs (a deleted input has
-// none) and its input units with their digests in this tree. False when a
-// digest is unknown: the set is then neither served nor kept.
+// setKey is a set's key: its inputs' blobs (none for a deleted one) and its input units' digests
+// in this tree; false when a digest is unknown, so the set is neither served nor kept.
 func setKey(l *Loaded, call string, files map[string]string, units unitDigests, list inputList) (plugincache.Key, bool) {
 	content := make([]string, 0, len(list.inputs)+len(list.units))
 	for _, in := range list.inputs {

@@ -11,15 +11,11 @@ import (
 	"github.com/bazelbuild/buildtools/build"
 )
 
-// A label of another repository is no target the head's hashes hold, so
-// whether it changed is judged by what pins that repository: its version,
-// the hashes MODULE.bazel.lock keeps of its registry files, and any override
-// naming a fixed commit or archive. A repository whose content can change
-// without its pin changing can't be told.
+// A label of another repository is judged by what pins that repository: its version, the lockfile's
+// hashes of its registry files, a fixed override; content that changes without its pin can't be told.
 
-// moduleRepo is the module a repository name stands for: @name, or a
-// canonical @@name+ (@@name~ before Bazel 8); false for an extension's
-// repository.
+// moduleRepo is the module a repository name stands for: @name, or a canonical @@name+ (@@name~
+// before Bazel 8); false for an extension's repository.
 var moduleRepo = regexp.MustCompile(`^@@?([A-Za-z0-9_.-]+?)[+~]?$`)
 
 func repoOf(label string) (string, bool) {

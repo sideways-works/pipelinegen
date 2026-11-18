@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 )
 
-// cp is where cp is, found when the test binary starts: a test may set
-// PATH to nothing of the machine's before it writes a script.
+// cp is found when the test binary starts: a test may set PATH to nothing of the machine's before
+// it writes a script.
 var cp = func() string { //nolint:gochecknoglobals // found once, before any test changes PATH
 	if p, err := exec.LookPath("cp"); err == nil {
 		return p
@@ -19,11 +19,8 @@ var cp = func() string { //nolint:gochecknoglobals // found once, before any tes
 	return "/bin/cp"
 }()
 
-// WriteExecutable writes a script a test runs, and makes it executable,
-// without this process ever holding the file open for writing: a child
-// forked meanwhile would hold a copy of the write descriptor until it execs,
-// and running the script then fails with "text file busy". So a process of
-// its own copies the content into place.
+// WriteExecutable has a process of its own copy a script into place: a child forked while this
+// process held it open for writing would make running it fail with "text file busy".
 func WriteExecutable(ctx context.Context, path string, content []byte) error {
 	src, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".src-*")
 	if err != nil {

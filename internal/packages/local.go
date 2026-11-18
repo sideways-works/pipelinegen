@@ -9,15 +9,12 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/container"
 )
 
-// LocalRepository is where the local image store keeps the cached images,
-// each tagged by its key: no registry is needed on one machine.
+// LocalRepository is where the local image store keeps the cached images, each tagged by its key:
+// no registry is needed on one machine.
 const LocalRepository = "pipelinegen-cache"
 
-// Local is the image with the packages ps installed on base, as tool's
-// local store has it: made the first time, as root in a container of base
-// that installs them and is committed, and reused after. built says
-// whether this call made it. Its key is of base's image ID, so a base
-// pulled again with other content gets an image of its own.
+// Local is base with ps installed in tool's local store, committed from a root container the first
+// time and reused after; keyed by base's image ID, so a base pulled anew gets its own.
 func Local(ctx context.Context, tool, base string, ps config.Packages, log io.Writer) (ref string, built bool, err error) { //nolint:nonamedreturns // the image and whether it was made
 	id, err := container.ImageID(ctx, tool, base)
 	if err != nil {

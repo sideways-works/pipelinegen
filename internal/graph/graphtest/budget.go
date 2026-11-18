@@ -6,19 +6,16 @@ import (
 	"time"
 )
 
-// Cost is what one run of a function took.
 type Cost struct {
 	Took   time.Duration
 	Heap   uint64
 	Allocs uint64
 }
 
-// MB is the heap in mebibytes.
 func (c Cost) MB() uint64 { return c.Heap >> 20 }
 
-// Measure runs f once and samples the heap every millisecond after a
-// collection, so the peak is f's own; a peak shorter than the interval can
-// be missed.
+// Measure runs f once, sampling the heap every millisecond after a collection so the peak is f's own;
+// a peak shorter than the interval can be missed.
 func Measure(f func()) Cost {
 	runtime.GC()
 

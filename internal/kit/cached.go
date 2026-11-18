@@ -24,13 +24,11 @@ const gitDir = ".git"
 
 const cachedCheck = "answers served from the core's cache are the plugin's own"
 
-// cached runs the plugin's units or links through the core's content cache
-// as planning does, cold, warm, and warm after one claimed file changed,
-// each compared with a cold answer for the same tree.
+// cached runs the plugin's units or links through the core's content cache as planning does, cold,
+// warm, and warm after one claimed file changed, each compared with a cold answer for the same tree.
 func (k *kit) cached(ctx context.Context, claimed []plugin.Claim) {
-	// an input two sets share is the change that tells whether the
-	// plugin answers every set holding it; else a claimed file, or for a
-	// plugin that doesn't detect (it is handed every file) the first
+	// an input two sets share tells whether the plugin answers every set holding it; else a claimed
+	// file, or the first for a plugin that doesn't detect (it is handed every file)
 	sets := k.answerSets(ctx, claimed)
 
 	changed := sharedInput(sets)
@@ -118,9 +116,8 @@ func (k *kit) cached(ctx context.Context, claimed []plugin.Claim) {
 
 const endsCheck = "a link changes only when one of its ends does"
 
-// endsChanged notes the links that came or went while neither of their ends
-// changed: planning counts the from end of such a link as changed all the
-// same, so it costs selections, not correctness.
+// endsChanged notes the links that came or went while neither end changed: planning counts their from
+// end as changed all the same, so it costs selections, not correctness.
 func (k *kit) endsChanged(before, after *deps.Tree, path string) {
 	if k.desc.Kind == plugin.KindCorrelator && k.o.SBOM == "" {
 		k.skip(endsCheck, "no companion sbom (--sbom): the digests of the links' ends are unknown")

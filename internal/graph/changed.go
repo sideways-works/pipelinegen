@@ -7,7 +7,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/deps"
 )
 
-// The values of Change.How.
 const (
 	// HowDigest is a unit both trees have, with different digests.
 	HowDigest = "digest"
@@ -39,6 +38,7 @@ func changesOf(l *loaded, o Options, width string) changes {
 
 	var sboms []string
 
+	// a node keeps the first how it is given: its own change over cannot-tell over links
 	set := func(i int32, how string) {
 		if _, ok := c.how[i]; !ok {
 			c.how[i] = how
@@ -101,10 +101,8 @@ func changesOf(l *loaded, o Options, width string) changes {
 	return c
 }
 
-// movedCounts tells whether a link in one tree only changes its from end in
-// a width. A link to a unit that changed itself changes its from end no more
-// than the unit does: the walk reaches every slice that follows the link
-// through the unit.
+// movedCounts tells whether a link in one tree only changes its from end in a width; a link to a unit
+// that changed itself doesn't: the walk reaches every slice following it through the unit.
 func movedCounts(l *loaded, e edge, width string) bool {
 	if width != Dependents && e.kind == dependentsOnly {
 		return false

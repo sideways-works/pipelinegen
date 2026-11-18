@@ -1,6 +1,5 @@
-// Command words is a small HTTP server: /upper?s=WORDS answers WORDS in
-// capitals, /count?s=WORDS how many words there are, and /healthz nothing,
-// once it is up. It listens on ADDR until it is stopped.
+// Command words serves /upper?s=WORDS (WORDS in capitals), /count?s=WORDS (how many words) and
+// /healthz once it is up, on ADDR until it is stopped.
 package main
 
 import (

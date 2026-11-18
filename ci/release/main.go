@@ -1,14 +1,5 @@
-// Command release builds and publishes a release of pipelinegen or of one
-// of its plugins, and writes a repository's NOTICE. Run it in pipelinegen's
-// checkout:
-//
-//	go run ./ci/release build   DIR TAG OUT   build TAG of the repository checked out in DIR into OUT
-//	go run ./ci/release publish REPO TAG OUT  attach OUT's files to TAG's GitHub release of REPO (owner/name)
-//	go run ./ci/release tested  REPO COMMIT CONTEXT...
-//	                                          fail unless one of the commit statuses named passed on COMMIT
-//	go run ./ci/release notice  DIR           write the NOTICE the release of the repository in DIR needs
-//
-// What a build makes and refuses is in internal/release.
+// Command release builds and publishes a release of pipelinegen or of a plugin, and writes a
+// repository's NOTICE; what a build makes and refuses is in internal/release.
 package main
 
 import (

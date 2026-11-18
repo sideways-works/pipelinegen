@@ -249,10 +249,8 @@ func suiteWalks(l *loaded, sources []source, samples map[string]sampled, width s
 	return bySuite, moved
 }
 
-// allSampled selects a suite's sample targets where every slice its sample
-// is drawn from is selected: running the sample then costs nothing, and the
-// forward binding's sample at the dependents width depends on an order the
-// walk can't replay.
+// allSampled selects a suite's sample targets where every slice the sample draws from is selected: it then
+// costs nothing, and the forward sample at the dependents width rests on an order the walk can't replay.
 func allSampled(ss []plugins.BindSlice, width string, o Options, sel *Selection) {
 	if !on(o, narrowSample) {
 		return

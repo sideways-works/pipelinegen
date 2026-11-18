@@ -31,12 +31,8 @@ func changesArgs(pr *config.PullRequests, ready bool) plugin.ChangesArgs {
 	}}
 }
 
-// Admit says whether a pull request run plans this head: the pull request
-// is open onto the run's base with this head, from the repository itself,
-// it passes the run's filters, and, with once_per_ready, no other head of
-// it was planned since it was last marked ready. ran finds that head in
-// the run's records: its commit, or "". Admit returns the reason when the
-// run doesn't plan the head.
+// Admit says whether a pull request run plans this head (open onto its base, not a fork, passing its
+// filters, and with once_per_ready unplanned since ready), and why not; ran finds a head's commit.
 func Admit(ctx context.Context, host Changes, cfg *config.Config, ch Change, ran func(since time.Time) (string, error)) (bool, string, error) {
 	pr := cfg.Runs[ch.Run].Trigger.PullRequests
 	if pr == nil {

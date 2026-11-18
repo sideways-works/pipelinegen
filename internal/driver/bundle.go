@@ -19,13 +19,11 @@ type Hooks interface {
 	// Stop closes the part a slice's tests ran; unclosed, when set, says why
 	// its stop was never marked.
 	Stop(ctx context.Context, sl plugin.DriverSlice, unclosed string) error
-	// End ends a slice with the driver's end event, or with nil when the
-	// slice got no result and why says what the driver said last; apart says
-	// another slice may be running, so its part stays open.
+	// End ends a slice with the driver's end event, or nil when it got no result (why is the driver's last
+	// words); apart says another slice may be running, so its part stays open.
 	End(ctx context.Context, sl plugin.DriverSlice, ev *plugin.DriverEvent, why string, apart bool) error
 }
 
-// Step is a run step ready to be called.
 type Step struct {
 	Driver Driver
 	Desc   plugin.Description
@@ -33,19 +31,16 @@ type Step struct {
 	Base   plugin.DriverRequest
 }
 
-// Runner runs a batch's run steps.
 type Runner struct {
 	Hooks Hooks
 	// Record and Stack are the run's and the suite's: a recording run of a
 	// stack suite bundles only through marks.
 	Record, Stack bool
-	// Collects says the suite names correlators, whose collect must come at
-	// each slice's real edges: a recording run of such a suite bundles
-	// through marks too.
+	// Collects says the suite names correlators, whose collect must come at each slice's real edges: a
+	// recording run of such a suite bundles through marks too.
 	Collects bool
-	// Marks is how a driver marks; Marks.Dir is made afresh for each marked
-	// bundle and removed when it ends, and only that bundle's call gets
-	// PIPELINEGEN_MARKS.
+	// Marks is how a driver marks; Marks.Dir is made afresh for each marked bundle and removed when it
+	// ends, and only that bundle's call gets PIPELINEGEN_MARKS.
 	Marks plugin.Marks
 	Log   io.Writer
 
@@ -81,10 +76,8 @@ func (r *Runner) mode(st Step) mode {
 	}
 }
 
-// Run runs a step's slices: one by one, or as one bundle, whose slices
-// left without a result then run again one by one. It fails only when the
-// batch's journal does; a slice that failed or got no result is the
-// journal's to say.
+// Run runs a step's slices one by one, or as one bundle whose slices left without a result run again one
+// by one; it fails only when the batch's journal does, which says what a slice did.
 func (r *Runner) Run(ctx context.Context, st Step, todo []plugin.DriverSlice) error {
 	if len(todo) == 0 {
 		return nil
@@ -191,9 +184,8 @@ func (b *bundleRun) mark(ctx context.Context, m Mark) error {
 	}
 
 	return b.r.hook(func() error {
-		// a slice's tests may come round again before its end (shards, a
-		// retry): each start opens a part that adds to its recording;
-		// after its end there is none to add to
+		// a slice's tests may come round again before its end (shards, a retry): each start opens a part
+		// that adds to its recording; after its end there is none to add to
 		if b.ended[sl.Name] {
 			return fmt.Errorf("%w: slice %s already ended in this bundle", ErrMark, sl.Name)
 		}
@@ -383,7 +375,6 @@ func freshDir(dir string) error {
 	return nil
 }
 
-// Names are the slices' names, in order.
 func Names(todo []plugin.DriverSlice) []string {
 	out := make([]string, 0, len(todo))
 	for _, sl := range todo {

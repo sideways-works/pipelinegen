@@ -19,7 +19,6 @@ type DeclaredCall struct {
 	Package  []string
 }
 
-// DeclaredCalls lists every call of a declared macro in a tree.
 func DeclaredCalls(cfg *config.Config, tree Tree) []DeclaredCall {
 	if len(cfg.Macros) == 0 {
 		return nil

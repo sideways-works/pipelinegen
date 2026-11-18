@@ -79,7 +79,6 @@ func runVersion(ctx context.Context, args []string, stdout io.Writer) error {
 	return say(stdout, "%s\n", Version)
 }
 
-// Run runs the command named by args[0] and returns the exit code.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		usage(stderr)
@@ -362,7 +361,6 @@ type CommandDoc struct {
 	Subcommands []CommandDoc
 }
 
-// FlagDoc describes one flag.
 type FlagDoc struct {
 	Name    string
 	Usage   string

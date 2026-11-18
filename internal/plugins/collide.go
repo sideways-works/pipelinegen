@@ -6,10 +6,8 @@ import (
 	"unicode"
 )
 
-// collidingPaths are the groups of tracked paths a case-folding or
-// Unicode-normalising filesystem (a Mac's, by default) may hold as one file.
-// Without Unicode's tables the key is conservative: such a pair is planned
-// wide, never missed.
+// collidingPaths groups the tracked paths a case-folding or Unicode-normalising filesystem (a
+// Mac's) may hold as one file; without Unicode's tables the key errs toward planning them wide.
 func collidingPaths(paths []string) [][]string {
 	byKey := map[string][]string{}
 

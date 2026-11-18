@@ -81,10 +81,8 @@ func startedArg(args []string) string {
 	return ""
 }
 
-// sweepOldLeases removes the leases an older pipelinegen's locks left in the store: its refs under
-// refs/pipelinegen/locks/, or its files under locks/ on the branch store's -locks branch. Nothing reads
-// them; a plan step that finds none writes nothing, and one that fails only warns. A run that isn't
-// trusted leaves them to one that is.
+// sweepOldLeases removes the leases an older pipelinegen's locks left, which nothing reads: refs under
+// refs/pipelinegen/locks/ or the -locks branch's locks/ files. Only trusted runs sweep; failing warns.
 func sweepOldLeases(ctx context.Context, cfg *config.Config, store *gitstore.Store, stderr io.Writer) {
 	if store.Proposed || store.ReadOnly {
 		return

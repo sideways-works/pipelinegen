@@ -1,7 +1,5 @@
-// Package recording reads and writes what a slice's run recorded: the unit
-// ids it touched, what only its batch's setup ran, and which correlators
-// couldn't tell. It is plain text, one unit id per line, and still reads the
-// older form a recording had before the correlators made it.
+// Package recording reads and writes what a slice's run recorded, one unit id per line: what it
+// touched, what only its batch's setup ran, and which correlators couldn't tell.
 package recording
 
 import (
@@ -28,7 +26,6 @@ const (
 	sinceOpen      = " (since "
 )
 
-// ErrRecording wraps a recording that can't be read.
 var ErrRecording = errors.New("recording")
 
 // Mark is a correlator that couldn't tell what a slice touched.
@@ -40,7 +37,6 @@ type Mark struct {
 	Since time.Time `json:"since,omitzero"`
 }
 
-// Recording is one slice's recording.
 type Recording struct {
 	// Own are the units the slice's own tests touched; Setup those only
 	// its batch's setup ran or that ran only as loading.
@@ -173,9 +169,8 @@ var namespace = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 // <package directory>#<kind>:<name>.
 var oldID = regexp.MustCompile(`^[^#\s]+#[a-z]+:\S+$`)
 
-// ValidID tells whether a line is a unit id: namespaced
-// (go:internal/notes#func:Create, pg:table:public.notes, file:<path>) or a
-// declaration in the older form.
+// ValidID tells whether a line is a unit id: namespaced (go:internal/notes#func:Create,
+// pg:table:public.notes, file:<path>) or a declaration in the older form.
 func ValidID(id string) error {
 	if strings.ContainsAny(id, " \t\r\n") || strings.HasPrefix(id, "#") {
 		return fmt.Errorf("%w: %q is no unit id", ErrRecording, id)
@@ -192,9 +187,8 @@ func ValidID(id string) error {
 	return fmt.Errorf("%w: %q is no unit id", ErrRecording, id)
 }
 
-// Namespaced tells whether an id is in a plugin's namespace (go:,
-// pg:, api:), which only planning through the plugins can bind; file: is
-// the core's own and the older form's too.
+// Namespaced tells whether an id is in a plugin's namespace (go:, pg:, api:), which only planning
+// through the plugins can bind; file: is the core's own and the older form's too.
 func Namespaced(id string) bool {
 	ns, _, ok := strings.Cut(id, ":")
 

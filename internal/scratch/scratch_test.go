@@ -11,8 +11,7 @@ import (
 	"time"
 )
 
-// TestMain lets the test binary hold a scratch directory until a signal
-// ends it.
+// TestMain lets the test binary hold a scratch directory until a signal ends it.
 func TestMain(m *testing.M) {
 	if os.Getenv("SCRATCH_HOLD") != "" {
 		var d Dirs

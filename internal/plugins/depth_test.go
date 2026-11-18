@@ -12,10 +12,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// depthTree: the listed unit reaches "near" in one step back (near uses
-// it) and in two steps forward (it uses mid, mid uses near); "far" uses
-// near. With a depth of one, far is one step back from near, and near is
-// no steps back from the listed unit, so far is bound.
+// depthTree: the listed unit reaches near one step back and two forward (via mid), and far uses
+// near; with a depth of one, far is one step back from near, so far is bound.
 func depthTree() *deps.Tree {
 	units := map[string]deps.Unit{}
 	for _, id := range []string{"g:listed", "g:mid", "g:near", "g:far"} {

@@ -1,7 +1,5 @@
-// Package sample picks a sample of a suite's slices: for a change every
-// test exercises the same way, a spread of the suite says as much as all of
-// it. The pick depends on a seed (the commit), so over many commits every
-// slice takes its turn.
+// Package sample picks a spread of a suite's slices, which says as much as all of it for a change
+// every test exercises alike; seeded by the commit, so over many commits every slice has a turn.
 package sample
 
 import (
@@ -11,19 +9,14 @@ import (
 	"sort"
 )
 
-// Slice is one slice of the suite with its group and recorded seconds.
 type Slice struct {
 	Name  string
 	Group string
 	Secs  float64
 }
 
-// Pick returns n slices of the suite, sorted by name: every slice in must,
-// even past n; then one slice of every group must doesn't reach, while n
-// allows; then the rest shared out by group size. Within a group the slices
-// whose hash with the seed comes first are picked, so long slices are
-// sampled as often as short ones, and the same slices and seed give the same
-// pick.
+// Pick returns n slices, sorted: all of must, even past n, then one of each group must misses, then
+// the rest by group size; within a group by hash with the seed, so long slices are picked as often.
 func Pick(all []Slice, n int, seed string, must []string) []string {
 	byName := map[string]Slice{}
 	for _, s := range all {
@@ -94,8 +87,8 @@ func keys[V any](m map[string]V) func(func(string) bool) {
 	}
 }
 
-// rank is a name's place for a seed: a hash, so every seed orders the
-// slices anew and each is equally likely to come first.
+// rank is a name's place for a seed: a hash, so every seed orders the slices anew and each is
+// equally likely to come first.
 func rank(seed, kind, name string) uint64 {
 	h := sha256.Sum256([]byte(seed + "\x00" + kind + "\x00" + name))
 
@@ -138,8 +131,8 @@ func take(groups map[string][]Slice, g string, picked map[string]bool, count map
 	count[g]++
 }
 
-// shares is each group's share of n: a group whose share by size comes to
-// less than one slice gets one, and the others share the rest by size.
+// shares is each group's share of n: a group whose share by size is under one slice gets one, and
+// the others share the rest by size.
 func shares(size map[string]int, n int) map[string]float64 {
 	out := map[string]float64{}
 	forced := map[string]bool{}

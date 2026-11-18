@@ -7,10 +7,8 @@ import (
 	"strings"
 )
 
-// KindDriver is a plugin that runs a suite's slices.
 const KindDriver = "driver"
 
-// BuiltinCommand is the driver built into the tool.
 const BuiltinCommand = "command"
 
 // The kinds of step a suite's steps list holds, in the order they run.
@@ -20,22 +18,19 @@ const (
 	StepRun     = "run"
 )
 
-// Step is one entry of a suite's steps: a driver that prepares once per
-// run, sets up once per batch, or runs the slices routed to it.
+// Step is one entry of a suite's steps: a driver that prepares once per run, sets up once per
+// batch, or runs the slices routed to it.
 type Step struct {
-	// Prepare, Setup and Run name the step's driver (a driver plugin's
-	// entry, or BuiltinCommand); a step names exactly one of them.
+	// Prepare, Setup and Run name the step's driver (a driver plugin's entry, or BuiltinCommand);
+	// a step names exactly one of them.
 	Prepare string `json:"prepare,omitempty" yaml:"prepare,omitempty"`
 	Setup   string `json:"setup,omitempty"   yaml:"setup,omitempty"`
 	Run     string `json:"run,omitempty"     yaml:"run,omitempty"`
-	// Take routes slices to a run step: path patterns for test files,
-	// "kind:<rule kind>" and label patterns ("//services/...",
-	// "//pkg:target") for targets. Left out on a suite's only run step,
-	// every slice.
+	// Take routes slices to a run step: path patterns for test files, "kind:<rule kind>" and
+	// label patterns for targets; left out on a suite's only run step, every slice.
 	Take []string `json:"take,omitempty" yaml:"take,omitempty"`
-	// Batch lets a run step's driver run the slices it is given together,
-	// as its tool allows (a package's files, a batch's targets); off, every
-	// slice is an invocation of its own.
+	// Batch lets a run step's driver run its slices together as its tool allows (a package's
+	// files, a batch's targets); off, every slice is an invocation of its own.
 	Batch *bool `json:"batch,omitempty" yaml:"batch,omitempty"`
 
 	Image string `json:"image,omitempty" yaml:"image,omitempty"`
@@ -43,7 +38,6 @@ type Step struct {
 	With map[string]any `json:"with,omitempty" yaml:"with,omitempty"`
 }
 
-// Kind is the step's kind: StepPrepare, StepSetup or StepRun.
 func (s Step) Kind() string {
 	switch {
 	case s.Prepare != "":
@@ -55,14 +49,11 @@ func (s Step) Kind() string {
 	}
 }
 
-// Driver is the name of the step's driver.
 func (s Step) Driver() string { return s.Prepare + s.Setup + s.Run }
 
-// Bundles tells whether the step's driver may run its slices together.
 func (s Step) Bundles() bool { return s.Batch != nil && *s.Batch }
 
-// HasSteps tells whether the suite is run by drivers rather than task
-// files.
+// HasSteps tells whether the suite is run by drivers rather than task files.
 func (s Suite) HasSteps() bool { return len(s.Steps) > 0 }
 
 // StepsOf are the suite's steps of one kind, by their index in its list.
@@ -78,17 +69,16 @@ func (s Suite) StepsOf(kind string) []int {
 	return out
 }
 
-// RoutedSlice is what routing reads of a slice: a test file's path, or a
-// target's label and rule kind.
+// RoutedSlice is what routing reads of a slice: a test file's path, or a target's label and
+// rule kind.
 type RoutedSlice struct {
 	Name  string
 	Label string
 	Kind  string
 }
 
-// Takes tells whether a run step takes the slice. A step without take
-// takes every slice: validation lets only a suite's one run step leave it
-// out.
+// Takes tells whether a run step takes the slice. A step without take takes every slice:
+// validation lets only a suite's one run step leave it out.
 func (s Step) Takes(sl RoutedSlice) bool {
 	if len(s.Take) == 0 {
 		return true
@@ -126,8 +116,8 @@ func labelMatches(p, label string) bool {
 	return p == label
 }
 
-// RunStepFor is the index of the suite's run step that takes the slice;
-// false when none or several do, which the check refuses.
+// RunStepFor is the index of the suite's run step that takes the slice; false when none or
+// several do, which the check refuses.
 func (s Suite) RunStepFor(sl RoutedSlice) (int, bool) {
 	found := -1
 
@@ -146,8 +136,8 @@ func (s Suite) RunStepFor(sl RoutedSlice) (int, bool) {
 	return found, found >= 0
 }
 
-// DriverConfig is a step's settings: its driver entry's config with the
-// step's with over it, key by key.
+// DriverConfig is a step's settings: its driver entry's config with the step's with over it,
+// key by key.
 func (c *Config) DriverConfig(st Step) map[string]any {
 	out := map[string]any{}
 
@@ -162,8 +152,7 @@ func (c *Config) DriverConfig(st Step) map[string]any {
 	return out
 }
 
-// Driver is the driver entry a step names; false for the built-in one or
-// a name no entry has.
+// Driver is the driver entry a step names; false for the built-in one or a name no entry has.
 func (c *Config) Driver(name string) (Plugin, bool) {
 	for _, p := range c.Plugins {
 		if p.Kind == KindDriver && p.Name == name {
@@ -273,8 +262,8 @@ func (c *Config) suiteSteps() map[string][]Step {
 	return out
 }
 
-// trustSteps gives every suite the trusted config's steps, or none: a
-// proposed change runs its suites as the trusted config says.
+// trustSteps gives every suite the trusted config's steps, or none: a proposed change runs its
+// suites as the trusted config says.
 func (c *Config) trustSteps(trusted map[string][]Step) {
 	for name, s := range c.Suites {
 		if !s.HasSteps() && len(trusted[name]) == 0 {

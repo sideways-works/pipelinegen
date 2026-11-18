@@ -12,7 +12,6 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// ErrChecksum is a connector's binary whose checksum isn't the pinned one.
 var ErrChecksum = fetch.ErrChecksum
 
 // ErrPin is a pin no binary can be checked against.
@@ -22,11 +21,8 @@ var ErrPin = fetch.ErrPin
 // release files.
 func Program(pin config.ConnectorPin) string { return plugin.Program(pin.Repository) }
 
-// Fetch returns the path of the pinned connector's binary: dir's copy
-// (the plugins directory a pipeline's bootstrap fills) when it matches the
-// pin, cacheDir's when an earlier fetch put it there, and otherwise one
-// downloaded into cacheDir and checked against the pin. A binary that
-// doesn't match its pin never runs.
+// Fetch returns the pinned connector's binary: dir's copy (filled by a pipeline's bootstrap) when it matches,
+// else cacheDir's, else one downloaded there and checked; a binary that doesn't match its pin never runs.
 func Fetch(ctx context.Context, client *http.Client, dir, cacheDir string, pin config.ConnectorPin) (string, error) {
 	f := fetch.Fetcher{Client: client, Cache: cacheDir, Under: "connectors"}
 	p := fetch.Pin{Name: pin.Name, Repository: pin.Repository, Version: pin.Version, SHA256: pin.SHA256, Sums: pin.Sums, URL: pin.URL}

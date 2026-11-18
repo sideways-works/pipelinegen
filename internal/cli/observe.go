@@ -17,9 +17,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/report"
 )
 
-// A recording batch observes its slices in its own task once every slice has ended, keeping each answer
-// under observedDir; the batch's end observes only what was left. Observing never changes a slice's
-// result, and stops in time for the task's limit.
+// A recording batch observes its ended slices in its own task into observedDir, its end only what was
+// left; observing never changes a slice's result, and stops in time for the task's limit.
 const observedDir = "observed"
 
 var errInterpreter = errors.New("interpreter missing")

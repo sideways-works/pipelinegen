@@ -13,9 +13,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Collect has every correlator that collects take its part of what a batch's
-// processes left behind, in the config's order. Each call is bounded by its
-// entry's collect limit and by ctx's deadline; the first failure stops it.
+// Collect has every collecting correlator take its part of what a batch left, in the config's
+// order, each call bounded by its collect limit and ctx; the first failure stops it.
 func (s *Set) Collect(ctx context.Context, action, slice, dir string, stack bool) error {
 	for _, l := range s.Plugins {
 		if !l.can(plugin.CallCollect) || !l.Desc.Handles(action) {
@@ -63,8 +62,7 @@ func collectStopped(batch, call context.Context, name, action, slice string, lim
 	}
 }
 
-// Claims are each plugin's claims in the tree checked out at root, by
-// plugin name.
+// Claims are each plugin's claims in the tree checked out at root, by plugin name.
 func (s *Set) Claims(ctx context.Context, root string) (map[string][]plugin.Claim, error) {
 	root = RealPath(root)
 
@@ -115,28 +113,22 @@ func (s *Set) fragments(ctx context.Context, l *Loaded, files map[string]string,
 	return out
 }
 
-// SetClaimed has the set's observe and collect calls carry each plugin's
-// claims.
 func (s *Set) SetClaimed(claimed map[string][]plugin.Claim) { s.claimed = claimed }
 
-// Observation is what one correlator saw a slice touch.
 type Observation struct {
 	Plugin string
-	// CantTell is set when the plugin couldn't tell; Reason is what it said,
-	// its secrets masked.
+	// CantTell is set when the plugin couldn't tell; Reason is what it said, its secrets masked.
 	CantTell  bool
 	Reason    string
 	Touched   []string
 	SetupLike []string
 }
 
-// Observe asks every correlator that observes what a slice touched.
 func (s *Set) Observe(ctx context.Context, tree, slice, setup string, parts []string) ([]Observation, error) {
 	tree = RealPath(tree)
 
-	// the setup's directory always comes first, so a plugin tells it by
-	// position: a batch without one gets a path that doesn't exist, which
-	// is a setup that left no evidence
+	// the setup's directory always comes first, so a plugin tells it by position: without a
+	// setup, a path that doesn't exist, which is a setup that left no evidence
 	if setup == "" {
 		setup = filepath.Join(s.work(), "no-setup")
 	}

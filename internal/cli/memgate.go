@@ -49,9 +49,8 @@ type prediction struct {
 	Why string `json:"why"`
 }
 
-// predict is the peak a batch of these slices should reach: the most any of them should, each the
-// 90th percentile of its recent peaks and a tenth more, a slice without any at the suite's median. A
-// suite with no peaks at all predicts nothing.
+// predict is a batch's peak: the most any slice should reach, each its recent peaks' 90th percentile and
+// a tenth more, one without any at the suite's median; a suite with no peaks predicts nothing.
 func predict(peaks map[string][]int64, names []string) (prediction, bool) {
 	var all []int64
 
@@ -160,11 +159,8 @@ func admits(r memory.Reading, pressure float64, need int64) bool {
 	return r.Free() >= need && pressure < pressureAdmit
 }
 
-// awaitMemory says what the worker has free and, for a batch with a predicted peak, waits while it has
-// less or memory is under pressure. A batch still short when the wait ends leaves its slices not run:
-// it writes why into its result, which its end reads, and fails. A machine whose memory can't be read
-// starts the batch unchecked, and so does a prediction above all the worker could ever give, which
-// would leave its slices never run.
+// awaitMemory waits while the worker has less free than the batch's predicted peak, or is under pressure;
+// still short, it writes why into the result for its end and fails. Unreadable memory starts unchecked.
 func awaitMemory(ctx context.Context, batches, batch, suite string, minutes int, result string, log io.Writer) error {
 	r, err := memory.Read(memoryRoot)
 	if err != nil {
@@ -184,6 +180,7 @@ func awaitMemory(ctx context.Context, batches, batch, suite string, minutes int,
 
 	warnf(log, "memory: %s, pressure %s; this batch should use %d MB: %s\n", r, psi(pressure), p.MB, p.Why)
 
+	// waiting for room that never comes would leave its slices never run
 	if c := r.Capacity(); p.MB > c {
 		warnf(log, "memory: %d MB predicted is more than the %d MB this worker could ever give: the batch starts unchecked\n", p.MB, c)
 
@@ -273,9 +270,8 @@ func shortOfMemoryIn(result string) string {
 	return short.why()
 }
 
-// localMemory refuses a suite's batch on this machine when it has less free than the batch should
-// use, by the peaks the shared store holds: a person is there to free some, so nothing waits. Peaks
-// it can't read, or none, check nothing.
+// localMemory refuses a batch this machine hasn't the free memory for by the store's peaks, waiting for
+// nothing since a person is there to free some; peaks it can't read, or none, check nothing.
 func localMemory(ctx context.Context, peaks func(context.Context) (map[string][]int64, error), suite string, names []string) error {
 	known, err := peaks(ctx)
 	if err != nil {
@@ -296,9 +292,8 @@ func localMemory(ctx context.Context, peaks func(context.Context) (map[string][]
 		errNoMemoryHere, suite, p.MB, p.Why, r)
 }
 
-// ready finds the build's plugins, installs the suite's packages and then refuses a batch this machine
-// hasn't the memory for, before the setup: on CI the install runs in front of the task's command, and
-// the batch waits for its memory after it.
+// ready finds the plugins, installs the suite's packages and then refuses a batch this machine hasn't the
+// memory for, before the setup, in CI's order: install, then the wait for memory.
 func (b *localBuild) ready(ctx context.Context, c *common, slices []string) error {
 	return b.readyWith(ctx, sharedPeaks(c, b.suite), slices)
 }
@@ -376,9 +371,8 @@ func sliceMemory(ctx context.Context, args []string) error {
 	return awaitMemory(ctx, batches, os.Getenv(envBatch), suite, cfg.SuiteMinutes(run, suite), result, os.Stderr)
 }
 
-// admit waits for the memory a batch of steps should use, then samples what each slice uses until stop.
-// On this machine run and record checked before the batch, nothing waits, and nothing is measured: the
-// machine's own cgroup holds more than the batch.
+// admit waits for a batch's memory, then samples each slice's use until stop; on this machine run and
+// record checked beforehand and nothing is measured, since its cgroup holds more than the batch.
 func (s *step) admit(ctx context.Context, f drivenFlags, batch, suite string) (stop func(), err error) {
 	run := s.reporter.ID.Run
 	if run == localRun {

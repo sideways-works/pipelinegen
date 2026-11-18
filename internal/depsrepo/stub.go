@@ -14,10 +14,8 @@ var selectorRef = regexp.MustCompile(`@pipelinegen_deps//` + slicesDir + `:([A-Z
 
 const dependentsSuffix = ".dependents"
 
-// Stub writes a deps repository that binds every selector the tree's BUILD
-// and .bzl files name, in both widths, to one stub file, so Bazel loads a
-// fresh checkout before any plan wrote the real one. It writes no key, so no
-// plan takes it for one it hashed.
+// Stub binds every selector the tree's BUILD and .bzl files name, in both widths, to one stub file, so Bazel
+// loads a fresh checkout before any plan wrote the real one; it writes no key, so no plan trusts it.
 func Stub(root string) error {
 	names := map[string]bool{}
 

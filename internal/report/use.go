@@ -93,9 +93,8 @@ func (s *sliceSum) addUse(event string, u *Use) {
 	}
 }
 
-// usedIn puts what the slice used in its state; a slice the OOM killer struck, or one whose failure
-// names a kill signal while memory was under pressure, crashed, and its peak counts as at least the room
-// it had, so the next prediction rises.
+// usedIn puts what the slice used in its state; one the OOM killer struck, or that names a kill signal
+// under memory pressure, crashed, and its peak counts as at least its room, so the prediction rises.
 func usedIn(sf *StateFile, used *Use) {
 	if used == nil {
 		return

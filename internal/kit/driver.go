@@ -21,9 +21,8 @@ import (
 
 const kitSuite = "kit"
 
-// kitDriver is what .pipelinegen-kit.json says of a driver's fixture: the
-// slices to run, whether to record them, and the settings of a run step, a
-// set-up and a prepare step.
+// kitDriver is what .pipelinegen-kit.json says of a driver's fixture: the slices to run, whether to
+// record them, and the settings of a run step, a set-up and a prepare step.
 type kitDriver struct {
 	Slices  []plugin.DriverSlice `json:"slices"`
 	Record  bool                 `json:"record"`
@@ -77,9 +76,8 @@ func describeDriver(d plugin.Description) []string {
 	return problems
 }
 
-// driverChecks run a driver on its fixture as the tool does: each slice
-// alone, then as one bundle, recording and not, comparing results slice by
-// slice; then marked bundles; then its set-up.
+// driverChecks run a driver on its fixture as the tool does: each slice alone, then as one bundle,
+// recording and not, comparing results slice by slice; then marked bundles; then its set-up.
 func (k *kit) driverChecks(ctx context.Context) {
 	f, ok := k.driverFixture()
 	if !ok {
@@ -326,9 +324,8 @@ func (k *kit) driverMarks(ctx context.Context, f kitDriver) {
 		what  string
 	}{{true, "a recorded stack suite's bundle"}}
 
-	// a driver that keeps no recording apart is called once per slice in a
-	// recording run of a suite without a stack, as the tool calls it: no
-	// bundle of it is marked there
+	// a driver that keeps no recording apart is called once per slice in a recording run of a suite
+	// without a stack, as the tool calls it: no bundle of it is marked there
 	if k.desc.Apart {
 		variants = append(variants, struct {
 			stack bool
@@ -478,9 +475,8 @@ func copyTree(src, dst string) error {
 	return nil
 }
 
-// failureFiles checks the files an end names: only a slice that didn't
-// pass names any, and each is a regular file inside the slice's files
-// directory. It says how many, for the modes to compare.
+// failureFiles checks the files an end names: only a slice that didn't pass names any, each a regular
+// file inside its files directory. It says how many, for the modes to compare.
 func failureFiles(sl plugin.DriverSlice, ev *plugin.DriverEvent) (string, string) {
 	if len(ev.Files) == 0 {
 		return "", ""

@@ -17,14 +17,8 @@ import (
 
 const partsCheck = "collect and observe take a slice run twice in one batch"
 
-// kitRecord is a fixture's recording command in .pipelinegen-kit.json. The
-// kit runs it Parts times (at least two) for one slice in one batch, as a
-// batch task runs: in a directory holding the tree as source/ and the
-// coverage output as coverage/, with PIPELINEGEN_RECORD=true;
-// PIPELINEGEN_SLICE and PIPELINEGEN_PART are the kit's own. Serve, when set,
-// is the batch's stack, started before the setup's end and stopped after the
-// last collect; Ready names the file (a glob) whose appearance says it
-// answers.
+// kitRecord is a fixture's recording command, run Parts times (at least two) for one slice as a batch runs:
+// with source/, coverage/ and PIPELINEGEN_RECORD=true; Serve is the stack, ready once Ready (a glob) appears.
 type kitRecord struct {
 	Slice  string         `json:"slice"`
 	Run    []string       `json:"run"`
@@ -55,17 +49,15 @@ func (r *kitRecords) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// kitFixture is what .pipelinegen-kit.json says of a collecting plugin: its
-// recordings, and its entry's name in the fixture's config, which the core
-// names its coverage directories after (default: the plugin file's name).
+// kitFixture is what the kit file says of a collecting plugin: its recordings, and its entry's name in
+// the fixture's config, which the coverage directories are named after (default: the plugin file's).
 type kitFixture struct {
 	Name   string     `json:"name"`
 	Record kitRecords `json:"record"`
 }
 
-// parts records the fixture's slice in parts, once per recording entry, as
-// the core does; every part's directory must hold the part's recording, and
-// observe over all the parts must tell at least what each part alone tells.
+// parts records the fixture's slice in parts as the core does: each part's directory must hold its
+// recording, and observe over all parts must tell at least what each alone tells.
 func (k *kit) parts(ctx context.Context) {
 	var f kitFixture
 

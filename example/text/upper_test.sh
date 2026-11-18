@@ -1,4 +1,3 @@
-# Unit tests of upper.
 . ./lib.sh
 
 test_upper() {

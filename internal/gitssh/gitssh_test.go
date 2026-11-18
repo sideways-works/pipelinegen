@@ -20,8 +20,8 @@ const (
 	testHosts = "git.example.test ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAItestkey"
 )
 
-// TestMain lets the test binary hold a key until a signal ends it, so the
-// test can see the key's directory go with the process.
+// TestMain lets the test binary hold a key until a signal ends it, so the test can see the key's
+// directory go with the process.
 func TestMain(m *testing.M) {
 	if os.Getenv("GITSSH_HOLD") != "" {
 		k := &Keys{KnownHosts: []string{testHosts}}

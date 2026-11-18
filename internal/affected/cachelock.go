@@ -7,10 +7,8 @@ import (
 	"syscall"
 )
 
-// lockCache holds the cache for one planning at a time: a second plan
-// writing the shared work tree while the first hashes would leave a snapshot
-// of a half-written tree, cached for every later plan. The lock goes with
-// the process, so one that dies frees it.
+// lockCache holds the cache for one planning at a time, so no plan caches a snapshot of a tree
+// another is half-way through writing; the lock goes with the process, so one that dies frees it.
 func lockCache(cache string) (func(), error) {
 	if err := os.MkdirAll(cache, 0o750); err != nil {
 		return nil, fmt.Errorf("cache: %w", err)

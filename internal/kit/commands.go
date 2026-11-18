@@ -21,17 +21,15 @@ var inScript = regexp.MustCompile(`(?:^|[\s;&|("])((?:[^\s"'$();&|]*/)?pipelineg
 
 type stepCall struct {
 	where string
-	// prog is the program as the task names it; a bare name runs from PATH,
-	// where no bootstrapped tool is, so it is a message for a person whose
-	// flags alone are checked.
+	// prog is the program as the task names it; a bare name runs from PATH, where no bootstrapped
+	// tool is, so it is a message for a person, whose flags alone are checked.
 	prog    string
 	args    []string
 	inputs  []string
 	outputs []string
 	caches  []string
 	env     map[string]string
-	// script is the shell's script that runs the call, when a shell does.
-	script string
+	script  string
 }
 
 func stepCalls(text []byte) ([]stepCall, error) {
@@ -237,11 +235,8 @@ func unquote(s string) []string {
 	return out
 }
 
-// callChecks are, for a pipeline the runner wrote, the calls the tool can't
-// run and the steps that don't mount what their command reads or keep what
-// it writes. A directory a command reads must be an input or cache of its
-// task, or written by an earlier call in the same task: an output no earlier
-// call wrote is an empty directory.
+// callChecks are the calls the tool can't run and the steps that don't mount what their command reads
+// or keep what it writes; an output no earlier call of the task wrote is an empty directory.
 func callChecks(cmds Commands, s plugin.Spec, text []byte, seen map[string]bool) (calls, mounts []string) { //nolint:nonamedreturns // two kinds of problem
 	steps, err := stepCalls(text)
 	if err != nil {

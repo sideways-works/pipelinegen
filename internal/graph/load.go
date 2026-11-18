@@ -179,10 +179,8 @@ func newLoaded(b, h *deps.Tree) (*loaded, int) {
 	return l, links
 }
 
-// inputUnits marks the summary units no file declares (such as a Go
-// package's API unit) that either tree's sets name as inputs. Such a unit
-// changes only with a declaration, which selects through itself, so it is no
-// name of its group and not bound with it whole.
+// inputUnits marks the summary units no file declares (a Go package's API unit) that sets name as inputs:
+// such a unit changes only with a declaration, which selects through itself, so it is no name of its group.
 func (l *loaded) inputUnits() {
 	for _, t := range l.trees {
 		if t == nil {

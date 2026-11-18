@@ -28,14 +28,8 @@ type pluginFiles struct {
 	sums  map[string]string
 }
 
-// pluginsFor finds the plugins need picks for platform, as the bootstrap would leave them: dir's own
-// copy when it is the build its pin names, and otherwise the pinned release, downloaded into the
-// user cache and checked by its pin. A plugin pinned by commit has no release, so it must be in dir.
-// An sbom or correlator in dir that isn't its pin still runs, its answers cached apart, as it always
-// has: that is how a plugin's own change is tried. A driver that isn't its pin never runs.
-//
-// gathered puts them in a directory of their own even when dir holds them all, links to the files
-// themselves, which an image can be given at their own paths.
+// pluginsFor finds the plugins need picks as the bootstrap would: dir's copy when it is its pin, else the
+// pinned release; one off its pin runs if an sbom or correlator, never a driver. gathered: linked apart.
 func pluginsFor(ctx context.Context, cfg *config.Config, dir, platform string, need func(config.Plugin) bool, gathered bool) (*pluginFiles, error) {
 	host := platform == config.Platform()
 	out := &pluginFiles{dir: dir, files: map[string]string{}, sums: map[string]string{}}

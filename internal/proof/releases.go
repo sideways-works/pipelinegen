@@ -15,15 +15,13 @@ import (
 	"time"
 )
 
-// The releases the proof plans with come through GitHub's API: the token
-// goes only in a request's Authorization header, and GITHUB_API names
-// another API than https://api.github.com.
+// The releases come through GitHub's API: the token goes only in a request's Authorization header, and
+// GITHUB_API names another API than https://api.github.com.
 
 var errAPI = errors.New("GitHub's API")
 
 var client = &http.Client{Timeout: 5 * time.Minute}
 
-// get asks the API for path; the token goes in a header, never the URL.
 func get(ctx context.Context, token, url, accept string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -97,9 +95,8 @@ func download(ctx context.Context, token, repo, tag string, assets []asset, name
 	return resp.Body, nil
 }
 
-// Fetch downloads one asset of a release and keeps it only when its
-// checksum is the pinned one. Go's client drops the Authorization header
-// when the download redirects to another host.
+// Fetch downloads a release's asset and keeps it only when its checksum is the pinned one; Go's client
+// drops the Authorization header when the download redirects to another host.
 func Fetch(ctx context.Context, token, repo, tag, name, sum, out string) error {
 	_, assets, err := latestOr(ctx, token, repo, "tags/"+tag)
 	if err != nil {

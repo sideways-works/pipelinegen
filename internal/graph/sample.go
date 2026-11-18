@@ -37,10 +37,8 @@ func (s sampled) both(l *loaded, i int32) bool {
 	return true
 }
 
-// sampleSuites works out per suite which changed units go to its sample. A
-// changed pin makes every unit its sbom lists a change, so each slice's
-// binding is worked out once per tree and only a change every slice binds is
-// looked at in its cone.
+// sampleSuites works out per suite which changed units go to its sample; a changed pin makes every unit
+// of its sbom a change, so each binding is worked out once per tree and only shared changes get a cone.
 func sampleSuites(l *loaded, ss []plugins.BindSlice, ch changes, o Options) map[string]sampled {
 	if !on(o, narrowSample) {
 		return nil
@@ -148,10 +146,8 @@ func rootsByWhy(l *loaded, sl plugins.BindSlice) sliceRoots {
 	return r
 }
 
-// sampler decides which changed units of one suite's slices go to the sample
-// in one tree. Each slice's closure (0 not, 1 bound, 2 bound and expanded)
-// is worked out once, and only a change every slice binds is looked at in
-// its cone.
+// sampler decides which changed units of a suite's slices go to the sample in one tree: each closure
+// (0 not, 1 bound, 2 bound and expanded) once, and only a change every slice binds in its cone.
 type sampler struct {
 	l     *loaded
 	tr    int
@@ -440,9 +436,8 @@ func (s *sampler) boundThrough(c int32) (map[int32]string, []int32) {
 	return inSample, unknowns
 }
 
-// mayBeBrought tells whether sample-bound may take c in any change's cone,
-// as a least fixed point over the whole tree, so only a change in it needs
-// its cone.
+// mayBeBrought tells whether sample-bound may take c in any change's cone, a least fixed point over the
+// whole tree, so only a change in it needs its cone.
 func (s *sampler) mayBeBrought(c int32) bool {
 	if s.bringable == nil {
 		s.bringable = s.bringableAll()
@@ -590,9 +585,8 @@ func (s *sampler) clearCone() {
 	s.cone = s.cone[:0]
 }
 
-// reach is how slice i binds y inside c's cone, 0 outside it. Every link
-// into a node the cone holds as bound comes from the cone, so there it is
-// the slice's closure.
+// reach is how slice i binds y inside c's cone, 0 outside; every link into a node the cone holds as bound
+// comes from the cone, so there it is the slice's closure.
 func (s *sampler) reach(i int, y int32) uint8 {
 	if s.coned && s.layer[y] == 0 {
 		return 0
@@ -664,10 +658,8 @@ func (s *sampler) throughSample(i int, y int32, inSample map[int32]string) bool 
 	return brought
 }
 
-// withoutSampled are the walk's sources less the suite's changes the sample
-// takes in every tree that has them. Where the sample takes a unit, the from
-// ends of its one-tree links the width follows become sources in its place
-// (movedCounts).
+// withoutSampled are the walk's sources less the changes the sample takes in every tree having them; the
+// from ends of such a unit's one-tree links the width follows become sources instead (movedCounts).
 func withoutSampled(l *loaded, sources []source, s sampled, keepMoved bool, width string) []source {
 	out := make([]source, 0, len(sources))
 

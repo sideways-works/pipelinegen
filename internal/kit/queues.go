@@ -11,14 +11,12 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// envSerialPlan is what runners once gave a serial planning job's plan
-// step; the tool reads it no more, and a pipeline that still sets it was
-// written for a serial planning job.
+// envSerialPlan is what runners once gave a serial planning job's plan step; the tool reads it no more,
+// so a pipeline that sets it was written for a serial planning job.
 const envSerialPlan = "PIPELINEGEN_SERIAL_PLAN"
 
-// serializedJobs are the jobs that run their builds one at a time, or behind
-// other jobs, though the spec asks for none of it: only a suite job whose
-// suite names a serial group or max_in_flight may. A planning job never is.
+// serializedJobs are the jobs that run builds one at a time or behind others though the spec asks for
+// none of it: only a suite job whose suite names a serial group or max_in_flight may, never planning.
 func serializedJobs(s plugin.Spec, text []byte) []string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(text, &doc); err != nil {
@@ -125,9 +123,8 @@ func saysSerialPlan(job map[string]any) bool {
 	return found
 }
 
-// unplannedStarts are a continuous run's suite jobs that could start a build
-// for a commit its planning job didn't plan: a suite job's triggering get
-// must take what the planning job puts inside an across, never the branch.
+// unplannedStarts are a continuous run's suite jobs that could start a build for an unplanned commit:
+// a suite job's triggering get must take what the planning job puts inside an across, never the branch.
 func unplannedStarts(s plugin.Spec, text []byte) []string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(text, &doc); err != nil {
@@ -168,9 +165,8 @@ func unplannedStarts(s plugin.Spec, text []byte) []string {
 	return out
 }
 
-// unhandedStarts are a pull request run's suite jobs that could start a
-// build for a head no build handed on: each resource a suite job triggers on
-// must be put only inside an across, and plan --from must write the gate.
+// unhandedStarts are a pull request run's suite jobs that could start a build for a head nothing handed
+// on: their triggers must be put only inside an across, and plan --from must write the gate.
 func unhandedStarts(s plugin.Spec, text []byte) []string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(text, &doc); err != nil {
@@ -303,10 +299,8 @@ func triggeringResources(job map[string]any) []string {
 	return out
 }
 
-// undecidedPrepares are a continuous run's planning tasks that could run the
-// planner's prepare before the build knows it will plan: the task's first
-// plan call must be the decision (plan --decide --gate <dir>), with the plan
-// after it through the same directory.
+// undecidedPrepares are a continuous run's planning tasks that could run the prepare before the build
+// knows it plans: the first plan call must be plan --decide --gate <dir>, the plan after it through it.
 func undecidedPrepares(s plugin.Spec, text []byte) []string {
 	steps, err := stepCalls(text)
 	if err != nil {

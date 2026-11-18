@@ -10,9 +10,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Difference is an answer a cold pass got from a plugin that differs from
-// what the cache would have served: the answer depends on something its
-// inputs don't name, or the stored answer is wrong.
+// Difference is a cold pass's answer that differs from what the cache would have served: the
+// answer depends on something its inputs don't name, or the stored answer is wrong.
 type Difference struct {
 	Plugin     string   `json:"plugin"`
 	Call       string   `json:"call"`
@@ -21,8 +20,6 @@ type Difference struct {
 	What       []string `json:"what"`
 }
 
-// Differences are what a cold pass found the cache would have served
-// otherwise, in the order found.
 func (s *Set) Differences() []Difference {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -36,12 +33,11 @@ func (s *Set) differ(d Difference) {
 	s.mu.Unlock()
 }
 
-// coldSets asks the plugin about every claim and compares its sets with the
-// cached ones; the cache never overwrites what it holds.
+// coldSets asks the plugin about every claim and compares its sets with the cached ones; the
+// cache never overwrites what it holds.
 func (s *Set) coldSets(ctx context.Context, l *Loaded, call, root string, files map[string]string, units unitDigests, claims []plugin.Claim) (answer, []string, error) {
-	// every set whose stored answer holds is compared, also one a warm
-	// plan would ask about again because it shares an input with a set
-	// that changed
+	// every set whose stored answer holds is compared, also one a warm plan would ask about again
+	// because it shares an input with a set that changed
 	cached := s.lookup(ctx, l, call, files, units, claims).served
 
 	asked := claimPaths(claims)
@@ -52,8 +48,7 @@ func (s *Set) coldSets(ctx context.Context, l *Loaded, call, root string, files 
 		return answer{}, asked, err
 	}
 
-	// a set keyed on a path that is no file stays in the answer, bound
-	// wide, and out of the cache
+	// a set keyed on a path that is no file stays in the answer, bound wide, and out of the cache
 	good, untold := s.treeInputs(l, call, fresh.Sets, files, nil)
 
 	s.compareSets(l, call, cached, good)

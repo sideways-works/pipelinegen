@@ -31,9 +31,8 @@ func usesPlugins(cfg *config.Config) bool {
 	return false
 }
 
-// What a suite's setup ran binds every slice of the suite, or its setup target with the setup split in
-// force. Walked suites' slices are not bound; with every suite walked no deps repository is written and
-// the key is empty.
+// What a suite's setup ran binds every slice of it, or its setup target with the setup split on; walked
+// suites' slices aren't bound, and with every suite walked no deps repository is written.
 func pluginsPrepare(cfg *config.Config, l recording.Lists, marks lists.Marks, bz func(dir string) *bazel.Client, set *plugins.Set, w deps.Writer, book *planBook, walk *walkTrees) func(context.Context, string, string, map[string][]bazel.Slice) (string, error) {
 	level := narrowingLevel(cfg)
 

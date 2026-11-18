@@ -1,6 +1,5 @@
-// Package storetest opens stores for tests, on refs or on a branch, so a
-// package's tests can run once on each and show the two hold the same
-// records the same way.
+// Package storetest opens stores for tests, on refs or on a branch, so a package's tests run once on
+// each and show the two hold records the same way.
 package storetest
 
 import (
@@ -18,10 +17,8 @@ import (
 // OnBranch opens the stores on a branch; Both sets it for the second run.
 var OnBranch bool
 
-// Both runs the package's tests on refs and, when they pass, again on a
-// branch; a package's TestMain calls it. With a pattern, the second run
-// takes only the tests it matches, and a -run given on the command line
-// wins.
+// Both runs the package's tests on refs and, when they pass, again on a branch; with a pattern the
+// second run takes only the tests it matches, and a -run on the command line wins.
 func Both(m *testing.M, pattern ...string) {
 	code := m.Run()
 	if code == 0 {

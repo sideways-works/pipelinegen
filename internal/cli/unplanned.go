@@ -25,9 +25,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// The pull requests' check can order a new head behind planned ones, so the planning job never sees it.
-// A head to plan gets a checkout in <out>/plan/<number>; one to hand off again gets the resource's files
-// in <out>/handoff/<number>.
+// The pull requests' check can order a new head behind planned ones, unseen by planning: a head to plan
+// gets a checkout in <out>/plan/<number>, one to hand off again the resource's files in <out>/handoff/.
 func runUnplanned(ctx context.Context, args []string, stdout io.Writer) (err error) {
 	var (
 		c               common
@@ -519,9 +518,8 @@ func (sw sweep) planHead(ctx context.Context, id report.ID, h runs.Head, dir str
 	return true, say(stdout, "%s %s: no plan: plan it\n", h.Label(), short12(h.Commit))
 }
 
-// shortOfMemory tells a run whose last word is its mark of slices not run for want of memory: no suite
-// build began or ended after it, every one that began has ended, and nobody ended the run by hand. It
-// returns when the mark was written.
+// shortOfMemory tells a run whose last word is its short-of-memory mark (no suite build began or ended
+// after it, all have ended, none by hand), and when the mark was written.
 func shortOfMemory(refs map[string]gitstore.Ref, id report.ID) (time.Time, bool) {
 	short, ok := refs[id.ShortRef()]
 	if _, ended := refs[endedRef(id)]; !ok || ended {

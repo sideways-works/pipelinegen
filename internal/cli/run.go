@@ -543,9 +543,8 @@ func ofRun(p *affected.Plan, cfg *config.Config, runName string) {
 	})
 }
 
-// A change never deselects its own tests by editing the config: it plans under its config and, when it
-// edits it, under the base's too, uniting the two. A base config that can't plan never stops the plan:
-// a trusted run plans under its own alone and says so, any other runs everything.
+// A change never deselects its own tests by editing the config: it plans under its config and the
+// base's, united; a base config that can't plan leaves a trusted run its own, any other everything.
 func withBaseConfig(ctx context.Context, cfg *config.Config, trigger, run, base, head string, trusted bool, plan planFunc) (*affected.Plan, error) {
 	p, err := withBase(ctx, cfg, trigger, run, base, head, trusted, plan)
 	if p != nil {
@@ -731,9 +730,8 @@ func checkCommit(ctx context.Context, trigger, head string) (failed []check.Find
 	return failed, warnings, nil
 }
 
-// A file an sbom plugin claims is covered: its units carry a change. Claims are asked whenever the check
-// finds an uncovered file, even in a plan that runs everything already, so a claimed file is never
-// uncovered for want of asking.
+// A file an sbom plugin claims is covered. Claims are asked whenever the check finds an uncovered
+// file, even in a plan that runs everything, so a claimed file is never uncovered for want of asking.
 func coverage(ctx context.Context, cfg *config.Config, runName, trigger, head string, all bool, allReason string, claims func() map[string]string) (bool, string, []string, error) {
 	findings, warnings, err := checkCommit(ctx, trigger, head)
 	if err != nil {
@@ -974,9 +972,8 @@ func bazelFor(cfg *config.Config, trigger, cache string) func(dir string) *bazel
 	}
 }
 
-// bazeliskFor tries PIPELINEGEN_BAZELISK (relative to the working directory), the config's
-// bazel.bazelisk (relative to the root, or a name on PATH), then tools/bazelisk. Bazel runs in other
-// directories, so the path is made absolute.
+// bazeliskFor tries PIPELINEGEN_BAZELISK (from the working directory), bazel.bazelisk (from the root,
+// or on PATH), then tools/bazelisk; absolute, since Bazel runs in other directories.
 func bazeliskFor(cfg *config.Config, root string) string {
 	if env := os.Getenv("PIPELINEGEN_BAZELISK"); env != "" {
 		return absOr(env)
@@ -1016,9 +1013,8 @@ func fileExists(p string) bool {
 	return err == nil
 }
 
-// Without a passed commit within the walk, the newest one whose run is still going is the base: it plans
-// every slice and makes the lists, so only it runs everything. The host's statuses and the store's
-// records can differ: the store forgets runs past keep.runs, which a status outlives.
+// Without a passed commit within the walk, the newest one still running is the base, so only it runs
+// everything; the store forgets runs past keep.runs, which a host's status outlives.
 func lastPassed(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, repo string) (base string, inFlight bool, err error) {
 	commits, err := runs.FirstParents(ctx, repo, ch.Commit, 50)
 	if err != nil {
@@ -1069,9 +1065,8 @@ func runStateWithBaseline(cfg *config.Config, run string, all map[string]runs.St
 	return own
 }
 
-// A trusted run's commit carrying a baseline is its own base and selects nothing; an ordinary passed
-// status never is, so a rerun of a commit runs again. With no earlier pass, a baselined first parent
-// comes before a run still in flight.
+// A trusted commit carrying a baseline is its own base and selects nothing, a passed status never, so
+// a rerun runs again; with no earlier pass, a baselined first parent comes before a run in flight.
 func branchBase(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, repo string) (base, note string, err error) {
 	trusted := store != nil && trustedRun(cfg, ch.Run, ch.ID)
 

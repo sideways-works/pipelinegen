@@ -16,9 +16,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// sneaky is a links correlator whose set for a.txt names only a.txt, but
-// links a to b only while b.txt says "link": its answer depends on a file
-// it doesn't declare.
+// sneaky is a links correlator whose set for a.txt names only a.txt but links a to b only while
+// b.txt says "link": its answer depends on a file it doesn't declare.
 func sneaky() map[string]plugin.Handler {
 	return map[string]plugin.Handler{
 		plugin.CallDescribe: describe(plugin.Description{

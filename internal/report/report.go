@@ -16,10 +16,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// State is where a slice stands in a run.
 type State string
 
-// The states a slice moves through.
 const (
 	Pending State = "pending"
 	Running State = "running"
@@ -62,9 +60,8 @@ func (c Cause) of(r Reason) bool {
 	return r.Kind == "depends" || r.Kind == "executed" || slices.Equal(r.Through, c.Through)
 }
 
-// Narrowed is a selection a plan made smaller than what the change reaches:
-// sampled or narrowed. The nightly runs everything, so it catches what one
-// left out.
+// Narrowed is a selection a plan sampled or narrowed below what the change reaches; the
+// nightly runs everything, so it catches what one left out.
 type Narrowed struct {
 	Kind      string   `json:"kind"`
 	Narrowing string   `json:"narrowing"`
@@ -90,9 +87,8 @@ func (n NarrowingSet) Text() string {
 		n.OffAt, n.Name, strings.TrimSuffix(oneLine(n.Note), "."), n.By, n.Declared)
 }
 
-// SetBy finds a narrowing's level the config set among a plan's, when it is
-// the level offAt the narrowing left a slice out by: a plan united with the
-// base's may hold an entry of the base's level.
+// SetBy finds the level the config set for a narrowing, when it is offAt, the level a slice was
+// left out by: a plan united with the base's may hold an entry of the base's level.
 func SetBy(set []NarrowingSet, narrowing string, offAt int) (NarrowingSet, bool) {
 	i := slices.IndexFunc(set, func(n NarrowingSet) bool { return n.Name == narrowing && n.OffAt == offAt })
 	if i < 0 {
@@ -172,7 +168,6 @@ func (n *Net) SetLevels() []string {
 	return slices.Compact(out)
 }
 
-// Slice is one slice's result.
 type Slice struct {
 	// Name is how the slice is known (a test file's path); when empty, its
 	// label stands for it.
@@ -191,7 +186,6 @@ type Slice struct {
 	Files int `json:"files,omitempty"`
 }
 
-// Suite is one suite's part of a run.
 type Suite struct {
 	Name      string     `json:"name"`
 	Reason    string     `json:"reason,omitempty"`
@@ -202,7 +196,6 @@ type Suite struct {
 	Causes    []Cause    `json:"causes,omitempty"`
 }
 
-// Run is a whole run's state.
 type Run struct {
 	Name         string                      `json:"name"`
 	Change       string                      `json:"change,omitempty"`
@@ -220,7 +213,6 @@ type Run struct {
 	Now          time.Time                   `json:"-"`
 }
 
-// Plugins is a plan's account of its plugins.
 type Plugins struct {
 	Calls    []PluginCall `json:"calls,omitempty"`
 	Warnings []string     `json:"warnings,omitempty"`
@@ -235,8 +227,6 @@ type PluginCall struct {
 	Cached int    `json:"cached"`
 }
 
-// Totals are the files all calls asked the plugins about and those the
-// cache answered in their place.
 func (p *Plugins) Totals() (asked, cached int) {
 	if p == nil {
 		return 0, 0
@@ -302,7 +292,6 @@ type ResultFile struct {
 	Files []FailureFile `json:"files,omitempty"`
 }
 
-// ErrResult wraps a result file that can't be read.
 var ErrResult = errors.New("result file")
 
 // ReadResult reads a slice task's result file. A missing or unreadable file
@@ -372,9 +361,8 @@ func resultFiles(p string) []FailureFile {
 	return r.Files
 }
 
-// RanNoTests tells whether a result file says the slice ran no tests at
-// all: a passed result with "tests": 0. A file that doesn't say how many
-// ran never counts as none.
+// RanNoTests tells whether a result file is a passed one with "tests": 0; a file that doesn't
+// say how many ran never counts as none.
 func RanNoTests(p string) bool {
 	data, err := os.ReadFile(p) //nolint:gosec // the task's own output
 	if err != nil {
@@ -427,7 +415,6 @@ func capTail(s string) string {
 // MemoryTest names the failure of a slice not run because its batch found the worker short of memory.
 const MemoryTest = "(memory)"
 
-// ShortOfMemory tells a slice its batch never started for want of memory.
 func (sl Slice) ShortOfMemory() bool {
 	return sl.State == NotRun && len(sl.Failures) > 0 && sl.Failures[0].Test == MemoryTest
 }
@@ -444,7 +431,6 @@ func (s Suite) shortOfMemory() int {
 	return n
 }
 
-// Counts tallies a suite's slices by state.
 func (s Suite) Counts() map[State]int {
 	c := map[State]int{Untouched: len(s.Untouched)}
 	for _, sl := range s.Slices {
@@ -514,9 +500,8 @@ func (s Suite) noneTold() (string, bool) {
 	return "", false
 }
 
-// Status is a suite's commit status: GitHub's state and a description of at
-// most 140 characters. What a test or plugin wrote is masked before it is
-// cut, so no cut leaves part of a secret behind.
+// Status is a suite's GitHub state and description of at most 140 characters; what a test or
+// plugin wrote is masked before it is cut, so no cut leaves part of a secret behind.
 func (s Suite) Status() (state, description string) {
 	state, description = s.status()
 	description = secret.Redact(description)
@@ -689,7 +674,6 @@ func (s Suite) failedTests() int {
 	return len(seen) + more
 }
 
-// Sorted returns the run with its suites and slices in a stable order.
 func (r Run) Sorted() Run {
 	out := r
 	out.Suites = append([]Suite(nil), r.Suites...)

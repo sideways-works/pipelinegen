@@ -1,7 +1,5 @@
-// Package plugin is pipelinegen's plugin protocol: the messages a plugin
-// reads and writes, Serve for a plugin's main, and Run for the core. A
-// plugin is one executable called as `<executable> <call>`, with a JSON
-// request on stdin and a JSON response on stdout.
+// Package plugin is pipelinegen's plugin protocol: an executable called as `<executable> <call>`,
+// a JSON request on stdin and a JSON answer on stdout; Serve for a plugin's main, Run for the core.
 package plugin
 
 import (
@@ -13,17 +11,14 @@ import (
 	"unicode"
 )
 
-// Protocol is the protocol version this package speaks.
 const Protocol = 1
 
-// The kinds of plugin.
 const (
 	KindCorrelator = "correlator"
 	KindSBOM       = "sbom"
 	KindRunner     = "runner"
 )
 
-// The calls every plugin answers, and those of each kind.
 const (
 	CallDescribe = "describe"
 	CallUnits    = "units"
@@ -37,12 +32,10 @@ const (
 	CallDetect   = "detect"
 )
 
-// ExitCantTell is the exit code of a plugin that can't answer for this
-// tree or this slice: an answer of its own, apart from a failure and from
-// an empty answer.
+// ExitCantTell is the exit code of a plugin that can't answer for this tree or slice: an
+// answer of its own, apart from a failure and from an empty answer.
 const ExitCantTell = 3
 
-// Request is what every call carries.
 type Request struct {
 	Protocol int            `json:"protocol"`
 	Work     string         `json:"work"`
@@ -62,62 +55,47 @@ type Description struct {
 	Namespaces   []string    `json:"namespaces,omitempty"`
 	Capabilities []string    `json:"capabilities"`
 	Narrowings   []Narrowing `json:"narrowings,omitempty"`
-	// ResourceTypes are, for a runner, the CI system's own resource types
-	// its pipeline needs for a connector's run; a config that says its CI
-	// system lacks one is refused.
+	// ResourceTypes are, for a runner, the CI system's resource types its pipeline needs for a
+	// connector's run; a config that says its CI system lacks one is refused.
 	ResourceTypes []string `json:"resource_types,omitempty"`
 	Needs         []string `json:"needs,omitempty"`
-	// Toolchains are the versions the plugin resolved for its needs in
-	// the environment it runs in, by need ("go": "go1.27.1"): part of the
-	// key a cached bind answer is found by. A plugin with needs and no
-	// toolchains for them is never answered from that cache.
+	// Toolchains are the versions resolved for the plugin's needs ("go": "go1.27.1"), part of a
+	// cached bind answer's key: a plugin with needs and no toolchains is never answered from it.
 	Toolchains map[string]string `json:"toolchains,omitempty"`
 	Caches     []string          `json:"caches,omitempty"`
 	Candidates []string          `json:"candidates,omitempty"`
 	Inputs     map[string]string `json:"inputs,omitempty"`
-	// Collects names the collect actions the plugin handles (setup-end,
-	// slice-start, slice-end); none named is all three. The core calls
-	// collect only for these.
+	// Collects names the collect actions the plugin handles, all three when none: the core
+	// calls collect only for these.
 	Collects []string `json:"collects,omitempty"`
-	// CacheScopes are, for a runner, how widely each cache its pipeline
-	// keeps is shared, by the cache's name (the plan's cache, say): one
-	// job's (ScopeJob), every job's of the pipeline (ScopePipeline) or every
-	// job's on a worker (ScopeWorker). A plan cache shared beyond one job
-	// would let a proposed change's plan leave what a trusted plan reads.
+	// CacheScopes say, for a runner, how widely each of its pipeline's caches is shared: a plan
+	// cache shared beyond one job would let a proposed change's plan leave what a trusted one reads.
 	CacheScopes map[string]string `json:"cache_scopes,omitempty"`
-	// Fill says, per cache the plugin declares, how the core fills it on
-	// a person's machine before planning there: the plugin itself never
-	// reaches the network.
+	// Fill says how the core fills each declared cache on a person's machine before planning
+	// there: the plugin itself never reaches the network.
 	Fill map[string]Fill `json:"fill,omitempty"`
-	// ObserveReads names the config keys whose values are paths the plugin
-	// reads while it observes or collects; the core refuses a value outside
-	// what the observing step sees.
+	// ObserveReads names the config keys whose values are paths read while observing or
+	// collecting; the core refuses a value outside what the observing step sees.
 	ObserveReads []string `json:"observe_reads,omitempty"`
-	// ObservesForms name, for a correlator that observes, the forms of
-	// recording it reads (a driver's RecordingForms): a recorded suite
-	// whose driver leaves a form none of its correlators reads would
-	// record nothing they can tell.
+	// ObservesForms are, for an observing correlator, the recording forms it reads: a recorded
+	// suite whose driver leaves a form none of its correlators reads records nothing they can tell.
 	ObservesForms []string `json:"observes_forms,omitempty"`
 }
 
-// What the step that observes sees in its working directory: the tree and
-// the coverage output, and nothing else. A correlator may rely on these two
-// alone.
+// What the observing step sees in its working directory, and all a correlator may rely on:
+// the tree and the coverage output.
 const (
 	ObserveTree     = "source"
 	ObserveCoverage = "coverage"
 )
 
-// ObserveRead is one value of a key a plugin reads while it observes.
 type ObserveRead struct {
 	Key   string
 	Value string
 }
 
-// ObserveReadsOutside are the values of conf's ObserveReads keys that the
-// step that observes can't see: an absolute path, one that leaves its
-// working directory, or one under neither the tree nor the coverage
-// output. A key the config leaves out keeps the plugin's default.
+// ObserveReadsOutside are the values of conf's ObserveReads keys the observing step can't see (absolute,
+// leaving it, or under neither the tree nor the coverage output); a key conf leaves out keeps the default.
 func (d Description) ObserveReadsOutside(conf map[string]any) []ObserveRead {
 	var out []ObserveRead
 
@@ -162,27 +140,22 @@ func Observable(p string) bool {
 	return first == ObserveTree || first == ObserveCoverage
 }
 
-// Fill is how a declared cache is filled: Run, a program and its
-// arguments, runs in every directory of the tree holding the first of
-// Files, once per content of the Files there, with the cache's variable
-// pointing at the cache.
+// Fill is how a declared cache is filled: Run runs in every directory of the tree holding the
+// first of Files, once per content of the Files there, with the cache's variable pointing at it.
 type Fill struct {
 	Files []string `json:"files"`
 	Run   []string `json:"run"`
 }
 
-// The scopes of a runner's caches.
 const (
 	ScopeJob      = "job"
 	ScopePipeline = "pipeline"
 	ScopeWorker   = "worker"
 )
 
-// CollectActions are the actions of collect, in the order a batch meets
-// them.
+// CollectActions are in the order a batch meets them.
 var CollectActions = []string{CollectSetupEnd, CollectSliceStart, CollectSliceEnd}
 
-// Handles tells whether the plugin wants collect called for an action.
 func (d Description) Handles(action string) bool {
 	return len(d.Collects) == 0 || slices.Contains(d.Collects, action)
 }
@@ -195,15 +168,13 @@ type Narrowing struct {
 	Note  string `json:"note"`
 }
 
-// Answer is what a call's answer may carry besides its own fields: files
-// in the work directory holding it as JSON Lines, and the inputs it
-// depended on, for the core's cache.
+// Answer is what any call's answer may carry: files in its work directory holding it as JSON
+// Lines, and the inputs it depended on, for the core's cache.
 type Answer struct {
 	Files  []string `json:"files,omitempty"`
 	Inputs []string `json:"inputs,omitempty"`
-	// Cacheable false says the answer depends on something outside its
-	// declared inputs (a module missing from the module cache): the core
-	// asks again next time.
+	// Cacheable false says the answer depends on something outside its declared inputs (a module
+	// missing from the module cache): the core asks again next time.
 	Cacheable *bool `json:"cacheable,omitempty"`
 }
 
@@ -227,23 +198,18 @@ type Set struct {
 	// Absent are paths the answer looked for and didn't find: the core keys
 	// the set on their absence, so one that appears asks the set again.
 	Absent []string `json:"absent,omitempty"`
-	// InputUnits, in a correlator's set, are units an sbom lists whose
-	// digests the answer depends on besides its input files: a package's
-	// links lean on what its imports declare, not on their bodies. The
-	// core keys the set on their digests as on its files' blobs.
+	// InputUnits, in a correlator's set, are sbom units whose digests the answer depends on too (a
+	// package's links lean on what its imports declare): the set is keyed on them as on its files.
 	InputUnits []string     `json:"input_units,omitempty"`
 	Whole      bool         `json:"whole,omitempty"`
 	Units      []Unit       `json:"units,omitempty"`
 	Links      []Link       `json:"links,omitempty"`
 	CannotTell []CannotTell `json:"cannot_tell,omitempty"`
-	// DigestFrom, in a correlator's set, says which units' content derives
-	// from others, as the answer's own digest_from does; in a set it is
-	// cached with the set's files, where the answer's keeps the plugin
-	// from being answered from the cache at all.
+	// DigestFrom, in a correlator's set, is the answer's digest_from cached with the set's files;
+	// the answer's own keeps the plugin from being answered from the cache at all.
 	DigestFrom []DigestFrom `json:"digest_from,omitempty"`
-	// Complete, in an sbom's set, are the files whose units hold everything
-	// a test can observe of them when they run as code; a change that leaves
-	// every unit as it was reaches no slice bound by recording.
+	// Complete, in an sbom's set, are the files whose units hold all a test can observe of them as
+	// code: a change that leaves every unit as it was reaches no slice bound by recording.
 	Complete []string `json:"complete,omitempty"`
 }
 
@@ -253,19 +219,14 @@ type Claim struct {
 	Role    string   `json:"role"`
 	Depends []string `json:"depends,omitempty"`
 	ByUnits string   `json:"by_units,omitempty"`
-	// Anchor, with ByUnits, is a never-changing unit of the sbom's own that
-	// a recording holds whenever it covers this file: only a slice whose
-	// list holds it is bound to the units of the file it touched.
+	// Anchor, with ByUnits, is a never-changing unit a recording holds whenever it covers this
+	// file: only a slice whose list holds it is bound to the units of the file it touched.
 	Anchor string `json:"anchor,omitempty"`
-	// Recorded, set only by a correlator that observes, says that a
-	// recording made with it holds units of this file whenever a slice
-	// depends on it (a script the browser runs): a change to a file
-	// without it must reach the slices another way.
+	// Recorded, set only by an observing correlator, says a recording holds units of this file
+	// whenever a slice depends on it (a script the browser runs); without it a change needs another way.
 	Recorded bool `json:"recorded,omitempty"`
-	// Erased, never with Recorded and set only by a correlator that
-	// observes the app's build, says the build erases this file (it holds
-	// nothing but types): it runs in no test, no recording holds it, and a
-	// change to it reaches only a type check.
+	// Erased, set only by a correlator observing the app's build, says the build erases this file
+	// (it holds only types): no recording holds it, and a change to it reaches only a type check.
 	Erased bool `json:"erased,omitempty"`
 }
 
@@ -277,7 +238,6 @@ type DetectRequest struct {
 	Paths []string `json:"paths"`
 }
 
-// DetectAnswer is the claimed files.
 type DetectAnswer struct {
 	Answer
 
@@ -300,16 +260,14 @@ type Unit struct {
 	Kind       string   `json:"kind,omitempty"`
 	Executable bool     `json:"executable,omitempty"`
 	DigestFrom []string `json:"digest_from,omitempty"`
-	// Entry is the name a test runner selects the unit by, for a test
-	// entry function (TestCreate): a slice that names the tests it runs
-	// starts only from the entries among them.
+	// Entry is the name a test runner selects a test entry function by (TestCreate): a slice
+	// that names the tests it runs starts only from the entries among them.
 	Entry string `json:"entry,omitempty"`
 	// NotRoot keeps a unit from being a starting point of the slice whose
 	// file declares it (a type whose test-local twin stands for it there).
 	NotRoot bool `json:"not_root,omitempty"`
-	// Label is the unit as a developer names it (api.validate,
-	// Type.Method, POST /notes), for the reasons a plan prints; without
-	// one the core shows a plain form of the id.
+	// Label is the unit as a developer names it (api.validate, Type.Method, POST /notes) for a
+	// plan's reasons; without one the core shows a plain form of the id.
 	Label      string         `json:"label,omitempty"`
 	Attributes map[string]any `json:"attributes,omitempty"`
 }
@@ -334,10 +292,8 @@ const (
 	LinkDependentsOnly = "dependents-only"
 )
 
-// TypedKinds are the typed link kinds, sorted.
 var TypedKinds = []string{LinkBind, LinkDependentsOnly, LinkFollow}
 
-// Typed tells whether a link has one of the typed kinds.
 func (l Link) Typed() bool { return slices.Contains(TypedKinds, l.Kind) }
 
 // Link says that when From is bound, To is bound too.
@@ -346,43 +302,34 @@ type Link struct {
 	To        string `json:"to"`
 	Kind      string `json:"kind,omitempty"`
 	Narrowing string `json:"narrowing,omitempty"`
-	// While is when the link holds: off (the default, a wide link that
-	// stands while its narrowing is off) or on (a narrow link that
-	// replaces it while the narrowing is on).
+	// While is when the link holds: off (the default, a wide link standing while its narrowing
+	// is off) or on (a narrow link replacing it while the narrowing is on).
 	While string `json:"while,omitempty"`
-	// IfLinked says the link holds only for slices whose binaries link the
-	// target's group: a method reached through an interface, say, exists
-	// only where its package is linked in.
+	// IfLinked holds the link only for slices whose binaries link the target's group: a method
+	// reached through an interface exists only where its package is linked in.
 	IfLinked bool `json:"if_linked,omitempty"`
-	// Ref marks a link that comes from a reference in the source, apart from
-	// a type's methods and an interface's implementations: only a reference
-	// makes a new name count as bound.
+	// Ref marks a link from a reference in the source, not a type's methods or an interface's
+	// implementations: only a reference makes a new name count as bound.
 	Ref bool `json:"ref,omitempty"`
 }
 
-// The namespaces the core owns, besides file:. A link may name an id in
-// them without any sbom listing it: such an id has no digest, never
-// changes and is never dangling.
+// Namespaces the core owns besides file:. A link may name an id in them that no sbom lists:
+// it has no digest, never changes and is never dangling.
 const (
 	// GroupPrefix names a group as a link end, group:<group>: a link into it
 	// says the group is linked.
 	GroupPrefix = "group:"
-	// NodePrefix names a junction that is no unit, node:<namespace>:<rest>,
-	// such as the meeting point of an interface method and its
-	// implementations.
+	// NodePrefix names a junction that is no unit, node:<namespace>:<rest>, such as where an
+	// interface method meets its implementations.
 	NodePrefix = "node:"
 )
 
-// CoreOwned tells whether an id is in a namespace the core owns: a group
-// or a junction.
 func CoreOwned(id string) bool {
 	return strings.HasPrefix(id, GroupPrefix) || strings.HasPrefix(id, NodePrefix)
 }
 
-// Problem says what is wrong with a link, empty when nothing is: both
-// ends named, a known while, a narrowing for a narrow link, and no kind
-// that is a misspelling of a kind the core understands (it would be a
-// plain link, followed further than the plugin meant).
+// Problem says what is wrong with a link, empty when nothing is; a misspelt kind is refused,
+// since it would be a plain link, followed further than the plugin meant.
 func (l Link) Problem() string {
 	switch {
 	case l.From == "" || l.To == "":
@@ -443,7 +390,6 @@ type UnitsAnswer struct {
 	Complete   []string     `json:"complete,omitempty"`
 }
 
-// LinksAnswer answers links.
 type LinksAnswer struct {
 	Answer
 
@@ -453,7 +399,6 @@ type LinksAnswer struct {
 	DigestFrom []DigestFrom `json:"digest_from,omitempty"`
 }
 
-// The values of Link.While.
 const (
 	WhileOff = "off"
 	WhileOn  = "on"
@@ -466,9 +411,8 @@ type ObserveRequest struct {
 	Tree  string   `json:"tree"`
 	Slice string   `json:"slice"`
 	Dirs  []string `json:"dirs"`
-	// Claimed are the plugin's own claims in the tree, as in units and
-	// links, when the core has them: a plugin reads the files it needs from
-	// these and walks nothing.
+	// Claimed are the plugin's own claims in the tree, when the core has them: a plugin reads
+	// the files it needs from these and walks nothing.
 	Claimed []Claim `json:"claimed,omitempty"`
 }
 
@@ -480,7 +424,6 @@ type ObserveAnswer struct {
 	SetupLike []string `json:"setup_like,omitempty"`
 }
 
-// The actions of collect.
 const (
 	CollectSetupEnd   = "setup-end"
 	CollectSliceStart = "slice-start"

@@ -8,26 +8,21 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 )
 
-// Nowhere is the host of a repository that reports to none: a run's state
-// lives in the store alone and the CI system's own job results are the
-// report.
+// Nowhere is the host of a repository that reports to none: a run's state lives in the store alone,
+// and the CI system's own job results are the report.
 type Nowhere struct{}
 
-// SetStatus keeps nothing.
 func (Nowhere) SetStatus(context.Context, string, CommitStatus) error { return nil }
 
-// Statuses has none.
 func (Nowhere) Statuses(context.Context, string) ([]CommitStatus, error) { return nil, nil }
 
-// Comment keeps nothing.
 func (Nowhere) Comment(context.Context, int, string, string) error { return nil }
 
 // CommitSubject is unknown: the commit's id names it.
 func (Nowhere) CommitSubject(context.Context, string) (string, error) { return "", nil }
 
-// RunState is the state a run's status would show for one commit, read from
-// its records in the store: success, failure, error or pending, or "" when
-// the commit was never planned.
+// RunState is the state a run's status would show for one commit, from its records in the store:
+// success, failure, error or pending, or "" when the commit was never planned.
 func RunState(ctx context.Context, store *gitstore.Store, cfg *config.Config, id ID) (string, error) {
 	state, _, err := RunStatusOf(ctx, store, cfg, id)
 

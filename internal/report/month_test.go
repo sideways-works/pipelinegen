@@ -47,9 +47,8 @@ var adopterScale = monthScale{
 	measure: []int{1, 7, 14, 30}, listsCommits: 200,
 }
 
-// smallScale keeps the month's shape at a size the test suite affords,
-// long enough for every keep rule to have started removing: runs after 7
-// days, lists past 20 commits, answers after two weeks unused.
+// smallScale keeps the month's shape affordable yet long enough for every keep rule to remove: runs
+// after 7 days, lists past 20 commits, answers after two weeks unused.
 var smallScale = monthScale{
 	days:     22,
 	recorded: map[string]int{"backend": 9, "e2e": 3}, plain: 2,

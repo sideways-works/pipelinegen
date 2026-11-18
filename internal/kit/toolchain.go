@@ -18,10 +18,8 @@ var versionFiles = []string{".tool-versions", ".go-version", ".node-version", ".
 
 const copiesCheck = "answers about the kit's copies of the fixture can be cached"
 
-// pinToolchains puts the version files that hold for the fixture at the top
-// of the kit's work directory: the kit's copies live away from the fixture,
-// and without them a version manager would pick the machine's default
-// toolchain there.
+// pinToolchains puts the fixture's version files at the top of the kit's work directory: its copies
+// live away from the fixture, and a version manager would pick the machine's default there.
 func pinToolchains(tree, work string) error {
 	if tree == "" || work == "" {
 		return nil
@@ -54,10 +52,8 @@ func pinToolchains(tree, work string) error {
 	return nil
 }
 
-// PinToolchains puts the version files that hold for a repository (its own,
-// or the nearest above it) at the top of a directory a copy of it is checked
-// out under, so a version manager picks the repository's toolchain there
-// too. Each call takes them afresh.
+// PinToolchains puts a repository's version files (its own, or the nearest above it) at the top of a
+// directory a copy of it is checked out under, so a version manager picks its toolchain there too.
 func PinToolchains(repo, under string) error {
 	for _, name := range versionFiles {
 		if err := os.Remove(filepath.Join(under, name)); err != nil && !errors.Is(err, fs.ErrNotExist) {

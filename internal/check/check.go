@@ -1,7 +1,5 @@
-// Package check finds what no slice covers: a tracked file that is the input
-// of no slice and not declared untested, a tagged suite's target bound to
-// nothing, and a repository not set up for pipelinegen. The commit hook and
-// planning call the same Find, so they never disagree.
+// Package check finds what no slice covers and a repository not set up for pipelinegen; the
+// commit hook and planning call the same Find, so they never disagree.
 package check
 
 import (
@@ -21,7 +19,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/config"
 )
 
-// The kinds of finding.
 const (
 	// KindUncovered is a tracked file that is the input of no slice and
 	// matches no untested entry.
@@ -36,22 +33,17 @@ const (
 	// KindBadConfig is a config entry that can't be right, such as a
 	// pattern matching no file.
 	KindBadConfig = "bad-config"
-	// KindUnreadable is a BUILD or .bzl file that can't be parsed, or a
-	// target whose inputs can't be read without running Starlark: what it
-	// covers is unknown, so it fails rather than counting as covering
-	// nothing.
+	// KindUnreadable is a BUILD or .bzl file that can't be parsed, or a target whose inputs need
+	// Starlark to read: what it covers is unknown, so it fails rather than covering nothing.
 	KindUnreadable = "unreadable"
-	// KindDuplicate is a target naming one label twice in an attribute,
-	// under two spellings (//docs and //docs:docs, say): Bazel refuses to
-	// load its package.
+	// KindDuplicate is a target naming one label twice in an attribute under two spellings
+	// (//docs and //docs:docs): Bazel refuses to load its package.
 	KindDuplicate = "duplicate-label"
-	// KindDeclared is a warning naming each declared macro the check used,
-	// with what it covered: a claim the check trusts, shown so the list
-	// can't grow unseen.
+	// KindDeclared is a warning naming each declared macro the check used and what it covered:
+	// a claim the check trusts, shown so the list can't grow unseen.
 	KindDeclared = "declared-macro"
-	// KindVersionPinned is a warning that data a target takes from another
-	// repository is pinned by that module's version alone: no lockfile
-	// hash holds its content.
+	// KindVersionPinned is a warning that data a target takes from another repository is pinned
+	// by that module's version alone: no lockfile hash holds its content.
 	KindVersionPinned = "pinned-by-version"
 	// KindRunnerNotice is a warning the runner gave with the pipeline it
 	// wrote: something about it a person should know, short of a refusal.
@@ -59,15 +51,13 @@ const (
 	// KindPackages is a note of how a suite's steps get the packages it
 	// declares on CI, or a warning that some of them can't.
 	KindPackages = "packages"
-	// KindUndescribedDriver is a warning that the check couldn't ask a
-	// driver a suite's steps name what it is, so the steps that name it
-	// went unchecked.
+	// KindUndescribedDriver is a warning that a driver a suite's steps name couldn't be asked what
+	// it is, so the steps that name it went unchecked.
 	KindUndescribedDriver = "undescribed-driver"
 )
 
 const declaredAttr = "macros.reads"
 
-// Finding is one problem, with the file it is about and how to fix it.
 type Finding struct {
 	Kind   string `json:"kind"`
 	Path   string `json:"path"`
@@ -101,7 +91,6 @@ func (f Finding) key() string {
 	return strings.Join(append([]string{f.Kind, f.Path, f.Target, f.Problem, f.Fix, fmt.Sprint(f.Warning, f.Note)}, f.Files...), "\x00")
 }
 
-// Failures are the findings that aren't warnings.
 func Failures(fs []Finding) []Finding {
 	var out []Finding
 
@@ -114,7 +103,6 @@ func Failures(fs []Finding) []Finding {
 	return out
 }
 
-// Options are what a check needs to know of how planning runs.
 type Options struct {
 	NoDepsRepo bool
 }
@@ -131,9 +119,8 @@ const (
 
 const runTag = "pipelinegen-run:"
 
-// Find checks a tree. With staged nil it reports everything; otherwise only
-// the findings about the staged paths, and the setup and config findings
-// when a file they are about is staged.
+// Find checks a tree; with staged non-nil only the findings about the staged paths, and the setup
+// and config findings when a file they are about is staged.
 func Find(cfg *config.Config, tree Tree, staged []string) []Finding {
 	return FindWith(cfg, tree, staged, Options{})
 }
@@ -535,15 +522,12 @@ func badConfig(cfg *config.Config, tree Tree) []Finding {
 	return out
 }
 
-// batchesFlood is how many times parallel a suite's batches may be before
-// the check warns: every batch of a build runs at once, and beyond about
-// this many one build's batches crowd out the other suites' on the
-// workers.
+// batchesFlood is how many times parallel a suite's batches may be before the check warns: they
+// all run at once, and beyond about this many one build crowds out the other suites' batches.
 const batchesFlood = 4
 
-// floodingBatches warns of a suite whose builds run far more batches at once
-// than its parallel says: batches far above it, or batch_minutes with no
-// batches to bound how many a run of everything is dealt.
+// floodingBatches warns of a suite whose builds run far more batches at once than its parallel
+// says: batches far above it, or batch_minutes with no batches to bound a run of everything.
 func floodingBatches(cfg *config.Config) []Finding {
 	var out []Finding
 
@@ -572,9 +556,8 @@ func floodingBatches(cfg *config.Config) []Finding {
 	return out
 }
 
-// unrun reports each suite no run lists: a run plans only the suites it
-// names, so its tests never run. Planning only warns of it, so a pipeline
-// that ran yesterday keeps running while the check fails.
+// unrun reports each suite no run lists, whose tests never run; planning only warns of it, so a
+// pipeline that ran yesterday keeps running while the check fails.
 func unrun(cfg *config.Config) []Finding {
 	if len(cfg.Runs) == 0 {
 		return nil
@@ -604,10 +587,8 @@ func unrun(cfg *config.Config) []Finding {
 	return out
 }
 
-// images finds an image a suite or the planner's prepare names that the root
-// pipeline file doesn't declare as a registry-image resource. The file may
-// hold secrets' names, so a finding names the resource and the file, never a
-// value from it.
+// images finds an image a suite or the planner's prepare names that the root pipeline file doesn't
+// declare; the file may hold secrets' names, so a finding names the resource and file, no value.
 func images(cfg *config.Config, tree Tree) []Finding {
 	named := map[string]string{}
 
@@ -762,9 +743,8 @@ func (c *cover) walk(label string) {
 	}
 }
 
-// suites walks every suite's slices: a suite of test files has a slice per
-// file (the file, its owners and its extra deps), a tagged suite its tagged
-// targets, each of which must depend on more than its own sources.
+// suites walks every suite's slices: a test file with its owners and extra deps, or a tagged
+// target, which must depend on more than its own sources.
 func (c *cover) suites() []Finding {
 	var out []Finding
 
@@ -780,9 +760,8 @@ func (c *cover) suites() []Finding {
 		var alone []string
 
 		for _, f := range c.tree.Files {
-			// a recorded suite's helpers are covered by the recordings: a
-			// slice that runs one records it, and a change to one no
-			// recording holds runs the slice as an unclaimed file does
+			// a recorded suite's helpers are covered by the recordings: a slice that runs one records
+			// it, and a change to one no recording holds runs the slice as an unclaimed file does
 			if s.Bind == config.BindRecorded && matchAny(s.Tests, f) && matchAny(s.Helpers, f) && !matchAny(s.Exclude, f) {
 				c.covered[f] = true
 			}
@@ -871,9 +850,8 @@ func (c *cover) named(s config.Suite, f string) bool {
 	return err == nil && len(config.DataComments(bytes.NewReader(src))) > 0
 }
 
-// aloneFinding is a suite's test files that nothing but themselves binds:
-// planning binds such a slice to its own file alone, so a change to what the
-// file imports would select none of them.
+// aloneFinding is a suite's test files nothing but themselves binds: planning binds each to its own
+// file alone, so a change to what the file imports would select none of them.
 func aloneFinding(suite string, files []string) Finding {
 	examples := strings.Join(files[:min(2, len(files))], ", ")
 	if len(files) > 2 {
@@ -892,10 +870,8 @@ func aloneFinding(suite string, files []string) Finding {
 	}
 }
 
-// walkOwners walks the targets that list a file: planning binds a test file
-// only through them, so its package's other targets cover nothing on its
-// behalf. A target holding a value from another repository may list it, so
-// which target runs it is unknown: a finding.
+// walkOwners walks the targets that list a file, the only ones planning binds a test file through;
+// one holding a value from another repository may list it, so which target runs it is unknown.
 func (c *cover) walkOwners(suite, label, f string) (found []Finding, held bool) { //nolint:nonamedreturns // the findings and whether a target holds it
 	if owners := c.owners[label]; len(owners) > 0 {
 		for _, o := range owners {
@@ -1065,10 +1041,8 @@ func fixFor(f string) string {
 	return "add it to the srcs or data of a target a slice depends on, or to untested in " + config.FileName + " with a reason"
 }
 
-// versionPinned warns, once a repository, of data files targets take from a
-// module only its version pins: planning takes such data as unchanged while
-// the version and registries are, which rests on the registry never changing
-// a published version.
+// versionPinned warns, once a repository, of data files targets take from a module only its
+// version pins: planning trusts the registry never to change a published version.
 func versionPinned(tree Tree, g *buildfile.Graph) []Finding {
 	if slices.Contains(tree.Files, "MODULE.bazel.lock") {
 		return nil

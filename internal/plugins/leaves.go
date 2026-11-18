@@ -14,21 +14,17 @@ import (
 type Leaf int
 
 const (
-	// LeafKept stays a label of the slice.
 	LeafKept Leaf = iota
-	// LeafUnits is a file whose units replace it: those the slice touched
-	// are roots already.
+	// LeafUnits is a file whose units replace it: those the slice touched are roots already.
 	LeafUnits
-	// LeafBuild is a BUILD or .bzl file: what it declares reaches the
-	// slice through the rules it holds.
+	// LeafBuild is a BUILD or .bzl file: what it declares reaches the slice through its rules.
 	LeafBuild
-	// LeafUnobserved stays whole: its sbom lists units for it, but no
-	// recording of the suite holds any.
+	// LeafUnobserved stays whole: its sbom lists units for it, but no recording of the suite
+	// holds any.
 	LeafUnobserved
 )
 
-// Leaves judges the data labels of a tree's slices, alike for the walk and
-// for binding.
+// Leaves judges the data labels of a tree's slices, alike for the walk and for binding.
 type Leaves struct {
 	cfg *config.Config
 	t   *deps.Tree
@@ -41,8 +37,8 @@ type Leaves struct {
 	build    bool
 }
 
-// NewLeaves reads what the slices' lists hold. A nil config judges no
-// suite recorded, so no BUILD file is left out.
+// NewLeaves reads what the slices' lists hold. A nil config judges no suite recorded, so no
+// BUILD file is left out.
 func NewLeaves(cfg *config.Config, t *deps.Tree, bs []BindSlice) *Leaves {
 	f := &Leaves{
 		cfg: cfg, t: t, recorded: RecordedSBOMs(t, bs), dirs: map[string]map[string]map[string]bool{}, setup: map[string]map[string]map[string]bool{},
@@ -94,10 +90,8 @@ func note(m map[string]map[string]map[string]bool, suite, sbom, dir string) {
 	m[suite][sbom][dir] = true
 }
 
-// Judge says whether a slice keeps a data label. inGroup marks a label
-// found inside one of its filegroups: such a file without an anchor is
-// replaced only where some list of the suite holds units its sbom lists
-// for files of the same directory.
+// Judge says whether a slice keeps a data label. A label found inside a filegroup, without an
+// anchor, is replaced only where a list of the suite holds units of files of its directory.
 func (f *Leaves) Judge(sl BindSlice, label string, inGroup bool) Leaf {
 	p, ok := bazel.LabelPath(label)
 	if !ok || !sl.HasList || slices.Contains(sl.Declared, label) {
@@ -138,9 +132,8 @@ func (f *Leaves) Judge(sl BindSlice, label string, inGroup bool) Leaf {
 	return LeafUnits
 }
 
-// SetupTakes tells whether a suite's setup list holds units the sbom of
-// the file at p lists for files of its directory: the setup is then where
-// adding or removing such a file shows.
+// SetupTakes tells whether a suite's setup list holds units the sbom of p lists for files of its
+// directory: adding or removing such a file then shows in the setup.
 func (f *Leaves) SetupTakes(suite, p string) bool {
 	units, ok := f.t.FileUnits[p]
 	if !ok {
@@ -150,7 +143,6 @@ func (f *Leaves) SetupTakes(suite, p string) bool {
 	return f.setup[suite][ProviderOf(f.t, units)][path.Dir(p)]
 }
 
-// IsBuildFile tells a BUILD file or a Starlark file from data.
 func IsBuildFile(p string) bool {
 	base := path.Base(p)
 

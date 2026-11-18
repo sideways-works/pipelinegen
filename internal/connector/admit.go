@@ -8,15 +8,12 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Admit tells whether a proposed change may run: only one known to come
-// from the code's own repository. A fork's code, or code whose origin the
-// connector couldn't tell, never gets a pipeline's credentials.
+// Admit tells whether a proposed change may run: only one known to come from the code's own repository;
+// a fork's code, or code of an origin the connector couldn't tell, never gets a pipeline's credentials.
 func Admit(c plugin.Change) bool { return c.From == plugin.FromSame }
 
-// FilterProblems says, for each pull request filter a run sets that the
-// connector has no capability for, what is missing; none when the
-// connector can answer every one. A run whose connector can't tell drafts
-// or labels apart would otherwise test changes it means to skip.
+// FilterProblems names, per pull request filter the run sets, the capability the connector lacks for it:
+// one that can't tell drafts or labels apart would otherwise test changes the run means to skip.
 func FilterProblems(desc plugin.Description, filters []string) []string {
 	var out []string
 

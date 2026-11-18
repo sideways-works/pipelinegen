@@ -11,32 +11,29 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// Package is one package a suite's steps need: one name for every package
-// manager, or a name per family of managers where they differ.
+// Package is one package a suite's steps need: one name for every package manager, or a name
+// per family of managers where they differ.
 type Package struct {
-	// Name is the package's name for a manager By doesn't name, and the
-	// command or package a machine without an image is checked for.
+	// Name is the name for a manager By doesn't name, and the command or package a machine
+	// without an image is checked for.
 	Name string `yaml:"-"`
-	// By names the package per family: apt (apt-get), apk, and rpm (dnf,
-	// microdnf and yum, which install from the same repositories).
+	// By names the package per family: apt (apt-get), apk, and rpm (dnf, microdnf and yum, which
+	// install from the same repositories).
 	By map[string]string `yaml:"-"`
 }
 
-// The families of package managers a package may be spelled for.
 const (
 	FamilyApt = "apt"
 	FamilyApk = "apk"
 	FamilyRPM = "rpm"
 )
 
-// Families lists the families in a stable order.
 var Families = []string{FamilyApt, FamilyApk, FamilyRPM}
 
 const packageDefault = "name"
 
 var errPackage = errors.New("a package is a name, or a map of name, apt, apk and rpm to names")
 
-// UnmarshalYAML reads a package as a plain name or as a map of names.
 func (p *Package) UnmarshalYAML(n *yaml.Node) error {
 	switch n.Kind {
 	case yaml.ScalarNode:
@@ -64,7 +61,6 @@ func (p *Package) UnmarshalYAML(n *yaml.Node) error {
 	return &yaml.TypeError{Errors: []string{fmt.Sprintf("line %d: %v", n.Line, errPackage)}}
 }
 
-// MarshalYAML writes a package back in the form it was read in.
 func (p Package) MarshalYAML() (any, error) {
 	if len(p.By) == 0 {
 		return p.Name, nil
@@ -78,7 +74,6 @@ func (p Package) MarshalYAML() (any, error) {
 	return m, nil
 }
 
-// For is the package's name for a family, false when it has none.
 func (p Package) For(family string) (string, bool) {
 	if n, ok := p.By[family]; ok {
 		return n, true
@@ -87,8 +82,7 @@ func (p Package) For(family string) (string, bool) {
 	return p.Name, p.Name != ""
 }
 
-// String is the package as one stable line: its name, then each family's
-// spelling, sorted.
+// String is the package as one stable line: its name, then each family's spelling, sorted.
 func (p Package) String() string {
 	parts := make([]string, 0, 1+len(p.By))
 	parts = append(parts, p.Name)
@@ -100,7 +94,6 @@ func (p Package) String() string {
 	return strings.Join(parts, " ")
 }
 
-// Packages is a list of packages.
 type Packages []Package
 
 // Sorted is the list without repeats, in String's order.
@@ -122,7 +115,6 @@ func (ps Packages) Sorted() Packages {
 	return out
 }
 
-// Strings are the packages' String lines.
 func (ps Packages) Strings() []string {
 	out := make([]string, 0, len(ps))
 	for _, p := range ps {
@@ -132,13 +124,10 @@ func (ps Packages) Strings() []string {
 	return out
 }
 
-// PackagesFor is what a suite's steps need: the top level's packages and
-// the suite's, sorted, each once.
 func (c *Config) PackagesFor(suite string) Packages {
 	return slices.Concat(c.Packages, c.Suites[suite].Packages).Sorted()
 }
 
-// HasPackages tells whether any step of the pipeline needs a package.
 func (c *Config) HasPackages() bool {
 	if len(c.Packages)+len(c.Concourse.Planner.Packages) > 0 {
 		return true
@@ -147,26 +136,23 @@ func (c *Config) HasPackages() bool {
 	return slices.ContainsFunc(c.SuiteNames(), func(s string) bool { return len(c.Suites[s].Packages) > 0 })
 }
 
-// Images is where cached images, a base image with a suite's packages
-// installed, are kept.
+// Images is where cached images, a base image with a suite's packages installed, are kept.
 type Images struct {
-	// Registry is the repository the cached images are pushed to, each
-	// tagged with its key.
+	// Registry is the repository the cached images are pushed to, each tagged with its key.
 	Registry string `yaml:"registry"`
-	// Credentials names the var holding the username and password that
-	// push to the registry; only the job that builds the images gets it.
+	// Credentials names the var of the login that pushes; only the job that builds the images
+	// gets it.
 	Credentials string `yaml:"credentials,omitempty"`
-	// PullCredentials names the var that pulls from it, for a registry
-	// that needs a login to pull; without it the images are pulled
-	// anonymously.
+	// PullCredentials names the var that pulls, for a registry that needs a login to pull;
+	// without it images are pulled anonymously.
 	PullCredentials string `yaml:"pull_credentials,omitempty"`
 }
 
 // Names are shell words: they go into the install script as they are.
 var packageName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9+._-]*$`)
 
-// repository is a registry's repository without a tag or digest: an
-// optional host (with a port), then lower case path components.
+// repository is a registry's repository without a tag or digest: an optional host (with a
+// port), then lower case path components.
 var repository = regexp.MustCompile(`^([A-Za-z0-9.-]+(:[0-9]+)?/)?[a-z0-9]+([._-]+[a-z0-9]+)*(/[a-z0-9]+([._-]+[a-z0-9]+)*)*$`)
 
 func validatePackages(where string, ps Packages, bad func(string, ...any)) {
@@ -225,9 +211,8 @@ func (c *Config) validatePackages(bad func(string, ...any)) {
 	}
 }
 
-// PushSecrets are the repository's tasks given the var that pushes cached
-// images, or a field of it: a task runs the change's code, and with that
-// var a pull request could replace an image every run pulls.
+// PushSecrets are the repository's tasks given the var that pushes cached images: such a task
+// runs the change's code, so a pull request could replace an image every run pulls.
 func (c *Config) PushSecrets() []string {
 	push := c.Images.Credentials
 	if push == "" {

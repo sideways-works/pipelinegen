@@ -227,9 +227,8 @@ func TestALostRaceIsReplayed(t *testing.T) {
 
 const writers = 20
 
-// slowHost is a pre-receive hook that holds every push a while, so pushes
-// overlap the way they do on a host far away: two may both pass it, and
-// the later one then fails as its branch moved.
+// slowHost is a pre-receive hook that holds every push a while, as a far host does: two pushes may
+// both pass it, and the later one then fails as its branch moved.
 const slowHost = "sleep 0.2"
 
 func TestTwentyWritersAllLand(t *testing.T) {

@@ -24,10 +24,8 @@ func startedRun(t *testing.T) (string, *githubAPI) {
 	return root, api
 }
 
-// A config with a github section and no connector entry reports through
-// the pinned GitHub connector, downloaded into pipelinegen's cache and
-// checked by its checksum, as a step without the bootstrap's copy fetches
-// it.
+// A config with a github section and no connector entry reports through the pinned GitHub connector,
+// downloaded into pipelinegen's cache and checked by its checksum, as a step without the bootstrap's does.
 func TestAGitHubConfigReportsThroughTheFetchedConnector(t *testing.T) {
 	root, api := startedRun(t)
 

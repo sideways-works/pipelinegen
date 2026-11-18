@@ -18,9 +18,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Filler fills the caches plugins declare before they answer about a tree on
-// a person's machine, where no planner prepare filled them. Only the local
-// commands use one.
+// Filler fills the caches plugins declare before they answer on a person's machine, where no
+// planner prepare filled them; only the local commands use one.
 type Filler struct {
 	Who string
 	Out io.Writer
@@ -31,8 +30,7 @@ type Filler struct {
 
 type fillerKey struct{}
 
-// WithFiller has the plugin sets planning under ctx fill their caches with
-// f before they answer about a tree.
+// WithFiller has the plugin sets planning under ctx fill their caches with f before answering.
 func WithFiller(ctx context.Context, f *Filler) context.Context {
 	return context.WithValue(ctx, fillerKey{}, f)
 }
@@ -45,8 +43,7 @@ func fillerFrom(ctx context.Context) *Filler {
 
 const fillMarks = ".filled"
 
-// FillProblem is what is wrong with a fill as describe declares it, empty
-// when nothing is.
+// FillProblem is what is wrong with a fill as describe declares it, empty when nothing is.
 func FillProblem(cache string, f plugin.Fill) string {
 	switch {
 	case len(f.Run) == 0 || f.Run[0] == "":
@@ -119,9 +116,8 @@ func (s *Set) fill(ctx context.Context, f *Filler, root string, files map[string
 
 	for _, j := range jobs {
 		for _, dir := range fillDirs(files, j.spec.Files[0]) {
-			// a directory whose file every reader leaves out (an example
-			// workspace, say) is read by no plugin: filling it changes no
-			// answer
+			// a directory whose file every reader leaves out (an example workspace, say) is read by
+			// no plugin: filling it changes no answer
 			readers := slices.DeleteFunc(slices.Clone(j.readers), func(name string) bool {
 				return matchAny(j.excludes[name], path.Join(dir, j.spec.Files[0]))
 			})
@@ -201,9 +197,8 @@ func (f *Filler) one(ctx context.Context, s *Set, root, caches, dir, cache strin
 	}
 }
 
-// RunFill runs a fill of a cache in a directory, with target as the cache:
-// argv only, never a shell, in the person's environment less every secret
-// and pipelinegen's own variables.
+// RunFill runs a cache's fill in dir with target as the cache: argv only, never a shell, in the
+// person's environment less every secret and pipelinegen's own variables.
 func RunFill(ctx context.Context, dir, target, cache string, spec plugin.Fill) ([]byte, error) {
 	if p := FillProblem(cache, spec); p != "" {
 		return nil, fmt.Errorf("%w: %s", ErrPlugins, p)

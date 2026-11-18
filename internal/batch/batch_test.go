@@ -28,8 +28,7 @@ func TestDealBalancesAndIsDeterministic(t *testing.T) {
 }
 
 func TestAnUnrecordedSliceCountsAsTheMedian(t *testing.T) {
-	// recorded 2, 4, 10, 30: the median is 7, so the new slice weighs more
-	// than b and goes before it
+	// recorded 2, 4, 10, 30: the median is 7, so the new slice weighs more than b and goes before it
 	in := []Slice{rec("a", 30), rec("b", 4), rec("c", 10), rec("d", 2), {Name: "new"}}
 
 	got := Deal(in, 2)

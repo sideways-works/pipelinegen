@@ -2,9 +2,8 @@ package report
 
 import "path/filepath"
 
-// A batch's journal is read again by its ensure, which a CI system may run
-// in another container at another absolute path, so the journal keeps every
-// path of a slice's event relative to its own directory.
+// A batch's ensure may read its journal in another container at another absolute path, so the
+// journal keeps every path of a slice's event relative to its own directory.
 
 func (ev SliceEvent) withPaths(f func(string) string) SliceEvent {
 	ev.Result = f(ev.Result)

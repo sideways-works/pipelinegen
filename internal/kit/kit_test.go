@@ -73,10 +73,8 @@ func fakes(kind string) map[string]plugin.Handler {
 			},
 		}
 	case "versioned":
-		// the sbom, run by a version manager: in a tree whose nearest
-		// .tool-versions upward doesn't name its version it answers, but
-		// marks its answers not cacheable, as a plugin built for another
-		// toolchain does
+		// the sbom run by a version manager: where the nearest .tool-versions doesn't name its
+		// version it marks its answers not cacheable, as a plugin built for another toolchain does
 		d := plugin.Description{Kind: plugin.KindSBOM, Namespaces: []string{"t"}, Candidates: []string{"**/*.txt"},
 			Capabilities: []string{plugin.CallDetect, plugin.CallUnits},
 			Inputs:       map[string]string{plugin.CallUnits: plugin.PerFile, plugin.CallDetect: plugin.PerFile},
@@ -206,9 +204,8 @@ func fakes(kind string) map[string]plugin.Handler {
 			},
 		}
 	case "importer", "leaky":
-		// b.txt's set names a.txt's api unit as an input instead of
-		// a.txt; the leaky one's link kind depends on a.txt's body all
-		// the same, which the api unit's digest doesn't cover
+		// b.txt's set names a.txt's api unit as an input, not a.txt; the leaky one's link kind depends
+		// on a.txt's body all the same, which the api unit's digest doesn't cover
 		return map[string]plugin.Handler{
 			plugin.CallDescribe: describe(plugin.Description{Kind: plugin.KindCorrelator,
 				Capabilities: []string{plugin.CallLinks}, Inputs: map[string]string{plugin.CallLinks: plugin.PerSet}}),
@@ -326,10 +323,8 @@ func fakes(kind string) map[string]plugin.Handler {
 					return nil, fmt.Errorf("%w: collect called for %s, which it never declared", errUndeclared, req.Action)
 				}
 
-				// what the slice ran, taken from the stack into the
-				// directory the core names; onepart puts a later part
-				// where the first went, as a plugin that ignores the
-				// core's directories would
+				// what the slice ran, from the stack into the core's directory; onepart puts a later part
+				// where the first went, as a plugin that ignores the core's directories would
 				if kind == "onepart" && strings.Contains(filepath.ToSlash(req.Dir), "/.pipelinegen/part-") {
 					return plugin.Answer{}, nil
 				}
@@ -395,10 +390,8 @@ func fakes(kind string) map[string]plugin.Handler {
 
 var errUndeclared = errors.New("an undeclared call")
 
-// observeTexts reads the paths a recording lists (paths.lst in each part)
-// and touches the text unit of each that the tree has. A recording none of
-// whose paths the tree has can't be told, unless the correlator is
-// forgetful and answers an empty list.
+// observeTexts touches the text unit of each path a recording lists (paths.lst per part) that the tree
+// has; none of them can't be told, unless forgetful answers an empty list.
 func observeTexts(req plugin.ObserveRequest, forgetful bool) (any, error) {
 	touched, listed := []string{}, 0
 
@@ -456,9 +449,8 @@ func nosyUnits(in []byte) (any, error) {
 	return plugin.UnitsAnswer{Units: []plugin.Unit{{ID: "t:readme", File: "a.txt", Digest: hex.EncodeToString(sum[:8])}}}, nil
 }
 
-// declaredUnits reads what nosyUnits reads, the readme it never claims,
-// but declares it as an input of the set, so the core keys the answer on
-// it; out declares a file the fixture lacks as well.
+// declaredUnits reads the readme as nosyUnits does but declares it as an input, so the core keys the
+// answer on it; out also declares a file the fixture lacks.
 func declaredUnits(in []byte, out bool) (any, error) {
 	var req plugin.TreeRequest
 	if err := decode(in, &req); err != nil {

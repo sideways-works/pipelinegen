@@ -22,9 +22,8 @@ var (
 	ErrNotListed = errors.New("its release's SHA256SUMS lists no file for this platform")
 )
 
-// PinnedSum is the SHA-256 the config's pin gives the plugin's file in dir:
-// its release's sha256, or its platform's line of the SHA256SUMS kept beside
-// it, once that file's own SHA-256 is the pin.
+// PinnedSum is the SHA-256 the config's pin gives the plugin's file in dir: its release's sha256,
+// or its platform's line of the SHA256SUMS kept beside it once that file matches the pin.
 func PinnedSum(p config.Plugin, dir string) (string, error) {
 	if p.Release == nil || p.Release.Pin() == "" {
 		return "", ErrUnpinned
@@ -67,7 +66,6 @@ func sumFor(sums []byte, name string) (string, error) {
 	return "", fmt.Errorf("%w: %s-%s-%s", ErrNotListed, name, runtime.GOOS, runtime.GOARCH)
 }
 
-// FileSHA256 is a file's SHA-256, in hex.
 func FileSHA256(p string) (string, error) {
 	f, err := os.Open(p) //nolint:gosec // the plugin the config names
 	if err != nil {
@@ -83,16 +81,14 @@ func FileSHA256(p string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// NotPinned is a plugin whose binary is not the file its pin names, or can't
-// be checked against it; its answers are kept by its own digest.
+// NotPinned is a plugin whose binary is not the file its pin names, or can't be checked against
+// it; its answers are kept by its own digest.
 type NotPinned struct {
 	Plugin string
-	// Want is empty when the config gives no SHA-256 to check by; Why then
-	// says why.
+	// Want is empty when the config gives no SHA-256 to check by; Why then says why.
 	Pin, Want, Found, Why string
 }
 
-// Line says it in one line: the plugin, its pin and the digest found.
 func (n NotPinned) Line() string {
 	const used = "it answers, and its answers are cached apart"
 
@@ -134,8 +130,8 @@ func build(p config.Plugin, dir, exe string) (string, *NotPinned) {
 	return found, n
 }
 
-// sums caches the binaries' digests by path, size and time: a command loads
-// the plugins several times, and a binary is tens of megabytes.
+// sums caches the binaries' digests by path, size and time: a command loads the plugins several
+// times, and a binary is tens of megabytes.
 var sums sync.Map
 
 func binarySum(exe string) (string, error) {

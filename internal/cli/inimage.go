@@ -27,7 +27,6 @@ var (
 	errUndeclared = errors.New("no such image")
 )
 
-// The kinds of a build's tasks.
 const (
 	kindPrepare = "prepare"
 	kindBatch   = "batch"
@@ -259,9 +258,8 @@ func (b *localBuild) packaged(ctx context.Context, img taskImage, kind string) (
 	return p, nil
 }
 
-// installPackages makes the images of the build's tasks with the suite's packages before the rest of
-// the batch, as CI installs them in front of each task's command: the memory check and the setup come
-// after. Tasks that run on this machine install nothing; the machine is checked for the packages.
+// installPackages makes the build's task images with the suite's packages before the memory check and
+// setup, as CI installs in front of each command; tasks run on this machine are checked for them instead.
 func (b *localBuild) installPackages(ctx context.Context) error {
 	if len(b.cfg.PackagesFor(b.suite)) == 0 {
 		return nil
@@ -305,9 +303,8 @@ func (b *localBuild) tasks() []buildTask {
 	return append(out, buildTask{kindBatch, s.RunSlice})
 }
 
-// withPackages swaps img for the image with the suite's packages installed on it, made the first time
-// and kept in the local image store, and is the install that then finds them there: it installs
-// nothing, and fails a step that would run without them.
+// withPackages swaps img for the image with the suite's packages installed, made once and kept in the
+// local image store; the install then finds them there, and fails a step that would run without them.
 func (b *localBuild) withPackages(ctx context.Context, img *taskImage) ([]string, error) {
 	ps := b.cfg.PackagesFor(b.suite)
 	if len(ps) == 0 {
@@ -434,9 +431,8 @@ func (b *localBuild) containerRun(ctx context.Context, img taskImage, kind, dir 
 	return r, &back, nil
 }
 
-// imageTools links the build's tools to builds for the image's platform and mounts what the build
-// refers to at the same paths: its own directory, the repository's git directory that source is a
-// worktree of, read only, and the tools.
+// imageTools links the build's tools to builds for the image's platform and mounts, at their own paths,
+// the build's directory, the git directory source is a worktree of (read only), and the tools.
 func (b *localBuild) imageTools(ctx context.Context, plat string) ([]container.Mount, error) {
 	tool, err := b.linuxTool(ctx, plat)
 	if err != nil {

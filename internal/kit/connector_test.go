@@ -56,10 +56,8 @@ func connectorFixtureFile(skip string) string {
 	return string(data)
 }
 
-// connectorFakes is a connector for the API the fixture serves. kind says
-// how it misbehaves: connector-leak reports a fork's change as the
-// repository's own, connector-sneaky asks for requests where none belong,
-// connector-greedy declares the store's purpose and sets Authorization.
+// connectorFakes is a connector for the fixture's API; connector-leak reports a fork's change as the
+// repository's own, -sneaky asks for requests where none belong, -greedy takes the store's purpose.
 func connectorFakes(kind string) map[string]plugin.Handler {
 	d := plugin.Description{
 		Kind: plugin.KindConnector, Capabilities: []string{plugin.CapChanges, plugin.CapStatuses, plugin.CapComment, plugin.CapForks},

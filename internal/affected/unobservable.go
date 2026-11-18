@@ -18,10 +18,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/plugins"
 )
 
-// Unobservable is a changed file that changed nothing a test can observe
-// when it runs as code: the sbom that lists its units says they cover it
-// whole, in both trees, under the same pin, and every one of them is as
-// it was.
+// Unobservable is a changed file no test can observe running it as code: the sbom listing its units
+// covers it whole in both trees, under the same pin, and every unit is as it was.
 type Unobservable struct {
 	Path   string `json:"path"`
 	Plugin string `json:"plugin"`
@@ -33,14 +31,12 @@ type Unobservable struct {
 type UnobservableRule struct {
 	Files []Unobservable
 	OffAt int
-	// Anchored are the changed files an sbom claims by their units with an
-	// anchor: a slice whose list holds the anchor is bound to the units it
-	// touched, so a label holding the file is no reason of its own for it.
+	// Anchored are the changed files an sbom claims by their units with an anchor: a slice whose list
+	// holds the anchor is bound to the units it touched, so a label holding the file is no reason for it.
 	Anchored []Anchored
 	Holds    func(suite, slice, unit string) bool
 }
 
-// Anchored is a changed file claimed by its units with an anchor.
 type Anchored struct {
 	Path, Anchor, Narrowing, Plugin string
 	OffAt                           int
@@ -208,10 +204,8 @@ func (q *quiet) takes(o Options, suite, test string) []string {
 	return out
 }
 
-// decide makes sure the labels are decided for slices that take the given
-// files: a label stays when the change impacts it with those files as the
-// base has them. When bazel-diff can't say, every label stays, with a
-// warning.
+// decide makes sure the labels are decided for slices that take files: a label stays when the change
+// impacts it with those files as the base has them; when bazel-diff can't say, all stay, with a warning.
 func (q *quiet) decide(ctx context.Context, o Options, labels, takes []string) {
 	key := strings.Join(takes, "\x00")
 
@@ -243,10 +237,8 @@ func (q *quiet) decide(ctx context.Context, o Options, labels, takes []string) {
 	}
 }
 
-// impactedWithout are the main repository's targets the change impacts with
-// the given files as the base has them: bazel-diff hashes the head's work
-// tree again with the base's copies in place, in the same output base, and
-// compares that with the base's hashes.
+// impactedWithout are the main repository's targets the change impacts with the files as the base has
+// them: the head's tree hashed again with the base's copies in place, compared with the base's hashes.
 func (q *quiet) impactedWithout(ctx context.Context, o Options, takes []string) (map[string]bool, error) {
 	key := strings.Join(takes, "\x00")
 	if got, ok := q.without[key]; ok {

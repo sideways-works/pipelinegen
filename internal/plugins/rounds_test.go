@@ -15,9 +15,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// rulesBinder is a bind correlator whose knowledge is FAKE_RULES
-// ("x>y,..."): a slice whose list or roots hold x binds y. Each call goes
-// to FAKE_LOG as "<name> <roots of the slice>".
+// rulesBinder is a bind correlator knowing FAKE_RULES ("x>y,..."): a slice whose list or roots
+// hold x binds y. Each call goes to FAKE_LOG as "<name> <roots of the slice>".
 func rulesBinder() map[string]plugin.Handler {
 	name := os.Getenv("FAKE_NAME")
 

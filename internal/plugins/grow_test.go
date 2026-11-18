@@ -79,8 +79,8 @@ func TestBindingGrowsWithTheClosureNotItsSquare(t *testing.T) {
 		sl := []BindSlice{{Suite: "s", Name: "a_test.go", List: []string{"go:p#func:F000000"}, HasList: true}}
 		best := time.Duration(1<<63 - 1)
 
-		// the collector's work grows with the heap and runs on other cores:
-		// off while measuring, the binding's own work is what is counted
+		// the collector's work grows with the heap and runs on other cores: off while measuring,
+		// only the binding's own work is counted
 		defer debug.SetGCPercent(debug.SetGCPercent(-1))
 
 		for range 3 {
@@ -98,9 +98,8 @@ func TestBindingGrowsWithTheClosureNotItsSquare(t *testing.T) {
 		return best
 	}
 
-	// the process's CPU time, which a busy machine barely moves, as its
-	// wall clock it does; four times the units is about four times the
-	// work, and a square would be sixteen
+	// the process's CPU time, which a busy machine barely moves; four times the units is about
+	// four times the work, and a square would be sixteen
 	small, large := time.Duration(1<<63-1), time.Duration(1<<63-1)
 
 	for range 5 {
@@ -174,7 +173,6 @@ func TestABoundSliceHoldsEachUnitOnce(t *testing.T) {
 	}
 }
 
-// cpuTime is the CPU time this process has used so far.
 func cpuTime(t *testing.T) time.Duration {
 	t.Helper()
 

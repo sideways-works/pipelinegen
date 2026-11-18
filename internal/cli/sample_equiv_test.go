@@ -67,9 +67,8 @@ func TestTheWalksSampleIsTheSplits(t *testing.T) {
 					t.Fatalf("the walk's sample differs from the split's:\n%s", c)
 				}
 
-				// here a shared unit every slice ran changes, and with it
-				// what it links; one slice binds its old end another way
-				// and never its new one, so it binds the same in both trees.
+				// a shared unit every slice ran changes, and with it what it links; one slice binds its
+				// old end another way and never its new one, so it binds the same in both trees
 				if _, ok := sel.Selected[graph.Key{Suite: "syn", Name: "s0006_test", Width: graph.Executed}]; ok && seed == 12 {
 					t.Error("s0006_test is selected, though its binding is the same in both trees")
 				}

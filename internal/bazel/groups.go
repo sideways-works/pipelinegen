@@ -32,10 +32,8 @@ type Groups struct {
 // guards against a query that answers something unexpected.
 const maxGroupDepth = 64
 
-// OpenGroups opens the filegroups among labels, level by level, with one
-// query per level. A filegroup with an output_group or a select(), any
-// other rule, a generated file, a label of another repository and a label
-// the tree lacks all stay whole.
+// OpenGroups opens the filegroups among labels level by level, one query each; one with an output_group or
+// select(), other rules, generated files, other repositories' labels and missing ones stay whole.
 func (c *Client) OpenGroups(ctx context.Context, labels []string) (*Groups, error) {
 	g := &Groups{Members: map[string][]string{}, As: map[string]string{}}
 	seen := map[string]bool{}
@@ -80,9 +78,8 @@ func (c *Client) OpenGroups(ctx context.Context, labels []string) (*Groups, erro
 	return g, nil
 }
 
-// Leaves are what a label stands for once its groups are opened, each with
-// the groups it was found through, innermost first. A label that is no
-// group is its own leaf.
+// Leaves are what a label stands for once its groups are opened, each with the groups it was found
+// through, innermost first; a label that is no group is its own leaf.
 func (g *Groups) Leaves(label string) map[string][]string {
 	out := map[string][]string{}
 	g.leaves(label, nil, out, map[string]bool{})
@@ -118,7 +115,6 @@ func (g *Groups) leaves(label string, through []string, out map[string][]string,
 	}
 }
 
-// IsGroup tells whether the label was opened as a group.
 func (g *Groups) IsGroup(label string) bool {
 	_, ok := g.members(label)
 
@@ -220,9 +216,8 @@ type groupLine struct {
 	} `json:"generatedFile"` //nolint:tagliatelle // Bazel's field name
 }
 
-// groupTargets asks for the labels with selects left unflattened, so a
-// select() shows as such; the expression goes in a file, since a level
-// may name thousands of files. Labels the tree lacks are left out.
+// groupTargets asks for the labels with selects unflattened, so a select() shows; the expression goes in a
+// file, as a level may name thousands, and labels the tree lacks are left out.
 func (c *Client) groupTargets(ctx context.Context, labels []string) ([]groupTarget, error) {
 	defer progress.Stage(ctx, "Bazel query of filegroups")()
 

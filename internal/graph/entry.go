@@ -7,10 +7,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/plugins"
 )
 
-// A plugin's changed entry in the config reaches every slice that binds a
-// unit its sbom lists, or a correlator's recorded slices and the near ends
-// of its links. While plugin-entry is on, a suite's recorded slices go to
-// its sample instead.
+// A plugin's changed entry reaches every slice binding a unit its sbom lists, or a correlator's recorded
+// slices and its links' near ends; while plugin-entry is on, recorded slices go to the sample instead.
 
 func entrySampled(sl plugins.BindSlice) bool {
 	return sl.HasList && (sl.Setup || !strings.HasPrefix(sl.Name, "_"))

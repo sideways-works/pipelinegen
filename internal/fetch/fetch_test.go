@@ -94,9 +94,8 @@ func TestAFileThatDoesntMatchItsPinIsRefusedAndNotKept(t *testing.T) {
 	}
 }
 
-// A pin by sums checks the release's SHA256SUMS by its checksum and the
-// file by its line there, and keeps the list, so a second fetch needs no
-// download at all.
+// A pin by sums checks the release's SHA256SUMS by its checksum and the file by its line there,
+// and keeps the list, so a second fetch downloads nothing.
 func TestAPinBySumsChecksTheListAndThenTheFile(t *testing.T) {
 	bin := []byte("pinned")
 	sums := []byte(hexSum(bin) + "  shell-driver-" + platform + "\n" + hexSum([]byte("x")) + "  shell-driver-plan9-mips\n")
@@ -130,8 +129,8 @@ func TestAPinBySumsChecksTheListAndThenTheFile(t *testing.T) {
 	}
 }
 
-// A Node plugin is released as one .mjs file: a pin by one sha256 is that
-// file's checksum, on any platform.
+// A Node plugin is released as one .mjs file: a pin by one sha256 is that file's checksum, on
+// any platform.
 func TestANodePluginIsItsScript(t *testing.T) {
 	script := []byte("#!/usr/bin/env node\n")
 	r := newReleases(t, map[string][]byte{release + "shell-driver.mjs": script})
@@ -147,8 +146,8 @@ func TestANodePluginIsItsScript(t *testing.T) {
 	}
 }
 
-// A pin by one sha256 names the linux-amd64 file: on another platform no
-// file can be checked by it, and nothing is downloaded.
+// A pin by one sha256 names the linux-amd64 file: on another platform nothing can be checked by
+// it, so nothing is downloaded.
 func TestASHA256PinChecksNoOtherPlatform(t *testing.T) {
 	r := newReleases(t, nil)
 

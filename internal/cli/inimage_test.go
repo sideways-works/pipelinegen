@@ -89,10 +89,8 @@ func argPairs(args []string, flag string) []string {
 	return out
 }
 
-// The suite's image is its resource of the root pipeline file, by the digest the resource pins; its
-// prepare runs in the prepare step's. The build's directory, the git directory (read only) and the
-// tool are mounted where the build has them, and the environment is the task's: no token. It runs as
-// root with the image's own HOME, as on CI, and what it wrote is handed back to this user after.
+// The suite's image is its pinned resource, its prepare the prepare step's; the build's directories and
+// tool are mounted as the build has them, with no token, run as root and handed back to this user after.
 func TestASuiteRunsInItsImageAsCIRunsIt(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("the user a container runs as is Linux's question")

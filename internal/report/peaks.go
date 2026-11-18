@@ -14,13 +14,11 @@ import (
 // A suite's recent memory peaks, by slice, in one ref the trusted runs' suite ends keep: `batches`
 // predicts each batch's peak from it, and a batch waits for that much memory before it starts.
 const (
-	peaksFile = "peaks.json"
-	// PeaksKept is how many recent peaks a slice keeps.
+	peaksFile   = "peaks.json"
 	PeaksKept   = 10
 	peakRetries = 3
 )
 
-// PeaksRef holds a suite's recent peaks.
 func PeaksRef(suite string) string { return refRoot + "peaks/" + suite }
 
 type peakSample struct {
@@ -71,9 +69,8 @@ func Peaks(ctx context.Context, store *gitstore.Store, suite string) (map[string
 	return out, nil
 }
 
-// recordPeaks adds the peaks a trusted run's suite measured, one per slice and commit, so a suite's end
-// told again adds nothing. A proposed change's run reads the peaks and never writes them. A write
-// that fails only warns.
+// recordPeaks adds a trusted run's peaks, one per slice and commit, so a suite's end told again adds
+// nothing; a proposed change's run never writes them, and a failed write only warns.
 func (r *Reporter) recordPeaks(ctx context.Context, run Run, suite string) {
 	if r.ID.Proposed || r.Store.Proposed {
 		return

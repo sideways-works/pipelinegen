@@ -1,8 +1,5 @@
-// Package depsrepo writes the deps repository, .pipelinegen/deps, that
-// bazel-diff hashes: a digest file per unit, and per slice a selector
-// depending on its units' digest files, the groups it holds whole and its
-// data labels. It knows no language: unit ids are opaque strings, encoded
-// into file and target names that stay distinct for distinct ids.
+// Package depsrepo writes .pipelinegen/deps, which bazel-diff hashes: a digest file per unit and per slice a
+// selector on its units, whole groups and data. Unit ids are opaque, encoded into distinct names.
 package depsrepo
 
 import (
@@ -22,7 +19,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/deps"
 )
 
-// Dir is where the repository is written, relative to a tree's root.
 const Dir = ".pipelinegen/deps"
 
 // Fixed names inside the repository. None of them can be an encoded name:
@@ -38,14 +34,12 @@ const (
 	absentDigest = "absent"
 )
 
-// Writer writes the deps repository of one tree.
 type Writer struct{}
 
 var _ deps.Writer = Writer{}
 
-// Write makes root's deps repository from the tree's units and the
-// slices, replacing what was there, and returns a key of everything it
-// wrote: equal for equal input, different for any difference.
+// Write makes root's deps repository from the tree's units and the slices, replacing what was there, and
+// returns a key of everything it wrote: equal for equal input, different for any difference.
 func (Writer) Write(ctx context.Context, root string, tree *deps.Tree, ss []deps.Slice) (string, error) {
 	key := Key(tree, ss)
 
@@ -56,10 +50,8 @@ func (Writer) Write(ctx context.Context, root string, tree *deps.Tree, ss []deps
 	dir := filepath.Join(root, filepath.FromSlash(Dir))
 	keyFile := dir + keySuffix
 
-	// the same repository in place is left alone: a plan that changes
-	// nothing rewrites nothing. Another writer may have replaced the
-	// directory and left the key beside it, so the repository must be this
-	// writer's too.
+	// the same repository in place is left alone, so a plan that changes nothing rewrites nothing; another
+	// writer may have replaced the directory and left the key, so it must be this writer's too
 	if have, err := os.ReadFile(keyFile); err == nil && string(have) == key+"\n" { //nolint:gosec // the key this writer left
 		if repo, err := os.ReadFile(filepath.Join(dir, "REPO.bazel")); err == nil && string(repo) == header { //nolint:gosec // as above
 			return key, nil
@@ -98,9 +90,8 @@ func ReadKey(root string) (string, error) {
 	return strings.TrimSuffix(string(data), "\n"), nil
 }
 
-// Remove deletes the repository at root and its key, for a plan that
-// writes none: bazel-diff hashes a repository it finds, so one an earlier
-// plan left would be hashed as if it were the tree's.
+// Remove deletes the repository at root and its key for a plan that writes none: bazel-diff hashes any it
+// finds, so one an earlier plan left would be hashed as the tree's.
 func Remove(root string) error {
 	dir := filepath.Join(root, filepath.FromSlash(Dir))
 
@@ -121,10 +112,8 @@ func Remove(root string) error {
 // a repository written by an older writer is never taken for a new one.
 const format = "depsrepo 1"
 
-// Key is a short hash of everything Files writes from: the units' ids,
-// groups and digests, and each slice's selector, units, groups, data and
-// whether it depends on everything. Files is deterministic, so equal keys
-// mean equal repositories, and the key costs a fraction of writing them.
+// Key is a short hash of everything Files writes from; Files is deterministic, so equal keys mean equal
+// repositories, and the key costs a fraction of writing them.
 func Key(tree *deps.Tree, ss []deps.Slice) string {
 	h := sha256.New()
 	w := bufio.NewWriterSize(h, 1<<16)
@@ -214,7 +203,6 @@ func writeDir(dir string, files map[string][]byte) error {
 	return nil
 }
 
-// Files is the repository's content: path to bytes.
 func Files(tree *deps.Tree, ss []deps.Slice) map[string][]byte {
 	r := newRepo(tree)
 
@@ -290,9 +278,8 @@ func (r *repo) name(id string) string {
 	return n
 }
 
-// shareMin is how many units of one group a slice must hold before they
-// get a filegroup of their own there: fewer are named one by one, since a
-// target per slice and group costs bazel-diff more than a few labels do.
+// shareMin is how many units of one group a slice must hold to get a filegroup of their own there: fewer
+// are named one by one, as a target per slice and group costs bazel-diff more than a few labels.
 const shareMin = 8
 
 func groupPackage(name string) string {

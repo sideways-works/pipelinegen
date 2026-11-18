@@ -1,8 +1,5 @@
-// Package buildfile reads a repository's BUILD and .bzl files without Bazel:
-// the targets they declare, what each names as its inputs, and the globs
-// they match. It errs on the side of seeing more inputs, never fewer: a
-// string that names an existing file or target counts as an input wherever
-// it appears.
+// Package buildfile reads BUILD and .bzl files without Bazel: targets, their inputs and the globs they match.
+// It errs towards more inputs, never fewer: a string naming an existing file or target counts anywhere.
 package buildfile
 
 import (
@@ -26,27 +23,23 @@ type Target struct {
 	Name  string
 	Kind  string
 	File  string
-	// Attrs holds per attribute the labels it names, canonical: targets
-	// and files of this repository (//pkg:name), and other repositories'
-	// labels (@repo//pkg:name).
+	// Attrs holds per attribute the labels it names, canonical: this repository's as //pkg:name, other
+	// repositories' as @repo//pkg:name.
 	Attrs   map[string][]string
 	Strings map[string][]string
 	// Unreadable says, per attribute, why its value can't be read
 	// statically. Such a target's inputs are unknown, not empty.
 	Unreadable map[string]string
-	// Outside are the attributes holding a name loaded from another
-	// repository's .bzl file: it covers nothing in this tree, but it may
-	// hold strings of this package nobody can read here.
+	// Outside are the attributes holding a name loaded from another repository's .bzl file: it covers nothing
+	// here, but may hold strings of this package nobody can read here.
 	Outside map[string]bool
 	// Macro is, for a call of another repository's macro, the macro as
 	// "<.bzl label>%<name>": what it reads inside can only be declared.
 	Macro string
 }
 
-// Tags are the target's tags.
 func (t *Target) Tags() []string { return t.Strings["tags"] }
 
-// Graph is every target of the repository's BUILD files.
 type Graph struct {
 	Targets  map[string]*Target
 	Files    map[string]bool
@@ -63,21 +56,18 @@ type Graph struct {
 	byPath  []string
 }
 
-// ErrParse wraps a BUILD or .bzl file that can't be read.
 var ErrParse = errors.New("build file")
 
 var notInputs = map[string]bool{"name": true, "visibility": true, "tags": true, "licenses": true, "importpath": true}
 
-// IsBuildFile tells whether a path is a BUILD file.
 func IsBuildFile(p string) bool {
 	b := path.Base(p)
 
 	return b == "BUILD" || b == "BUILD.bazel"
 }
 
-// Load reads every BUILD file among the tracked files. read returns a
-// file's content (from the work tree, or from git's index for a commit
-// hook).
+// Load reads every BUILD file among the tracked files, read giving a file's content (the work tree, or
+// git's index for a commit hook).
 func Load(files []string, read func(string) ([]byte, error)) *Graph {
 	g := &Graph{
 		Targets:  map[string]*Target{},
@@ -128,16 +118,14 @@ func Load(files []string, read func(string) ([]byte, error)) *Graph {
 	return g
 }
 
-// IgnoredRoot is, for a path in a directory Bazel ignores, the outermost
-// ignored directory holding it (what .bazelignore or ignore_directories
-// names); ok is false for a path Bazel sees.
+// IgnoredRoot is the outermost directory Bazel ignores (by .bazelignore or ignore_directories) that holds p;
+// false for a path Bazel sees.
 func (g *Graph) IgnoredRoot(p string) (string, bool) {
 	return ignoredRoot(g.ignored, p)
 }
 
-// Ignored reads which directories Bazel ignores in a tree (.bazelignore and
-// REPO.bazel's ignore_directories) and tells, for a path, the outermost
-// ignored directory holding it.
+// Ignored reads which directories Bazel ignores in a tree (.bazelignore and REPO.bazel's ignore_directories)
+// and gives, for a path, the outermost ignored directory holding it.
 func Ignored(files []string, read func(string) ([]byte, error)) func(p string) (string, bool) {
 	set := make(map[string]bool, len(files))
 	for _, f := range files {
@@ -219,9 +207,8 @@ var ignoreDirectories = regexp.MustCompile(`(?s)ignore_directories\(\s*\[(.*?)\]
 
 var quoted = regexp.MustCompile(`"([^"]*)"|'([^']*)'`)
 
-// ignoredDirs tells which directories Bazel ignores: those .bazelignore
-// lists and those REPO.bazel's ignore_directories matches, with everything
-// below; Bazel reads neither BUILD files nor sources there.
+// ignoredDirs tells which directories, everything below included, .bazelignore lists or ignore_directories
+// matches: Bazel reads neither BUILD files nor sources there.
 func ignoredDirs(files map[string]bool, read func(string) ([]byte, error)) func(dir string) bool {
 	var paths, globs []string
 
@@ -306,7 +293,6 @@ func (g *Graph) PackageOf(p string) (string, bool) {
 	}
 }
 
-// FileLabel is a tracked file's label, in its package.
 func (g *Graph) FileLabel(p string) (string, bool) {
 	pkg, ok := g.PackageOf(p)
 	if !ok {
@@ -321,7 +307,6 @@ func (g *Graph) FileLabel(p string) (string, bool) {
 	return "//" + pkg + ":" + rel, true
 }
 
-// LabelFile is the tracked file a label names, if it names one.
 func (g *Graph) LabelFile(label string) (string, bool) {
 	rest, ok := strings.CutPrefix(label, "//")
 	if !ok {
@@ -342,9 +327,8 @@ func (g *Graph) LabelFile(label string) (string, bool) {
 	return "", false
 }
 
-// Canonical turns a label written in package pkg into its canonical form,
-// //pkg:name or @repo//pkg:name. ok is false for a string that is no label
-// (a bare word, which may still name a file or target of the package).
+// Canonical turns a label written in package pkg into //pkg:name or @repo//pkg:name; false for a bare
+// word, which may still name a file or target of the package.
 func Canonical(pkg, s string) (string, bool) {
 	switch {
 	case strings.HasPrefix(s, "@@//"):
@@ -644,8 +628,8 @@ func (g *Graph) outsideMacro(file *bzlFile, call *build.CallExpr) string {
 	return l.module + "%" + l.symbol
 }
 
-// Glob is a glob in a package: its tracked files, outside its subpackages
-// and what Bazel ignores, that match an include pattern, as file labels.
+// Glob is a package's tracked files outside its subpackages and what Bazel ignores that match an include
+// pattern, as file labels.
 func (g *Graph) Glob(pkg string, include []string) []string {
 	return g.glob(pkg, include, nil)
 }
@@ -756,9 +740,8 @@ func (g *Graph) body(pkg string, file *bzlFile, stmts []build.Expr, vars env, de
 	}
 }
 
-// resolveAll fills every target's Attrs with the strings that name a target
-// or tracked file, as canonical labels. It runs once all packages are read,
-// so a bare name may refer to a target declared later.
+// resolveAll fills every target's Attrs with the strings naming a target or tracked file, canonical; it runs
+// once all packages are read, so a bare name may refer to a target declared later.
 func (g *Graph) resolveAll() {
 	for _, t := range g.Targets {
 		for attr, values := range t.Strings {
@@ -810,7 +793,6 @@ func (g *Graph) resolve(pkg, v string) (string, bool) {
 	return "", false
 }
 
-// Inputs are the labels a target names in any attribute, sorted.
 func (t *Target) Inputs() []string {
 	n := 0
 	for _, ls := range t.Attrs {

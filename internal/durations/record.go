@@ -22,9 +22,8 @@ type Reports struct {
 	// with (empty for none).
 	Param      string
 	Playwright []io.Reader
-	// PlaywrightBase is the directory, from the repository's root, that the
-	// reports' file names are relative to. Empty: found from the report's
-	// rootDir and the suite's test files.
+	// PlaywrightBase is the reports' rootDir from the repository's root; empty, it is found from the
+	// report's rootDir and the suite's test files.
 	PlaywrightBase string
 	// Seconds are test files' times measured elsewhere (a batch's journal:
 	// the wall time of each slice's parts), under Param.
@@ -38,10 +37,8 @@ type Repo struct {
 	Read  func(string) ([]byte, error)
 }
 
-// ErrRecord wraps what keeps Record from recording.
 var ErrRecord = errors.New("record durations")
 
-// Recorded is what Record made.
 type Recorded struct {
 	Path    string
 	Content []byte
@@ -50,11 +47,8 @@ type Recorded struct {
 	Unknown []string
 }
 
-// Record takes a run's reports into a suite's durations file: every test
-// file the run measured gets its new times, the others keep theirs, and
-// files that no longer exist are dropped. Go tests are mapped to their
-// files by the names the files declare, packages to directories by go.mod;
-// Playwright's spec files are taken relative to the report's root.
+// Record takes a run's reports into a suite's durations file: measured files get new times, others
+// keep theirs, and files gone are dropped. Go tests map to files by their declarations.
 func Record(cfg *config.Config, repo Repo, suite string, reports Reports) (*Recorded, error) {
 	s, ok := cfg.Suites[suite]
 
@@ -308,9 +302,8 @@ func recordPlaywright(r io.Reader, tests []string, base string) (map[string]map[
 	return out, nil
 }
 
-// playwrightBase finds the directory the report's file names are relative
-// to: the shortest tail of its rootDir (the root itself included) under
-// which its files are the suite's test files.
+// playwrightBase is the shortest tail of the report's rootDir (the root itself included) under which
+// its files are the suite's test files.
 func playwrightBase(data []byte, m map[string]map[string]float64, tests []string) (string, error) {
 	var rep struct {
 		Config struct {

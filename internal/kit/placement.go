@@ -18,9 +18,8 @@ const placementCheck = "a placement moves steps between workers and changes noth
 // it changes, a worker tag included.
 const staleHashParam = "PIPELINEGEN_PIPELINE_SHA256"
 
-// placement checks that the runner reads its placement from its own config
-// and that a placement only moves steps between workers: the pipeline
-// written with it is the one written without it but for worker tags.
+// placement checks that the runner reads its placement from its own config and that one only moves
+// steps between workers: the pipeline with it is the one without it but for worker tags.
 func (k *kit) placement(ctx context.Context, root string, placed []byte) {
 	const name = placementCheck
 

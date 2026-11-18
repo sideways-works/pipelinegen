@@ -10,8 +10,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Connector is a place the code, or its proposed changes, live: for now
-// the plain git connector, for a git server with no host API.
+// Connector is a place the code, or its proposed changes, live: for now the plain git connector,
+// for a git server with no host API.
 type Connector struct {
 	Name string `json:"name" yaml:"name"`
 
@@ -23,38 +23,34 @@ type Connector struct {
 	Links string `json:"links" yaml:"links"`
 }
 
-// ConnectorChanges selects the branches a plain git connector offers as
-// proposed changes.
+// ConnectorChanges selects the branches a plain git connector offers as proposed changes.
 type ConnectorChanges struct {
 	Branches []string `json:"branches" yaml:"branches"`
 }
 
-// The connectors a config uses by name: git under connectors, github for
-// the github section.
+// The connectors a config uses by name: git under connectors, github for the github section.
 const (
 	ConnectorGit    = "git"
 	ConnectorGitHub = "github"
 )
 
-// KindConnector is a plugins entry that pins the git or github connector.
 const KindConnector = plugin.KindConnector
 
-// ConnectorPin is a connector's release: the repository whose GitHub
-// release holds it, its version, and its binaries' checksums by platform,
-// or the checksum of the release's SHA256SUMS.
+// ConnectorPin is a connector's release: the repository whose GitHub release holds it, its
+// version, and its binaries' checksums by platform or the checksum of its SHA256SUMS.
 type ConnectorPin struct {
 	Name       string    `json:"name"`
 	Repository string    `json:"repository"`
 	Version    string    `json:"version"`
 	SHA256     Checksums `json:"sha256,omitempty"`
 	Sums       string    `json:"sums,omitempty"`
-	// URL overrides where it is fetched from; %s is replaced by the
-	// repository, the version and the file's name, in that order.
+	// URL overrides where it is fetched from; %s is replaced by the repository, the version and
+	// the file's name, in that order.
 	URL string `json:"url,omitempty"`
 }
 
-// PinnedConnectors are the connector releases a config uses unless a
-// plugins entry of kind connector by the same name pins another.
+// PinnedConnectors are the connector releases a config uses unless a plugins entry of kind
+// connector by the same name pins another.
 var PinnedConnectors = map[string]ConnectorPin{
 	ConnectorGitHub: {
 		Name: ConnectorGitHub, Repository: "sideways-works/pipelinegen-connector-github", Version: "v0.1.0",
@@ -68,8 +64,6 @@ var PinnedConnectors = map[string]ConnectorPin{
 	},
 }
 
-// ConnectorsUsed names the connectors the config runs: github for the
-// github section, git for a connector under connectors.
 func (c *Config) ConnectorsUsed() []string {
 	var out []string
 
@@ -84,8 +78,8 @@ func (c *Config) ConnectorsUsed() []string {
 	return out
 }
 
-// ConnectorPin is the release of the connector named name the config
-// runs: its plugins entry's, or the pinned one.
+// ConnectorPin is the release of the named connector the config runs: its plugins entry's, or
+// the pinned one.
 func (c *Config) ConnectorPin(name string) ConnectorPin {
 	for _, p := range c.Plugins {
 		if p.Kind != KindConnector || p.Name != name || p.Release == nil {
@@ -107,8 +101,8 @@ var connectorCapabilities = map[string][]string{
 	ConnectorGit: {plugin.CapChanges},
 }
 
-// CodeConnector is the connector the code and its proposed changes come
-// from: the first one; nil when the config names none.
+// CodeConnector is the connector the code and its proposed changes come from: the first one,
+// nil when the config names none.
 func (c *Config) CodeConnector() *Connector {
 	if len(c.Connectors) == 0 {
 		return nil
@@ -117,8 +111,6 @@ func (c *Config) CodeConnector() *Connector {
 	return &c.Connectors[0]
 }
 
-// ChangesFromConnector tells whether runs take their proposed changes from
-// a connector rather than from the github section.
 func (c *Config) ChangesFromConnector() bool {
 	cc := c.CodeConnector()
 
@@ -170,8 +162,8 @@ func (c *Config) validateConnectors(bad func(string, ...any)) {
 	c.validateChangeTriggers(bad)
 }
 
-// validateGitChanges requires the plain git connector's branch patterns:
-// without them every personal branch on the server would run.
+// validateGitChanges requires the plain git connector's branch patterns: without them every
+// personal branch on the server would run.
 func (c *Config) validateGitChanges(where string, cn Connector, bad func(string, ...any)) {
 	if len(cn.Changes.Branches) == 0 {
 		bad(`%s: changes.branches is required: the branches that are proposed changes, e.g. changes: {branches: ["review/*"]}`, where)
@@ -184,9 +176,8 @@ func (c *Config) validateGitChanges(where string, cn Connector, bad func(string,
 	}
 }
 
-// validateChangeTriggers fails a filter, comment or status the code
-// connector has no capability for: the run would otherwise test changes it
-// means to skip, or report nowhere.
+// validateChangeTriggers fails a filter, comment or status the code connector can't do: the run
+// would test changes it means to skip, or report nowhere.
 func (c *Config) validateChangeTriggers(bad func(string, ...any)) {
 	cc := c.CodeConnector()
 	if cc == nil {

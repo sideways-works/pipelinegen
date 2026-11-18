@@ -20,10 +20,8 @@ var ErrNoMerge = errors.New("does not merge cleanly")
 // clone of it carries the commit along.
 const treeRef = "refs/pipelinegen/tree"
 
-// Merge makes the commit a pull request is tested as: head merged into the
-// target's tip, made the same way every time (the same parents, tree,
-// message, author and dates), so the planning job and every suite job get
-// the same commit id.
+// Merge makes the commit a pull request is tested as, head merged into the target's tip, with fixed
+// parents, tree, message, author and dates, so the planning job and every suite job get one id.
 func Merge(ctx context.Context, repo, head, into string) (string, error) {
 	tree, err := git(ctx, repo, "merge-tree", "--write-tree", into, head)
 	if err != nil {
@@ -64,10 +62,8 @@ type Auth struct {
 // GitHubScope is where a GitHub repository's token goes: its git host.
 const GitHubScope = "https://github.com/"
 
-// tokenEnv authenticates git with a token the way git over HTTPS takes one
-// on GitHub and the hosts that follow it: basic auth with the token as the
-// password. The token travels in the environment, never in a command's
-// arguments, where other processes could read it, and only to the scope.
+// tokenEnv gives git the token as basic auth's password, as GitHub takes it, through the environment
+// (never arguments, which other processes can read) and only to the scope.
 func tokenEnv(a Auth) []string {
 	if a.Token == "" || a.Scope == "" {
 		return a.Env
@@ -87,13 +83,11 @@ func tokenEnv(a Auth) []string {
 	}, a.Env...)
 }
 
-// AuthEnv is git's environment for a, as the fetches here use it: the
-// token as a header scoped to its URL, and the ssh command.
+// AuthEnv is git's environment for a: the token as a header scoped to its URL, and the ssh command.
 func AuthEnv(a Auth) []string { return tokenEnv(a) }
 
-// OriginScope is the URL of repo's origin as the scope of its token: an
-// HTTPS URL without a user or password, or "" for any other (a git:// or
-// file remote needs no token).
+// OriginScope is repo's origin as its token's scope: an HTTPS URL without a user or password, or ""
+// for any other (a git:// or file remote needs no token).
 func OriginScope(ctx context.Context, repo string) string {
 	out, err := git(ctx, repo, "remote", "get-url", "origin")
 	if err != nil {
@@ -123,8 +117,7 @@ func BranchTip(ctx context.Context, remote, branch string, auth Auth) (string, e
 	return strings.TrimSpace(sha), nil
 }
 
-// Branches lists a remote's branches and the commit each points at, with
-// git's extra environment env (the remote's credential, an ssh command):
+// Branches lists a remote's branches and their commits, with env (credential, ssh command) added:
 // what a plain git connector picks its changes from.
 func Branches(ctx context.Context, remote string, env []string) (map[string]string, error) {
 	out, err := gitEnv(ctx, "", env, "ls-remote", "--heads", "--", remote)
@@ -144,14 +137,10 @@ func Branches(ctx context.Context, remote string, env []string) (map[string]stri
 	return heads, nil
 }
 
-// ErrNoBranch is a branch the remote doesn't have.
 var ErrNoBranch = errors.New("no such branch on the remote")
 
-// FetchTip reads a branch's tip from repo's origin and makes sure repo
-// has that commit, with the token when one is given. The tip comes from
-// the remote's answer, never from FETCH_HEAD, a file every fetch in the
-// same checkout rewrites: another step fetching there at the same moment
-// can't change it.
+// FetchTip reads a branch's tip from repo's origin and fetches it; the tip is the remote's answer,
+// never FETCH_HEAD, which another step fetching in the same checkout may rewrite meanwhile.
 func FetchTip(ctx context.Context, repo, branch string, auth Auth) (string, error) {
 	out, err := gitEnv(ctx, repo, tokenEnv(auth), "ls-remote", "--", "origin", "refs/heads/"+branch)
 	if err != nil {
@@ -179,7 +168,6 @@ func FetchTip(ctx context.Context, repo, branch string, auth Auth) (string, erro
 	return tip, nil
 }
 
-// FetchCommit makes sure repo has commit, fetching it from origin when not.
 func FetchCommit(ctx context.Context, repo, commit string, auth Auth) error {
 	if _, err := git(ctx, repo, "cat-file", "-e", commit+"^{commit}"); err == nil {
 		return nil

@@ -106,8 +106,8 @@ func fakes(kind string) map[string]plugin.Handler {
 					return nil, err
 				}
 
-				// a plugin that walks the tree or maps coverage back to it
-				// sees nothing through a symlinked root
+				// a plugin that walks the tree or maps coverage back to it sees nothing through a
+				// symlinked root
 				if resolved, err := filepath.EvalSymlinks(req.Tree); err != nil || resolved != req.Tree {
 					return nil, fmt.Errorf("units: %w: %s", errSymlinkedTree, req.Tree)
 				}
@@ -124,17 +124,15 @@ func fakes(kind string) map[string]plugin.Handler {
 					id := "t:" + strings.TrimPrefix(p, "texts/")
 					a.Units = append(a.Units, plugin.Unit{ID: id, File: p, Digest: hex.EncodeToString(sum[:4])})
 
-					// a text that starts "api " has an api unit, whose digest
-					// is its first line alone, as a package's declarations
-					// without their bodies
+					// a text that starts "api " has an api unit digesting its first line alone, as a
+					// package's declarations without their bodies
 					if first, _, _ := strings.Cut(string(data), "\n"); strings.HasPrefix(first, "api ") {
 						api := sha256.Sum256([]byte(first))
 						a.Units = append(a.Units, plugin.Unit{ID: id + "#api", File: p, Digest: hex.EncodeToString(api[:4])})
 					}
 
-					// a text saying "whole" is covered whole by its units;
-					// a.txt also when b.txt says "whole too", a file its
-					// answer doesn't name
+					// a text saying "whole" is covered whole by its units; a.txt also when b.txt says
+					// "whole too", a file its answer doesn't name
 					other, _ := os.ReadFile(filepath.Join(req.Tree, "texts/b.txt")) //nolint:errcheck // a missing file reads empty
 					if strings.Contains(string(data), "whole") || p == "texts/a.txt" && strings.Contains(string(other), "whole too") {
 						a.Complete = append(a.Complete, p)
@@ -326,11 +324,8 @@ func fakes(kind string) map[string]plugin.Handler {
 	case "overlap":
 		return overlapping()
 	case "chain", "chainout", "chainabsent":
-		// a correlator that claims texts/a.txt alone and reads along a
-		// chain of references, a.txt names the file it reads, which names
-		// a third: the set declares all three as its inputs, and its link
-		// goes to what the third file says. chainout also declares a path
-		// above the tree; chainabsent a config it probed and didn't find.
+		// claims a.txt alone and reads along a chain of references, declaring all three files as
+		// inputs; chainout also declares a path above the tree, chainabsent a config not found
 		return map[string]plugin.Handler{
 			plugin.CallDescribe: describe(plugin.Description{
 				Kind: plugin.KindCorrelator, Name: "uses",
@@ -391,8 +386,7 @@ func fakes(kind string) map[string]plugin.Handler {
 			},
 		}
 	case "setdigest":
-		// a correlator that says, in a.txt's set, that a's content derives
-		// from b's
+		// a correlator that says, in a.txt's set, that a's content derives from b's
 		return map[string]plugin.Handler{
 			plugin.CallDescribe: describe(plugin.Description{
 				Kind: plugin.KindCorrelator, Name: "uses",
@@ -424,8 +418,8 @@ func fakes(kind string) map[string]plugin.Handler {
 			},
 		}
 	case "rest":
-		// links in sets, and, once the tree holds rest-on, one outside them
-		// too; every call's paths go to FAKE_LOG, one line per call
+		// links in sets and, once the tree holds rest-on, one outside them; every call's paths go
+		// to FAKE_LOG, a line per call
 		return map[string]plugin.Handler{
 			plugin.CallDescribe: describe(plugin.Description{
 				Kind: plugin.KindCorrelator, Name: "uses",
@@ -456,8 +450,8 @@ func fakes(kind string) map[string]plugin.Handler {
 			},
 		}
 	case "typechecks":
-		// a correlator that can't type-check what a.txt says, as a
-		// language's correlator can't for a package that doesn't build
+		// a correlator that can't type-check what a.txt says, as a language's correlator can't for
+		// a package that doesn't build
 		return map[string]plugin.Handler{
 			plugin.CallDescribe: describe(plugin.Description{
 				Kind: plugin.KindCorrelator, Name: "uses",

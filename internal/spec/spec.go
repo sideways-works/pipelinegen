@@ -1,5 +1,4 @@
-// Package spec turns a config into the spec a runner plugin gets: the runs
-// and suites as the core reads them, with defaults applied and per-run
+// Package spec turns a config into the spec a runner plugin gets: defaults applied and per-run
 // values worked out, so a runner needs no copy of the config's rules.
 package spec
 
@@ -18,25 +17,23 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// ErrSpec wraps a config a spec can't be made from.
 var ErrSpec = errors.New("spec")
 
-// From makes the spec of a config whose root pipeline file isn't at hand:
-// it names no cached image.
+// From makes the spec of a config whose root pipeline file isn't at hand: it names no cached
+// image.
 func From(cfg *config.Config) (plugin.Spec, error) { return FromInclude(cfg, nil) }
 
-// FromInclude makes the spec of a config; include is the root pipeline
-// file's text (concourse.include), whose registry-image resources are the
-// bases of the cached images.
+// FromInclude makes the spec of a config; include is the root pipeline file's text, whose
+// registry-image resources are the cached images' bases.
 func FromInclude(cfg *config.Config, include []byte) (plugin.Spec, error) {
-	// only a pipeline links to Concourse: no other command needs its
-	// address, so a missing one fails here and nowhere else
+	// only a pipeline links to Concourse: no other command needs its address, so a missing one
+	// fails here and nowhere else
 	if len(cfg.Runs) > 0 && cfg.Concourse.URL == "" {
 		return plugin.Spec{}, fmt.Errorf("%w: concourse needs its url: concourse.url, or %s in the environment", ErrSpec, config.EnvConcourseURL)
 	}
 
-	// a config may declare runs before it names their remote and CI
-	// system; only a pipeline needs them
+	// a config may declare runs before it names their remote and CI system; only a pipeline needs
+	// them
 	if err := cfg.ValidatePipeline(); err != nil {
 		return plugin.Spec{}, fmt.Errorf("%w: %w", ErrSpec, err)
 	}
@@ -203,11 +200,10 @@ func tools(cfg *config.Config) []plugin.SpecTool {
 		out = append(out, t)
 	}
 
-	// the connectors the config uses without an entry of its own, so the
-	// bootstrap fetches them with the pipeline's read token
+	// the connectors the config uses without an entry of its own, so the bootstrap fetches them
+	// with the pipeline's read token
 	for _, name := range cfg.ConnectorsUsed() {
-		// an entry by its name, of any kind, has the plugins directory's
-		// file of that name
+		// an entry by its name, of any kind, has the plugins directory's file of that name
 		if slices.ContainsFunc(cfg.Plugins, func(p config.Plugin) bool { return p.Name == name }) {
 			continue
 		}
@@ -235,8 +231,8 @@ func asMap(v any) (map[string]any, error) {
 	return m, nil
 }
 
-// withPackages adds what the steps need installed, and the cached images
-// that bring it, one build per key.
+// withPackages adds what the steps need installed, and the cached images that bring it, one build
+// per key.
 func withPackages(s *plugin.Spec, cfg *config.Config, include []byte) {
 	if ps := cfg.Concourse.Planner.Packages; len(ps) > 0 {
 		s.PlannerPackages = &plugin.SpecPackages{Names: packages.Names(ps), Install: packages.Script(ps)}

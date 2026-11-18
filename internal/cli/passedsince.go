@@ -35,9 +35,8 @@ type reached struct {
 	slices       map[string]bool
 }
 
-// passedSinceBase compares each slice of a branch's last_passed run from the newer of the run's base and
-// the newest commit since at which it passed in this run, for the newest passedSinceBases such commits.
-// Anything it can't tell keeps the run's base; the notes say why for the plan's warnings.
+// passedSinceBase compares each slice from the newer of the run's base and the newest commit at which it
+// passed since; anything it can't tell keeps the run's base, with a note for the plan's warnings.
 func passedSinceBase(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, base, head, cache, bdPath string) (*affected.Rebase, []string) {
 	run := cfg.Runs[ch.Run]
 	offAt := plugins.CoreOffAt(plugins.NarrowPassedSince)

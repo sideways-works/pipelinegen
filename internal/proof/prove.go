@@ -246,10 +246,8 @@ func (p *planner) on(ctx context.Context, setting, change string) (string, error
 	return branch, nil
 }
 
-// person is how the proof's plans run: as a person's commands on the
-// fixture, not steps of a pipeline, so without PIPELINEGEN_JOB_URL. With
-// it, bazelisk's downloads would go into each cache and a plan would read
-// the environment a pipeline's step has, not the one the tables describe.
+// person runs the proof's plans as a person's commands, without PIPELINEGEN_JOB_URL: with it bazelisk's
+// downloads would go into each cache and a plan would read a pipeline step's environment.
 func (p *planner) person() []string { return unsetEnv(p.env, "PIPELINEGEN_JOB_URL") }
 
 func (p *planner) toFiles(ctx context.Context, outFile, errFile string, name string, args ...string) (int, error) {
@@ -339,9 +337,8 @@ func (p *planner) plan(ctx context.Context, label, base, head string, why bool) 
 	return writeFile(out+".why", text.String())
 }
 
-// walkplan plans the same by the walk on a cache of its own, so neither tool
-// reads what the other stored, and records whether it selects and leaves out
-// what the plan did.
+// walkplan plans the same by the walk on a cache of its own, so neither tool reads what the other stored,
+// and records whether it selects and leaves out what the plan did.
 func (p *planner) walkplan(ctx context.Context, label, base, head, differ string) error {
 	out := filepath.Join(p.r.work, "plans", label)
 
@@ -473,10 +470,8 @@ func (r *run) walkverdict(label string) string {
 	return "same"
 }
 
-// expected is what each plan should select: exact:<slices>
-// (comma-separated), none, all, sample:<n>:<narrowing> (n slices, sampled
-// by that narrowing) and own+sample:<slices>:<n>:<narrowing> (those
-// slices, plus at most n sampled).
+// expected is what each plan should select: exact:<slices>, none, all, sample:<n>:<narrowing> (n sampled
+// by it), or own+sample:<slices>:<n>:<narrowing> (those, plus at most n sampled).
 func expected(label string) string {
 	c, level, _ := strings.Cut(label, "-")
 	is := func(cs ...string) bool { return slices.Contains(cs, c) }
@@ -523,9 +518,8 @@ func expected(label string) string {
 	return ""
 }
 
-// entryExpected is what a plugin's changed entry selects: below level 4 the
-// suite's sample, with the reached slices named under plugin-entry; from
-// level 4 what the entry reaches, on its own.
+// entryExpected is what a changed plugin entry selects: below level 4 the suite's sample, with the reached
+// slices named under plugin-entry; from level 4 what the entry reaches, on its own.
 func entryExpected(level string) string {
 	if level == "L4" || level == "L5" {
 		return expectAll

@@ -7,14 +7,12 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/plugins"
 )
 
-// movedCap bounds how many moved-link ends the walk compares tree by tree.
-// Past it a sampled unit stays a source: more than the forward binding
-// selects, never less.
+// movedCap bounds how many moved-link ends the walk compares tree by tree; past it a sampled unit stays
+// a source: more than the forward binding selects, never less.
 const movedCap = 64
 
-// movedTargets are the far ends of one-tree links that leave a unit the
-// suite's sample takes: the sample takes the unit out of every slice, but
-// not what its links bind there.
+// movedTargets are the far ends of one-tree links leaving a unit the sample takes: the sample takes the
+// unit out of every slice, but not what its links bind there.
 func movedTargets(l *loaded, sources []source, s sampled) []int32 {
 	var out []int32
 

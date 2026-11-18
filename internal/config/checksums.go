@@ -9,13 +9,11 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// Checksums are a release's SHA-256 by platform (linux-amd64,
-// darwin-arm64).
+// Checksums are a release's SHA-256 by platform (linux-amd64, darwin-arm64).
 type Checksums map[string]string
 
 const anyPlatform = "*"
 
-// The platforms releases are built for.
 const (
 	LinuxAMD64  = "linux-amd64"
 	LinuxARM64  = "linux-arm64"
@@ -28,8 +26,7 @@ var (
 	errChecksums = errors.New("a checksum, or one per platform")
 )
 
-// UnmarshalYAML takes one checksum, for whichever platform runs it, or a
-// mapping by platform.
+// UnmarshalYAML takes one checksum, for whichever platform runs it, or a mapping by platform.
 func (c *Checksums) UnmarshalYAML(n *yaml.Node) error {
 	if n.Kind == yaml.ScalarNode {
 		*c = Checksums{anyPlatform: n.Value}
@@ -51,7 +48,6 @@ func (c *Checksums) UnmarshalYAML(n *yaml.Node) error {
 	return nil
 }
 
-// MarshalYAML writes one checksum back as the string it was.
 func (c Checksums) MarshalYAML() (any, error) {
 	if sum, ok := c[anyPlatform]; ok && len(c) == 1 {
 		return sum, nil
@@ -63,7 +59,6 @@ func (c Checksums) MarshalYAML() (any, error) {
 // Platform is the platform this program runs on, as checksums name it.
 func Platform() string { return runtime.GOOS + "-" + runtime.GOARCH }
 
-// For is the checksum for a platform, if the release has one.
 func (c Checksums) For(platform string) (string, bool) {
 	if sum, ok := c[platform]; ok {
 		return sum, true

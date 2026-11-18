@@ -144,8 +144,8 @@ func (w *wideGraphs) extraWithin(g *linkGraph, d *deps.Slice, n string, depth in
 			continue
 		}
 
-		// both lists are walked in turn: appending one to the other could
-		// write into the link graph's own arrays
+		// both lists are walked in turn: appending one to the other could write into the link
+		// graph's own arrays
 		for _, next := range [][]string{g.forward[it.id], w.forward[n][it.id]} {
 			for _, to := range next {
 				push(to, it.back, true)

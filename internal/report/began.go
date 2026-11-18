@@ -10,19 +10,15 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 )
 
-// A suite build's start record is written as soon as the plan selected
-// something of the suite, before the build's first batch, so whatever asks
-// whether a suite of the run began sees the build from its start. Each start
-// overwrites the last.
+// A suite build's start record is written once the plan selected something of the suite, before its
+// first batch, so whatever asks whether a suite began sees the build from its start.
 const (
 	beganDir  = "_began/"
 	beganFile = "began.json"
 )
 
-// BeganRef is the start record of a suite of the run.
 func (id ID) BeganRef(suite string) string { return id.Prefix() + beganDir + suite }
 
-// Began is what a suite build's start record holds.
 type Began struct {
 	Suite  string    `json:"suite"`
 	At     time.Time `json:"at"`

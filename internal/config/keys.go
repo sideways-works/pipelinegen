@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-// KeyDoc describes one key of the config file for the reference.
 type KeyDoc struct {
 	Path    string
 	Type    string
@@ -48,8 +47,7 @@ var defaults = map[string]string{
 	"bazel_diff.sha256":                              "the pinned release's, for linux-amd64, linux-arm64 and darwin-arm64",
 }
 
-// Pinned is the bazel-diff release the config defaults to; it is checked
-// under Bazel 9.2.0.
+// Pinned is the bazel-diff release the config defaults to, checked under Bazel 9.2.0.
 var Pinned = BazelDiff{
 	Version: "v67.0.3",
 	// the release publishes no checksum list, and no build for Intel Macs

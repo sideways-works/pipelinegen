@@ -14,7 +14,6 @@ import (
 	"strconv"
 )
 
-// Version is the file format's version.
 const Version = 1
 
 // Plain is the parameter key of a suite run without parameter sets.
@@ -29,7 +28,6 @@ type File struct {
 // ErrFormat wraps a durations file or a test report that can't be read.
 var ErrFormat = errors.New("durations")
 
-// New returns an empty durations file.
 func New() *File {
 	return &File{Files: map[string]map[string]float64{}}
 }
@@ -86,9 +84,8 @@ func Parse(data []byte) (*File, error) {
 	return f, nil
 }
 
-// Marshal writes the file one test file per line, sorted, so a run's update
-// shows as a small diff. A file timed without parameter sets is a plain
-// number.
+// Marshal writes one test file per line, sorted, so a run's update shows as a small diff; a file
+// timed without parameter sets is a plain number.
 func (f *File) Marshal() []byte {
 	var b bytes.Buffer
 
@@ -147,7 +144,6 @@ func (f *File) Marshal() []byte {
 	return b.Bytes()
 }
 
-// Write writes the file to path.
 func (f *File) Write(path string) error {
 	if err := os.WriteFile(path, f.Marshal(), 0o644); err != nil { //nolint:gosec // a checked-in file, readable by all
 		return fmt.Errorf("write durations: %w", err)
@@ -194,10 +190,8 @@ func (f *File) Seconds(file string, params []string) (secs float64, ok bool) {
 	return secs, ok
 }
 
-// Update takes a run's measured times: a measured file's parameter sets
-// get their new values and keep the others; files the run didn't measure
-// keep theirs. When exists is not nil, files it doesn't hold are dropped,
-// since they were deleted.
+// Update takes a run's measured times: measured parameter sets get new values, the rest keep theirs;
+// with exists set, files it doesn't hold were deleted and are dropped.
 func (f *File) Update(measured map[string]map[string]float64, exists func(string) bool) {
 	for file, per := range measured {
 		if f.Files[file] == nil {

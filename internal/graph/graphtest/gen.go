@@ -40,7 +40,6 @@ type Params struct {
 	CorrelatorEnds           int
 }
 
-// The plugins a generated pair names.
 const (
 	SBOMName       = "syn-sbom"
 	CorrelatorName = "syn-correlator"

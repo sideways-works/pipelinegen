@@ -1,14 +1,5 @@
-// Package release builds and publishes a release of pipelinegen or of one of
-// its plugins.
-//
-// A release is made only from a commit a run of every test passed on, which
-// Tested reads from the commit's statuses. Build takes the tagged commit
-// from git, builds it twice in fresh directories and fails unless both give
-// the same bytes: static binaries per platform for a Go module or
-// dist/NAME.mjs for a Node package, the files the repository names for its
-// release, plugin.json for a plugin, LICENSE, NOTICE and SHA256SUMS. A tag
-// vX.Y.Z-rc.N is published as a prerelease, and a release that exists is
-// never changed.
+// Package release builds, twice and byte for byte alike, and publishes a release of pipelinegen or a plugin,
+// only from a commit a run of every test passed on; a published release is never changed.
 package release
 
 import (
@@ -37,7 +28,6 @@ var versionTag = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$`)
 
 var candidate = regexp.MustCompile(`-rc\.[0-9]+$`)
 
-// IO is where a release's commands write.
 type IO struct {
 	Stdout, Stderr io.Writer
 }
@@ -229,9 +219,8 @@ func Tested(ctx context.Context, o IO, repo, commit string, contexts []string) e
 	return refuse("no run of every test passed on %s (%s): run one before releasing it", commit, strings.Join(contexts, " "))
 }
 
-// Publish attaches out's files to the tag's GitHub release of repo
-// (owner/name). A release that exists is never changed: publishing
-// succeeds when it holds exactly this build and fails when it doesn't.
+// Publish attaches out's files to the tag's GitHub release of repo (owner/name); an existing release is never
+// changed: publishing succeeds when it holds exactly this build and fails when it doesn't.
 func Publish(ctx context.Context, o IO, repo, tag, out string) error {
 	out, err := filepath.Abs(out)
 	if err != nil {

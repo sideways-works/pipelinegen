@@ -1,6 +1,5 @@
-// Package graph plans a change outward: it finds the units that changed
-// between two trees and walks backwards from them to the slices that bind
-// them. docs/internals/graph.md is the contract it keeps.
+// Package graph plans a change outward: from the units that changed between two trees it walks back to
+// the slices that bind them, keeping the contract in docs/internals/graph.md.
 package graph
 
 import (
@@ -13,9 +12,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// The link kinds the walk reads from deps.Tree.Typed. A link in
-// deps.Tree.Links, or of an unknown typed kind, is a plain link, the widest
-// reading.
+// The link kinds the walk reads from deps.Tree.Typed; one in deps.Tree.Links, or of an unknown typed
+// kind, is a plain link, the widest reading.
 const (
 	// KindFollow binds its target and expands it.
 	KindFollow = plugin.LinkFollow
@@ -41,7 +39,6 @@ const (
 	Dependents = plugins.Dependents
 )
 
-// Key names one slice in one width.
 type Key struct {
 	Suite, Name, Width string
 }
@@ -82,14 +79,12 @@ type Node struct {
 	Label, File, Plugin string
 }
 
-// Plugin is what the walk needs to know of a configured plugin.
 type Plugin struct {
 	Name       string
 	SBOM       bool
 	Namespaces []string
 }
 
-// Options say what the walk walks under.
 type Options struct {
 	Plugins []Plugin
 	// On tells whether a narrowing is in force at the plan's level.
@@ -101,7 +96,6 @@ type Options struct {
 	Observes func(suite, correlator string) bool
 }
 
-// Selection is the walk's answer.
 type Selection struct {
 	// Selected are the selected slices, each with up to Options.Paths
 	// shortest paths in a fixed order.
@@ -137,7 +131,6 @@ func (s *Selection) Hits(suite, width string) []Hit {
 	return out
 }
 
-// ErrGraph wraps what can't be loaded or walked.
 var ErrGraph = errors.New("graph")
 
 // Change is a unit or core node that differs between the trees, and how (a
@@ -162,9 +155,8 @@ func Changed(b, h *deps.Tree, ss []plugins.BindSlice, width string, o Options) (
 	return ch.list(l), nil
 }
 
-// Select walks backwards from what changed between base and head and answers
-// which slices bind a changed node in each width, with one walk per width,
-// linear in the links reached.
+// Select walks back from what changed between base and head to the slices binding a changed node in
+// each width, one walk per width, linear in the links reached.
 func Select(_ context.Context, b, h *deps.Tree, slices []plugins.BindSlice, widths []string, o Options) (*Selection, error) {
 	l := load(b, h)
 	sel := selectAll(l, slices, widths, o)

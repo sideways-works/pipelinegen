@@ -272,9 +272,8 @@ func TestAMarkNobodyTakesTimesOut(t *testing.T) {
 	}
 }
 
-// scripted is a driver that marks and ends as its script says, line by
-// line ("start a", "stop a", "end a", "fail a"), keeping each mark's
-// answer.
+// scripted is a driver that marks and ends as its script says, line by line ("start a", "stop a",
+// "end a", "fail a"), keeping each mark's answer.
 type scripted struct {
 	fake
 

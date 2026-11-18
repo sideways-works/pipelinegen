@@ -1,5 +1,5 @@
-// Package gotests reads the names of the tests a Go test file declares, so
-// a task can run one slice's tests by name from one compiled test binary.
+// Package gotests reads the names of the tests a Go test file declares, so a task can run one
+// slice's tests by name from one compiled test binary.
 package gotests
 
 import (
@@ -13,9 +13,8 @@ import (
 	"unicode/utf8"
 )
 
-// Names are the top-level functions of a Go test file that `go test -run`
-// matches: tests, fuzz targets and examples, sorted. TestMain runs for every
-// test and is no test of its own; benchmarks only run with -bench.
+// Names are the functions of a Go test file `go test -run` matches (tests, fuzz targets and
+// examples), sorted; TestMain is no test, and benchmarks run only with -bench.
 func Names(path string, src []byte) ([]string, error) {
 	f, err := parser.ParseFile(token.NewFileSet(), path, src, parser.SkipObjectResolution)
 	if err != nil {
@@ -42,8 +41,8 @@ func Names(path string, src []byte) ([]string, error) {
 	return out, nil
 }
 
-// isTest is go test's own rule: the prefix, then nothing or a character
-// that is not a lower-case letter (TestOrders, Test, but not Testify).
+// isTest is go test's own rule: the prefix, then nothing or a character that is not a lower-case
+// letter (TestOrders, Test, but not Testify).
 func isTest(name, prefix string) bool {
 	rest, ok := strings.CutPrefix(name, prefix)
 	if !ok {
@@ -59,7 +58,6 @@ func isTest(name, prefix string) bool {
 	return !unicode.IsLower(r)
 }
 
-// ByFile reads the names of every given file.
 func ByFile(paths []string, read func(string) ([]byte, error)) (map[string][]string, error) {
 	out := make(map[string][]string, len(paths))
 
@@ -77,8 +75,8 @@ func ByFile(paths []string, read func(string) ([]byte, error)) (map[string][]str
 	return out, nil
 }
 
-// FileOf inverts ByFile's result: the file declaring each test, as
-// durations.GoFiles takes it to turn `go test -json` times into file times.
+// FileOf inverts ByFile: the file declaring each test, as durations.GoFiles takes it to turn
+// `go test -json` times into file times.
 func FileOf(byFile map[string][]string) map[string]string {
 	out := map[string]string{}
 

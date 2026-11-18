@@ -569,9 +569,8 @@ func narrowedCases(t *testing.T, group int) {
 						return slices.Contains(c.pairOnly[fmt.Sprintf("%d>%d", lo, hi)], name)
 					})
 
-					// level 5 also follows dependents, which no narrowing
-					// records: against it a plan following executed names
-					// a part of what it adds.
+					// level 5 also follows dependents, which no narrowing records: against it a plan
+					// following executed names a part of what it adds.
 					exact := follow != ex || hi < 5
 					if exact && !slices.Equal(named, added) || !exact && !subset(named, added) {
 						t.Errorf("%s: level %d names %v as left out by narrowings off up to %d, which selects %v more (records %+v)", name, lo, named, hi, added, plans[lo].Narrowed)

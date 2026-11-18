@@ -7,9 +7,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/plugins"
 )
 
-// untoldSBOM is an sbom that couldn't tell about files in a tree, one of
-// whose file units changed: a recorded slice that reaches its namespaces or
-// owns one of its files depends on those files.
+// untoldSBOM is an sbom that couldn't tell about files in a tree, one of whose file units changed: a
+// recorded slice reaching its namespaces or owning one of its files depends on those files.
 type untoldSBOM struct {
 	name  string
 	files []string

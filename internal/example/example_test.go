@@ -1,5 +1,5 @@
-// Package example_test checks that the example repository in example/ plans
-// the way its comments and the documentation say.
+// Package example_test checks that the example repository in example/ plans the way its comments
+// and the documentation say.
 package example_test
 
 import (
@@ -248,8 +248,8 @@ func changes(t *testing.T) []change {
 			want: map[string][]string{"unit": {"text/upper_test.sh"}},
 		},
 		{
-			// By the graph alone, both test files that run against the
-			// server; once the smoke suite has recordings, only count.
+			// by the graph alone, both test files that run against the server; once the smoke suite
+			// has recordings, only count
 			name: "the Go server runs the smoke test files",
 			edit: func(r *testrepo.Repo) {
 				replace(t, r, "words/words.go", "return len(strings.Fields(s))", "n := len(strings.Fields(s))\n\n\treturn n")
@@ -371,8 +371,8 @@ func TestExampleAffected(t *testing.T) {
 		}
 	}
 
-	// The plan depends on the two commits alone: planned again from
-	// nothing (a new cache and work tree), it is the same to the byte.
+	// the plan depends on the two commits alone: planned again from nothing (a new cache and work
+	// tree), it is the same to the byte
 	again := t.TempDir()
 	testrepo.Bazel(t, filepath.Join(again, "tree"))
 

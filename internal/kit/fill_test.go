@@ -10,9 +10,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// fillFakes is an sbom that declares how to fill its module cache: with a
-// program that fills it once (fill), one that adds to it every time
-// (fill-dirty), or a fill the core would never run (fill-bad).
+// fillFakes is an sbom whose fill fills its module cache once (fill), adds to it every time
+// (fill-dirty), or is one the core would never run (fill-bad).
 func fillFakes(kind string) map[string]plugin.Handler {
 	f := plugin.Fill{Files: []string{"go.mod"}, Run: []string{"kitfill"}}
 

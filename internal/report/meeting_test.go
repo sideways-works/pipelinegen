@@ -13,9 +13,8 @@ import (
 
 var errNotRecorded = errors.New("not recorded as passed")
 
-// busyRemote is a bare remote whose pre-receive hook refuses the first
-// push of every writer (told apart by the first ref it pushes), as a host
-// busy with another push to the same repository does.
+// busyRemote is a bare remote whose pre-receive hook refuses the first push of every writer (told
+// apart by its first ref), as a host busy with another push to the same repository does.
 func busyRemote(t *testing.T) string {
 	t.Helper()
 

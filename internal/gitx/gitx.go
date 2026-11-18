@@ -14,21 +14,18 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// Repo is a git repository on disk.
 type Repo struct {
 	Dir string
 }
 
-// ErrGit wraps a git command that failed.
 var ErrGit = errors.New("git")
 
-// Git runs git in the repository and returns what it printed.
 func (r Repo) Git(ctx context.Context, args ...string) (string, error) {
 	return r.run(ctx, args...)
 }
 
-// run runs git and returns its stdout. An exit status 1 is returned as
-// exitOne, for the commands that answer yes or no with it.
+// run runs git and returns its stdout; an exit status 1 is returned as exitOne, for the commands
+// that answer yes or no with it.
 func (r Repo) run(ctx context.Context, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // git with pipelinegen's own arguments
 	cmd.Dir = r.Dir
@@ -64,8 +61,7 @@ func (r Repo) owns(ctx context.Context, dir string) bool {
 	return err == nil && strings.TrimSpace(theirs) == strings.TrimSpace(ours)
 }
 
-// Show returns a file's content at a commit, and false when the commit has
-// no such file.
+// Show returns a file's content at a commit, and false when the commit has no such file.
 func (r Repo) Show(ctx context.Context, commit, path string) ([]byte, bool, error) {
 	if _, err := r.run(ctx, "cat-file", "-e", commit+":"+path); err != nil {
 		if errors.Is(err, errExitOne) || strings.Contains(err.Error(), "exit status 128") {
@@ -83,8 +79,7 @@ func (r Repo) Show(ctx context.Context, commit, path string) ([]byte, bool, erro
 	return []byte(out), true, nil
 }
 
-// Resolve returns the full commit id of rev, and false when there is no
-// such commit.
+// Resolve returns the full commit id of rev, and false when there is no such commit.
 func (r Repo) Resolve(ctx context.Context, rev string) (string, bool, error) {
 	out, err := r.run(ctx, "rev-parse", "--verify", "--quiet", "--end-of-options", rev+"^{commit}")
 	if errors.Is(err, errExitOne) {
@@ -112,15 +107,14 @@ func (r Repo) IsAncestor(ctx context.Context, a, b string) (bool, error) {
 	}
 }
 
-// Change is one changed path between two commits. A rename shows as the old
-// path deleted and the new one added.
+// Change is one changed path between two commits; a rename shows as the old path deleted and the
+// new one added.
 type Change struct {
 	Path string
 	// Status is git's letter: A added, M modified, D deleted, T type changed.
 	Status string
 }
 
-// Diff lists the paths that differ between two commits.
 func (r Repo) Diff(ctx context.Context, base, head string) ([]Change, error) {
 	out, err := r.run(ctx, "diff", "--name-status", "--no-renames", "-z", base, head, "--")
 	if err != nil {
@@ -144,13 +138,11 @@ func (r Repo) Diff(ctx context.Context, base, head string) ([]Change, error) {
 	return changes, nil
 }
 
-// Checkout puts commit into dir, a worktree of r made on first use and
-// reused afterwards, so that a tool keeping state per directory (Bazel's
-// output base) finds it again. Anything left in dir that git doesn't track
-// is removed, except what .gitignore names.
+// Checkout puts commit into dir, a worktree of r reused across calls so per-directory state
+// (Bazel's output base) persists; untracked files are removed except what .gitignore names.
 func (r Repo) Checkout(ctx context.Context, dir, commit string) error {
-	// a work tree kept in a cache may belong to a checkout that is gone (a
-	// CI system mounts each build's input at a new path): start it afresh
+	// a work tree kept in a cache may belong to a checkout that is gone (a CI system mounts each
+	// build's input at a new path): start it afresh
 	if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil && !r.owns(ctx, dir) {
 		if err := os.RemoveAll(dir); err != nil {
 			return fmt.Errorf("checkout: %w", err)

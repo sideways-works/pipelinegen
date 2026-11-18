@@ -9,9 +9,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitx"
 )
 
-// AloneReason is the reason of a slice bound to nothing but its own file:
-// what the file imports reaches it through nothing, so it runs on every
-// change until the config binds it.
+// AloneReason is a slice bound to nothing but its own file: what the file imports reaches it
+// through nothing, so it runs on every change until the config binds it.
 const AloneReason = "nothing binds it but its own file (no owner target, no Bazel target holding the file, " +
 	"no extra_deps entry, no pipelinegen:data line), so a change to what it imports would select nothing; " +
 	"it runs on every change until the config binds it"

@@ -29,31 +29,23 @@ type Attach struct {
 	// CannotTell are the run's slices that a correlator couldn't tell:
 	// their lists stay as they are, marked until a run tells them.
 	CannotTell Marks
-	// Trusted says the run was not a proposed change's, by the trusted
-	// config: only then may its recordings shrink a list (Shrinkable),
-	// tell a marked slice, or make a list for a slice that had none.
-	// Anything else only adds units to lists that exist.
+	// Trusted says the run was not a proposed change's: only then may its recordings shrink a list,
+	// tell a marked slice, or make a list; anything else only adds units to lists that exist.
 	Trusted bool
 	Walk    int
-	// Shrinkable are the slice keys whose recording may replace their
-	// list: slices that passed in a run that selected every slice. Every
-	// other recording only adds to its list.
+	// Shrinkable are the slice keys whose recording may replace their list: slices that passed in a
+	// run that selected every slice. Every other recording only adds to its list.
 	Shrinkable map[string]bool
-	// Whole are the slice keys whose recording is whole: slices that passed.
-	// Only such a recording makes a list or tells a marked slice: a failed
-	// slice may have stopped part way, and a list of what it reached would
-	// narrow it to less than it runs.
+	// Whole are the slices that passed: only their recording makes a list or tells a marked slice,
+	// since a failed slice may have stopped part way and would narrow it to less than it runs.
 	Whole map[string]bool
-	// SuitesPassed, when set, names the suites every selected slice of which
-	// passed: only their setup list may shrink, since a suite with a slice
-	// that failed or never ran may have had a batch whose setup the run
-	// never saw. Nil judges by the recordings alone.
+	// SuitesPassed names the suites whose every selected slice passed, the only ones whose setup list
+	// may shrink: another may have had a batch whose setup the run never saw. Nil: by recordings.
 	SuitesPassed map[string]bool
 	Seed         *attached.Seed
 	KeepMarks    bool
 }
 
-// Attached is what Attach did.
 type Attached struct {
 	To            string
 	Base          Source
@@ -63,14 +55,10 @@ type Attached struct {
 
 const tries = 5
 
-// ErrAttach wraps what keeps Attach from attaching.
 var ErrAttach = errors.New("attach")
 
-// Do merges the run's recordings into To's lists by recording.Merge's rules
-// and names the run among the lists' attached runs, in one write; without
-// lists of its own To starts from its nearest ancestor's. A concurrent
-// attach to the same commit makes it read again, and the same run attached
-// again writes nothing new. It never deletes.
+// Do merges the run's recordings into To's lists (or its nearest ancestor's) and names the run among
+// their attached runs in one write; a concurrent attach reads again, and it never deletes.
 func (a Attach) Do(ctx context.Context, store *gitstore.Store) (*Attached, error) {
 	if a.Run == "" || a.Change == "" || a.Commit == "" || a.To == "" {
 		return nil, fmt.Errorf("%w: run, change, commit and target are all needed", ErrAttach)
@@ -103,9 +91,8 @@ func (a Attach) walk() int {
 	return Walk
 }
 
-// resolve turns To into a full commit of the checkout, refusing what the
-// checkout can't follow back: lists built without the ancestors' would
-// drop what they hold.
+// resolve turns To into a full commit of the checkout, refusing one it can't follow back: lists
+// built without the ancestors' would drop what they hold.
 func (a Attach) resolve(ctx context.Context) (string, error) {
 	repo := gitx.Repo{Dir: a.Repo}
 
@@ -222,10 +209,8 @@ type taking struct {
 	cannot     Marks
 }
 
-// taken is what of the run goes into lists that hold base. A trusted run
-// attached again may bring slices a rerun passed since: in a run of
-// everything they replace their list, in one that adds they add, and the
-// marks of the slices that passed go in again.
+// taken is what of the run goes into lists that hold base. A trusted run attached again may bring
+// slices a rerun passed since: they replace or add as the run does, and their marks go in again.
 func (a Attach) taken(ctx context.Context, again bool, base recording.Lists, replaced map[string]string) taking {
 	in := taking{
 		recordings: a.Recordings, shrink: a.Shrinkable, whole: a.Whole,
@@ -241,9 +226,8 @@ func (a Attach) taken(ctx context.Context, again bool, base recording.Lists, rep
 	}
 
 	if !a.Trusted {
-		// a run that isn't trusted (a proposed change's) may only add:
-		// to lists that exist, never shrinking one, never telling a
-		// marked slice, never making a list
+		// a proposed change's run may only add to lists that exist: never shrinking one, telling a
+		// marked slice or making a list
 		in.recordings, in.shrink, in.told = onlyAdding(a.Recordings, base), nil, nil
 	}
 
@@ -291,9 +275,8 @@ func attachedFiles(ctx context.Context, store *gitstore.Store, own gitstore.Ref,
 	return who, nil
 }
 
-// mergeMarks keeps the marks of the slices this run didn't tell, drops those
-// it told, and adds the run's own: a slice marked before keeps the time it
-// was first seen and takes the run's newest reason.
+// mergeMarks keeps the marks of slices this run didn't tell and adds its own: a slice marked before
+// keeps when it was first seen and takes the run's newest reason.
 func mergeMarks(base Marks, told recording.Lists, cannot Marks) Marks {
 	out := Marks{}
 
@@ -310,11 +293,8 @@ func mergeMarks(base Marks, told recording.Lists, cannot Marks) Marks {
 	return out
 }
 
-// passedSince is what of a run attached before still goes into the lists:
-// the recordings of the slices that passed in a run of everything since it
-// was first attached, and their suite's setup list once the suite passed
-// whole. A mark the run left is not put back, since the lists may have been
-// told since.
+// passedSince is what of a run attached before still goes in: slices that passed in a run of
+// everything since, and their suite's setup once it passed whole; its marks may have been told since.
 func (a Attach) passedSince(ctx context.Context, recs recording.Lists, replaced map[string]string) (recording.Lists, map[string]bool, map[string]bool) {
 	precedes := ancestry(ctx, a.Repo)
 	run := LiveRun{Commit: a.Commit}
@@ -355,11 +335,8 @@ func (a Attach) passedSince(ctx context.Context, recs recording.Lists, replaced 
 	return out, shrink, whole
 }
 
-// merge folds recordings into lists: those in shrink replace their list, the
-// rest only add to it. A suite's setup list may shrink only when every
-// recorded slice of the suite may and every selected slice passed. A
-// recording makes a list for a slice that had none only when it is whole: a
-// failed slice may have stopped part way.
+// merge folds recordings into lists: those in shrink replace their list, the rest add, and only a
+// whole one makes a list; a setup list shrinks only when its whole suite may and passed.
 func merge(base, recordings recording.Lists, shrink, whole, suitesPassed map[string]bool) (merged, replaced recording.Lists) {
 	replace, add := recording.Lists{}, recording.Lists{}
 	setupShrinks := map[string]bool{}
@@ -414,10 +391,8 @@ func replacedAt(before map[string]string, replacing, merged recording.Lists, com
 	return out
 }
 
-// Attachment names a run whose recordings went into a commit's lists.
 type Attachment = attached.Attachment
 
-// Attachments reads which runs were attached to commit; see attached.Read.
 func Attachments(ctx context.Context, store *gitstore.Store, commit string) ([]Attachment, error) {
 	got, err := attached.Read(ctx, store, commit)
 	if err != nil {

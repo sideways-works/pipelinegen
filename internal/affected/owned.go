@@ -8,9 +8,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/bazel"
 )
 
-// ownedPaths lists the files Bazel knows in the workspace, relative to the
-// repository's root: the source files its targets own, and the BUILD and
-// .bzl files that define them.
+// ownedPaths lists, from the repository's root, the files Bazel knows in the workspace: its targets'
+// source files and the BUILD and .bzl files that define them.
 func ownedPaths(ctx context.Context, bz *bazel.Client, workspace string) (map[string]bool, error) {
 	out, err := bz.Run(ctx, "query", `kind("source file", deps(//...)) + buildfiles(//...)`, "--output=label", "--keep_going=false")
 	if err != nil {

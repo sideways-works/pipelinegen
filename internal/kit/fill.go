@@ -14,9 +14,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/plugins"
 )
 
-// fills checks what describe's fill declares: each the core can run, and,
-// over the fixture, that a second run changes nothing the first left in the
-// cache.
+// fills checks what describe's fill declares: each the core can run and, over the fixture, a second
+// run changes nothing the first left in the cache.
 func (k *kit) fills(ctx context.Context) {
 	if len(k.desc.Fill) == 0 {
 		return

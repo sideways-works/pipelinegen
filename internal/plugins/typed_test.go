@@ -13,13 +13,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// typed is a links correlator answering a set per text: in a.txt's, a
-// link of every typed kind, one holding only where the target's group is
-// linked, a reference, a narrow one, links to the core's group and
-// junction ids and to a unit nobody lists, and one plain link.
-// FAKE_KIND, when set, replaces the kind of the first link;
-// FAKE_PLAIN_ONLY leaves out the typed links, FAKE_ALL_LISTED the link to
-// the unit nobody lists.
+// typed answers a set per text; a.txt's holds a link of every typed kind and form (linked-only,
+// reference, narrow, to the core's ids, to a unit nobody lists) and one plain link.
 func typed() map[string]plugin.Handler {
 	return map[string]plugin.Handler{
 		plugin.CallDescribe: describe(plugin.Description{
@@ -80,8 +75,8 @@ func typedLinks() []plugin.Link {
 	}
 }
 
-// withFake points the setup's correlator at another fake; its variables are
-// read from a file beside it, since a plugin gets none of ours.
+// withFake points the setup's correlator at another fake; its variables come from a file beside
+// it, since a plugin gets none of ours.
 func withFake(t *testing.T, s *setup, fake string, env ...string) {
 	t.Helper()
 

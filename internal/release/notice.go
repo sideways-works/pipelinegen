@@ -18,11 +18,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// A release's NOTICE names the program, its copyright and licence, and each
-// piece of third-party software its release files include, with that
-// software's licence and NOTICE. For Go that is every module linked into a
-// released main package on a release platform, and the Go standard library;
-// for Node every npm package the bundle includes.
+// A release's NOTICE names the program, its copyright and licence, and each third-party piece its files
+// include with its licence and NOTICE: Go's linked modules and standard library, or Node's bundled packages.
 
 const (
 	separator = "--------------------------------------------------------------------------------"
@@ -281,9 +278,8 @@ func GoNotice(ctx context.Context, dir, name string, mains []string) (string, er
 	return n.b.String(), nil
 }
 
-// NodeNotice is the NOTICE of a Node repository's release of the program
-// name, whose bundle includes the packages at the lockfile paths given
-// (node_modules/x).
+// NodeNotice is the NOTICE of a Node repository's release of the program name, whose bundle includes the
+// packages at the lockfile paths given (node_modules/x).
 func NodeNotice(dir, name string, paths []string) (string, error) {
 	var lock struct {
 		Packages map[string]struct {
@@ -333,11 +329,8 @@ func NodeNotice(dir, name string, paths []string) (string, error) {
 	return n.b.String(), nil
 }
 
-// embedded adds what a module ships in another form than Go code, with
-// licences kept below its root or not at all: go-pgquery embeds libpg_query
-// compiled to WebAssembly, with PostgreSQL's code, protobuf-c, xxHash and
-// wasi-libc in it, whose licence files are fetched into $NOTICE_UPSTREAM
-// (default ~/.cache/notice-upstream).
+// embedded adds what a module ships other than as Go code, its licences elsewhere or nowhere: go-pgquery's
+// WebAssembly libpg_query and what it holds, licences fetched into $NOTICE_UPSTREAM (~/.cache/notice-upstream).
 func (n *noticeText) embedded(ctx context.Context, m module) error {
 	if m.path != "github.com/wasilibs/go-pgquery" {
 		return nil
@@ -544,10 +537,8 @@ func fetch(ctx context.Context, url string) ([]byte, error) {
 //go:embed bundled.mjs
 var bundledScript string
 
-// noticeBuilds are the esbuild builds package.json lists under
-// "pipelinegen": {"notice": [...]}; a package that lists none can't say what
-// its NOTICE covers and is refused, and an empty list says the bundle
-// includes no npm package.
+// noticeBuilds are the esbuild builds package.json lists under "pipelinegen": {"notice": [...]}; a package
+// listing none can't say what its NOTICE covers and is refused, an empty list bundles no npm package.
 func noticeBuilds(dir string) ([]json.RawMessage, error) {
 	var pkg struct {
 		Pipelinegen struct {

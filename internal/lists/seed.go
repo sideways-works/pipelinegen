@@ -34,9 +34,8 @@ func Seeds(ctx context.Context, store *gitstore.Store, ref gitstore.Ref) ([]Atta
 	return out, nil
 }
 
-// SeededBase is the newest of commits (newest first) whose lists were seeded
-// or carry a baseline set by hand for run, and "" when none does: the base a
-// branch's runs compare with before any of them passed.
+// SeededBase is the newest of commits (newest first) whose lists were seeded or carry a baseline for
+// run, or "": the base a branch's runs compare with before any of them passed.
 func SeededBase(ctx context.Context, store *gitstore.Store, commits []string, run string) (string, error) {
 	refs, err := store.List(ctx, RefPrefix)
 	if err != nil {

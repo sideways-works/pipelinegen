@@ -54,9 +54,8 @@ func held(names []string) []string {
 	return slices.DeleteFunc(slices.Clone(names), func(n string) bool { return os.Getenv(n) == "" })
 }
 
-// guardProposed holds a step that runs a proposed change's code to the read credential: the tool's
-// writing variables always refuse it, and with credentials by purpose so does an undeclared host token.
-// With one token every step holds it, so the step plans and says first what that token is exposed to.
+// guardProposed holds a step that runs a proposed change's code to the read credential; with one token
+// every step holds it, so the step plans and first says what that token is exposed to.
 func guardProposed(cfg *config.Config) (lines []string, err error) {
 	refused := held(writingVars(cfg))
 

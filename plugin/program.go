@@ -5,19 +5,15 @@ import (
 	"strings"
 )
 
-// Kinds are the kinds of plugin, in the order a repository's name is
-// matched against them. A runner's bootstrap, written in shell, keeps the
-// same list, and its tests hold it equal to this one.
+// Kinds are in the order a repository's name is matched against them; a runner's shell
+// bootstrap keeps the same list, and its tests hold it equal to this one.
 var Kinds = []string{KindSBOM, KindCorrelator, KindRunner, KindDriver, KindConnector}
 
-// RepositoryPrefix starts the name of a plugin's repository that names its
-// kind first.
+// RepositoryPrefix starts the name of a plugin's repository that names its kind first.
 const RepositoryPrefix = "pipelinegen-"
 
-// Program is the name of the program a repository holds (owner/name or a
-// URL), which names its release files and its ./cmd/NAME: a repository
-// pipelinegen-KIND-NAME holds NAME-KIND, any other the program of its own
-// name.
+// Program is the program a repository (owner/name or a URL) holds, naming its release files and
+// ./cmd/NAME: pipelinegen-KIND-NAME holds NAME-KIND, any other repository its own name.
 func Program(repository string) string {
 	name := strings.TrimSuffix(path.Base(strings.TrimSuffix(repository, "/")), ".git")
 

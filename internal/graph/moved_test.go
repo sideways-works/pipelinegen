@@ -12,10 +12,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// The units of the moved-link cases: x keeps its digest while one of its
-// links comes or goes; u keeps its digest too, t changes, n is new in the
-// head and r gone from it; p binds x without expanding it; j is a
-// junction that leads to u.
+// x keeps its digest while one of its links comes or goes, u keeps it too, t changes, n is new and r
+// gone in the head; p binds x without expanding it; j is a junction leading to u.
 const (
 	movedX    = "u:x"
 	movedU    = "u:u"

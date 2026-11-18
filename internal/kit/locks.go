@@ -4,9 +4,8 @@ import (
 	"slices"
 )
 
-// lockSteps are the steps that run pipelinegen lock or unlock. Locks are
-// gone: those commands do nothing, and a step that runs one was written for
-// an older tool.
+// lockSteps are the steps that run pipelinegen lock or unlock: those commands do nothing now, so
+// such a step was written for an older tool.
 func lockSteps(text []byte) []string {
 	steps, err := stepCalls(text)
 	if err != nil {

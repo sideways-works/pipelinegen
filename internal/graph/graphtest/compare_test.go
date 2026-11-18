@@ -98,7 +98,6 @@ func TestCompareSortsIntoItsClasses(t *testing.T) {
 	}
 }
 
-// The widths, for the keys.
 const (
 	Executed   = plugins.Executed
 	Dependents = plugins.Dependents

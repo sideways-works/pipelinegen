@@ -13,18 +13,14 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// exitUnrecorded is the exit code of a report step whose records could not
-// be written (cli.ExitUnrecorded): a pipeline may tolerate a report step's
-// other failures, never this one.
+// exitUnrecorded is a report step's exit when its records could not be written (cli.ExitUnrecorded):
+// a pipeline may tolerate a report step's other failures, never this one.
 const exitUnrecorded = 4
 
 var recordingSteps = []string{"report batch-end", "report suite"}
 
-// swallowedUnrecorded are the tasks that run a recording step where its exit
-// 4 can't fail the job: inside a try, or in a script that doesn't end with 4
-// when the tool does. Each script is run with a stand-in for the tool that
-// exits 4 for a report, and with the installs of the spec's packages, which
-// would run on this machine, taken out.
+// swallowedUnrecorded are tasks running a recording step where its exit 4 can't fail the job: in a try,
+// or a script not ending with 4 when the tool does, run with a stand-in tool and no package installs.
 func swallowedUnrecorded(ctx context.Context, text []byte, installs ...string) []string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(text, &doc); err != nil {

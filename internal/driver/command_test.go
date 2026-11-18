@@ -151,9 +151,8 @@ func TestMarkStandsForTheMarksCommand(t *testing.T) {
 	}
 }
 
-// markScript is a marks command for a test: it makes the mark through the
-// marks directory and waits for the batch's answer, as `pipelinegen slice
-// mark` does, noting each mark in log.
+// markScript makes a mark through the marks directory and waits for the batch's answer, as
+// `pipelinegen slice mark` does, noting each mark in log.
 func markScript(log string) []string {
 	script := `d=$PIPELINEGEN_MARKS; id=$(date +%s%N)-$$; echo "mark $1 $2" >> "` + log + `"
 printf '{"mark":"%s","slice":"%s"}' "$1" "$2" > "$d/.$id.tmp" && mv "$d/.$id.tmp" "$d/$id.json"

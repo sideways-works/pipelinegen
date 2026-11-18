@@ -103,9 +103,8 @@ func TestTheSampleIsDrawnAfterTheLaterPasses(t *testing.T) {
 			}
 		}
 
-		// a slice the change since its pass doesn't sample runs only from
-		// passed-since's level: the sample doesn't name it; one it samples
-		// runs once the sample is off, and is named under both
+		// a slice the change since its pass doesn't sample runs only from passed-since's level, unnamed
+		// by the sample; one it samples runs once the sample is off, named under both
 		for _, name := range left {
 			if slices.Contains(sampledOut, name) != c.sampledFromPass {
 				t.Errorf("%s: %s left out by the sample %v", c.name, name, slices.Contains(sampledOut, name))

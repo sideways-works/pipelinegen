@@ -1,6 +1,5 @@
-// Package graphtest holds what the tests of planning compare the outward
-// walk against: the forward computation it replaces, and synthetic trees to
-// compare them on.
+// Package graphtest holds what planning's tests compare the outward walk against: the forward computation
+// it replaces, and synthetic trees to compare them on.
 package graphtest
 
 import (
@@ -10,19 +9,16 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/deps"
 )
 
-// Key names one slice in one width.
 type Key struct {
 	Suite, Name, Width string
 }
 
 func (k Key) String() string { return k.Suite + "/" + k.Name + " (" + k.Width + ")" }
 
-// KeyOf is a bound slice's key.
 func KeyOf(d deps.Slice) Key { return Key{Suite: d.Suite, Name: d.Name, Width: d.Width} }
 
-// Content is what a slice's selector in the deps repository depends on in
-// one tree, one line per dependency, sorted. bazel-diff hashes exactly this,
-// so two trees select the slice exactly when its content differs.
+// Content is what a slice's selector in the deps repository depends on in one tree, sorted lines; bazel-diff
+// hashes exactly this, so two trees select the slice exactly when it differs.
 func Content(t *deps.Tree, d deps.Slice) []string {
 	var out []string
 

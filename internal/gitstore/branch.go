@@ -19,11 +19,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// A store on a branch keeps each record a ref would hold as a directory of
-// the branch, <p> for refs/pipelinegen/<p>, and beside it an empty marker
-// <p>:<unix>.<nonce> that stands for the commit a ref would point at: every
-// write makes a new one, so a write guarded by the value it read is refused
-// when another came between.
+// A branch store keeps each record as a directory <p> (for refs/pipelinegen/<p>) beside an empty
+// marker <p>:<unix>.<nonce>, new with every write, so a write guarded by what it read loses to one between.
 
 const root = "refs/pipelinegen/"
 
@@ -112,9 +109,8 @@ func (s *Store) markers(ctx context.Context, v *branchstore.View, dir string) (m
 	return refs, nil
 }
 
-// remember adds the record whose marker is base to refs. A record's own
-// files may hold the marker character, so only a name whose part after it is
-// a token counts. The caller holds s.b.mu.
+// remember adds the record whose marker is base to refs; a record's own files may hold the marker
+// character, so only a name whose part after it is a token counts. The caller holds s.b.mu.
 func (s *Store) remember(refs map[string]Ref, dir, base string) {
 	rec, tok, ok := strings.Cut(base, marks)
 	if !ok || tokenTime(tok).IsZero() {
@@ -364,9 +360,8 @@ func (s *Store) branchWrite(ctx context.Context, message string, updates []Updat
 	case errors.Is(err, errStaleRecord):
 		return nil, fmt.Errorf("%w: a record changed under the write", ErrStale)
 	case err != nil && ctx.Err() == nil && guarded(updates):
-		// as on refs: a write guarded by what it read is answered by
-		// reading again, which is as right after a refusal as after a
-		// lost race
+		// as on refs: a write guarded by what it read is answered by reading again, as right after
+		// a refusal as after a lost race
 		return nil, fmt.Errorf("%w: %s: %w", ErrStale, refNames(updates), err)
 	case err != nil:
 		return nil, fmt.Errorf("%s: %w", refNames(updates), err)

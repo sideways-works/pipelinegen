@@ -55,12 +55,8 @@ func newLeafInputs(f *plugins.Leaves, sl plugins.BindSlice, unobserved func(path
 	return li
 }
 
-// given are the leaves the slice gives up in this tree, beside other, the same slice in the other tree
-// of the plan (nil when there is none). A file whose units replace it but which only one tree holds
-// was added or removed: that shows in the setup part where the setup takes such files, and the file
-// stays whole otherwise. Added and removed beside each other in one directory, it may be a rename, and
-// order and names are what units don't carry: both stay whole. Without the other tree (unpaired),
-// whether a file inside a filegroup was added or removed can't be told, so it stays whole.
+// given are the leaves the slice gives up here, beside other, its twin in the plan's other tree; a file
+// only one tree holds, or a possible rename, or any without the other tree to tell by, stays whole.
 func (li *leafInputs) given(other *leafInputs, unpaired bool) (out map[string]bool, setup []string) { //nolint:nonamedreturns // the two lists
 	out = map[string]bool{}
 
@@ -103,9 +99,8 @@ func renamed(l string, li, other *leafInputs) bool {
 	return false
 }
 
-// labels are the slice's inputs in this tree. A filegroup goes back in place of what it holds where
-// the slice gives up nothing below it in either tree, so both trees name it alike and the inputs stay
-// short.
+// labels are the slice's inputs in this tree; a filegroup goes back in place of what it holds where the
+// slice gives up nothing below it in either tree, so both trees name it alike and the inputs stay short.
 func (li *leafInputs) labels(other *leafInputs, unpaired bool) []string {
 	gone, _ := li.given(other, unpaired)
 

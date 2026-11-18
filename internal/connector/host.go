@@ -20,21 +20,18 @@ type Host struct {
 // the pipeline's environment, never from a proposed change.
 type Options struct {
 	Name, Path string
-	// Config is the connector's block, which the core fills.
-	Config map[string]any
-	Remote string
+	Config     map[string]any
+	Remote     string
 	// API is the root of the host's API the deployment names; its origin
 	// takes requests whether or not describe declares it.
 	API    string
 	Tokens map[string]string
-	// Work holds each call's files, in a directory of the call's own that
-	// only this user can open, removed when the call ends: the responses
-	// in it decide what the connector answers.
+	// Work holds each call's files, in a directory of its own only this user can open, removed when it ends:
+	// the responses in it decide what the connector answers.
 	Work string
 	HTTP *http.Client
 }
 
-// Open describes the connector and readies its exchange.
 func Open(ctx context.Context, o Options) (*Host, error) {
 	if err := os.MkdirAll(o.Work, 0o750); err != nil {
 		return nil, fmt.Errorf("connector %s: %w", o.Name, err)
@@ -77,7 +74,6 @@ func Open(ctx context.Context, o Options) (*Host, error) {
 	}, nil
 }
 
-// Description is the connector's describe.
 func (h *Host) Description() plugin.Description { return h.ex.Desc }
 
 func (h *Host) call(ctx context.Context, call string, args, answer any) error {
@@ -90,7 +86,6 @@ func (h *Host) call(ctx context.Context, call string, args, answer any) error {
 	return h.ex.Call(ctx, call, work, args, answer)
 }
 
-// Changes lists the open proposed changes onto a base branch.
 func (h *Host) Changes(ctx context.Context, a plugin.ChangesArgs) ([]plugin.Change, error) {
 	var out plugin.ChangesAnswer
 	if err := h.call(ctx, plugin.CallChanges, a, &out); err != nil {
@@ -100,14 +95,12 @@ func (h *Host) Changes(ctx context.Context, a plugin.ChangesArgs) ([]plugin.Chan
 	return out.Changes, nil
 }
 
-// Status sets one commit status.
 func (h *Host) Status(ctx context.Context, a plugin.StatusArgs) error {
 	var out map[string]any
 
 	return h.call(ctx, plugin.CallStatus, a, &out)
 }
 
-// Statuses is a commit's newest status per context.
 func (h *Host) Statuses(ctx context.Context, commit string) ([]plugin.Status, error) {
 	var out plugin.StatusesAnswer
 	if err := h.call(ctx, plugin.CallStatuses, plugin.StatusesArgs{Commit: commit}, &out); err != nil {
@@ -117,7 +110,6 @@ func (h *Host) Statuses(ctx context.Context, commit string) ([]plugin.Status, er
 	return out.Statuses, nil
 }
 
-// Subject is a commit's subject line.
 func (h *Host) Subject(ctx context.Context, commit string) (string, error) {
 	var out plugin.SubjectAnswer
 	if err := h.call(ctx, plugin.CallSubject, plugin.SubjectArgs{Commit: commit}, &out); err != nil {

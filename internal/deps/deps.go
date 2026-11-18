@@ -1,9 +1,5 @@
-// Package deps is the boundary between what planning learns from the plugins
-// and the deps repository bazel-diff hashes: the units of a tree with their
-// digests, and per slice what its selector depends on. A Writer turns both
-// into .pipelinegen/deps, one digest file per unit and one selector target
-// per slice, so bazel-diff selects a slice exactly when a digest or label it
-// depends on changed.
+// Package deps is what planning learns from the plugins for the deps repository bazel-diff hashes: a tree's
+// units with their digests, and per slice what its selector depends on.
 package deps
 
 import (
@@ -18,8 +14,8 @@ type Unit struct {
 	// Group is where its digest file lives (a Go package's directory, a
 	// file's path); a slice may depend on a whole group at once.
 	Group string
-	// Digest changes exactly when the unit's behaviour can change. For a
-	// unit with digest_from it is already the combination of its sources'.
+	// Digest changes exactly when the unit's behaviour can change; with digest_from it already combines
+	// its sources'.
 	Digest  string
 	File    string
 	Entry   string
@@ -31,13 +27,11 @@ type Unit struct {
 type Tree struct {
 	Commit string
 	Units  map[string]Unit
-	// Links are the links in force at the plan's narrowing level, whatever
-	// their kind plain links: followed at every width and walked backwards
-	// at the dependents width.
+	// Links are the links in force at the plan's narrowing level, whatever their kind plain links:
+	// followed at every width and walked backwards at the dependents width.
 	Links []plugin.Link
-	// Typed are the links in force whose kind the walk reads apart
-	// (internal/graph), kept out of Links so the forward closure never
-	// follows them as plain links.
+	// Typed are the links in force whose kind the walk reads apart (internal/graph), kept out of Links so
+	// the forward closure never follows them as plain links.
 	Typed         []plugin.Link
 	TypedRuledOut map[string][]plugin.Link
 	CannotTell    map[string]string
@@ -51,10 +45,8 @@ type Tree struct {
 	Anchors      map[string]string
 	Pins         map[string]string
 	LinkBy       map[[2]string]string
-	// CorrelatorEnds are, per correlator, the near end of every link it
-	// gave, sorted, and CorrelatorFiles the files it claims: a slice whose
-	// binding holds one rests on the correlator's answers, so a change of
-	// its entry reaches it.
+	// CorrelatorEnds are per correlator the near ends of its links, sorted, CorrelatorFiles the files it
+	// claims: a slice whose binding holds one rests on its answers, so a change of its entry reaches it.
 	CorrelatorEnds  map[string][]string
 	CorrelatorFiles map[string][]string
 	Providers       map[string]string
@@ -66,10 +58,8 @@ type Tree struct {
 	Untold   map[string][]string
 	Complete map[string]string
 	UnitsOf  map[string][]string
-	// InputUnits are, sorted, the units some set of the tree names as an
-	// input unit: they key a set's answer. Those no file declares (a Go
-	// package's API unit) are also neither names of their group nor bound
-	// with it whole.
+	// InputUnits are, sorted, the units a set names as inputs, keying its answer; those no file declares
+	// (a Go package's API unit) are neither names of their group nor bound with it whole.
 	InputUnits []string
 }
 
@@ -104,23 +94,19 @@ type Slice struct {
 	Everything bool
 	Units      []string
 	Groups     []string
-	// Data are Bazel labels of the repository the slice depends on
-	// whatever the lists say (its owner, or its owner's data, extra_deps,
-	// pipelinegen:data lines), after the file-with-units rule.
+	// Data are the repository's Bazel labels the slice depends on whatever the lists say (its owner, its
+	// data, extra_deps, pipelinegen:data lines), after the file-with-units rule.
 	Data   []string
 	Why    map[string]Why
 	Linked []string
-	// Dropped are, per narrowing in force, the unit ids the wide rule would
-	// add, and DroppedGroups the groups whose unbound names it would;
-	// neither is written to the deps repository.
+	// Dropped are per narrowing in force the unit ids the wide rule would add, DroppedGroups the groups whose
+	// unbound names it would; neither is written to the deps repository.
 	Dropped       map[string][]string
 	DroppedGroups map[string][]string
 }
 
-// Writer writes the deps repository for one tree.
 type Writer interface {
-	// Write makes the deps repository for the tree checked out at root,
-	// from its units and slices, and returns a key that changes whenever
-	// what it wrote changes (the plan's snapshots are cached by it).
+	// Write makes the deps repository of the tree at root and returns a key that changes whenever what it
+	// wrote does (the plan's snapshots are cached by it).
 	Write(ctx context.Context, root string, tree *Tree, slices []Slice) (key string, err error)
 }

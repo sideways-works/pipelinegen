@@ -111,9 +111,8 @@ func referenced(l *loaded, tr int, bound []bool) {
 	}
 }
 
-// boundByAny is what the recorded slices bind together in tree tr, in a
-// width. At the dependents width each slice's depth bounds its own part, so
-// slices are walked together per depth.
+// boundByAny is what the recorded slices bind together in tree tr in a width; at the dependents width
+// each slice's depth bounds its own part, so slices are walked together per depth.
 func boundByAny(l *loaded, tr int, ss []plugins.BindSlice, dependents bool) []bool {
 	bound := make([]bool, len(l.ids))
 

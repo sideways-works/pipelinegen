@@ -20,10 +20,8 @@ var errFixture = errors.New("the fixture's kit file")
 
 const unitsCheck = "a set keyed on input units is the plugin's own while their digests hold"
 
-// fixtureEdit is an edit the fixture names in its kit file: in path, the
-// first old becomes new. An edit that leaves a unit's digest alone shows
-// whether the sets keyed on it stay right, and one that changes it whether
-// the digest covers what the links need.
+// fixtureEdit is an edit the kit file names: in path, the first old becomes new. One that leaves a unit's
+// digest alone shows whether sets keyed on it stay right, one that changes it whether it covers the links.
 type fixtureEdit struct {
 	Path string `json:"path"`
 	Old  string `json:"old"`
@@ -47,9 +45,8 @@ func (k *kit) fixtureEdits() []fixtureEdit {
 	return f.Edits
 }
 
-// inputUnits runs each of the fixture's edits through the core's cache: warm
-// after the edit, the tree is the cold one, and the plugin is asked about no
-// more files than the stale sets hold.
+// inputUnits runs each of the fixture's edits through the core's cache: warm after the edit, the tree is
+// the cold one, and the plugin is asked about no more files than the stale sets hold.
 func (k *kit) inputUnits(ctx context.Context, sets []plugin.Set) {
 	if !slices.ContainsFunc(sets, func(s plugin.Set) bool { return len(s.InputUnits) > 0 }) {
 		k.skip(unitsCheck, "no set of the fixture names input units")

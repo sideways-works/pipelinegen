@@ -1,8 +1,5 @@
-// Command cmd checks this repository's commit messages.
-//
-//	go run ./internal/commitmsg/cmd file <path>   # the commit-msg hook (ci/commit-msg)
-//	go run ./internal/commitmsg/cmd new           # the commits a CI build brings
-//	go run ./internal/commitmsg/cmd log <revs>... # any range, for a check by hand
+// Command cmd checks this repository's commit messages: file <path> as the commit-msg hook, new
+// for the commits a CI build brings, log <revs>... for any range.
 package main
 
 import (

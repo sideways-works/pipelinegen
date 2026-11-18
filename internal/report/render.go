@@ -10,7 +10,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// Format is how a comment shows a run.
 type Format string
 
 // The comment formats: a list of suites and slices, or a Mermaid flowchart
@@ -20,9 +19,8 @@ const (
 	Mermaid Format = "mermaid"
 )
 
-// Mermaid refuses diagrams over its text and edge limits (50,000 characters
-// and 500 edges by default); a chart past these budgets is shown as the list
-// instead.
+// Mermaid refuses diagrams over its text and edge limits (50,000 characters and 500 edges by
+// default); a chart past these budgets is shown as the list instead.
 const (
 	mermaidMaxChars = 40000
 	mermaidMaxEdges = 400

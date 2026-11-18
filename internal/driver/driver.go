@@ -1,7 +1,5 @@
-// Package driver runs a suite's steps: it calls each step's driver with the
-// slices routed to it, reads the results they stream, runs again apart what
-// a bundle left without a result, and hands every slice's boundaries to the
-// batch's journal.
+// Package driver runs a suite's steps: it calls each step's driver with its slices, reads the results they
+// stream, runs apart what a bundle left without a result, and hands the boundaries to the batch's journal.
 package driver
 
 import (
@@ -25,19 +23,14 @@ import (
 // the protocol, or exited non-zero.
 var ErrDriver = errors.New("driver failed")
 
-// Driver is one step's driver.
 type Driver interface {
-	// Name is the driver's name in the config.
 	Name() string
-	// Describe is the driver's describe answer.
 	Describe(ctx context.Context) (plugin.Description, error)
-	// Run runs the request's slices, calling event for each line of the
-	// stream as it comes. It returns the last lines the driver wrote on
-	// stderr, which say why when a slice got no end.
+	// Run streams the request's events to event; it returns the driver's last lines on stderr, which
+	// say why when a slice got no end.
 	Run(ctx context.Context, req plugin.DriverRequest, event func(plugin.DriverEvent)) (string, error)
 	// Setup starts the set-up and returns once it is ready.
 	Setup(ctx context.Context, req plugin.DriverRequest) (Running, error)
-	// Prepare runs a prepare step.
 	Prepare(ctx context.Context, req plugin.DriverRequest) error
 }
 
@@ -62,7 +55,6 @@ type Exec struct {
 	StopWait time.Duration
 }
 
-// Name is the driver's name.
 func (e *Exec) Name() string { return e.Label }
 
 const tailLines = 15
@@ -91,7 +83,6 @@ func killGroup(cmd *exec.Cmd, sig syscall.Signal) error {
 	return nil
 }
 
-// Describe asks the driver what it is.
 func (e *Exec) Describe(ctx context.Context) (plugin.Description, error) {
 	var d plugin.Description
 
@@ -114,7 +105,6 @@ func (e *Exec) Describe(ctx context.Context) (plugin.Description, error) {
 	return d, nil
 }
 
-// Run runs a run request and streams its events.
 func (e *Exec) Run(ctx context.Context, req plugin.DriverRequest, event func(plugin.DriverEvent)) (string, error) {
 	in, err := json.Marshal(req)
 	if err != nil {
@@ -150,9 +140,8 @@ func (e *Exec) Run(ctx context.Context, req plugin.DriverRequest, event func(plu
 	return log.Tail(), nil
 }
 
-// readEvents reads a run's stream: one JSON event per line. A line that
-// isn't one goes to the log, as does an event kind this protocol doesn't
-// know, which a later protocol may add.
+// readEvents reads a run's stream, one JSON event per line; a line that isn't one goes to the log, as
+// does an event kind this protocol doesn't know, which a later protocol may add.
 func readEvents(r io.Reader, event func(plugin.DriverEvent), log io.Writer) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 64<<10), 16<<20)
@@ -174,7 +163,6 @@ func readEvents(r io.Reader, event func(plugin.DriverEvent), log io.Writer) {
 	}
 }
 
-// Prepare runs a prepare request.
 func (e *Exec) Prepare(ctx context.Context, req plugin.DriverRequest) error {
 	in, err := json.Marshal(req)
 	if err != nil {
@@ -291,9 +279,8 @@ type setupProc struct {
 
 func (r *setupProc) Env() map[string]string { return r.env }
 
-// Stop closes the set-up's stdin, which asks it to stop what it started
-// and exit; one that doesn't within the wait gets TERM, then KILL, each
-// to its whole process group.
+// Stop closes the set-up's stdin, asking it to stop what it started and exit; past the wait it gets TERM,
+// then KILL, each to its whole process group.
 func (r *setupProc) Stop(context.Context) error {
 	r.once.Do(func() {
 		_ = r.stdin.Close() //nolint:errcheck // a process gone already has nothing to read

@@ -17,10 +17,8 @@ type Pins struct {
 	CorrelatorVersion, CorrelatorSHA string
 }
 
-// WriteFixture writes the fixture repository the proof plans on into dir: a
-// Bazel workspace with one small Go module, its config pinning the Go
-// plugins, and a git repository with no commit yet. Each Bazel server's Java
-// heap is heap (1g when empty), since the proof runs several side by side.
+// WriteFixture writes into dir a Bazel workspace with one small Go module, its config pinning the Go plugins,
+// and a git repository with no commit yet; heap bounds each Bazel server (1g when empty), as several run.
 func WriteFixture(dir, outputRoot, heap string, pins Pins) error {
 	if heap == "" {
 		heap = "1g"
@@ -131,9 +129,8 @@ plugins:
     config: {modules: [.]}
 `
 
-// fixtureFiles are the fixture's other files; ci/go-batch.sh records slices
-// as a CI worker's batch task would, and the FIXTURE_ variables make the
-// cases whose coverage is lost, foreign or empty.
+// fixtureFiles are the fixture's other files; ci/go-batch.sh records slices as a CI batch task would, and
+// the FIXTURE_ variables make the cases whose coverage is lost, foreign or empty.
 var fixtureFiles = map[string]string{
 	"MODULE.bazel": `module(name = "fixture")
 

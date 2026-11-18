@@ -10,8 +10,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/plugins"
 )
 
-// Model binds slices forward as the graph's contract says
-// (docs/internals/graph.md). Over plain links alone it binds exactly as
+// Model binds slices forward as docs/internals/graph.md says; over plain links alone it binds exactly as
 // plugins.Set.Bind does without bind correlators.
 type Model struct {
 	Plugins       []graph.Plugin
@@ -540,9 +539,8 @@ func (q *stepQueue) pop() (step, bool) {
 	return s, true
 }
 
-// AsBinder rewrites the reasons of what typed links bound as a bind
-// correlator gives them, so planning's sample split reads them as it reads
-// the Go correlator's.
+// AsBinder rewrites the reasons of what typed links bound as a bind correlator gives them, so planning's
+// sample split reads them as the Go correlator's.
 func AsBinder(t *deps.Tree) After {
 	into := map[string][]string{}
 

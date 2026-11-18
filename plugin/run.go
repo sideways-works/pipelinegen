@@ -17,30 +17,25 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// ErrCantTell is a plugin's answer that it can't tell, for this tree or
-// this slice.
+// ErrCantTell is a plugin's answer that it can't tell, for this tree or this slice.
 var ErrCantTell = errors.New("can't tell")
 
-// ErrFailed wraps a plugin call that failed.
 var ErrFailed = errors.New("plugin failed")
 
-// Plugin is a plugin executable the core calls.
 type Plugin struct {
 	Name    string
 	Path    string
 	Config  map[string]any
 	Cache   string
 	Timeout time.Duration
-	// Caches are the cache names the plugin's describe declared; each is a
-	// directory under CachesDir (default Cache), given to the plugin as
-	// its toolchain's variable.
+	// Caches are the cache names the plugin declared, each a directory under CachesDir (default
+	// Cache), given to the plugin as its toolchain's variable.
 	Caches []string
-	// CachesDir holds the declared caches, shared by every plugin that
-	// declares the same one (a Go module cache is the same for all).
+	// CachesDir is shared by every plugin that declares the same cache (a Go module cache is the
+	// same for all).
 	CachesDir string
-	// Log, when set, takes what the plugin wrote on stderr during a call
-	// that answered, a line at a time under its name; a failed call carries
-	// it in its error.
+	// Log takes, a line at a time under the plugin's name, what it wrote on stderr during a call
+	// that answered; a failed call carries it in its error.
 	Log io.Writer
 	Dir string
 }
@@ -66,8 +61,8 @@ func (p Plugin) cacheEnv() map[string]string {
 	return out
 }
 
-// Call runs one call: req goes to stdin as JSON, and stdout's JSON is
-// decoded into answer. Exit code ExitCantTell is ErrCantTell.
+// Call sends req as JSON on stdin and decodes stdout into answer; exit code ExitCantTell is
+// ErrCantTell.
 func (p Plugin) Call(ctx context.Context, call string, req, answer any) error {
 	if p.Timeout > 0 {
 		var cancel context.CancelFunc
@@ -116,12 +111,10 @@ func (p Plugin) Call(ctx context.Context, call string, req, answer any) error {
 	return nil
 }
 
-// NewRequest is the common part of a request to p, writing into work.
 func (p Plugin) NewRequest(work string) Request {
 	return Request{Protocol: Protocol, Work: work, Cache: p.Cache, Config: p.Config}
 }
 
-// Describe asks p what it is and what it can do.
 func (p Plugin) Describe(ctx context.Context, work string) (Description, error) {
 	var d Description
 	if err := p.Call(ctx, CallDescribe, p.NewRequest(work), &d); err != nil {
@@ -135,8 +128,7 @@ func (p Plugin) Describe(ctx context.Context, work string) (Description, error) 
 	return d, nil
 }
 
-// ReadLines reads an answer's files: JSON Lines of T in the work
-// directory, appended to items.
+// ReadLines appends to items the JSON Lines of T in an answer's files in the work directory.
 func ReadLines[T any](work string, files []string, items []T) ([]T, error) {
 	for _, f := range files {
 		if filepath.IsAbs(f) || strings.Contains(f, "..") {
@@ -182,8 +174,7 @@ func (e *cantTellError) Error() string {
 
 func (e *cantTellError) Unwrap() error { return ErrCantTell }
 
-// CantTellMessage is what a plugin that couldn't tell said about why, on
-// one line, redacted; empty when it said nothing.
+// CantTellMessage is what a plugin that couldn't tell said about why, on one line, redacted.
 func CantTellMessage(err error) string {
 	ce, ok := errors.AsType[*cantTellError](err)
 	if !ok {
@@ -202,8 +193,7 @@ func tail(s string, n int) string {
 	return strings.Join(lines, "\n")
 }
 
-// logStderr writes a call's stderr to Log, each line under the plugin's
-// name and the call, tokens redacted.
+// logStderr writes a call's stderr to Log under the plugin's name and the call, tokens redacted.
 func (p Plugin) logStderr(call, text string) {
 	if p.Log == nil || strings.TrimSpace(text) == "" {
 		return

@@ -9,14 +9,12 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitx"
 )
 
-// KindConfig is a slice that runs differently under the head's config: What
-// names the part that changed. Such a slice runs at every narrowing level,
-// and no sample leaves it out.
+// KindConfig is a slice that runs differently under the head's config (What names the part):
+// it runs at every narrowing level, and no sample leaves it out.
 const KindConfig = "config"
 
-// understood tells whether the change edits the config and the planner
-// understood every part it changed: the config file is then no changed file
-// of its own, though a Bazel target that holds it still sees it change.
+// understood tells whether the change edits the config and every part of it is understood: the
+// config file is then no changed file of its own, though a target holding it still sees it change.
 func (o Options) understood() bool {
 	return o.Meaning != nil && o.Meaning.Understood()
 }
@@ -36,10 +34,8 @@ type configured struct {
 	left map[string][]string
 }
 
-// configSelect adds the slices the config's change makes run differently and
-// those a changed driver's entry reaches: unlisted ones, or all while
-// plugin-entry is off, run; recorded ones with a list go to the suite's
-// sample.
+// configSelect adds the slices the config's change makes run differently and those a changed driver's
+// entry reaches: unlisted ones, or all while plugin-entry is off, run; listed ones go to the sample.
 func (o Options) configSelect(sp *SuitePlan, suite string, all []bazel.Slice, head string, rule *SampleRule) configured {
 	out := configured{kept: map[string]bool{}, pool: map[string]bool{}, left: map[string][]string{}}
 

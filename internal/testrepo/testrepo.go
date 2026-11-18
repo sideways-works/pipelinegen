@@ -14,14 +14,13 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/testenv"
 )
 
-// Repo is a temporary git repository with the fixture workspace at its root.
 type Repo struct {
 	t   *testing.T
 	Dir string
 }
 
-// FixtureDir is testdata/workspace at the module's root, found from the
-// test's working directory (its package's directory).
+// FixtureDir is testdata/workspace at the module's root, found from the test's working
+// directory.
 func FixtureDir(t *testing.T) string {
 	t.Helper()
 
@@ -50,15 +49,12 @@ func fixtureDir(t *testing.T) string {
 	}
 }
 
-// New copies the fixture into a new repository and commits it.
 func New(t *testing.T) *Repo {
 	t.Helper()
 
 	return NewFrom(t, fixtureDir(t))
 }
 
-// NewFrom copies another fixture directory into a new repository and
-// commits it.
 func NewFrom(t *testing.T, dir string) *Repo {
 	t.Helper()
 
@@ -90,8 +86,7 @@ func (r *Repo) Git(args ...string) string {
 	return r.GitIn(r.t, args...)
 }
 
-// GitIn runs git in the repository for test t, which may be another test
-// than the one that made it.
+// GitIn runs git for test t, which may be another test than the one that made the repository.
 func (r *Repo) GitIn(t *testing.T, args ...string) string {
 	t.Helper()
 
@@ -106,7 +101,6 @@ func (r *Repo) GitIn(t *testing.T, args ...string) string {
 	return strings.TrimSpace(string(out))
 }
 
-// Write writes a file, relative to the repository's root.
 func (r *Repo) Write(rel, content string) {
 	r.t.Helper()
 
@@ -120,7 +114,6 @@ func (r *Repo) Write(rel, content string) {
 	}
 }
 
-// Commit commits everything and returns the new commit.
 func (r *Repo) Commit(msg string) string {
 	r.t.Helper()
 
@@ -130,13 +123,12 @@ func (r *Repo) Commit(msg string) string {
 	return r.Git("rev-parse", "HEAD")
 }
 
-// heavySlots bounds the tests that run Bazel side by side: each starts
-// its own server, and the machine running the suite may be shared.
+// heavySlots bounds the tests that run Bazel side by side: each starts its own server, and the
+// machine running the suite may be shared.
 var heavySlots = make(chan struct{}, 4)
 
-// Parallel runs a test that starts Bazel beside the package's other
-// parallel tests, at most a few at a time, so a package of many such
-// tests takes the time of its longest rather than of all of them.
+// Parallel runs a test that starts Bazel beside the package's other parallel tests, a few at a
+// time, so a package of many takes the time of its longest.
 func Parallel(t *testing.T) {
 	t.Helper()
 	NeedBazel(t)
@@ -144,8 +136,8 @@ func Parallel(t *testing.T) {
 	Slot(t)
 }
 
-// Slot holds one of the slots for a parallel test that starts Bazel, until
-// the test ends; Parallel takes it for the tests it starts.
+// Slot holds a slot for a parallel test that starts Bazel until it ends; Parallel takes it for
+// the tests it starts.
 func Slot(t *testing.T) {
 	t.Helper()
 
@@ -154,10 +146,8 @@ func Slot(t *testing.T) {
 	t.Cleanup(func() { <-heavySlots })
 }
 
-// NeedBazel skips the test in -short mode, where nothing starts Bazel,
-// and fails it when its package's TestMain doesn't run the tests through
-// testenv.Bazel, which gives Bazel an output root of the test binary's
-// own and removes it with every server in it when the tests end.
+// NeedBazel skips the test in -short mode and fails it unless TestMain runs through
+// testenv.Bazel, which gives Bazel the binary's own output root and removes it after.
 func NeedBazel(t *testing.T) {
 	t.Helper()
 
@@ -170,8 +160,7 @@ func NeedBazel(t *testing.T) {
 	}
 }
 
-// Bazel returns a client for a workspace directory whose server is removed
-// with its output when the test ends.
+// Bazel returns a client for dir whose server is removed with its output when the test ends.
 func Bazel(t *testing.T, dir string) *bazel.Client {
 	t.Helper()
 	NeedBazel(t)

@@ -128,9 +128,8 @@ func newestRound(ctx context.Context, store *gitstore.Store, cfg *config.Config,
 	return r, true, nil
 }
 
-// awaitRound runs the build when its commit is the branch's tip and no round is in progress, waiting
-// at most wait_minutes. Builds may decide at once, so each records its round's start and planning and
-// reads the tip again after each: of two builds deciding at once the older commit's exits.
+// awaitRound runs the build once its commit is the branch's tip and no round is in progress, for at most
+// wait_minutes; each build records its round and rereads the tip, so of two at once the older exits.
 func awaitRound(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger string, stdout io.Writer) (bool, error) {
 	run, _, err := decideRound(ctx, cfg, ch, store, trigger, stdout, nil)
 
@@ -236,6 +235,8 @@ type decider struct {
 	idle, planning time.Duration
 
 	planned string
+	// fresh: the planning record was just written; the build plans only once a reading after it still
+	// finds no round in progress, so of two builds deciding at once each sees the other
 	fresh   bool
 	dead    map[string]bool
 	started bool

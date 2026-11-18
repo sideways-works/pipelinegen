@@ -322,9 +322,8 @@ func writeResult(path string, ev *plugin.DriverEvent, why string) error {
 			r.Failures = append(r.Failures, report.Failure{Test: f.Test, Tail: f.Tail})
 		}
 
-		// the driver names them in the slice's files directory; the result
-		// names them from the result directory, where the check of each
-		// path refuses any that leaves it
+		// the driver names them in the slice's files directory, the result from the result directory,
+		// where each path's check refuses any that leaves it
 		for _, f := range ev.Files {
 			r.Files = append(r.Files, report.FailureFile{Path: report.FilesPrefix(ev.Slice) + f.Path, Label: f.Label})
 		}

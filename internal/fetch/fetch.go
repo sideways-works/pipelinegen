@@ -1,6 +1,5 @@
-// Package fetch downloads a pinned release's file for a platform into
-// pipelinegen's cache and checks it against its pin: a file that doesn't
-// match is never kept, so it never runs.
+// Package fetch downloads a pinned release's file for a platform into the cache and checks it
+// against its pin: a file that doesn't match is never kept, so it never runs.
 package fetch
 
 import (
@@ -23,14 +22,12 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// ErrChecksum is a downloaded file whose checksum isn't the pinned one.
 var ErrChecksum = errors.New("checksum mismatch")
 
 // ErrPin is a pin no file can be fetched or checked by.
 var ErrPin = errors.New("pin")
 
-// DefaultURL is where a release's files are: the repository, the version
-// and the file's name fill it in that order.
+// DefaultURL is filled with the repository, the version and the file's name, in that order.
 const DefaultURL = "https://github.com/%s/releases/download/%s/%s"
 
 const (
@@ -40,33 +37,29 @@ const (
 
 var sha256Hex = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
-// Pin is a release and how its files are checked: by a checksum per
-// platform, or by the checksum of the release's SHA256SUMS.
+// Pin is a release and how its files are checked: by a checksum per platform, or by the checksum
+// of the release's SHA256SUMS.
 type Pin struct {
-	// Name is the pin's name in messages: the plugin's or the connector's.
+	// Name is the plugin's or the connector's, for messages.
 	Name       string
 	Repository string
 	Version    string
 	SHA256     config.Checksums
-	// Script is the checksum of the release's <program>.mjs, the one file
-	// a Node plugin is released as, the same on every platform.
+	// Script is the checksum of the release's <program>.mjs, the one file a Node plugin is
+	// released as, the same on every platform.
 	Script string
 	Sums   string
-	// URL overrides DefaultURL.
-	URL string
+	URL    string
 }
 
-// Program is the program the pinned repository holds, which names its
-// release's files.
 func (p Pin) Program() string { return plugin.Program(p.Repository) }
 
 func (p Pin) binary(platform string) string { return p.Program() + "-" + platform }
 
 func (p Pin) script() string { return p.Program() + ".mjs" }
 
-// Got is a fetched file: its path, its checksum, and the release's
-// SHA256SUMS when the pin is by sums, which a plugins directory keeps
-// beside the file as the bootstrap does.
+// Got is a fetched file: its path, its checksum, and with a pin by sums the release's
+// SHA256SUMS, which a plugins directory keeps beside the file as the bootstrap does.
 type Got struct {
 	Path   string
 	SHA256 string
@@ -80,9 +73,8 @@ type Fetcher struct {
 	Under  string
 }
 
-// Fetch returns the pinned file for platform: the cache's copy when an
-// earlier fetch put it there, and otherwise one downloaded and checked
-// against the pin.
+// Fetch returns the pinned file for platform: the cache's copy when an earlier fetch put it
+// there, otherwise one downloaded and checked against the pin.
 func (f Fetcher) Fetch(ctx context.Context, pin Pin, platform string) (Got, error) {
 	files, sums, err := f.wanted(ctx, pin, platform)
 	if err != nil {
@@ -125,8 +117,8 @@ func (f Fetcher) Fetch(ctx context.Context, pin Pin, platform string) (Got, erro
 
 type wantedFile struct{ file, sum string }
 
-// wanted are the files that may hold the pin's program for platform, in
-// the order to try them, each with the checksum it must have.
+// wanted are the files that may hold the pin's program for platform, in the order to try them,
+// each with the checksum it must have.
 func (f Fetcher) wanted(ctx context.Context, pin Pin, platform string) ([]wantedFile, []byte, error) {
 	if pin.Sums != "" {
 		sums, err := f.sums(ctx, pin)
@@ -163,8 +155,8 @@ func (f Fetcher) wanted(ctx context.Context, pin Pin, platform string) ([]wanted
 	return out, nil, nil
 }
 
-// sums is the release's SHA256SUMS once its checksum is the pin's: the
-// cache's copy, kept by that checksum, or a download.
+// sums is the release's SHA256SUMS once its checksum is the pin's: the cache's copy, kept by
+// that checksum, or a download.
 func (f Fetcher) sums(ctx context.Context, pin Pin) ([]byte, error) {
 	want := strings.ToLower(pin.Sums)
 	if !sha256Hex.MatchString(want) {
@@ -194,7 +186,6 @@ func (f Fetcher) sums(ctx context.Context, pin Pin) ([]byte, error) {
 	return data, nil
 }
 
-// Listed reads a SHA256SUMS file: each file's checksum by its name.
 func Listed(sums []byte) map[string]string {
 	out := map[string]string{}
 
@@ -254,6 +245,7 @@ func (f Fetcher) download(ctx context.Context, pin Pin, file string) ([]byte, er
 	return data, nil
 }
 
+// maxFile bounds what a download may read, so a wrong URL can't fill memory or the cache.
 const maxFile = 200 << 20
 
 // keep writes data to dest by a rename, so a reader never sees half a file.
@@ -308,7 +300,6 @@ func fileSum(p string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// Accepts are the checksums a file for platform may have under the pin.
 func (f Fetcher) Accepts(ctx context.Context, pin Pin, platform string) ([]string, error) {
 	files, _, err := f.wanted(ctx, pin, platform)
 
@@ -326,8 +317,8 @@ func used(p string) {
 	_ = os.Chtimes(p, now, now) //nolint:errcheck // at worst it is fetched again
 }
 
-// Trim removes what dir (a Fetcher's Cache joined with its Under) holds that no fetch has used for
-// longer than keep: each release file's directory, and each SHA256SUMS kept. It returns what it removed.
+// Trim removes what dir (Cache joined with Under) holds that no fetch used for longer than keep:
+// each release file's directory and each SHA256SUMS kept.
 func Trim(dir string, keep time.Duration, now time.Time) ([]string, error) {
 	var removed []string
 

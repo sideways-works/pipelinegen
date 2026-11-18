@@ -101,7 +101,6 @@ func (f *fakeGitHub) status(sha, ctx string) (CommitStatus, bool) {
 	return all[len(all)-1], true
 }
 
-// IssueComment is one comment the fake keeps on a pull request.
 type IssueComment struct {
 	ID        int64
 	Body      string

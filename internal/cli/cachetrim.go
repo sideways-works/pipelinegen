@@ -91,6 +91,7 @@ func trimCache(cache string, budget int64, start time.Time) (*trimmed, error) {
 
 		p := filepath.Join(cache, filepath.FromSlash(part))
 
+		// the answer cache goes oldest first, only as far as needed; every other part goes whole
 		freed := int64(0)
 		if part == "answers" {
 			freed, err = t.dropOldest(cache, p, total-budget)
@@ -269,6 +270,7 @@ func (t *trimmed) dropSnapshots(cache string, start time.Time) error {
 
 	for _, s := range snaps {
 		switch {
+		// a snapshot written since the step began is its own
 		case !s.when.Before(start):
 			keep[s.key] = true
 		case others < keptSnapshots:
@@ -281,6 +283,7 @@ func (t *trimmed) dropSnapshots(cache string, start time.Time) error {
 		name := e.Name()
 		key := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(name, ".tmp"), ".json"), ".hashes"), ".edges")
 
+		// a .tmp is a write a killed plan left half done
 		if keep[key] && !strings.HasSuffix(name, ".tmp") {
 			continue
 		}

@@ -6,9 +6,8 @@ import (
 	"strings"
 )
 
-// MissingNeeds are the needs whose program isn't on env's PATH. A need
-// names a program and may add a version ("go>=1.27", "node>=22"), which
-// the plugin or driver checks itself.
+// MissingNeeds are the needs whose program isn't on env's PATH; a version in a need ("go>=1.27")
+// is the plugin's or driver's own to check.
 func MissingNeeds(needs []string, env []string) []string {
 	path := ""
 

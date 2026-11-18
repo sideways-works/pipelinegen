@@ -10,10 +10,8 @@ import (
 	"time"
 )
 
-// summaryFile sits beside the journal with what its lines add up to, so a
-// slice's start or end needn't read a journal that grows with the batch. A
-// summary that doesn't cover the journal to its last byte is made again from
-// it.
+// summaryFile holds what the journal's lines add up to, so a slice's start or end needn't read it all;
+// one that doesn't cover the journal to its last byte is made again from it.
 const summaryFile = "summary.json"
 
 type summary struct {

@@ -16,11 +16,8 @@ var shared = []string{
 	"PIPELINEGEN_RECORD", "PIPELINEGEN_RUN_FILE",
 }
 
-// Env is a driver's environment, made from the batch task's: its variables
-// less every token and every other PIPELINEGEN_ variable, the tools
-// directory first on PATH, and over them the suite's params and the set-ups'
-// exports. A declared batch secret stays. It is hygiene, not a boundary: a
-// test runs as the same user and can read its parent's environment.
+// Env is the batch task's environment less tokens (a declared batch secret stays) and PIPELINEGEN_ variables,
+// tools first on PATH, then params and exports: hygiene, not a boundary, as a test can read its parent's.
 type Env struct {
 	// Base is the task's environment (os.Environ when nil).
 	Base    []string
@@ -28,16 +25,13 @@ type Env struct {
 	Secrets []string
 	Params  map[string]string
 	Cache   string
-	// Commit is the commit the run runs, given to the driver as
-	// plugin.EnvCommit. It is no var of Vars: a driver that passes those to
+	// Commit is the run's commit, given as plugin.EnvCommit and no var of Vars: a driver passing those to
 	// its tests by name would make it part of every test's cache key.
 	Commit string
 }
 
-// Vars are the variables the tests get beyond the driver's own process
-// environment, by name: the params (filled in), the declared secrets'
-// values, and the exports. A driver whose tool hides the environment from
-// tests passes each by name.
+// Vars are the variables the tests get beyond the driver's own environment: the params, the declared
+// secrets' values and the exports, which a driver whose tool hides the environment passes by name.
 func (e Env) Vars(exports map[string]string) map[string]string {
 	out := map[string]string{}
 
@@ -67,9 +61,8 @@ func (e Env) base() []string {
 	return os.Environ()
 }
 
-// For is the environment of a driver given the exports so far.
-// PIPELINEGEN_MARKS is never in it: only a call that runs a bundle whose
-// marks the tool serves gets it (withMarks).
+// For is a driver's environment given the exports so far; PIPELINEGEN_MARKS is never in it, only in a
+// call running a bundle whose marks the tool serves (withMarks).
 func (e Env) For(exports map[string]string) []string {
 	over := e.Vars(exports)
 
@@ -122,10 +115,8 @@ func drops(name string) bool {
 	return strings.HasPrefix(upper, "PIPELINEGEN_") && !slices.Contains(shared, name)
 }
 
-// withMarks is env for one call of a driver, with PIPELINEGEN_MARKS only
-// when the call runs a bundle whose marks the tool serves: a hook marks only
-// when it sees the variable, so a slice run alone never waits for marks
-// nobody takes. A nil env is the process's own.
+// withMarks is env with PIPELINEGEN_MARKS only for a call running a bundle whose marks the tool serves:
+// a hook marks only when it sees it, so a slice run alone never waits for marks nobody takes.
 func withMarks(env []string, req plugin.DriverRequest) []string {
 	if env == nil {
 		env = os.Environ()

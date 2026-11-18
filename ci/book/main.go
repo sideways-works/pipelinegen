@@ -1,14 +1,5 @@
-// Command book runs every step of the book's guide on a fresh copy of
-// example-notes and fails when what the tool printed differs from
-// docs/transcripts, the outputs the book shows. With --update it writes
-// the new outputs into docs/transcripts and the pages instead.
-//
-//	go run ./ci/book [--update] <scratch dir>
-//
-// The outputs are the pinned releases': the pipelinegen on PATH must be
-// the version example-notes pins, and each plugin in $PLUGINS its pinned
-// binary. The steps need pipelinegen, bazel (bazelisk), go, node and a
-// Playwright browser on PATH.
+// Command book runs the book's guide on a fresh copy of example-notes and fails when the tool's
+// outputs differ from docs/transcripts (see docs/internals/testing-and-releases.md).
 package main
 
 import (

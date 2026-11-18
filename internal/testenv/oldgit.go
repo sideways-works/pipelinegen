@@ -7,10 +7,8 @@ import (
 	"testing"
 )
 
-// OldGit puts a git first on PATH that answers `cat-file --batch-check` and
-// `cat-file --batch`, with lazy fetching off, as git before 2.45 does: asked
-// about an object a partial clone lacks, it dies with "fatal: could not
-// fetch <id> from promisor remote" instead of answering "<id> missing".
+// OldGit puts a git first on PATH whose cat-file --batch dies with "could not fetch <id> from
+// promisor remote" for an object a partial clone lacks, as git before 2.45 does.
 func OldGit(t *testing.T) {
 	t.Helper()
 

@@ -11,11 +11,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 )
 
-// A continuous run whose planning builds a runner can't run one at a time
-// keeps a create-only record of each round a build began: RoundStarted once
-// it finds its commit the branch's tip, RoundPlanning when it ends its wait.
-// Every build that decides reads them after writing its own, so of two
-// builds that decide at once each sees the other's.
+// A continuous run a runner can't plan one build at a time keeps a create-only record of each round:
+// every build that decides reads them after writing its own, so of two at once each sees the other.
 const (
 	// RoundStarted is the record that a build of the round began.
 	RoundStarted = "started"
@@ -25,13 +22,11 @@ const (
 	roundFile = "round.json"
 )
 
-// ErrRoundRecorded is a round record written for a round that has one.
 var ErrRoundRecorded = errors.New("the round has that record already")
 
 // AllRounds is where every run's round records live.
 const AllRounds = refRoot + "rounds/"
 
-// RoundsPrefix is where a run's round records of a change live.
 func RoundsPrefix(run, change string) string {
 	return AllRounds + run + "/" + RefPart(change) + "/"
 }
@@ -42,15 +37,13 @@ func (id ID) RoundRef(kind string) string {
 	return RoundsPrefix(id.Run, id.Change) + short(id.Commit) + "/" + kind
 }
 
-// RoundRecord is what a round record holds.
 type RoundRecord struct {
 	Commit string    `json:"commit"`
 	At     time.Time `json:"at"`
 	JobURL string    `json:"job_url,omitempty"`
 }
 
-// RecordRound writes a record of the round of id, create-only, and returns
-// its version; it answers ErrRoundRecorded when the round has the record.
+// RecordRound writes the round's record create-only and returns its version, or ErrRoundRecorded;
 // over, when set, is the version the record must have instead.
 func RecordRound(ctx context.Context, store *gitstore.Store, id ID, kind, jobURL, over string) (string, error) {
 	up, err := RoundUpdate(id, kind, jobURL, over)
@@ -88,7 +81,6 @@ type Round struct {
 	Records map[string]gitstore.Ref
 }
 
-// Last is when the round's newest record was written.
 func (r Round) Last() time.Time {
 	var last time.Time
 

@@ -21,9 +21,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// A proposed change is planned in two steps, so its code never runs where a credential that writes is.
-// The first runs the change's code with the store read only and leaves plan.json or failed.txt; the
-// second runs none of it, checks that the plan is of this change, and writes it.
+// A proposed change is planned in two steps, so its code never runs where a credential that writes is:
+// the first, read only, leaves plan.json or failed.txt; the second checks the plan is this change's.
 const (
 	planOutFile   = "plan.json"
 	planFailedOut = "failed.txt"
@@ -262,10 +261,8 @@ func ownPlan(ctx context.Context, cfg *config.Config, ch runs.Change, store *git
 
 var fullCommit = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
-// olderTip accepts a plan of the change merged into an older tip of the
-// target, when the target moved on between the two steps: that tip must
-// be in the target's history now, and merging the change into it here must
-// give the plan's head, so the first step's word is taken for nothing.
+// olderTip accepts a plan merged into an older tip of a target that moved on: that tip must be in the
+// target's history, and merging the change into it here must give the plan's head.
 func olderTip(ctx context.Context, cfg *config.Config, ch runs.Change, repo string, plan *affected.Plan, tip string) bool {
 	if cfg.Runs[ch.Run].Compare != config.CompareMergedTarget || plan.Base == "" || !fullCommit.MatchString(plan.Base) {
 		return false

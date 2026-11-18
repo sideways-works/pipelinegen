@@ -42,12 +42,11 @@ const (
 
 var keyRowRE = regexp.MustCompile("^\\|\\s*`([a-z0-9_.<>\\[\\]]+)`\\s*\\|")
 
-// ownedElsewhere are keys whose own keys belong to another part of
-// pipelinegen, which documents and validates them.
+// ownedElsewhere are keys whose own keys another part of pipelinegen documents and validates.
 var ownedElsewhere = []string{"generated[]."}
 
-// aliases are keys that are another key by a second name: their own keys
-// are documented once, under the key they stand for.
+// aliases are keys that are another key by a second name: their own keys are documented once,
+// under the key they stand for.
 var aliases = map[string]string{"runs.<name>.trigger.changes.": "runs.<name>.trigger.pull_requests."}
 
 func documentedAs(k string) string {

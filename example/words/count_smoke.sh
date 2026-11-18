@@ -1,4 +1,4 @@
-# Smoke tests of /count.
+# WORDS is the address of the server the batch started.
 
 test_count() {
 	got=$(wget -qO- "$WORDS/count?s=a+b+c")

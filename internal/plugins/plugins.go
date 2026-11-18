@@ -1,6 +1,5 @@
-// Package plugins runs a repository's sbom and correlator plugins for
-// planning and assembles what they say into a deps.Tree, keeping every
-// answer in the content cache so a plan asks only about what changed.
+// Package plugins runs a repository's sbom and correlator plugins for planning and assembles a
+// deps.Tree, keeping every answer in the content cache so a plan asks only about what changed.
 package plugins
 
 import (
@@ -21,27 +20,24 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// ErrPlugins wraps what goes wrong with the plugins as a whole.
 var ErrPlugins = errors.New("plugins")
 
-// Options say where the plugins are and what they keep.
 type Options struct {
 	Log io.Writer
 
 	Config *config.Config
 	Dir    string
-	// Cache is the core's cache directory: <Cache>/plugins/<name> is each
-	// plugin's own, <Cache>/caches/<name> the shared caches plugins declare.
+	// Cache is the core's cache directory: <Cache>/plugins/<name> is each plugin's own,
+	// <Cache>/caches/<name> the shared caches plugins declare.
 	Cache     string
 	Answers   *plugincache.Cache
 	Work      string
 	Described map[string]plugin.Description
-	// Cold asks every plugin about every file and set and compares each
-	// answer with what the cache would have served.
+	// Cold asks every plugin about every file and set and compares each answer with what the
+	// cache would have served.
 	Cold bool
 }
 
-// Loaded is one configured plugin, described.
 type Loaded struct {
 	Conf config.Plugin
 	P    plugin.Plugin
@@ -53,8 +49,8 @@ type Loaded struct {
 
 func (l *Loaded) can(call string) bool { return slices.Contains(l.Desc.Capabilities, call) }
 
-// version and checksum name exactly which build answered, so an answer of
-// one build is never served for another.
+// version and checksum name exactly which build answered, so an answer of one build is never
+// served for another.
 func (l *Loaded) version() (string, string) {
 	v, sum := "commit", l.Conf.Commit
 	if r := l.Conf.Release; r != nil {
@@ -68,7 +64,6 @@ func (l *Loaded) version() (string, string) {
 	return v, sum
 }
 
-// Set is the configured plugins of a repository, described.
 type Set struct {
 	o       Options
 	Plugins []*Loaded
@@ -87,13 +82,11 @@ type Set struct {
 	differences []Difference
 }
 
-// Report is what a plan records about its plugins.
 type Report struct {
 	Calls    []CallCount `json:"calls,omitempty"`
 	Warnings []string    `json:"warnings,omitempty"`
 }
 
-// CallCount is one plugin call's share of a plan.
 type CallCount struct {
 	Plugin      string `json:"plugin"`
 	Call        string `json:"call"`
@@ -102,7 +95,6 @@ type CallCount struct {
 	Uncacheable int    `json:"uncacheable,omitempty"`
 }
 
-// Load describes every sbom and correlator plugin of the config.
 func Load(ctx context.Context, o Options) (*Set, error) {
 	s := &Set{o: o, offAt: map[string]int{}}
 
@@ -168,8 +160,8 @@ func Load(ctx context.Context, o Options) (*Set, error) {
 // ByCore is the declarer of the core's own narrowings.
 const ByCore = "the core"
 
-// Override is a narrowing whose level the config sets: OffAt in force, and
-// Declared the level its declarer (By) gives.
+// Override is a narrowing whose level the config sets: OffAt in force, Declared the level its
+// declarer (By) gives.
 type Override struct {
 	Name     string `json:"name"`
 	OffAt    int    `json:"off_at"`
@@ -178,9 +170,8 @@ type Override struct {
 	Note     string `json:"note"`
 }
 
-// override puts the config's levels in place of the declarers': a name no
-// configured plugin and not the core declares is refused, since it would
-// narrow nothing and the config would only seem to.
+// override puts the config's levels in place of the declarers': a name nobody declares is
+// refused, since it would narrow nothing and the config would only seem to.
 func (s *Set) override(levels map[string]config.NarrowingLevel, declarer map[string]string) error {
 	for _, name := range sortedKeys(levels) {
 		lv := levels[name]
@@ -198,41 +189,37 @@ func (s *Set) override(levels map[string]config.NarrowingLevel, declarer map[str
 	return nil
 }
 
-// Overrides are the narrowings whose level the config sets, by name.
 func (s *Set) Overrides() []Override { return slices.Clone(s.set) }
 
-// NarrowSetupSplit keeps what ran during a batch's setup out of its
-// slices' lists, binding the suite's setup target instead.
+// NarrowSetupSplit keeps what ran during a batch's setup out of its slices' lists, binding the
+// suite's setup target instead.
 const NarrowSetupSplit = "setup-split"
 
-// The narrowings the core implements itself, whatever plugins are
-// configured.
+// The narrowings the core implements itself, whatever plugins are configured.
 const (
-	// NarrowSample binds the units every recorded slice of a suite ran to
-	// a sample of the suite instead of to every slice.
+	// NarrowSample binds the units every recorded slice of a suite ran to a sample of the suite
+	// instead of to every slice.
 	NarrowSample = "sample"
-	// NarrowSampleBound binds to the sample, too, the units every recorded
-	// slice binds only through code every slice ran, and those bound
-	// because they run at start-up.
+	// NarrowSampleBound binds to the sample, too, the units every recorded slice binds only
+	// through code every slice ran, and those bound because they run at start-up.
 	NarrowSampleBound = "sample-bound"
-	// NarrowUnobservable takes a changed file whose sbom says its units
-	// cover it whole, and whose units are all as they were, for no change
-	// to the slices bound by recording, whatever Bazel edge leads there.
+	// NarrowUnobservable takes a changed file whose units cover it whole and are all as they were
+	// for no change to the slices bound by recording, whatever Bazel edge leads there.
 	NarrowUnobservable = "unobservable-edits"
-	// NarrowPluginEntry binds a plugin's entry in the config to a sample of
-	// each suite the entry reaches instead of to every slice it reaches.
+	// NarrowPluginEntry binds a plugin's entry in the config to a sample of each suite it reaches
+	// instead of to every slice it reaches.
 	NarrowPluginEntry = "plugin-entry"
-	// NarrowPassedSince compares a slice of a last_passed run from where it
-	// last passed in that run, when that is newer than the run's base.
+	// NarrowPassedSince compares a slice of a last_passed run from where it last passed in that
+	// run, when that is newer than the run's base.
 	NarrowPassedSince = "passed-since"
 
-	// NarrowBuildFiles leaves BUILD and .bzl files out of a recorded
-	// slice's data: a change to a rule reaches it through that rule.
+	// NarrowBuildFiles leaves BUILD and .bzl files out of a recorded slice's data: a change to a
+	// rule reaches it through that rule.
 	NarrowBuildFiles = "build-files-by-targets"
 )
 
-// CoreNarrowings are the core's own narrowings with the level that
-// switches each off, as the ladder lists them.
+// CoreNarrowings are the core's own narrowings with the level that switches each off, as the
+// ladder lists them.
 var CoreNarrowings = []plugin.Narrowing{
 	{Name: NarrowSample, OffAt: 3, Note: "code every slice runs the same way breaks them alike, " +
 		"but a sample can still miss the one slice it breaks differently; the nightly runs the rest"},
@@ -249,7 +236,6 @@ var CoreNarrowings = []plugin.Narrowing{
 		"which bazel-diff hashes, and through the members it lists; it rests on the tests that read such a file's text being declared (text_inputs)"},
 }
 
-// CoreOffAt is the level from which a core narrowing is off.
 func CoreOffAt(name string) int {
 	for _, n := range CoreNarrowings {
 		if n.Name == name {
@@ -260,8 +246,7 @@ func CoreOffAt(name string) int {
 	return 0
 }
 
-// Descriptions are the plugins' descriptions by name, for a later step's
-// Options.Described.
+// Descriptions are the plugins' descriptions by name, for a later step's Options.Described.
 func (s *Set) Descriptions() map[string]plugin.Description {
 	out := make(map[string]plugin.Description, len(s.Plugins))
 	for _, l := range s.Plugins {
@@ -271,8 +256,8 @@ func (s *Set) Descriptions() map[string]plugin.Description {
 	return out
 }
 
-// Flush writes the answers made since the last Flush to the repository's
-// cache refs, when the cache pushes.
+// Flush writes the answers made since the last Flush to the repository's cache refs, when the
+// cache pushes.
 func (s *Set) Flush(ctx context.Context) error {
 	if s.o.Answers == nil {
 		return nil
@@ -281,7 +266,6 @@ func (s *Set) Flush(ctx context.Context) error {
 	return s.o.Answers.Flush(ctx)
 }
 
-// Report returns what the plans so far recorded.
 func (s *Set) Report() Report {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -327,7 +311,6 @@ func (s *Set) notCacheable(name, call string) {
 	}
 }
 
-// NotPinned are the plugins whose binary is not the file their pin names.
 func (s *Set) NotPinned() []NotPinned {
 	var out []NotPinned
 
@@ -340,7 +323,6 @@ func (s *Set) NotPinned() []NotPinned {
 	return out
 }
 
-// Warnf adds a plan-level warning, once.
 func (s *Set) Warnf(format string, args ...any) { s.warnf(format, args...) }
 
 func (s *Set) warnf(format string, args ...any) {

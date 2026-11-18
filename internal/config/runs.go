@@ -14,20 +14,17 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// GitHub is where runs report and pull requests are listed.
 type GitHub struct {
 	Repository string `yaml:"repository"`
-	// Token names the Concourse var holding the token, never its value:
-	// the token of every purpose Tokens leaves out.
+	// Token names the Concourse var holding the token, never its value: the token of every
+	// purpose Tokens leaves out.
 	Token string `yaml:"token"`
-	// Tokens split the token by purpose, so a step gets only a token for
-	// what it does: a task that runs the change's code, at most one that
-	// reads.
+	// Tokens split the token by purpose, so a step gets only a token for what it does: a task
+	// that runs the change's code, at most one that reads.
 	Tokens       Tokens `yaml:"tokens"`
 	StatusPrefix string `yaml:"status_prefix"`
 }
 
-// Tokens name, per purpose, the Concourse var holding its token.
 type Tokens struct {
 	Read string `json:"read" yaml:"read"`
 
@@ -45,7 +42,6 @@ func (t Tokens) byPurpose() map[string]string {
 	}
 }
 
-// TokenFor is the var of a purpose's token: its own, or the one token.
 func (g GitHub) TokenFor(purpose string) string {
 	if v := g.Tokens.byPurpose()[purpose]; v != "" {
 		return v
@@ -54,8 +50,8 @@ func (g GitHub) TokenFor(purpose string) string {
 	return g.Token
 }
 
-// SplitTokens is every purpose's var when the section splits the token
-// by purpose, nil when one token serves them all.
+// SplitTokens is every purpose's var when the token is split by purpose, nil when one token
+// serves them all.
 func (g GitHub) SplitTokens() map[string]string {
 	if g.Tokens == (Tokens{}) {
 		return nil
@@ -69,31 +65,26 @@ func (g GitHub) SplitTokens() map[string]string {
 	return out
 }
 
-// Git is the repository's own remote. A repository on a host pipelinegen
-// doesn't report to names it here: the records live in the remote,
-// and the CI system's job results are the report.
+// Git names the remote of a repository on a host pipelinegen doesn't report to: the records live
+// in the remote, and the CI system's job results are the report.
 type Git struct {
-	// Remote is the repository's URL (https, http, git or file). It never
-	// carries a credential.
+	// Remote is the repository's URL (https, http, git or file), never with a credential.
 	Remote string `yaml:"remote"`
-	// SSHKey names, for an ssh remote, the CI var holding the private key
-	// of each purpose, never a key itself.
+	// SSHKey names, for an ssh remote, the CI var holding each purpose's private key.
 	SSHKey SSHKeys `yaml:"ssh_key"`
-	// KnownHosts are an ssh remote's host keys, as known_hosts lines:
-	// required for one, since its host is checked strictly.
+	// KnownHosts are an ssh remote's host keys, as known_hosts lines: required, since its host
+	// is checked strictly.
 	KnownHosts []string `yaml:"known_hosts"`
 	Origin     string   `yaml:"-"`
 }
 
-// Reports tells whether runs report to a host, where commit statuses,
-// comments and pull requests live; without one, only branch, timer and
-// manual runs can run.
+// Reports tells whether runs report to a host, where statuses, comments and pull requests live;
+// without one, only branch, timer and manual runs can run.
 func (c *Config) Reports() bool {
 	return c.GitHub.Repository != "" || c.GitHub.Token != "" || c.GitHub.Tokens != (Tokens{})
 }
 
-// remoteSchemes are the URLs git.remote takes: ones git reaches with
-// nothing but the token pipelinegen's steps carry.
+// remoteSchemes are those git reaches with nothing but the token pipelinegen's steps carry.
 var remoteSchemes = map[string]bool{"https": true, "http": true, "git": true, "file": true}
 
 func validRemote(remote string) bool {
@@ -103,71 +94,61 @@ func validRemote(remote string) bool {
 		(u.Host != "" || u.Scheme == "file") && u.Path != "" && u.Path != "/"
 }
 
-// Concourse holds what the generated pipelines need from the CI system.
 type Concourse struct {
 	URL        string         `yaml:"url"`
 	Team       string         `yaml:"team"`
 	Repository map[string]any `yaml:"repository"`
-	// Vars is not read; a config that still sets it loads with a warning, so
-	// it isn't taken for doing something.
+	// Vars is not read; a config that still sets it loads with a warning, so it isn't taken
+	// for doing something.
 	Vars    []string `yaml:"vars,omitempty"`
 	Planner Planner  `yaml:"planner"`
 	Include string   `yaml:"include"`
 	Branch  string   `yaml:"branch"`
-	// PullRequests is the image of the pull request resource type (default
-	// the maintained fork of github-pr-resource).
+	// PullRequests is the image of the pull request resource type (default the maintained
+	// fork of github-pr-resource).
 	PullRequests map[string]any `yaml:"pull_requests"`
-	// Mock says whether the Concourse the pipeline runs on has its bundled
-	// mock resource type, which a connector's chain of changes needs:
-	// "bundled" (the default) or "missing".
+	// Mock says whether the Concourse has its bundled mock resource type, which a connector's
+	// chain of changes needs: "bundled" (the default) or "missing".
 	Mock string `yaml:"mock,omitempty"`
-	// SelfSet lets the pipeline job set the pipeline itself. Off, it only
-	// fails when the pipeline is stale. On, secrets stay ((name))
-	// references, which need a credential manager or var_sources.
+	// SelfSet lets the pipeline job set the pipeline itself; off, it only fails when stale. On,
+	// secrets stay ((name)) references, which need a credential manager or var_sources.
 	SelfSet      bool                   `yaml:"self_set"`
 	SerialGroups map[string]SerialGroup `yaml:"serial_groups,omitempty"`
 }
 
-// SerialGroup is how the runs share one serial group.
 type SerialGroup struct {
 	PerRun bool `yaml:"per_run"`
 }
 
-// Planner is the image pipelinegen's own steps run in, and the tools they
-// fetch.
+// Planner is the image pipelinegen's own steps run in, and the tools they fetch.
 type Planner struct {
 	Image     map[string]any `yaml:"image"`
 	Digest    string         `yaml:"digest"`
 	Bootstrap Bootstrap      `yaml:"bootstrap"`
-	// Prepare is a shell command the planning step runs in the checkout
-	// before it plans, to fill the plugins' shared caches (go mod download,
-	// say). It may use the network; plugins never do.
+	// Prepare is a shell command run in the checkout before planning to fill the plugins'
+	// shared caches (go mod download, say); it may use the network, plugins never do.
 	Prepare      string `yaml:"prepare"`
 	PrepareImage string `yaml:"prepare_image,omitempty"`
-	// Params and Secrets are the prepare command's environment, set in its
-	// own shell only, never for pipelinegen's steps; GitToken names the
-	// secret git authenticates with there.
+	// Params and Secrets are the prepare command's environment, never pipelinegen's steps';
+	// GitToken names the secret git authenticates with there.
 	Params   map[string]string `yaml:"params,omitempty"`
 	Secrets  map[string]string `yaml:"secrets,omitempty"`
 	GitToken string            `yaml:"git_token,omitempty"`
-	// Packages are what pipelinegen's own steps need installed in the
-	// planner image.
+	// Packages are what pipelinegen's own steps need installed in the planner image.
 	Packages Packages `yaml:"packages,omitempty"`
 }
 
-// Bootstrap is what each job's first step fetches into its tools: the
-// pipelinegen release and its checksum, or a commit to build, and bazelisk.
+// Bootstrap is what each job's first step fetches into its tools: the pipelinegen release and
+// its checksum, or a commit to build, and bazelisk.
 type Bootstrap struct {
-	// Repository is pipelinegen's owner/name.
 	Repository string   `json:"repository" yaml:"repository"`
 	Release    *Release `json:"release"    yaml:"release"`
 	Commit     string   `json:"commit"     yaml:"commit"`
 	Bazelisk   Download `json:"bazelisk"   yaml:"bazelisk"`
 }
 
-// Release is a released version and how its files are checked: SHA256 is one
-// file's checksum, Sums the checksum of the release's SHA256SUMS, so one pin
-// serves Linux and macOS alike. A release has exactly one of them.
+// Release has exactly one of SHA256, one file's checksum, and Sums, the checksum of the
+// release's SHA256SUMS, so one pin serves Linux and macOS alike.
 type Release struct {
 	Version string `json:"version"        yaml:"version"`
 	SHA256  string `json:"sha256"         yaml:"sha256"`
@@ -182,23 +163,20 @@ func (r Release) valid() bool {
 	return r.Version != "" && sha256Hex.MatchString(r.SHA256)
 }
 
-// Download is a released version of a tool that publishes no checksum
-// list, and its binary's checksum.
+// Download is a version of a tool that publishes no checksum list, and its binary's checksum.
 type Download struct {
 	Version string `json:"version" yaml:"version"`
 	SHA256  string `json:"sha256"  yaml:"sha256"`
 }
 
-// DefaultBazelisk is the bazelisk release a pipeline's bootstrap fetches
-// when the config names none.
 var DefaultBazelisk = Download{Version: "v1.30.0", SHA256: "a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8"}
 
 func (d Download) valid() bool {
 	return d.Version != "" && sha256Hex.MatchString(d.SHA256)
 }
 
-// Pin names the pinned build in keys: the checksum it is checked by,
-// the sums file's when it has one.
+// Pin names the pinned build in keys: the checksum it is checked by, the sums file's when it
+// has one.
 func (r Release) Pin() string {
 	if r.Sums != "" {
 		return r.Sums
@@ -207,7 +185,6 @@ func (r Release) Pin() string {
 	return r.SHA256
 }
 
-// Run is one kind of run the repository declares.
 type Run struct {
 	Trigger   Trigger             `yaml:"trigger"`
 	Compare   string              `yaml:"compare"`
@@ -218,20 +195,17 @@ type Run struct {
 	Uncovered string              `yaml:"uncovered"`
 	Follow    string              `yaml:"follow"`
 	Keep      *Retention          `yaml:"keep"`
-	// TurnMinutes is not read and is accepted with a warning; a continuous
-	// run's round counts as dead after IdleMinutes.
+	// TurnMinutes is not read and is accepted with a warning; a continuous run's round counts
+	// as dead after IdleMinutes.
 	TurnMinutes int `yaml:"turn_minutes"`
 	IdleMinutes int `yaml:"idle_minutes"`
-	// WaitMinutes is how long a continuous run's newest build waits for the
-	// round in progress to end (default DefaultWaitMinutes) before it fails
-	// naming the round; a newer commit ends the wait at once.
+	// WaitMinutes is how long a continuous run's newest build waits for the round in progress
+	// before it fails naming the round; a newer commit ends the wait at once.
 	WaitMinutes int `yaml:"wait_minutes"`
 }
 
-// IdleLength is how long, in minutes, a continuous run's round may go
-// without a recorded step before it counts as dead: its idle_minutes, else
-// the longest silent stretch its limits allow (the suite's start step, its
-// prepare and one batch) and a margin.
+// IdleLength is how many minutes a continuous run's round may go without a recorded step before
+// it counts as dead: idle_minutes, else the longest silence its limits allow and a margin.
 func (c *Config) IdleLength(run string) int {
 	r := c.Runs[run]
 	if r.IdleMinutes > 0 {
@@ -246,12 +220,11 @@ func (c *Config) IdleLength(run string) int {
 	return c.Limits.StepMinutes() + 2*longest + idleMargin
 }
 
+// idleMargin, in minutes, covers the steps around a stretch the limits bound and the workers' clocks.
 const idleMargin = 10
 
-// PlanningLength is how long, in minutes, a continuous run's round with no
-// plan yet may go without a newer record before it counts as dead:
-// limits.plan and a margin for the steps around the plan and the workers'
-// clocks.
+// PlanningLength is how many minutes a continuous round with no plan yet may go without a newer
+// record before it counts as dead: limits.plan, and a margin for the steps and clocks around it.
 func (c *Config) PlanningLength() int {
 	return c.Limits.PlanMinutes() + idleMargin
 }
@@ -260,15 +233,12 @@ func (c *Config) PlanningLength() int {
 type Trigger struct {
 	Branch       string        `yaml:"branch"`
 	PullRequests *PullRequests `yaml:"pull_requests"`
-	// Changes is pull_requests by its host-neutral name, moved into
-	// PullRequests when the config is read.
+	// Changes is pull_requests by its host-neutral name, moved into PullRequests when read.
 	Changes *PullRequests `yaml:"changes"`
 	Timer   *Timer        `yaml:"timer"`
 	Manual  bool          `yaml:"manual"`
-	// Continuous, beside Branch, queues a build for every commit of the
-	// branch and runs its rounds one at a time: a build whose commit is no
-	// longer the branch's tip runs nothing, and the tip's waits while a
-	// round is in progress.
+	// Continuous, beside Branch, queues a build per commit and runs its rounds one at a time: a
+	// build whose commit is no longer the tip runs nothing, the tip's waits for the round.
 	Continuous bool `yaml:"continuous"`
 }
 
@@ -279,29 +249,25 @@ type PullRequests struct {
 	Labels        []string `yaml:"labels"`
 	LabelsWithout []string `yaml:"labels_without"`
 	Head          string   `yaml:"head"`
-	// OncePerReady plans a head only when it was the head as the pull
-	// request last became ready for review: a push to a ready pull request
-	// starts nothing until it is set to draft and ready again.
+	// OncePerReady plans a head only when it was the head as the pull request last became ready:
+	// a push to a ready pull request starts nothing until it is set to draft and ready again.
 	OncePerReady bool `yaml:"once_per_ready"`
-	// MissedAfter is how long an open head may go without a plan, or a
-	// planned head without any suite begun, before the run's sweep plans
-	// it or hands it to the suites again (default 10m).
+	// MissedAfter is how long an open head may go without a plan, or a planned one without a
+	// suite begun, before the sweep plans it or hands it on again (default 10m).
 	MissedAfter Period `yaml:"missed_after,omitempty"`
 	SweepEvery  Period `yaml:"sweep_every,omitempty"`
 }
 
-// Drafts is a pull request run's draft setting: "", "false", "true" or
-// "any"; left out it is "false".
+// Drafts is a pull request run's draft setting: "", "false", "true" or "any"; left out it is
+// "false".
 type Drafts string
 
-// The draft settings.
 const (
 	DraftsReady Drafts = "false"
 	DraftsOnly  Drafts = "true"
 	DraftsAny   Drafts = "any"
 )
 
-// UnmarshalYAML takes true, false or any.
 func (d *Drafts) UnmarshalYAML(n *yaml.Node) error {
 	switch v := Drafts(n.Value); {
 	case n.Kind == yaml.ScalarNode && (v == DraftsReady || v == DraftsOnly || v == DraftsAny):
@@ -313,9 +279,8 @@ func (d *Drafts) UnmarshalYAML(n *yaml.Node) error {
 	}
 }
 
-// Wanted is the draft state a pull request must have, nil for either:
-// ready ones only unless the config says otherwise, since a draft is work
-// its author hasn't asked anyone to look at yet.
+// Wanted is the draft state a pull request must have, nil for either: ready ones only unless
+// the config says otherwise, since a draft is work its author hasn't asked anyone to look at.
 func (d Drafts) Wanted() *bool {
 	switch d {
 	case DraftsAny:
@@ -327,7 +292,6 @@ func (d Drafts) Wanted() *bool {
 	}
 }
 
-// Whether the Concourse has its bundled mock resource type.
 const (
 	MockBundled = "bundled"
 	MockMissing = "missing"
@@ -336,11 +300,10 @@ const (
 // DefaultSweepEvery is how often a connector's changes are swept for.
 const DefaultSweepEvery = "1m"
 
-// DefaultMissedAfter is how long a head waits for its own planning build
-// before the sweep takes it.
+// DefaultMissedAfter is how long a head waits for its own planning build before the sweep
+// takes it.
 const DefaultMissedAfter = 10 * time.Minute
 
-// Missed is the run's missed_after, or its default.
 func (p *PullRequests) Missed() time.Duration {
 	if d, ok := p.MissedAfter.Duration(); ok {
 		return d
@@ -349,7 +312,6 @@ func (p *PullRequests) Missed() time.Duration {
 	return DefaultMissedAfter
 }
 
-// Timer starts a run once a day in a window.
 type Timer struct {
 	Start    string   `yaml:"start"`
 	Stop     string   `yaml:"stop"`
@@ -357,7 +319,6 @@ type Timer struct {
 	Days     []string `yaml:"days"`
 }
 
-// RunSuite is a suite's part in a run.
 type RunSuite struct {
 	Params      map[string]string `yaml:"params"`
 	Minutes     int               `yaml:"minutes"`
@@ -365,7 +326,6 @@ type RunSuite struct {
 	Secrets     Secrets           `yaml:"secrets"`
 }
 
-// RunReport says where a run reports.
 type RunReport struct {
 	Status    *bool    `yaml:"status"`
 	Comment   *Comment `yaml:"comment"`
@@ -382,12 +342,10 @@ func (r RunReport) FlushEvery() time.Duration {
 	return 30 * time.Second
 }
 
-// Comment is a pull request comment that shows the run.
 type Comment struct {
 	Format string `yaml:"format"`
 }
 
-// The values of Run.Compare and Run.Select.
 const (
 	CompareMergedTarget = "merged_target"
 	CompareLastPassed   = "last_passed"
@@ -403,7 +361,6 @@ var (
 	timeOfDay = regexp.MustCompile(`^([01]?[0-9]|2[0-3]):[0-5][0-9]$`)
 )
 
-// UncoveredFor is what run name does when something is bound to no slice.
 func (c *Config) UncoveredFor(run string) string {
 	if u := c.Runs[run].Uncovered; u != "" {
 		return u
@@ -412,7 +369,6 @@ func (c *Config) UncoveredFor(run string) string {
 	return c.Uncovered
 }
 
-// KeepRuns is how long run's runs are kept.
 func (c *Config) KeepRuns(run string) Retention {
 	if k := c.Runs[run].Keep; k != nil {
 		return *k
@@ -421,8 +377,7 @@ func (c *Config) KeepRuns(run string) Retention {
 	return c.Keep.Runs
 }
 
-// FollowFor is how far run follows a change in suite, and the depth bound
-// (0: none).
+// FollowFor is how far run follows a change in suite, and the depth bound (0: none).
 func (c *Config) FollowFor(run, suite string) (string, int) {
 	follow, depth := c.Follow, c.FollowDepth
 
@@ -446,12 +401,10 @@ func validFollow(f string) bool {
 	return f == FollowExecuted || f == FollowDependents
 }
 
-// Statuses tells whether the run sets commit statuses.
 func (r RunReport) Statuses() bool {
 	return r.Status == nil || *r.Status
 }
 
-// RunNames lists the runs in a stable order.
 func (c *Config) RunNames() []string {
 	names := make([]string, 0, len(c.Runs))
 	for name := range c.Runs {
@@ -463,7 +416,6 @@ func (c *Config) RunNames() []string {
 	return names
 }
 
-// RunSuiteNames lists a run's suites in a stable order.
 func (r Run) RunSuiteNames() []string {
 	names := make([]string, 0, len(r.Suites))
 	for name := range r.Suites {
@@ -475,9 +427,8 @@ func (r Run) RunSuiteNames() []string {
 	return names
 }
 
-// RunCovers tells whether the run named covers suite: a run plans, reports
-// and waits for the suites its entry names. Without a config, the run, or
-// its suites, every suite counts.
+// RunCovers tells whether a run plans, reports and waits for suite: those its entry names, or
+// every suite without a config, the run, or its suites.
 func (c *Config) RunCovers(run, suite string) bool {
 	if c == nil {
 		return true
@@ -512,9 +463,8 @@ func (c *Config) validateRuns(bad func(string, ...any)) {
 	}
 }
 
-// validateCI checks the sections a pipeline is made from as far as the
-// config has them, so a config still being written checks and plans locally;
-// only ValidatePipeline needs them all.
+// validateCI checks what a pipeline is made from as far as the config has it, so a config still
+// being written checks and plans locally; only ValidatePipeline needs it all.
 func (c *Config) validateCI(bad func(string, ...any)) {
 	if c.Reports() {
 		c.validateTokens(bad)
@@ -591,8 +541,8 @@ func (c *Config) validateNoHost(bad func(string, ...any)) {
 	}
 }
 
-// ValidatePipeline checks what making the pipeline needs beyond a valid
-// config, once it declares runs.
+// ValidatePipeline checks what making the pipeline needs beyond a valid config, once it
+// declares runs.
 func (c *Config) ValidatePipeline() error {
 	if len(c.Runs) == 0 {
 		return nil

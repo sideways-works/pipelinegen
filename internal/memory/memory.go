@@ -1,6 +1,5 @@
-// Package memory reads how much memory a task may still use: the machine's
-// available memory and, when the task's cgroup or one above it has a limit,
-// what that limit leaves.
+// Package memory reads how much memory a task may still use: the machine's available memory and,
+// when the task's cgroup or one above it has a limit, what that limit leaves.
 package memory
 
 import (
@@ -21,7 +20,6 @@ const MB = 1 << 20
 // ErrNoReading is a machine whose memory can't be read: no /proc/meminfo.
 var ErrNoReading = errors.New("memory: no reading")
 
-// Reading is what a task may still use, in MB.
 type Reading struct {
 	// Available is MemAvailable: free memory plus the caches the kernel would reclaim.
 	Available int64
@@ -32,8 +30,8 @@ type Reading struct {
 	Cgroup      string
 }
 
-// Free is what the task may still use: the machine's available memory, or less when a cgroup's limit
-// leaves less.
+// Free is what the task may still use: the machine's available memory, or less when a cgroup's
+// limit leaves less.
 func (r Reading) Free() int64 {
 	if r.Limit > 0 {
 		return min(r.Available, max(r.Limit-r.Used, 0))
@@ -42,7 +40,7 @@ func (r Reading) Free() int64 {
 	return r.Available
 }
 
-// Capacity is the most the task could ever have: the machine's memory, or a cgroup's limit below it.
+// Capacity is the most the task could ever have: the machine's memory, or a cgroup's limit below.
 func (r Reading) Capacity() int64 {
 	if r.Limit > 0 {
 		return min(r.Total, r.Limit)
@@ -60,8 +58,8 @@ func (r Reading) String() string {
 	return s + ", no cgroup limit"
 }
 
-// Read reads the machine under root ("/" but in tests): root/proc/meminfo, and the cgroup of the
-// reading process, v2 or v1, under root/sys/fs/cgroup.
+// Read reads the machine under root ("/" but in tests): root/proc/meminfo, and the reading
+// process's cgroup, v2 or v1, under root/sys/fs/cgroup.
 func Read(root string) (Reading, error) {
 	info, err := fields(filepath.Join(root, "proc", "meminfo"), ":")
 	if err != nil {
@@ -185,7 +183,6 @@ func fields(p, sep string) (map[string]string, error) {
 	return out, sc.Err() //nolint:wrapcheck // as above
 }
 
-// kb reads "16384 kB" as MB.
 func kb(v string) int64 {
 	return atoi(strings.TrimSpace(strings.TrimSuffix(v, "kB"))) / 1024
 }

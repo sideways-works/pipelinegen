@@ -1,8 +1,5 @@
-// Package toolcalls describes pipelinegen's commands as a CI step calls
-// them: each flag and whether the path it names is read or written, and what
-// a command reads and needs beyond its flags. The tool fills it from its own
-// flag sets; the plugin kit and the contracts' table of steps are checked
-// against it, so the three never disagree.
+// Package toolcalls describes each command as a CI step calls it: its flags, whether a path is
+// read or written, and what else it needs; the kit and the contracts' table are checked against it.
 package toolcalls
 
 import (
@@ -15,19 +12,17 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Use is what a command does with the path a flag names.
 type Use uint8
 
 // The uses of a path; a flag with none names no path.
 const (
 	Reads Use = 1 << iota
 	Writes
-	// File marks a path that names a file: written in the step's own
-	// directory, it needs no output.
+	// File marks a path that names a file: written in the step's own directory, it needs no
+	// output.
 	File
 )
 
-// Flag is one flag of a command.
 type Flag struct {
 	Default string
 	// Bool flags take no value after a space.
@@ -35,14 +30,12 @@ type Flag struct {
 	Use  Use
 }
 
-// Token says whether a command needs the pipeline's token.
 type Token string
 
-// The token needs.
 const (
 	NoToken Token = ""
-	// TokenOptional: without it the command writes nothing remote and
-	// says so (a batch task's slice steps).
+	// TokenOptional: without it the command writes nothing remote and says so (a batch task's
+	// slice steps).
 	TokenOptional Token = "optional"
 	// TokenRequired: it writes refs or statuses.
 	TokenRequired Token = "required"
@@ -50,30 +43,23 @@ const (
 
 // Needs are what a command reads and needs beyond its flags.
 type Needs struct {
-	// Reads are directories it reads by their default place, relative to
-	// the build's directory.
+	// Reads are directories it reads by their default place, relative to the build's directory.
 	Reads []string `json:"reads,omitempty"`
-	// Recording are directories it reads only in a run that records its
-	// suite.
+	// Recording are directories it reads only in a run that records its suite.
 	Recording []string `json:"recording,omitempty"`
-	// ConfigFrom names the flag whose directory the config is read from,
-	// whatever --root says.
+	// ConfigFrom names the flag whose directory the config is read from, whatever --root says.
 	ConfigFrom string `json:"config_from,omitempty"`
-	// RunFromEnv: it learns its run from PIPELINEGEN_CHANGE and
-	// PIPELINEGEN_COMMIT, else the file PIPELINEGEN_RUN_FILE names, else
-	// the checkout PIPELINEGEN_TRIGGER names.
+	// RunFromEnv: it learns its run from PIPELINEGEN_CHANGE and PIPELINEGEN_COMMIT, else the file
+	// PIPELINEGEN_RUN_FILE names, else the checkout PIPELINEGEN_TRIGGER names.
 	RunFromEnv bool `json:"run_from_env,omitempty"`
 	// Bazel: it runs Bazel, through PIPELINEGEN_BAZELISK when that is set.
 	Bazel bool  `json:"bazel,omitempty"`
 	Token Token `json:"token,omitempty"`
-	// ReadOnlyWith is a flag with which the command writes no refs or
-	// statuses, so the read token is enough when the tokens are split by
-	// purpose: plan --out, which plans a change's own tree and leaves the
-	// writing to the step after it.
+	// ReadOnlyWith is a flag with which the command writes nothing remote, so the read token is
+	// enough (plan --out plans a change's own tree and leaves the writing to the next step).
 	ReadOnlyWith string `json:"read_only_with,omitempty"`
-	// ConcourseURL: it writes the pipeline, the one thing that needs
-	// Concourse's address, which it may take from
-	// PIPELINEGEN_CONCOURSE_URL.
+	// ConcourseURL: it writes the pipeline, the one thing needing Concourse's address, which it
+	// may take from PIPELINEGEN_CONCOURSE_URL.
 	ConcourseURL bool `json:"concourse_url,omitempty"`
 }
 
@@ -82,13 +68,11 @@ type Command struct {
 	Flags map[string]Flag
 	// Named commands take a name before their flags (slice start <name>).
 	Named bool
-	// Words: it takes words of its own among its flags (a slot's number,
-	// pull requests' numbers).
+	// Words: it takes words of its own among its flags (a slot's number, pull requests' numbers).
 	Words bool
 	Needs Needs
 }
 
-// Commands are the tool's commands by name.
 type Commands map[string]Command
 
 // The environment the tool reads in a step.
@@ -102,14 +86,13 @@ const (
 	EnvConcourseURL = "PIPELINEGEN_CONCOURSE_URL"
 )
 
-// PurposeEnv is the variable a purpose's own token is in, when the config
-// splits the token by purpose: PIPELINEGEN_<PURPOSE>_TOKEN.
+// PurposeEnv is the variable a purpose's own token is in when the config splits the token.
 func PurposeEnv(purpose string) string {
 	return "PIPELINEGEN_" + strings.ToUpper(purpose) + "_TOKEN"
 }
 
-// Steps are the commands a runner's generated pipeline calls, the rows of
-// the contracts' table of steps.
+// Steps are the commands a runner's generated pipeline calls, the rows of the contracts' table
+// of steps.
 var Steps = []string{
 	"plan", "tree", "batches", "report batch-end", "report whole", "report collect",
 	"report suite", "pipeline", "git-auth",
@@ -120,16 +103,14 @@ var errUnset = errors.New("which the step doesn't set")
 // ErrCall is a call the tool would refuse or misread.
 var ErrCall = errors.New("pipelinegen call")
 
-// Call is one parsed call of the tool.
 type Call struct {
 	Command string
 	Name    string
 	Flags   map[string]string
 }
 
-// Parse reads a call's arguments the way the tool's flag package does: one
-// or two dashes, a value after a space or an equals sign, none for a bool
-// flag. A shell redirection ends the call.
+// Parse reads a call's arguments as the tool's flag package does: one or two dashes, a value
+// after a space or "=", none for a bool flag; a shell redirection ends the call.
 func (cs Commands) Parse(args []string) (Call, error) {
 	if len(args) == 0 {
 		return Call{}, fmt.Errorf("%w: a call without a command", ErrCall)
@@ -195,18 +176,16 @@ func (cs Commands) Parse(args []string) (Call, error) {
 	return c, nil
 }
 
-// redirection tells a shell redirection (>out, 2>err, <in) from a word;
-// a placeholder of the docs (<run>) is a word.
+// redirection tells a shell redirection (>out, 2>err, <in) from a word; a placeholder of the docs
+// (<run>) is a word.
 func redirection(w string) bool {
 	r := strings.TrimLeft(w, "0123456789")
 
 	return r != "" && (r[0] == '>' || r[0] == '<' && !strings.HasSuffix(r, ">"))
 }
 
-// Mounts are what a call reads and writes, as directories of the build (each
-// path's first element), given the step's environment and whether its run
-// records the suite; Problems are what the step can't satisfy whatever it
-// mounts.
+// Mounts are what a call reads and writes, as the build's top directories, given the step's
+// environment and whether it records; problems are what no mount can satisfy.
 func (cs Commands) Mounts(c Call, env map[string]string, recording bool) (reads, writes, problems []string) { //nolint:nonamedreturns // three lists
 	m := &mounts{env: env}
 	cmd := cs[c.Command]
@@ -316,9 +295,8 @@ func (m *mounts) needs(n Needs, c Call, recording bool) {
 	}
 }
 
-// top is the directory of the build a path lies in, its first element,
-// with $VAR and ${VAR} taken from the step's environment; "" for an
-// absolute path, which is no mount.
+// top is the build directory a path lies in, $VAR and ${VAR} taken from the step's environment;
+// "" for an absolute path, which is no mount.
 func top(p string, env map[string]string) (string, error) {
 	var missing []string
 

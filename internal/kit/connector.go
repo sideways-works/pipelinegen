@@ -20,9 +20,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// connectorFixture is the connector section of a fixture's kit file. Every
-// string may hold {server}, the address of the kit's fake host, which stands
-// for the repository's host.
+// connectorFixture is a fixture's connector section; every string may hold {server}, the kit's fake
+// host, which stands for the repository's host.
 type connectorFixture struct {
 	Remote    string                     `json:"remote"`
 	Config    map[string]any             `json:"config,omitempty"`

@@ -1,6 +1,5 @@
-// Package docscheck reads the documentation the way its test needs: the
-// sections of a reference page, whether each describes code on main, and the
-// links between pages, so the docs can't fall behind the code.
+// Package docscheck reads the documentation as its test needs: a reference page's sections,
+// whether each describes code on main, and the links between pages.
 package docscheck
 
 import (
@@ -15,24 +14,21 @@ import (
 	"unicode"
 )
 
-// NotReleased is the line a reference section starts with while the code
-// it describes is designed but not on main.
+// NotReleased is the line a reference section starts with while the code it describes is designed
+// but not on main.
 const NotReleased = "Not in a release yet."
 
-// Section is a part of a page under one heading.
 type Section struct {
 	Heading string
 	Body    string
 }
 
-// Released tells whether the section describes code on main: it doesn't
-// start with the NotReleased line.
 func (s Section) Released() bool {
 	return !strings.HasPrefix(strings.TrimSpace(s.Body), NotReleased)
 }
 
-// Sections splits a Markdown page at its headings of the given level
-// (2 for "## "), skipping fenced code.
+// Sections splits a Markdown page at its headings of the given level (2 for "## "), skipping
+// fenced code.
 func Sections(page string, level int) []Section {
 	marker := strings.Repeat("#", level) + " "
 
@@ -73,7 +69,6 @@ func Sections(page string, level int) []Section {
 	return out
 }
 
-// Link is one relative link on a page.
 type Link struct {
 	Page   string
 	Target string
@@ -86,8 +81,8 @@ var (
 	schemeRE = regexp.MustCompile(`^[a-z][a-z0-9+.-]*:`)
 )
 
-// Links lists the links of a Markdown page that point into the repository:
-// no scheme, outside code.
+// Links lists the links of a Markdown page that point into the repository: no scheme, outside
+// code.
 func Links(page, text string) []Link {
 	var (
 		out   []Link
@@ -119,8 +114,8 @@ func Links(page, text string) []Link {
 	return out
 }
 
-// Anchors lists the anchors GitHub gives a page's headings: lower case,
-// punctuation dropped, spaces as dashes, and -1, -2 for repeats.
+// Anchors lists the anchors GitHub gives a page's headings: lower case, punctuation dropped,
+// spaces as dashes, and -1, -2 for repeats.
 func Anchors(text string) map[string]bool {
 	out := map[string]bool{}
 	fence := false
@@ -169,11 +164,10 @@ func slugify(h string) string {
 	return b.String()
 }
 
-// ErrLink wraps a link that leads nowhere.
 var ErrLink = errors.New("dead link")
 
-// Resolve checks one link of a page under root: the file or directory it
-// names must exist and, for an anchor into a Markdown page, the heading.
+// Resolve checks one link of a page under root: the file or directory it names must exist, and
+// for an anchor into a Markdown page, the heading.
 func Resolve(root string, l Link) error {
 	target, anchor, _ := strings.Cut(l.Target, "#")
 

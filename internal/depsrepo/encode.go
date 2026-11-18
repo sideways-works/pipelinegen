@@ -15,14 +15,8 @@ const (
 	hashHex    = 32
 )
 
-// Encode turns an id (or a group, or a slice's name) into one path
-// element and target name: lower-case letters, digits, '-' and '_' stay,
-// a '.' stays where it isn't first, an upper-case letter becomes '^' and
-// its lower case (so names differ on case-insensitive file systems too),
-// and every other byte becomes %XX. That much is injective. A name longer
-// than maxExact keeps its first keptPrefix bytes, then '~' and a hash of
-// the id; '~' never appears in an exact name, so a long name can only meet
-// another through a hash collision.
+// Encode turns an id into one path element and target name, injectively: [a-z0-9_-] and a non-leading '.'
+// stay, upper case becomes '^' and lower, others %XX; past maxExact, a prefix, '~' and a hash of the id.
 func Encode(id string) string {
 	var b strings.Builder
 

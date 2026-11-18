@@ -46,7 +46,6 @@ func checkName(what, s string) error {
 	return nil
 }
 
-// Check tells whether the ID can name refs.
 func (id ID) Check() error {
 	return errors.Join(checkName("run", id.Run), checkText("change", id.Change), checkName("commit", id.Commit))
 }
@@ -114,9 +113,8 @@ func refByte(b byte) bool {
 	return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9' || strings.IndexByte("-_.+,", b) >= 0
 }
 
-// RefPath turns a slice's name, a file's path, into ref path parts: every
-// byte a ref can't hold is written %XX, and so is each dot that would end
-// a part, start it, double it or make it end in ".lock".
+// RefPath writes a name as ref path parts: every byte a ref can't hold is %XX, and so is each
+// dot that would end a part, start it, double it or make it end in ".lock".
 func RefPath(name string) string {
 	parts := strings.Split(name, "/")
 
@@ -148,7 +146,6 @@ func RefPart(part string) string {
 	return b.String()
 }
 
-// NameFromRef undoes RefPath and RefPart.
 func NameFromRef(path string) (string, error) {
 	name, err := url.PathUnescape(path)
 	if err != nil {
@@ -161,7 +158,6 @@ func NameFromRef(path string) (string, error) {
 // EndRef marks a suite's end; suite names never start with "_".
 func (id ID) EndRef(suite string) string { return id.Prefix() + "_end/" + suite }
 
-// PlanRef holds the run's plan, written by the planning job.
 func (id ID) PlanRef() string {
 	return refRoot + "plans/" + id.Run + "/" + RefPart(id.Change) + "/" + short(id.Commit)
 }
@@ -169,10 +165,8 @@ func (id ID) PlanRef() string {
 // AllPlans is where every run's plans live: plans/<run>/<change>/<commit>.
 const AllPlans = refRoot + "plans/"
 
-// PlansOf is where every plan of a run lives.
 func PlansOf(run string) string { return refRoot + "plans/" + run + "/" }
 
-// PlansOfChange is where every plan of one change of a run lives.
 func PlansOfChange(run, change string) string { return PlansOf(run) + RefPart(change) + "/" }
 
 // SweptOf is where a run's sweep keeps its marks on the heads it took up.
@@ -182,7 +176,6 @@ func SweptOf(run string) string { return refRoot + "swept/" + run + "/" }
 // whose presence says a suite began.
 func SweptRef(id ID) string { return SweptOf(id.Run) + RefPart(id.Change) + "/" + short(id.Commit) }
 
-// RunsOf is where the records of every change of a run live.
 func RunsOf(run string) string { return refRoot + "runs/" + run + "/" }
 
 // AlsoToRef names more pull requests for a change's comment.
@@ -268,7 +261,6 @@ type planSuite struct {
 	Causes     []Cause             `json:"causes"`
 }
 
-// ErrNoPlan is returned when a step that renders has no plan.
 var ErrNoPlan = errors.New("no plan")
 
 func parsePlan(data []byte) (*planFile, error) {
@@ -284,9 +276,8 @@ func parsePlan(data []byte) (*planFile, error) {
 	return &plan, nil
 }
 
-// ofRun keeps the suites the run covers by cfg: a plan an older planner
-// wrote holds every suite of the config, and a suite the run has no job for
-// would keep the run from ever ending.
+// ofRun keeps the suites the run covers: an older planner's plan holds every suite of the
+// config, and a suite the run has no job for would keep the run from ever ending.
 func (p *planFile) ofRun(cfg *config.Config, run string) {
 	p.Suites = slices.DeleteFunc(p.Suites, func(sp planSuite) bool { return !cfg.RunCovers(run, sp.Suite) })
 }
@@ -295,9 +286,8 @@ func (p *planFile) ofRun(cfg *config.Config, run string) {
 // wrote it first, and its plan stands.
 var ErrPlanned = errors.New("planned already")
 
-// WritePlan stores the run's plan for its steps to read, once: a run keeps
-// the first plan written for it, so suite jobs never see it change. A
-// planner that finds the plan written meanwhile gets ErrPlanned.
+// WritePlan stores the run's plan once: a run keeps the first plan written for it, so suite
+// jobs never see it change; a planner that finds one written meanwhile gets ErrPlanned.
 func WritePlan(ctx context.Context, store *gitstore.Store, id ID, plan []byte) error {
 	err := writePlan(ctx, store, id, plan, false)
 	if errors.Is(err, gitstore.ErrStale) {
@@ -402,6 +392,7 @@ func readSnapshot(ctx context.Context, store *gitstore.Store, cfg *config.Config
 		switch {
 		case name == AlsoToRef(id.Run, id.Change), name == id.PlanRef():
 			snap.refs[name] = ref
+		// end marks lie under the run's prefix too, so they are told apart first
 		case strings.HasPrefix(name, id.EndRef("")):
 			snap.refs[name] = ref
 			endCommits = append(endCommits, ref.Commit)
@@ -560,9 +551,8 @@ func buildRun(id ID, snap snapshot, groups map[string]*regexp.Regexp) Run {
 	return r
 }
 
-// States says where each selected slice and whole-suite check of a suite
-// stands in a run, by slice name: one the suite's end left without a result
-// is errored, one that never started pending.
+// States says where each selected slice and whole-suite check of a suite stands, by name: one
+// the suite's end left without a result is errored, one that never started pending.
 func States(ctx context.Context, store *gitstore.Store, id ID, suite string) (map[string]State, error) {
 	if err := errors.Join(id.Check(), checkName("suite", suite)); err != nil {
 		return nil, err
@@ -605,7 +595,6 @@ func groupOf(pattern *regexp.Regexp, name string) string {
 	return base
 }
 
-// WriteAlsoTo names more pull requests that get a run's comment.
 func WriteAlsoTo(ctx context.Context, store *gitstore.Store, run, change string, prs []int) error {
 	if err := errors.Join(checkName("run", run), checkText("change", change)); err != nil {
 		return err
@@ -717,9 +706,8 @@ func Recordings(ctx context.Context, store *gitstore.Store, id ID) (map[string][
 	return out, nil
 }
 
-// SliceStates reads the state of every slice the run's refs hold, keyed
-// "<suite>/<slice>", whether or not the run's plan names it: what a
-// slice's own steps last wrote, never the plan's view of it.
+// SliceStates reads every slice state the run's refs hold, keyed "<suite>/<slice>", planned or
+// not: what a slice's own steps last wrote, never the plan's view of it.
 func SliceStates(ctx context.Context, store *gitstore.Store, id ID) (map[string]State, error) {
 	if err := id.Check(); err != nil {
 		return nil, err
@@ -776,18 +764,15 @@ type Keep struct {
 	Lists  KeepLists
 }
 
-// KeepRuns keeps a run when it is among the newest Last runs of its name
-// or younger than Age; zero values keep nothing by that rule. With both
-// zero, every run stays.
+// KeepRuns keeps a run among the newest Last of its name or younger than Age; a zero value
+// keeps nothing by its rule, and with both zero every run stays.
 type KeepRuns struct {
 	Last int
 	Age  time.Duration
 }
 
-// KeepLists keeps the newest Last lists and those younger than Age, the
-// same way; and, when Mainline names the default branch's first parents
-// (newest first), the lists of its first Commits whatever their age, and
-// none of the commits after those.
+// KeepLists keeps lists the same way and, when Mainline names the default branch's first
+// parents (newest first), those of its first Commits whatever their age, and none after.
 type KeepLists struct {
 	Last int
 	Age  time.Duration
@@ -796,8 +781,6 @@ type KeepLists struct {
 	Mainline []string
 }
 
-// KeepFrom reads the config's keep settings: keep.runs, each run's own
-// keep, and keep.lists.
 func KeepFrom(cfg *config.Config) Keep {
 	conv := func(r config.Retention) KeepRuns {
 		age, _ := r.For.Duration()
@@ -859,10 +842,8 @@ func (r *sweptRun) when() time.Time {
 	return r.newest
 }
 
-// Sweep removes what keep no longer holds: whole runs, each in one atomic
-// delete, also_to refs of changes without a run left, and old lists. Lists
-// of the commits in protect and each branch's newest lists are never
-// removed; a run that changed while being swept is left for next time.
+// Sweep removes what keep no longer holds: whole runs (each one atomic delete), orphaned also_to
+// refs and old lists, never protect's or a branch's newest; a run changed meanwhile waits.
 func Sweep(ctx context.Context, store *gitstore.Store, now time.Time, keep Keep, protect []string) (int, error) {
 	refs, err := store.List(ctx, refRoot+"runs/", refRoot+"plans/", refRoot+"also-to/", refRoot+"lists/", attached.Prefix)
 	if err != nil {
@@ -898,9 +879,8 @@ func Sweep(ctx context.Context, store *gitstore.Store, now time.Time, keep Keep,
 
 	removed += n
 
-	// lists go in batches: they are independent, and one push names each;
-	// a commit's attached ref goes with its lists, and one whose lists are
-	// gone already goes too
+	// lists go in batches, being independent; a commit's attached ref goes with its lists, or
+	// alone once they are gone
 	old := sweepLists(lists, keep.Lists, now, protect)
 	has := map[string]bool{}
 
@@ -953,9 +933,8 @@ func orphanAlso(also []gitstore.Ref, kept map[string]bool) []gitstore.Ref {
 
 var prChange = regexp.MustCompile(`^pr-[0-9]+$`)
 
-// branchesNewest are, per branch whose runs attached lists, the commit of
-// its newest lists still there: a quiet branch keeps them however old, so
-// its next run plans from them rather than from nothing.
+// branchesNewest is the commit of each branch's newest lists still there: a quiet branch keeps
+// them however old, so its next run plans from them rather than from nothing.
 func branchesNewest(ctx context.Context, store *gitstore.Store, lists []gitstore.Ref, attachedBy map[string]gitstore.Ref) ([]string, error) {
 	type found struct {
 		commit string
@@ -1132,9 +1111,8 @@ func sweepLists(lists []gitstore.Ref, keep KeepLists, now time.Time, protect []s
 	return old
 }
 
-// deleteRun removes a run's refs in one atomic push, or in guarded chunks
-// for a run of more refs than one push should carry, its plan in the last,
-// so a partial delete still leaves a run the next sweep finds.
+// deleteRun removes a run's refs in one atomic push, or in guarded chunks for a large run with
+// its plan in the last, so a partial delete still leaves a run the next sweep finds.
 func deleteRun(ctx context.Context, store *gitstore.Store, refs []gitstore.Ref) (int, error) {
 	refs = slices.Clone(refs)
 	slices.SortStableFunc(refs, func(a, b gitstore.Ref) int {
@@ -1190,8 +1168,6 @@ func deleteRefs(ctx context.Context, store *gitstore.Store, message string, refs
 	return len(refs), nil
 }
 
-// StateFiles reads what each slice of a suite holds in a run, by slice
-// name.
 func StateFiles(ctx context.Context, store *gitstore.Store, id ID, suite string) (map[string]StateFile, error) {
 	if err := errors.Join(id.Check(), checkName("suite", suite)); err != nil {
 		return nil, err

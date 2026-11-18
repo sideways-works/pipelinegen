@@ -1,4 +1,3 @@
-# Checks that lib.sh defines every operation.
 . ./lib.sh
 
 test_operations_defined() {

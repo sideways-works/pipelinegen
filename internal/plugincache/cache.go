@@ -1,7 +1,5 @@
-// Package plugincache keeps plugins' answers by content: in a local
-// directory and, behind it, a remote level shared by every machine (a ref of
-// the repository per plugin build). It is only a cache: losing it costs
-// time, never a wrong answer.
+// Package plugincache keeps plugins' answers by content, locally and behind that in a level every
+// machine shares (a ref per plugin build); losing it costs time, never a wrong answer.
 package plugincache
 
 import (
@@ -31,7 +29,6 @@ type Key struct {
 	Content []string
 }
 
-// Hash is the key's address.
 func (k Key) Hash() (string, error) {
 	cfg, err := json.Marshal(k.Config)
 	if err != nil {
@@ -59,10 +56,8 @@ type Build struct {
 
 func (k Key) build() Build { return Build{Plugin: k.Plugin, Version: k.Version, SHA256: k.SHA256} }
 
-// Edit changes an item record: Add puts items in, Remove takes items out.
-// An edit is applied to the record as the store holds it when the edit is
-// written, and again whenever that write is replayed, so two plans editing
-// one record never lose each other's items.
+// Edit adds and removes items of a record; it applies to the record as the store holds it when written,
+// and again when that write is replayed, so two plans editing one record never lose each other's items.
 type Edit struct {
 	Add, Remove []string
 }
@@ -94,22 +89,16 @@ func (e Edit) then(o Edit) Edit {
 // Remote is the shared level behind the local directory: where any
 // machine finds the answers any other one computed.
 type Remote interface {
-	// Answer reads one answer by its key's hash; false when it has none.
 	Answer(ctx context.Context, b Build, hash string) ([]byte, bool, error)
-	// Items reads an item record; false when it has none.
 	Items(ctx context.Context, b Build, hash string) ([]string, bool, error)
-	// Save writes a build's new answers and applies its edits, in one
-	// write. Answers are write-once: a hash always names the same bytes. An
-	// answer the level holds already with the same bytes changes nothing;
-	// one it holds with other bytes is never overwritten: it comes back as
-	// a Conflict, and the rest of the write lands.
+	// Save writes a build's new answers and edits in one write. Answers are write-once: one held with
+	// other bytes is never overwritten but comes back as a Conflict, and the rest of the write lands.
 	Save(ctx context.Context, b Build, answers map[string][]byte, edits map[string]Edit) ([]Conflict, error)
 	// Replace overwrites answers whatever the level holds for them: for
 	// the run that rebuilt them cold, after it reported each conflict.
 	Replace(ctx context.Context, b Build, answers map[string][]byte) error
-	// Replaced are the keys Replace ever wrote for a build, each with the
-	// digest (Digest) of the bytes it left: a local copy of such a key
-	// with other bytes is stale.
+	// Replaced are the keys Replace ever wrote for a build, each with the Digest of the bytes it left:
+	// a local copy of such a key with other bytes is stale.
 	Replaced(ctx context.Context, b Build) (map[string]string, error)
 }
 
@@ -120,17 +109,14 @@ func Digest(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Conflict is a write-once answer the remote level holds with other bytes
-// than a fresh one for the same key: the answer has an input its key doesn't
-// name, or the plugin isn't deterministic. A plan that meets one keeps its
-// own fresh answer, overwrites nothing and warns once per key.
+// Conflict is a write-once remote answer whose bytes differ from a fresh one's: the answer has an input its
+// key doesn't name, or the plugin isn't deterministic. A plan keeps its fresh answer and warns once per key.
 type Conflict struct {
 	Build       Build
 	Hash        string
 	Stored, Got []byte
 }
 
-// ErrConflict is wrapped by a ConflictError.
 var ErrConflict = errors.New("cached answers differ from fresh ones")
 
 // ConflictError is what Flush returns when answers conflicted; every other
@@ -150,16 +136,14 @@ func (e *ConflictError) Error() string {
 
 func (e *ConflictError) Unwrap() error { return ErrConflict }
 
-// Cache is the local directory and, behind it, the remote level.
 type Cache struct {
 	Dir string
 	// Remote is the shared level; nil keeps the cache local.
 	Remote Remote
 	// Push writes new answers to the remote level (default read-only).
 	Push bool
-	// HeldBytes bounds the bytes of fresh answers kept in memory until
-	// Flush, and of each write Flush makes (default DefaultHeldBytes):
-	// the rest are read back from the local directory.
+	// HeldBytes bounds the fresh answers kept in memory until Flush, and each write Flush makes
+	// (default DefaultHeldBytes): the rest are read back from the local directory.
 	HeldBytes int
 
 	mu       sync.Mutex
@@ -169,11 +153,8 @@ type Cache struct {
 	replaced map[Build]map[string]string
 }
 
-// Keeper is a remote level that drops answers no plan used for a while,
-// so it must hear of every answer a plan used, its local hits too: a
-// machine whose local directory answers everything would otherwise let
-// the shared level forget what every other machine needs. Save keeps
-// what was used.
+// Keeper is a remote level that drops answers no plan used for a while, so it must hear of local hits
+// too, or a machine answered locally would let the level forget what the others need.
 type Keeper interface {
 	// Use notes that a plan used an answer from its local directory;
 	// local reads it, should the level have lost it.
@@ -195,11 +176,8 @@ func (c *Cache) use(b Build, hash string) {
 	})
 }
 
-// ErrMiss is an answer the cache doesn't have.
 var ErrMiss = errors.New("not cached")
 
-// Get returns the answer for a key: from the local directory, else from
-// the remote level.
 func (c *Cache) Get(ctx context.Context, k Key) ([]byte, error) {
 	hash, err := k.Hash()
 	if err != nil {
@@ -237,9 +215,8 @@ func (c *Cache) Get(ctx context.Context, k Key) ([]byte, error) {
 	return data, nil
 }
 
-// stale tells whether a local copy is of a key the remote level replaced
-// since, with other bytes: this machine may have kept the answer the
-// replacing run found wrong.
+// stale tells whether a local copy is of a key the remote level replaced since with other bytes: this
+// machine may have kept the answer the replacing run found wrong.
 func (c *Cache) stale(ctx context.Context, b Build, hash string, data []byte) (bool, error) {
 	if c.Remote == nil {
 		return false, nil
@@ -315,8 +292,6 @@ func (c *Cache) Put(k Key, data []byte) error {
 	return nil
 }
 
-// DefaultHeldBytes bounds the fresh answers a Cache keeps in memory
-// between Flushes, when HeldBytes is not set.
 const DefaultHeldBytes = 64 << 20
 
 func (c *Cache) heldBytes() int {
@@ -327,7 +302,6 @@ func (c *Cache) heldBytes() int {
 	return DefaultHeldBytes
 }
 
-// Held is how many bytes of fresh answers the cache keeps in memory now.
 func (c *Cache) Held() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -335,8 +309,6 @@ func (c *Cache) Held() int {
 	return c.held
 }
 
-// Items reads an item record: from the local directory, else from the
-// remote level; false when neither has it.
 func (c *Cache) Items(ctx context.Context, k Key) ([]string, bool, error) {
 	hash, err := k.Hash()
 	if err != nil {
@@ -406,10 +378,8 @@ func (c *Cache) Edit(ctx context.Context, k Key, e Edit) error {
 	return nil
 }
 
-// Flush writes the answers and edits made since the last Flush, one write
-// per build. Answers the remote level holds with other bytes are left as
-// they are and come back in a *ConflictError, after everything else was
-// written.
+// Flush writes the answers and edits made since the last Flush, one write per build; answers the remote
+// holds with other bytes stay and come back in a *ConflictError, after everything else was written.
 func (c *Cache) Flush(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -452,9 +422,8 @@ func (c *Cache) Flush(ctx context.Context) error {
 	return nil
 }
 
-// save writes one build's fresh answers and edits in writes of at most the
-// held bound each, reading answers past the bound back from the local
-// directory. Called with c.mu held.
+// save writes one build's fresh answers and edits in writes of at most the held bound each, reading
+// answers past it back from the local directory. Called with c.mu held.
 func (c *Cache) save(ctx context.Context, b Build) ([]Conflict, error) {
 	var (
 		conflicts []Conflict
@@ -530,7 +499,6 @@ func (c *Cache) StoredItems(ctx context.Context, k Key) ([]string, bool, error) 
 	return c.Remote.Items(ctx, k.build(), hash)
 }
 
-// Answer is one answer and its key.
 type Answer struct {
 	Key  Key
 	Data []byte
@@ -591,9 +559,8 @@ func (c *Cache) local(hash string) string {
 	return filepath.Join(c.Dir, hash[:2], hash[2:])
 }
 
-// saveLocal writes an answer to a temporary name and renames it, so
-// concurrent runs never read half an answer, and tells whether it did. A
-// failure only costs a recomputation later, so it is not reported.
+// saveLocal writes an answer to a temporary name and renames it, so concurrent runs never read half
+// of one; a failure only costs a recomputation, so it is not reported.
 func (c *Cache) saveLocal(hash string, data []byte) bool {
 	if c.Dir == "" {
 		return false

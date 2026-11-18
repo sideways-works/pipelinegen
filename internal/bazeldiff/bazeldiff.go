@@ -24,7 +24,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/progress"
 )
 
-// Tool runs one bazel-diff binary.
 type Tool struct {
 	Path string
 	// Env is its environment, nil for the process's: the tool gives it one
@@ -32,7 +31,6 @@ type Tool struct {
 	Env []string
 }
 
-// ErrBazelDiff wraps a bazel-diff run that failed.
 var ErrBazelDiff = errors.New("bazel-diff")
 
 func (t Tool) run(ctx context.Context, dir string, args ...string) error {
@@ -63,12 +61,10 @@ func bazelArgs(bz *bazel.Client) []string {
 	return args
 }
 
-// DepsRepo is the external repository planning writes the slices' bindings
-// into; bazel-diff hashes it file by file, so that one changed binding
-// reaches only the slices bound to it.
+// DepsRepo is the external repository planning writes the slices' bindings into; bazel-diff hashes it file
+// by file, so one changed binding reaches only the slices bound to it.
 const DepsRepo = "@pipelinegen_deps"
 
-// DepsDir is where DepsRepo lives in a work tree.
 const DepsDir = ".pipelinegen/deps"
 
 // Hashes writes the hashes of the workspace in dir to hashes and its
@@ -173,7 +169,6 @@ var Pinned = Release{Version: config.Pinned.Version, SHA256: config.Pinned.SHA25
 
 const defaultURL = "https://github.com/Tinder/bazel-diff/releases/download/%s/%s"
 
-// ErrChecksum is a fetched binary whose checksum isn't the pinned one.
 var ErrChecksum = errors.New("checksum mismatch")
 
 // Fetch returns the release's binary, from cacheDir when an earlier fetch

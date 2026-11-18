@@ -11,10 +11,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// overlapping is a links correlator whose sets share an input, as per-file
-// sets do that all read one contract: a.txt's set and b.txt's each name
-// the shared file (FAKE_SHARED) and link to it, and the shared file's own
-// set links it to b. Each call's paths go to FAKE_LOG.
+// overlapping is a links correlator whose per-file sets of a.txt and b.txt share an input, the
+// file FAKE_SHARED, and link to it; its own set links it to b. Calls go to FAKE_LOG.
 func overlapping() map[string]plugin.Handler {
 	return map[string]plugin.Handler{
 		plugin.CallDescribe: describe(plugin.Description{
@@ -40,8 +38,8 @@ func overlapping() map[string]plugin.Handler {
 				{Group: shared, Inputs: []string{shared}, Links: []plugin.Link{{From: unit(shared), To: "t:b.txt", Kind: plugin.LinkUses}}},
 			}
 
-			// a module that replaces another with a local path reads that
-			// one's files too: one set's inputs hold the other's whole
+			// a module that replaces another with a local path reads that one's files too: one
+			// set's inputs hold the other's whole
 			if os.Getenv("FAKE_SHAPE") == "superset" {
 				sets = []plugin.Set{
 					{Group: "texts/a.txt", Inputs: []string{"texts/a.txt", shared}, Links: []plugin.Link{{From: "t:a.txt", To: unit(shared), Kind: plugin.LinkUses}}},

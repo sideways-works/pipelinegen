@@ -73,6 +73,8 @@ func TestTitleKeepsShortTitles(t *testing.T) {
 }
 `
 
+// pluginSums and driverSums are the guide's tools/sums and tools/drivers.sums: the pinned releases'
+// checksums, the same as the plugin entries and example-notes give.
 const pluginSums = `9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95  tools/plugins/go-sbom
 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210  tools/plugins/go-correlator
 fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab  tools/plugins/openapi-sbom
@@ -280,8 +282,8 @@ func (g *guide) run(ctx context.Context) error {
 	err := do(
 		func() error { return g.copySource(ctx) },
 		func() error {
-			// what the steps add: the config, Bazel's files, the CI's images
-			// and the coverage build's hook (step 7)
+			// what the steps add: the config, Bazel's files, the CI's images and the coverage
+			// build's hook (step 7)
 			for _, f := range []string{"pipelinegen.yaml", "MODULE.bazel", "BUILD.bazel", ".bazelversion", ".gitignore", ".tool-versions", "ci/root.yml", "cmd/notes/cover.go"} {
 				if err := os.Remove(filepath.Join(g.notes, f)); err != nil && !errors.Is(err, os.ErrNotExist) {
 					return fmt.Errorf("steps: %w", err)
@@ -314,8 +316,7 @@ func (g *guide) run(ctx context.Context) error {
 		step("query", "bazel query //..."),
 		commitAll("build the notes service with Bazel"),
 
-		// step 3: first config, and its drivers where pipelinegen finds
-		// them
+		// step 3: first config, and its drivers where pipelinegen finds them
 		func() error { return g.write("pipelinegen.yaml", firstConfig) },
 		g.drivers,
 		step("sha-drivers", "sha256sum -c tools/drivers.sums"),
@@ -439,9 +440,8 @@ func (g *guide) recorded(ctx context.Context, step func(string, string) func() e
 		step("why-contract-docs", "pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts"),
 		reset(rec),
 
-		// how-to: estimate what you would save: try over four everyday
-		// commits on the config of step 4, whose suites are still bound by
-		// the graph
+		// how-to: estimate what you would save: try over four everyday commits on the config of
+		// step 4, whose suites are still bound by the graph
 		reset(cfg),
 		edit("api/api.go", sub("a note needs a title", "every note needs a title")), commitTracked("api: a clearer message"),
 		g.wordsEdit, commitTracked("text: keep hyphenated words whole"),

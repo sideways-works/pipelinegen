@@ -8,11 +8,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/packages"
 )
 
-// packageModes says, for every suite that declares packages, how its steps
-// get them on CI: a cached image, or an install in each task. A suite's
-// task files run the repository's own scripts, which no install goes in
-// front of: without a cached image they run without the packages, a
-// warning.
+// packageModes says how each suite that declares packages gets them on CI, a cached image or an
+// install per task; task files run the repository's own scripts, so without an image, a warning.
 func packageModes(cfg *config.Config, tree Tree) []Finding {
 	if !cfg.HasPackages() {
 		return nil

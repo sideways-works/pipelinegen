@@ -16,9 +16,8 @@ type Pass struct {
 	At     time.Time
 }
 
-// Passes are, by "<suite>/<slice>", the newest pass of each slice of a run's change among commits, newest
-// first. A pass is a passed state with tests run, in a run whose plan tested that very commit; a slice
-// skipped, not run or with no tests counts as none, and so do records the sweep removed.
+// Passes are, by "<suite>/<slice>", each slice's newest pass among commits (newest first): passed with
+// tests run, in a run whose plan tested that very commit; records the sweep removed count as none.
 func Passes(ctx context.Context, store *gitstore.Store, run, change string, commits []string) (map[string]Pass, error) {
 	rank := make(map[string]int, len(commits))
 	full := make(map[string]string, len(commits))

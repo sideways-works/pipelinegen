@@ -1,9 +1,5 @@
-// Package connector calls connector plugins. A connector answers each call
-// with the requests it wants sent, as data; this package checks each, puts
-// the token of the call's purpose on it, sends it, retries what may pass,
-// and hands the responses back. A connector is third-party code: it never
-// holds a token, and nothing it asks for can carry one to a host the config
-// didn't agree to.
+// Package connector sends the requests a connector plugin answers with, as data: each checked, given the
+// call's token, retried when it may pass. A connector never holds a token, nor can send one elsewhere.
 package connector
 
 import (
@@ -33,14 +29,11 @@ const (
 // the call fails.
 var ErrRefused = errors.New("connector request refused")
 
-// Exchange calls one connector.
 type Exchange struct {
 	Plugin plugin.Plugin
 	Desc   plugin.Description
-	// Hosts are the origins (scheme://host[:port]) requests may go to:
-	// the code remote's (Origin of the configured remote), and the API
-	// hosts the config confirms. An API host goes in only when describe
-	// declares it too (Allowed).
+	// Hosts are the origins (scheme://host[:port]) requests may go to: the code remote's, and the API
+	// hosts the config confirms and describe declares (Allowed).
 	Hosts  []string
 	Tokens map[string]string
 	Remote string
@@ -90,8 +83,7 @@ func Allowed(remoteOrigin string, declared, confirmed []string) ([]string, error
 	return out, nil
 }
 
-// Call runs call with args in rounds, in the work directory work, and
-// decodes the connector's answer into answer.
+// Call runs call with args in rounds in the work directory work, decoding the connector's answer into answer.
 func (e *Exchange) Call(ctx context.Context, call, work string, args, answer any) error {
 	raw, err := json.Marshal(args)
 	if err != nil {

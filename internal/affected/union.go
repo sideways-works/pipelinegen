@@ -10,10 +10,8 @@ import (
 
 const baseConfigReason = "selected by the base's configuration"
 
-// Union is the plan of a change that edits the config: what its own config
-// selects, plus what the base's config selects in the same change. A slice
-// or suite only the base's selects runs as the base defined it, with a
-// reason saying so.
+// Union plans a change that edits the config: what its own config selects plus what the base's selects
+// in the same change; a slice or suite only the base's selects runs as the base defined it.
 func Union(own, byBase *Plan) *Plan {
 	out := *own
 	out.Suites = slices.Clone(own.Suites)
@@ -111,9 +109,8 @@ const (
 	AddedSuiteReason = "the configuration adds the suite"
 )
 
-// addedByConfig selects the slices a suite has under the head's config and
-// not the base's: a test the config adds never ran in the suite, so it runs
-// as a new slice does.
+// addedByConfig selects the slices a suite has under the head's config and not the base's: a test the
+// config adds never ran in the suite, so it runs as a new slice does.
 func addedByConfig(own SuitePlan, byBase *SuitePlan, why string) SuitePlan {
 	known := map[string]bool{}
 

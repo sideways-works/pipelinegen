@@ -14,9 +14,8 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// A mark is exchanged through files in the marks directory: the one who
-// marks writes <id>.json by rename, and waits for <id>.done, or for
-// <id>.failed holding why. Ids sort in the order the marks were made.
+// A mark is exchanged through the marks directory: the marker writes <id>.json by rename and waits for
+// <id>.done, or <id>.failed holding why; ids sort in the order the marks were made.
 const (
 	markRequest = ".json"
 	markDone    = ".done"
@@ -26,7 +25,6 @@ const (
 // ErrMark is a mark the batch didn't take.
 var ErrMark = errors.New("mark")
 
-// Mark is one mark of a bundle's slice boundary.
 type Mark struct {
 	Mark  string `json:"mark"`
 	Slice string `json:"slice"`

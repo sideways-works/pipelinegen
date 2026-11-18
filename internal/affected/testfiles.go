@@ -16,11 +16,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// TestFileSlices lists a suite's test files in a work tree: the tracked
-// files its tests patterns match and its exclude patterns don't, that hold
-// a test of their own, outside the directories Bazel ignores (no target
-// there can run them). A Go file holds a test when it declares a top-level
-// Test function; any other file unless it matches the suite's helpers.
+// TestFileSlices lists the tracked files a suite's patterns match, outside Bazel-ignored directories,
+// that hold a test: a Go file a top-level Test function, any other unless it matches the helpers.
 func TestFileSlices(ctx context.Context, tree string, s config.Suite) ([]bazel.Slice, error) {
 	files, err := trackedFiles(ctx, tree)
 	if err != nil {

@@ -1,4 +1,3 @@
-# Unit tests of mul.
 . ./lib.sh
 
 test_mul() {

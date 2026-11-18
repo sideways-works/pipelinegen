@@ -13,9 +13,8 @@ import (
 	"strings"
 )
 
-// notesPort is the port the notes server of the book's guide listens on,
-// unless NOTES_PORT names another: the guide's copy of the config has it
-// in place of the 8080 the book shows.
+// notesPort is the guide's notes server's port unless NOTES_PORT names another: the guide's copy
+// of the config has it in place of the 8080 the book shows.
 const notesPort = "7181"
 
 type guide struct {
@@ -24,13 +23,10 @@ type guide struct {
 	commits                              int
 }
 
-// ErrStep is a step the guide needs that failed.
 var ErrStep = errors.New("a step failed")
 
-// Steps runs the guide: book is the tool's checkout, whose example-notes
-// it copies; work is where it runs and out where the outputs go. It needs
-// pipelinegen, bazel (bazelisk), go, node and a Playwright browser on
-// PATH, and the pinned plugins in plugins.
+// Steps runs the guide on a copy of book's example-notes in work, outputs into out; it needs
+// pipelinegen, bazelisk, go, node and a Playwright browser on PATH, and the pinned plugins.
 func Steps(ctx context.Context, book, work, out, plugins string) error {
 	g := &guide{src: filepath.Join(book, "example-notes"), work: work, out: out, plugins: plugins, notes: filepath.Join(work, "notes")}
 
@@ -62,8 +58,8 @@ func Steps(ctx context.Context, book, work, out, plugins string) error {
 		npm = filepath.Join(work, "npm")
 	}
 
-	// pipelinegen's own cache, fresh for every run, as on a new machine;
-	// the browsers Playwright installed stay where they are
+	// pipelinegen's own cache, fresh for every run, as on a new machine; the browsers Playwright
+	// installed stay where they are
 	browsers := os.Getenv("PLAYWRIGHT_BROWSERS_PATH")
 	if browsers == "" {
 		cache := os.Getenv("XDG_CACHE_HOME")
@@ -117,8 +113,8 @@ func (g *guide) git(ctx context.Context, args ...string) error {
 	return g.sh(ctx, g.env, "git", args...)
 }
 
-// commit commits what is staged at the next minute of a fixed day, so
-// every run makes the same commits.
+// commit commits what is staged at the next minute of a fixed day, so every run makes the same
+// commits.
 func (g *guide) commit(ctx context.Context, message string) error {
 	g.commits++
 	date := fmt.Sprintf("2026-01-01T12:%02d:00Z", g.commits)

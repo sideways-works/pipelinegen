@@ -1,6 +1,5 @@
-// Package releasetest checks the release command (go run ./ci/release),
-// which builds the releases of pipelinegen and its plugins, on a small
-// repository of its own.
+// Package releasetest checks the release command (go run ./ci/release) on a small repository of
+// its own.
 package releasetest
 
 import (
@@ -95,8 +94,7 @@ func widget(t *testing.T, extra map[string]string) string {
 	run(t, repo, "git", "remote", "add", "origin", "https://github.com/owner/widget.git")
 	run(t, repo, "git", "tag", "v1.2.3")
 
-	// a NOTICE the test gives is the one it means; otherwise the one the
-	// release needs
+	// a NOTICE the test gives is the one it means; otherwise the one the release needs
 	if _, given := extra["NOTICE"]; !given && exists(filepath.Join(repo, "go.mod")) && exists(filepath.Join(repo, "cmd", "widget", "main.go")) {
 		renotice(t, work)
 	}
@@ -129,9 +127,8 @@ func releaseBin(t *testing.T) string {
 
 		builtBin = filepath.Join(dir, "release")
 
-		// without VCS stamping: the command under test must not depend on
-		// the state of the checkout the tests run in, which git may refuse
-		// to read (another user's, a tarball's, a shallow export's)
+		// without VCS stamping: the command under test must not depend on the checkout the tests
+		// run in, which git may refuse to read (another user's, a tarball's, a shallow export's)
 		out, err := exec.CommandContext(t.Context(), "go", "build", "-buildvcs=false", "-o", builtBin, "../../ci/release").CombinedOutput()
 		if err != nil {
 			errBuild = fmt.Errorf("%w: %s", err, out)
@@ -303,8 +300,8 @@ func TestNestedModuleNeedsItsTag(t *testing.T) {
 	run(t, work, releaseBin(t), "build", "widget", "v1.2.3", "out2")
 }
 
-// fakeGH is a gh on PATH that knows no release and writes the arguments
-// of each call to a file in dir, one call a line.
+// fakeGH is a gh on PATH that knows no release and writes the arguments of each call to a file in
+// dir, one call a line.
 func fakeGH(t *testing.T, dir string) string {
 	t.Helper()
 

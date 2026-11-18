@@ -1,6 +1,5 @@
-// Package commitmsg checks this repository's commit messages: one
-// conventional subject line of at most 72 characters and nothing else, so
-// the history reads as a list of what changed.
+// Package commitmsg checks this repository's commit messages: one conventional subject line of
+// at most 72 characters and nothing else, so the history reads as a list of what changed.
 package commitmsg
 
 import (
@@ -17,16 +16,14 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
-// MaxSubject is the longest subject accepted, in characters.
 const MaxSubject = 72
 
-// ErrMessage is a message that breaks the rule.
 var ErrMessage = errors.New("commit message")
 
 var subject = regexp.MustCompile(`^(feat|fix|docs|test|build|ci|refactor|chore|perf)(\([a-z0-9][a-z0-9/._-]*\))?: \S`)
 
-// Check checks a whole message as git hands it to a commit-msg hook: its
-// comment lines (those starting with #) are not part of it.
+// Check checks a whole message as git hands it to a commit-msg hook: its comment lines (those
+// starting with #) are not part of it.
 func Check(msg string) error {
 	var lines []string
 
@@ -53,7 +50,6 @@ func Check(msg string) error {
 	return CheckSubject(lines[0])
 }
 
-// CheckSubject checks one subject line.
 func CheckSubject(s string) error {
 	switch {
 	case s != strings.TrimSpace(s):
@@ -67,10 +63,8 @@ func CheckSubject(s string) error {
 	return nil
 }
 
-// New lists the commits a build of dir's HEAD brings: a merge's second
-// parent's own commits (a pull request merged into its target), otherwise
-// HEAD alone. Older commits are never checked again, since a landed commit
-// can't be rewritten.
+// New lists the commits a build of dir's HEAD brings: a merge's second parent's own, else HEAD
+// alone; a landed commit can't be rewritten, so it is never checked again.
 func New(ctx context.Context, dir string) ([]string, error) {
 	parents, err := git(ctx, dir, "rev-list", "--parents", "-n", "1", "HEAD")
 	if err != nil {
@@ -84,8 +78,8 @@ func New(ctx context.Context, dir string) ([]string, error) {
 	return []string{"-1", "HEAD"}, nil
 }
 
-// Commits checks every commit of revs in dir, merges left out, and
-// returns one error naming each that breaks the rule.
+// Commits checks every commit of revs in dir, merges left out, and returns one error naming each
+// that breaks the rule.
 func Commits(ctx context.Context, dir string, revs ...string) error {
 	out, err := git(ctx, dir, append([]string{"log", "--no-merges", "--format=%h%x00%B%x00"}, revs...)...)
 	if err != nil {

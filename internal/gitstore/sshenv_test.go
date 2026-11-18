@@ -9,10 +9,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/testenv"
 )
 
-// sshRemote is a bare remote reached over "ssh" through a command of the
-// store's environment (as the store's key reaches git), which runs git's
-// remote end on this machine and notes each call. Without that command no
-// git call reaches the remote.
+// sshRemote is a bare remote reached over "ssh" through a command of the store's environment, which
+// runs git's remote end here and notes each call; without it no git call reaches the remote.
 func sshRemote(t *testing.T) (remote string, env []string, calls string) {
 	t.Helper()
 

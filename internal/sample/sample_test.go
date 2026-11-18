@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-// suite is shaped like a browser suite: two big groups, a few middling
-// ones and many groups of one; every third slice is ten times as long.
+// suite is shaped like a browser suite: two big groups, a few middling ones and many groups of one;
+// every third slice is ten times as long.
 func suite() []Slice {
 	var out []Slice
 
@@ -62,8 +62,8 @@ func TestEveryGroupThenTheirShares(t *testing.T) {
 
 		counts := groupsOf(all, got)
 
-		// the groups of one take one slot each; the five others share the
-		// remaining 22 by size, each within one slice of its share
+		// the groups of one take one slot each; the five others share the remaining 22 by size, each
+		// within one slice of its share
 		for g, share := range map[string]float64{"host": 22 * 65.0 / 128, "console": 22 * 44.0 / 128, "event": 22 * 8.0 / 128} {
 			if c := counts[g]; math.Abs(float64(c)-share) > 1.5 {
 				t.Fatalf("seed %d: group %s has %d, its share is %.1f: %v", seed, g, c, share, counts)
@@ -185,8 +185,7 @@ func TestEdges(t *testing.T) {
 		t.Fatalf("no slices: %v", got)
 	}
 
-	// equal hashes can't be forced, but equal everything else orders by
-	// duration, then name
+	// equal hashes can't be forced, but equal everything else orders by duration, then name
 	ss := []Slice{{Name: "b", Secs: 1}, {Name: "a", Secs: 2}}
 	order(ss, "")
 

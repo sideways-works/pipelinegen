@@ -33,24 +33,19 @@ type Change struct {
 	// Doubt says why a branch's commit isn't trusted as the branch's: it
 	// is no longer on it, or the checkout can't tell.
 	Doubt string `json:"doubt,omitempty"`
-	// Handed is when the sweep handed the change on, with a random part.
-	// Nothing reads it: it exists only so that the same head handed on
-	// again is a new version of the CI system's resource, which would
-	// fold an identical one into the old.
+	// Handed is when the sweep handed the change on, with a random part: read by nothing, it makes
+	// a head handed on again a new resource version, which the CI system would otherwise fold.
 	Handed string `json:"handed,omitempty"`
 }
 
-// Proposed tells whether the change is proposed, its code not yet
-// trusted: a pull request, or a change a connector listed. Such a change
-// never writes what a trusted plan reads.
+// Proposed tells whether the change's code is not yet trusted: a pull request, a connector's change
+// or a doubted commit. Such a change never writes what a trusted plan reads.
 func (c Change) Proposed() bool { return c.PR != 0 || c.Connector != "" || c.Doubt != "" }
 
-// ErrTrigger wraps a trigger directory that can't be read.
 var ErrTrigger = errors.New("trigger")
 
-// ErrMoved is a trigger the config reads as something it isn't: a
-// proposed change whose config says its run is a branch's, or the
-// reverse.
+// ErrMoved is a trigger the config reads as something it isn't: a proposed change whose config says
+// its run is a branch's, or the reverse.
 var ErrMoved = errors.New("a change may not move where its run reads or writes")
 
 const (
@@ -72,11 +67,8 @@ func triggerForm(dir string) string {
 	return formCheckout
 }
 
-// FromTrigger reads what a build's trigger input stands for: a pull request
-// resource's head (its .git/resource files), a connector's hand-off, or a
-// branch's checkout. The trigger's form decides, never the config: the
-// config may be the proposed change's own, and a change that says its run
-// is a branch's is still a proposed change, refused rather than trusted.
+// FromTrigger reads what a build's trigger stands for: a pull request's head, a connector's hand-off
+// or a branch's checkout. Its form decides, never the config, which may be the proposed change's own.
 func FromTrigger(ctx context.Context, cfg *config.Config, run, dir string) (Change, error) {
 	r, ok := cfg.Runs[run]
 	if !ok {
@@ -130,10 +122,8 @@ func takes(form string) string {
 	return "a branch's commits"
 }
 
-// onBranch says why a branch's checkout of commit can't be trusted as the
-// branch's, "" when it can: the commit is no longer on the branch as
-// fetched, or the checkout holds no branch to tell by. Such a run is planned
-// as a proposed change.
+// onBranch says why a branch's checkout of commit can't be trusted as the branch's ("" when it can):
+// the commit left the branch, or the checkout can't tell; such a run is planned as proposed.
 func onBranch(ctx context.Context, dir, branch, commit string) string {
 	if checkBranch(ctx, branch) != nil {
 		return fmt.Sprintf("can't tell whether this commit is on %q", branch)
@@ -212,7 +202,6 @@ func fromPullRequest(run, base, dir string) (Change, error) {
 // which run and change the build is about.
 const RunFile = "run.json"
 
-// WriteRunFile writes the change into dir.
 func WriteRunFile(dir string, ch Change) error {
 	data, err := json.MarshalIndent(ch, "", "  ")
 	if err != nil {
@@ -230,7 +219,6 @@ func WriteRunFile(dir string, ch Change) error {
 	return nil
 }
 
-// ReadRunFile reads the change a step's run file holds.
 func ReadRunFile(path string) (Change, error) {
 	data, err := os.ReadFile(path) //nolint:gosec // a file the pipeline's own steps wrote
 	if err != nil {

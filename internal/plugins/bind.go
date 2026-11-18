@@ -26,38 +26,36 @@ const (
 	Dependents = "dependents"
 )
 
-// BindSlice is a slice as binding needs it.
 type BindSlice struct {
 	Suite   string
 	Name    string
 	Sources []string
 	Tests   []string
-	// List is the unit ids the slice was recorded touching; without a
-	// recording (HasList false) it binds everything.
+	// List is the unit ids the slice was recorded touching; without a recording (HasList false)
+	// it binds everything.
 	List    []string
 	HasList bool
-	// Depth limits the dependents width's steps against the links; 0 is
-	// no limit.
+	// Depth limits the dependents width's steps against the links; 0 is no limit.
 	Depth int
 	Data  []string
 	Units []string
-	// Declared are the labels among Data the test file names in its own
-	// pipelinegen:data lines, which no narrowing takes away.
+	// Declared are the labels among Data the test file names in its own pipelinegen:data lines,
+	// which no narrowing takes away.
 	Declared []string
-	// Tops are the data labels as the slice names them, and Groups the
-	// filegroups among them opened: Data then holds what they stand for.
+	// Tops are the data labels as the slice names them, and Groups the filegroups among them
+	// opened: Data then holds what they stand for.
 	Tops   []string
 	Groups *bazel.Groups
 	Setup  bool
-	// Graph marks a slice of a suite bound by the Bazel graph: it never
-	// records, so it depends on its own files' units and its data.
+	// Graph marks a slice of a suite bound by the Bazel graph: it never records, so it depends
+	// on its own files' units and its data.
 	Graph bool
 }
 
 const setupSlice = "_setup"
 
-// InGroup tells a data label found inside one of the slice's filegroups
-// from one the slice names itself.
+// InGroup tells a data label found inside one of the slice's filegroups from one the slice
+// names itself.
 func (sl BindSlice) InGroup(label string) bool {
 	return sl.Groups != nil && !slices.Contains(sl.Tops, label)
 }
@@ -74,11 +72,9 @@ const whyData = "data"
 
 const whyOwn = "own"
 
-// maxRounds bounds the rounds between bind correlators and links: two
-// suffice in practice.
+// maxRounds bounds the rounds between bind correlators and links: two suffice in practice.
 const maxRounds = 4
 
-// Bind gives each slice its dependencies in both widths.
 func (s *Set) Bind(ctx context.Context, root string, t *deps.Tree, slices []BindSlice) ([]deps.Slice, error) {
 	root = RealPath(root)
 	g := newLinkGraph(OwnFiles(root, t, slices))
@@ -100,8 +96,7 @@ func (s *Set) Bind(ctx context.Context, root string, t *deps.Tree, slices []Bind
 			case sl.HasList:
 				g.close(d, roots(t, sl), width == Dependents, sl.Depth)
 			case sl.Graph:
-				// its own files' units only: what they reach is the owner's
-				// graph, in its data
+				// its own files' units only: what they reach is the owner's graph, in its data
 				for id, why := range roots(t, BindSlice{Sources: sl.Sources}) {
 					d.Why[id] = why
 					g.add(d, id)
@@ -155,10 +150,8 @@ func (s *Set) Bind(ctx context.Context, root string, t *deps.Tree, slices []Bind
 
 const whyUntold = "cannot-tell"
 
-// bindUntold widens a recorded slice for each plugin that couldn't tell
-// about the tree: for a correlator the slice depends on everything, for an
-// sbom on each file it couldn't tell about once the slice reached its
-// namespaces.
+// bindUntold widens a recorded slice for each plugin that couldn't tell about the tree: to
+// everything for a correlator, for an sbom to each file it couldn't tell about in its namespaces.
 func (s *Set) bindUntold(t *deps.Tree, d *deps.Slice, sl BindSlice, g *linkGraph, ix unitIndex) {
 	for _, name := range sortedKeys(t.Untold) {
 		l := s.loaded(name)
@@ -262,13 +255,11 @@ func (s *Set) bindPins(t *deps.Tree, d *deps.Slice, sl BindSlice, pins pinSource
 	}
 }
 
-// Observes tells whether a correlator observes a suite's slices.
 func (s *Set) Observes(suite, correlator string) bool {
 	return s.o.Config == nil || slices.Contains(s.o.Config.CorrelatorsFor(suite), correlator)
 }
 
-// AnswerUnits are what a binding holds when it rests on a correlator's
-// answers in a tree.
+// AnswerUnits are what a binding holds when it rests on a correlator's answers in a tree.
 func AnswerUnits(t *deps.Tree, correlator string) map[string]bool {
 	out := map[string]bool{}
 
@@ -336,9 +327,8 @@ func groupProviders(t *deps.Tree) map[string][]string {
 
 const whyUnbound = "unbound"
 
-// bindUnbound makes d depend on the unbound names of each group it links,
-// through one unit per group and width whose digest is the list of names: a
-// name that appears or goes selects the slice, a changed body doesn't.
+// bindUnbound makes d depend on the unbound names of each group it links, through a unit per
+// group and width whose digest lists them: a name that appears or goes selects, a body doesn't.
 func bindUnbound(t *deps.Tree, d *deps.Slice, ix unitIndex) {
 	for _, group := range d.Linked {
 		ub, ok := t.Unbound[d.Width][group]
@@ -369,10 +359,8 @@ func namesDigest(names []string) string {
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-// OwnFiles gives each recorded slice's own test file that no plugin lists a
-// unit in (a shell or YAML test) a unit of its own, file:<path>, whose
-// digest is the file's content. Planning calls it before the walk, so the
-// walk and Bind see the same units; a second call adds nothing.
+// OwnFiles gives a recorded slice's own test file that no plugin lists (a shell or YAML test) a
+// unit file:<path> digesting its content; called before the walk, so the walk and Bind agree.
 func OwnFiles(root string, t *deps.Tree, slices []BindSlice) *deps.Tree {
 	var covered map[string]bool
 
@@ -452,8 +440,8 @@ func roots(t *deps.Tree, sl BindSlice) map[string]deps.Why {
 	return out
 }
 
-// data is a slice's data labels less those Leaves judges replaced: a file
-// whose units the slice touched are roots already, and a BUILD file.
+// data is a slice's data labels less those Leaves judges replaced: a file whose units the slice
+// touched are roots already, and a BUILD file.
 func data(f *Leaves, sl BindSlice) []string {
 	var out []string
 
@@ -468,8 +456,8 @@ func data(f *Leaves, sl BindSlice) []string {
 	return out
 }
 
-// RecordedSBOMs are, per suite, the sboms some slice's list holds a unit
-// of: the recordings of that suite hold that sbom's units.
+// RecordedSBOMs are, per suite, the sboms some slice's list holds a unit of: that suite's
+// recordings hold that sbom's units.
 func RecordedSBOMs(t *deps.Tree, bs []BindSlice) map[string]map[string]bool {
 	out := map[string]map[string]bool{}
 
@@ -488,7 +476,6 @@ func RecordedSBOMs(t *deps.Tree, bs []BindSlice) map[string]map[string]bool {
 	return out
 }
 
-// ProviderOf is the sbom that lists a file's units.
 func ProviderOf(t *deps.Tree, units []string) string {
 	for _, id := range units {
 		if p := t.Providers[id]; p != "" {
@@ -503,8 +490,7 @@ type linkGraph struct {
 	t       *deps.Tree
 	forward map[string][]string
 	reverse map[string][]string
-	// units knows what each slice's groups hold, so adding one is a lookup,
-	// not a scan.
+	// units knows what each slice's groups hold, so adding one is a lookup, not a scan.
 	units  unitIndex
 	untold map[string]map[string]bool
 	backs  map[*deps.Slice]map[string]int
@@ -512,8 +498,7 @@ type linkGraph struct {
 
 type unitIndex map[*[]string]map[string]bool
 
-// add appends v to the list once; a list grown by other means since is read
-// again.
+// add appends v to the list once; a list grown by other means since is read again.
 func (ix unitIndex) add(list *[]string, v string) {
 	set := ix[list]
 	if set == nil || len(set) != len(*list) {
@@ -600,10 +585,8 @@ func (g *linkGraph) close(d *deps.Slice, roots map[string]deps.Why, dependents b
 	}
 }
 
-// closeWithin is the dependents closure under a depth: a 0-1 breadth-first
-// search where a step back costs one, so each unit keeps the fewest steps
-// back of any path. The fewest steps are kept across calls, so a root a bind
-// correlator adds later starts at none.
+// closeWithin is the dependents closure under a depth: a 0-1 breadth-first search where a step
+// back costs one, the fewest steps back kept across calls so a root added later starts at none.
 func (g *linkGraph) closeWithin(d *deps.Slice, roots map[string]deps.Why, depth int) {
 	backs := g.backs[d]
 	if backs == nil {
@@ -617,8 +600,8 @@ func (g *linkGraph) closeWithin(d *deps.Slice, roots map[string]deps.Why, depth 
 		have, known := backs[id]
 		_, bound := d.Why[id]
 
-		// a unit bound by other means than a closure (a slice's own files
-		// bound by the Bazel graph) is not walked from, as without a depth
+		// a unit bound by other means than a closure (a slice's own files bound by the Bazel graph)
+		// is not walked from, as without a depth
 		if (known && have <= b) || (bound && !known) {
 			return
 		}
@@ -659,8 +642,8 @@ type step struct {
 	back int
 }
 
-// stepQueue is a deque: a step with no step back goes to the head, one with
-// a step back to the tail.
+// stepQueue is a deque: a step with no step back goes to the head, one with a step back to the
+// tail.
 type stepQueue struct {
 	head []step // its last element is next
 	tail []step
@@ -700,8 +683,7 @@ func (g *linkGraph) add(d *deps.Slice, id string) {
 		return
 	}
 
-	// only a unit new to the reasons gets here, so no set is needed to keep
-	// it once
+	// only a unit new to the reasons gets here, so no set is needed to keep it once
 	d.Units = append(d.Units, id)
 
 	if _, wide := g.t.CannotTell[id]; wide && u.Group != "" {
@@ -745,12 +727,12 @@ func (s *Set) bindRounds(ctx context.Context, root string, g *linkGraph, slices 
 		}
 	}
 
-	// the unbound names of each binder's last round: they shrink as roots
-	// cross between correlators
+	// the unbound names of each binder's last round: they shrink as roots cross between
+	// correlators
 	unbound := make([][]unboundLine, len(binders))
 
-	// each binder's last request: asked the same again in this tree, it
-	// answers the same, so it isn't asked
+	// each binder's last request: asked the same again in this tree, it answers the same, so it
+	// isn't asked
 	last := make([][]byte, len(binders))
 
 	defer func() { g.t.Unbound = unboundOf(unbound) }()
@@ -777,8 +759,7 @@ func (s *Set) bindRounds(ctx context.Context, root string, g *linkGraph, slices 
 				return err
 			}
 
-			// what it would have bound is unknown: every slice it is asked
-			// about depends on everything
+			// what it would have bound is unknown: every slice it is asked about depends on everything
 			if !ok {
 				untoldBinder(slices, bound)
 
@@ -875,8 +856,8 @@ func merge(g *linkGraph, name string, slices []BindSlice, bound []map[string]*de
 					have.Vias = mergeStrings(have.Vias, why.Vias)
 					d.Why[id] = have
 
-					// under a depth, a unit the links reached some steps
-					// back is a root now, and is walked from again
+					// under a depth, a unit the links reached some steps back is a root now, and is
+					// walked from again
 					if b, known := g.backs[d][id]; known && b > 0 && within(width == Dependents, sl.Depth) {
 						why.Vias = have.Vias
 						fresh[id] = why
@@ -897,9 +878,8 @@ func merge(g *linkGraph, name string, slices []BindSlice, bound []map[string]*de
 	return grew
 }
 
-// bindRequest is what a bind correlator is asked about the slices: their
-// lists, and as roots what the slice holds that the correlator didn't bind
-// itself, since that is its own answer to the same request.
+// bindRequest asks a bind correlator about the slices' lists, with as roots what each slice holds
+// that the correlator didn't bind itself, since that is its own answer to the same request.
 func bindRequest(l *Loaded, root string, narrowings []string, slices []BindSlice, bound []map[string]*deps.Slice) map[string]any {
 	reqSlices := make([]map[string]any, 0, len(slices))
 	rootsBy := map[string][]string{}

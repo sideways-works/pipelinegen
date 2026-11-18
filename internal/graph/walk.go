@@ -5,9 +5,8 @@ import (
 	"strings"
 )
 
-// The layers of the walk's states: needBound is any reach at the executed
-// width, needExpanded a reach that expands the node, needDependents a reach
-// at the dependents width.
+// The layers of the walk's states: needBound is any reach at the executed width, needExpanded one that
+// expands the node, needDependents one at the dependents width.
 const (
 	needBound int32 = iota
 	needExpanded
@@ -55,10 +54,8 @@ func walkIn(l *loaded, trees uint8, dependents bool, sources []source) *walk {
 		w.cost[i] = -1
 	}
 
-	// a 0-1 breadth-first order, one depth at a time: a free step joins
-	// the queue of the depth being walked, a step that costs depth the
-	// next one's. Each state is settled at its fewest depth steps, and
-	// within them at about its fewest hops, so reasons stay short.
+	// a 0-1 breadth-first order by depth: a free step joins this depth's queue, a costly one the next;
+	// each state settles at its fewest depth steps and about its fewest hops, so reasons stay short
 	var free, costly []state
 
 	push := func(s state, c int32, h hop) {

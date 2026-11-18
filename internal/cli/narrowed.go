@@ -174,10 +174,8 @@ func (b *planBook) inputsHook() func(commit, suite, slice string) ([]string, err
 
 var errNoInputs = errors.New("the plan kept no Bazel inputs")
 
-// inputs are a slice's labels at commit; other is the plan's other tree, whose leaves decide which
-// filegroups go back whole and which files were added or removed. A suite's setup part takes the
-// files whose adding or removing shows there. Paired, the plan has two trees: a slice the other tree
-// lacks keeps the files with units inside its filegroups whole.
+// inputs are a slice's labels at commit; other, the plan's other tree, decides which filegroups go back
+// whole and which files were added or removed, those the setup part takes when they show there.
 func (b *planBook) inputs(commit, other string, paired bool, suite, slice string) ([]string, error) {
 	b.mu.Lock()
 	bt, ot := b.trees[commit], b.trees[other]
@@ -250,9 +248,8 @@ func (b *planBook) through(commit, suite, slice, label string) []string {
 	return bt.leaves[suite+"/"+slice].through(label)
 }
 
-// keepInputs records each walked slice's data as its selector would hold it, judged leaf by leaf
-// (plugins.Leaves): a file whose units the slice touched and a BUILD file are given up, everything else
-// stays whole. The inputs are made once both trees are kept.
+// keepInputs keeps each walked slice's data as its selector would, leaf by leaf: a file whose units it
+// touched and a BUILD file are given up, everything else whole; inputs are made once both trees are kept.
 func (b *planBook) keepInputs(cfg *config.Config, commit string, t *deps.Tree, bs []plugins.BindSlice) {
 	if b == nil {
 		return

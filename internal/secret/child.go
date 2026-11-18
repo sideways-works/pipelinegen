@@ -7,25 +7,18 @@ import (
 	"strings"
 )
 
-// PipelineStepVar is set, to 1, in every step of a generated pipeline that
-// runs the tool, and nowhere else: it says the process is a pipeline's
-// step and nothing more.
+// PipelineStepVar is set, to 1, in every step of a generated pipeline that runs the tool, and
+// nowhere else.
 const PipelineStepVar = "PIPELINEGEN_PIPELINE_STEP"
 
-// jobURLVar is the link to a step's job; older runners set it in their suite
-// steps alone, which count as pipeline steps by it.
+// jobURLVar is the link to a step's job; older runners set it in their suite steps alone, which
+// count as pipeline steps by it.
 const jobURLVar = "PIPELINEGEN_JOB_URL"
 
-// InPipeline tells whether this process is a pipeline's step rather than a
-// person's command.
 func InPipeline() bool { return os.Getenv(PipelineStepVar) != "" || os.Getenv(jobURLVar) != "" }
 
-// ChildEnv is the environment of a program the tool starts on a tree that
-// may be a proposed change's (Bazel and its repository rules, bazelisk,
-// bazel-diff): the process's, less every purpose's token and every other
-// PIPELINEGEN_ variable. keep names a variable that stays even so: the git
-// read token Bazel's fetches of private modules need. It is hygiene, not a
-// boundary.
+// ChildEnv is the environment of a program run on a tree that may be a proposed change's: less
+// every token and PIPELINEGEN_ variable but keep (Bazel's git read token). Hygiene, no boundary.
 func ChildEnv(keep ...string) []string {
 	var env []string
 
@@ -46,15 +39,12 @@ func childDrops(name string) bool {
 	return upper == "GITHUB_TOKEN" || upper == "GH_TOKEN" || strings.HasPrefix(upper, "PIPELINEGEN_")
 }
 
-// gitHardening are the settings every git call of the tool's takes on a
-// tree or a fetch: no hook, no fsmonitor, no LFS smudge, whatever a
-// worker's or a tree's set-up says.
+// gitHardening applies to every git call of the tool's on a tree or a fetch: no hook, no
+// fsmonitor, whatever a worker's or a tree's set-up says.
 var gitHardening = [][2]string{{"core.hooksPath", "/dev/null"}, {"core.fsmonitor", "false"}}
 
-// HardenGit adds the hardening to a git environment: the settings as
-// further GIT_CONFIG_ entries after those env holds, LFS's smudge off, and
-// in a pipeline's step no system or global config either (on a person's
-// machine their own git and ssh set-up keeps working).
+// HardenGit adds the hardening as further GIT_CONFIG_ entries, turns LFS's smudge off, and in a
+// pipeline's step drops system and global config; on a person's machine theirs keeps working.
 func HardenGit(env []string) []string {
 	out := make([]string, 0, len(env)+8)
 	count := 0

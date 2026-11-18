@@ -17,10 +17,8 @@ const seedJob = ".job-"
 // job removes it: one whose job died before putting it back.
 const orphanAge = 24 * time.Hour
 
-// claim takes the seed for this job by renaming it to a name of the job's
-// own: a rename moves the whole repository or nothing, so no two jobs hold
-// the same one. A seed that fails its check is removed, and the job starts
-// empty.
+// claim takes the seed by renaming it to a name of the job's own, which moves all of it or nothing,
+// so no two jobs hold one; a seed that fails its check is removed, and the job starts empty.
 func (s *Store) claim(ctx context.Context) error {
 	parent, base := filepath.Dir(s.Seed), filepath.Base(s.Seed)
 
@@ -57,9 +55,8 @@ func (s *Store) claim(ctx context.Context) error {
 	return nil
 }
 
-// sound tells whether the taken repository is whole: every object its
-// refs reach is there and readable. A job killed while the repository was
-// out, a full disk or a stray write leaves one that isn't.
+// sound tells whether every object the taken repository's refs reach is there and readable: a job
+// killed while it was out, a full disk or a stray write leaves one that isn't.
 func (s *Store) sound(ctx context.Context) bool {
 	if _, err := os.Stat(filepath.Join(s.Dir, "HEAD")); err != nil {
 		return false
@@ -70,9 +67,8 @@ func (s *Store) sound(ctx context.Context) bool {
 	return err == nil
 }
 
-// putBack returns the job's scratch repository to the seed, packed when
-// fetches left many packs; false when another job put one back first, and
-// this one is then removed.
+// putBack returns the scratch repository to the seed, packed when fetches left many packs; false when
+// another job put one back first, and this one is then removed.
 func (s *Store) putBack() bool {
 	if out, err := s.offline(&strings.Builder{}, "count-objects", "-v"); err == nil && untidy(out) {
 		if _, err := s.offline(&strings.Builder{}, "gc", "--quiet", "--prune=now"); err != nil {

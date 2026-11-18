@@ -24,10 +24,8 @@ func (tl *timeline) add(line string) {
 	tl.lines = append(tl.lines, line)
 }
 
-// working is a driver that runs a bundle's slices one after another, each
-// with work that takes a moment, and streams each slice's end once it ran:
-// a recording driver whose recordings are apart (go-driver with batch:
-// true). Given marks it marks around each slice's work, unless deaf.
+// working runs a bundle's slices one after another, each taking a moment, and ends each as it ran: a
+// driver whose recordings are apart (go-driver with batch: true); given marks it marks around each, unless deaf.
 type working struct {
 	tl   *timeline
 	deaf bool
@@ -73,10 +71,8 @@ func (w *working) Setup(context.Context, plugin.DriverRequest) (Running, error) 
 }
 func (w *working) Prepare(context.Context, plugin.DriverRequest) error { return nil }
 
-// collecting are hooks that call a collector at a slice's edges, as the
-// batch's journal does: its slice-start at Start, its slice-end at Stop or
-// at an End that closes the slice's part; an End also notes why a slice
-// has no part collected.
+// collecting calls a collector at a slice's edges as the journal does: slice-start at Start, slice-end at
+// Stop or an End closing the part; an End also notes why a slice has no part collected.
 type collecting struct{ tl *timeline }
 
 func (c *collecting) Start(_ context.Context, sl plugin.DriverSlice) error {

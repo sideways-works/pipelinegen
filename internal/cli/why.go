@@ -336,10 +336,8 @@ func (w *whyFlags) keptPlan(ctx context.Context, store *gitstore.Store) (*whyPla
 	return &p, fmt.Sprintf("in %s %s at %s", w.run, w.change, short12(id.Commit)), id, nil
 }
 
-// failureFiles notes, for each answer whose slice ran in a kept run (id)
-// and kept failure files, how many and how to fetch them. A plan made
-// again has no run, and a run swept past keep.runs, or a store that can't
-// say, notes nothing: why is about selection.
+// failureFiles notes, for each answer whose slice kept failure files in a kept run, how many and how to
+// fetch them; a plan made again, a swept run or a store that can't say notes nothing.
 func failureFiles(ctx context.Context, store *gitstore.Store, id report.ID, answers []Answer) []Answer {
 	if id.Run == "" || store == nil {
 		return answers

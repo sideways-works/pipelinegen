@@ -14,7 +14,6 @@ type Status struct {
 // FirstParents lists up to n commits before commit along its first
 // parents, newest first; none for a first commit.
 func FirstParents(ctx context.Context, repo, commit string, n int) ([]string, error) {
-	// a first commit has nothing before it
 	if _, err := git(ctx, repo, "rev-parse", "--verify", "-q", commit+"^"); err != nil {
 		return nil, nil //nolint:nilerr // no parent is no base, not a failure
 	}

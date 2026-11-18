@@ -1,7 +1,5 @@
-// Package attached names the runs whose recordings went into a commit's
-// lists: one file per run under _attached/ in the commit's lists ref,
-// written with the lists. Older lists keep them in a ref of their own,
-// refs/pipelinegen/attached/<commit>, read the same until swept.
+// Package attached names the runs whose recordings went into a commit's lists: a file per run under
+// _attached/ in its lists ref, or, for older lists, in refs/pipelinegen/attached/<commit> until swept.
 package attached
 
 import (
@@ -29,7 +27,6 @@ const ListsPrefix = "refs/pipelinegen/lists/"
 // is <suite>/<slice>.txt, and no suite's name starts with "_".
 const Dir = "_attached/"
 
-// Ref is a commit's attached ref.
 func Ref(commit string) string { return Prefix + commit }
 
 // Attachment names a run whose recordings went into a commit's lists.
@@ -38,9 +35,8 @@ type Attachment struct {
 	Change string `json:"change"`
 	// Commit is the commit the run tested, as given to attach.
 	Commit string `json:"commit"`
-	// Seed is set when the recordings came from a person's machine
-	// (pipelinegen seed); the commit is then a base for the branch's first
-	// runs.
+	// Seed is set when the recordings came from a person's machine (pipelinegen seed); the commit is
+	// then a base for the branch's first runs.
 	Seed *Seed `json:"seed,omitempty"`
 }
 
@@ -50,9 +46,8 @@ type Seed struct {
 	Tool    string       `json:"tool"`
 	Plugins []SeedPlugin `json:"plugins,omitempty"`
 	At      time.Time    `json:"at"`
-	// Baseline is set for a baseline set by hand (pipelinegen baseline):
-	// no recordings came with it, the commit is only declared good for
-	// the run its note names as its change.
+	// Baseline is set for a baseline set by hand (pipelinegen baseline): no recordings came with it,
+	// the commit is only declared good for the run its note names.
 	Baseline bool `json:"baseline,omitempty"`
 }
 
@@ -70,7 +65,6 @@ func (a Attachment) File() string {
 	return url.PathEscape(a.Run) + "/" + url.PathEscape(a.Change) + "/" + url.PathEscape(a.Commit) + ".json"
 }
 
-// ErrAttached wraps an attached ref that can't be read.
 var ErrAttached = errors.New("attached runs")
 
 // Read lists the runs attached to commit; none is an empty list.

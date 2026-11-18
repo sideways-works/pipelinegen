@@ -1,5 +1,3 @@
-// Package osproc holds what a process does differently on Linux and
-// elsewhere: its priority, a child's process group. Files the build leaves
-// out keep a package from being followed declaration by declaration, so they
-// live here.
+// Package osproc holds what a process does differently on Linux and elsewhere (priority, process group),
+// apart because a file the build leaves out stops declaration-by-declaration reading of its package.
 package osproc

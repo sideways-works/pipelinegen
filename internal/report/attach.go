@@ -13,9 +13,8 @@ import (
 
 var errAttach = errors.New("lists not attached")
 
-// Attacher hangs a run's recordings on its commit's lists once the run is
-// over, each slice judged by its own state. The lists package does it;
-// report only decides when, so it doesn't depend on learn.
+// Attacher hangs a run's recordings on its commit's lists once the run is over, each slice judged by
+// its own state; report only decides when, so it doesn't depend on the lists package.
 type Attacher func(ctx context.Context, r *Reporter, end Ending) error
 
 // Ending is what an Attacher is told of the run it attaches.
@@ -29,9 +28,8 @@ type Ending struct {
 	Suites map[string]bool
 }
 
-// attaches tells whether this run hangs its recordings on its commit when it
-// passes. A pull request's run is attached by the merge, to the commit the
-// merge makes.
+// attaches tells whether this run hangs its recordings on its commit when it passes; a pull request's
+// run is attached by the merge, to the commit the merge makes.
 func (r *Reporter) attaches() bool {
 	rc := r.runConfig()
 

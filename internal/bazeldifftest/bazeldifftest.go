@@ -12,10 +12,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/testrepo"
 )
 
-// Tool returns the bazel-diff to test against: the binary
-// PIPELINEGEN_TEST_BAZEL_DIFF names, or else the pinned release, fetched
-// once into the user's cache and checked against its checksum. A test that
-// can't have it fails; only -short mode, where nothing starts Bazel, skips.
+// Tool is the binary PIPELINEGEN_TEST_BAZEL_DIFF names, else the pinned release fetched once and
+// checked; a test that can't have it fails, and only -short mode skips.
 func Tool(t *testing.T) bazeldiff.Tool {
 	t.Helper()
 	testrepo.NeedBazel(t)

@@ -13,16 +13,12 @@ import (
 	"time"
 )
 
-// BazelMark is set while a package's tests run under Bazel: its value is
-// the output root of the test binary's own that Bazel uses.
+// BazelMark is set while a package's tests run under Bazel: its value is the test binary's own
+// output root that Bazel uses.
 const BazelMark = "PIPELINEGEN_TEST_BAZEL_ROOT"
 
-// Bazel runs a package's tests, from its TestMain, so that no Bazel they
-// start leaves anything behind: the test binary gets a directory of its own
-// for its temporary files and Bazel's output root (TEST_TMPDIR, which every
-// Bazel the tests start inherits), and when the tests end every server there
-// is stopped and the directory removed. The tests fail if a workspace left
-// an output base in the default root all the same.
+// Bazel runs a package's tests from TestMain with TEST_TMPDIR, Bazel's output root, a directory of their
+// own; afterwards its servers are stopped and it is removed, and an output base left elsewhere fails them.
 func Bazel(m *testing.M) int {
 	dir, err := os.MkdirTemp("", "pipelinegen-test-")
 	if err != nil {
@@ -104,9 +100,8 @@ func outputBases() []string {
 	return out
 }
 
-// leakedFrom are the output bases in the default roots, new since before, of
-// a workspace under dir: Bazel writes an output base's workspace into its
-// DO_NOT_BUILD_HERE file.
+// leakedFrom are the output bases new in the default roots of a workspace under dir: Bazel writes
+// an output base's workspace into its DO_NOT_BUILD_HERE file.
 func leakedFrom(before []string, dir string) []string {
 	dirs := []string{dir}
 	if resolved, err := filepath.EvalSymlinks(dir); err == nil && resolved != dir {
@@ -137,8 +132,8 @@ func leakedFrom(before []string, dir string) []string {
 	return out
 }
 
-// stopServers stops every Bazel server whose output base is under root:
-// each writes its process id into server/server.pid.txt there.
+// stopServers stops every Bazel server whose output base is under root: each writes its process
+// id into server/server.pid.txt there.
 func stopServers(root string) {
 	pids, err := filepath.Glob(filepath.Join(root, "_bazel_*", "*", "server", "server.pid.txt"))
 	if err != nil {
@@ -165,8 +160,7 @@ func stopServers(root string) {
 		}
 	}
 
-	// a server writes its output down before it exits; one that doesn't
-	// within the wait is killed
+	// a server writes its output down before it exits; one that doesn't within the wait is killed
 	deadline := time.Now().Add(10 * time.Second)
 
 	for _, pid := range running {
@@ -182,8 +176,8 @@ func stopServers(root string) {
 	}
 }
 
-// removeAll removes a directory Bazel wrote into: its output trees hold
-// directories without write permission, which have to get it back first.
+// removeAll removes a directory Bazel wrote into: its output trees hold directories without write
+// permission, which have to get it back first.
 func removeAll(dir string) error {
 	writable(dir)
 

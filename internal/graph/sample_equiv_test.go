@@ -76,9 +76,8 @@ func TestAChangedPinCostsNoWalkPerUnit(t *testing.T) {
 
 		walks, changes := graph.PlanWalks(pair.Base, pair.Head, pair.Slices, sampleOptions(true))
 
-		// per tree, each slice's closure counted and kept; per width the
-		// walk, the suite's walk and its moved walks (two per moved end,
-		// at most 64 ends); a tenth of the changes may need a cone
+		// per tree each slice's closure counted and kept; per width the walk, the suite's and its moved
+		// walks (two per moved end, at most 64 ends); a tenth of the changes may need a cone
 		limit := 2*2*slices + 2*(2+2*2*64) + changes/10
 
 		t.Logf("%d units, %d changes: %d walks, at most %d", units, changes, walks, limit)
