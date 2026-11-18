@@ -1,0 +1,17 @@
+# observed
+go:internal/cli#func:narrowingLevel
+go:internal/cli#func:reportNeeds
+go:internal/cli#func:sliceNeeds
+go:internal/config#func:Platform
+go:internal/config#method:Checksums.For
+go:internal/config#method:Config.NarrowingFor
+go:internal/config#method:Config.SuiteNames
+go:internal/connectortest#func:Env
+go:internal/connectortest#func:Serve
+go:internal/testenv#func:Bazel
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:defaultRoots
+go:internal/testenv#func:outputBases
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
