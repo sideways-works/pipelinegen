@@ -1,8 +1,9 @@
 package plugin
 
 import (
-	"encoding/json"
 	"time"
+
+	"github.com/sideways-works/plugkit/exchange"
 )
 
 // KindConnector is a plugin that knows where code lives: a git host's
@@ -100,10 +101,7 @@ type ConnectorDescription struct {
 
 // ConnectorAuth puts a token in Header, after Scheme and a space when there is one
 // (Authorization: Bearer <token>, PRIVATE-TOKEN: <token>).
-type ConnectorAuth struct {
-	Header string `json:"header"`
-	Scheme string `json:"scheme,omitempty"`
-}
+type ConnectorAuth = exchange.Auth
 
 type ConnectorLimits struct {
 	StatusTextMax int  `json:"status_text_max,omitempty"`
@@ -114,42 +112,20 @@ type ConnectorLimits struct {
 
 // ExchangeRequest is one round of a connector call. A connector keeps no state between rounds:
 // each carries the call's arguments again and every response of every round before it.
-type ExchangeRequest struct {
-	Request
-
-	Args      json.RawMessage `json:"args,omitempty"`
-	Responses []HTTPResponse  `json:"responses,omitempty"`
-}
+type ExchangeRequest = exchange.Request
 
 // Round is a connector's answer to one round: requests for the core to send, or Done with the
 // call's answer.
-type Round struct {
-	Requests []HTTPRequest   `json:"requests,omitempty"`
-	Done     json.RawMessage `json:"done,omitempty"`
-}
+type Round = exchange.Round
 
-type HTTPRequest struct {
-	ID      string            `json:"id"`
-	Method  string            `json:"method"`
-	URL     string            `json:"url"`
-	Headers map[string]string `json:"headers,omitempty"`
-	Auth    *HTTPAuth         `json:"auth,omitempty"`
-	Body    string            `json:"body,omitempty"`
-}
+type HTTPRequest = exchange.HTTPRequest
 
 // HTTPAuth names the purpose whose token a request carries; it must be the call's
 // (CallPurposes).
-type HTTPAuth struct {
-	Purpose string `json:"purpose"`
-}
+type HTTPAuth = exchange.HTTPAuth
 
 // HTTPResponse is the host's answer to one request, after the core's retries.
-type HTTPResponse struct {
-	ID       string            `json:"id"`
-	Status   int               `json:"status"`
-	Headers  map[string]string `json:"headers,omitempty"`
-	BodyFile string            `json:"body_file,omitempty"`
-}
+type HTTPResponse = exchange.HTTPResponse
 
 type IdentifyArgs struct {
 	Remote string `json:"remote"`

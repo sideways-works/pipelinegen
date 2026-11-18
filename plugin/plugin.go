@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+
+	pk "github.com/sideways-works/plugkit/plugin"
 )
 
 const Protocol = 1
@@ -34,14 +36,9 @@ const (
 
 // ExitCantTell is the exit code of a plugin that can't answer for this tree or slice: an
 // answer of its own, apart from a failure and from an empty answer.
-const ExitCantTell = 3
+const ExitCantTell = pk.ExitCantTell
 
-type Request struct {
-	Protocol int            `json:"protocol"`
-	Work     string         `json:"work"`
-	Cache    string         `json:"cache,omitempty"`
-	Config   map[string]any `json:"config,omitempty"`
-}
+type Request = pk.Request
 
 // Description is the answer to describe.
 type Description struct {
