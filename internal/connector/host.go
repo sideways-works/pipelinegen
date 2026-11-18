@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/sideways-works/pipelinegen/plugin"
+	"github.com/sideways-works/plugkit/exchange"
 )
 
 // Host is one connector ready to call: its binary described, the origins
@@ -56,7 +57,7 @@ func Open(ctx context.Context, o Options) (*Host, error) {
 
 	outright, confirmed := "", []string{}
 	if o.API != "" {
-		if outright, err = normalOrigin(o.API); err != nil {
+		if outright, err = exchange.NormalOrigin(o.API); err != nil {
 			return nil, fmt.Errorf("connector %s: api: %w", o.Name, err)
 		}
 

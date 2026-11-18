@@ -178,7 +178,7 @@ func (h *host) request(i int) *http.Request {
 	return h.got[i]
 }
 
-func exchange(t *testing.T, h *host) *Exchange {
+func newExchange(t *testing.T, h *host) *Exchange {
 	t.Helper()
 
 	hosts, err := Allowed(h.URL, nil, nil)
@@ -221,7 +221,7 @@ func TestExchangeRounds(t *testing.T) {
 	t.Parallel()
 
 	h := newHost(t, nil)
-	e := exchange(t, h)
+	e := newExchange(t, h)
 
 	first := get("page-1", h.URL+"/pulls?page=1", plugin.PurposeChanges)
 	first.Headers = map[string]string{"accept": "application/json"}
@@ -259,7 +259,7 @@ func TestExchangeCustomAuthHeader(t *testing.T) {
 	t.Parallel()
 
 	h := newHost(t, nil)
-	e := exchange(t, h)
+	e := newExchange(t, h)
 	e.Desc.Auth = &plugin.ConnectorAuth{Header: "PRIVATE-TOKEN"}
 
 	if _, err := run(t, e, plugin.CallStatus, script{Rounds: [][]plugin.HTTPRequest{{get("s", h.URL+"/s", plugin.PurposeReport)}}}); err != nil {
@@ -269,215 +269,6 @@ func TestExchangeCustomAuthHeader(t *testing.T) {
 	r := h.request(0)
 	if r.Header.Get("Private-Token") != reportToken || r.Header.Get("Authorization") != "" {
 		t.Errorf("headers = %v", r.Header)
-	}
-}
-
-func TestExchangeRefusals(t *testing.T) {
-	t.Parallel()
-
-	h := newHost(t, nil)
-	other := newHost(t, nil)
-
-	// the subtests run at once; none may have sent anything, which is
-	// known once they all ended
-	t.Cleanup(func() {
-		for _, x := range []*host{h, other} {
-			for i := range x.hits() {
-				t.Errorf("a refused request went out: %s %s", x.request(i).Method, x.request(i).URL)
-			}
-		}
-	})
-
-	big := get("big", h.URL+"/b", "")
-	big.Method, big.Body = "POST", strings.Repeat("x", MaxBody+1)
-
-	with := func(name, value string) plugin.HTTPRequest {
-		r := get("h", h.URL+"/h", "")
-		r.Headers = map[string]string{name: value}
-
-		return r
-	}
-
-	method := get("m", h.URL+"/m", "")
-	method.Method = "CONNECT"
-
-	https := "https" + strings.TrimPrefix(h.URL, "http")
-	userinfo := strings.Replace(h.URL, "http://", "http://user:pw@", 1)
-
-	tooMany := make([]plugin.HTTPRequest, MaxRequestsPerRound+1)
-	for i := range tooMany {
-		tooMany[i] = get(fmt.Sprintf("r%d", i), h.URL+"/r", "")
-	}
-
-	cases := []struct {
-		name    string
-		call    string
-		reqs    []plugin.HTTPRequest
-		declare []string
-		auth    *plugin.ConnectorAuth
-		tokens  map[string]string
-	}{
-		{name: "another host", reqs: []plugin.HTTPRequest{get("a", other.URL+"/x", plugin.PurposeChanges)}},
-		{name: "another scheme on the same host", reqs: []plugin.HTTPRequest{get("a", https+"/x", "")}},
-		{name: "a scheme that isn't http", reqs: []plugin.HTTPRequest{get("a", "file:///etc/passwd", "")}},
-		{name: "a user in the url", reqs: []plugin.HTTPRequest{get("a", userinfo+"/x", "")}},
-		{name: "an undeclared header", reqs: []plugin.HTTPRequest{with("X-Foo", "1")}},
-		{name: "Authorization, declared", reqs: []plugin.HTTPRequest{with("Authorization", "Bearer x")}, declare: []string{"Authorization"}},
-		{name: "authorization in lower case", reqs: []plugin.HTTPRequest{with("authorization", "x")}, declare: []string{"authorization"}},
-		{name: "Cookie", reqs: []plugin.HTTPRequest{with("Cookie", "a=b")}, declare: []string{"Cookie"}},
-		{name: "Host", reqs: []plugin.HTTPRequest{with("Host", "evil.example")}, declare: []string{"Host"}},
-		{name: "a Proxy- header", reqs: []plugin.HTTPRequest{with("proxy-authorization", "x")}, declare: []string{"Proxy-Authorization"}},
-		{
-			name: "the token's own header as a literal", reqs: []plugin.HTTPRequest{with("Private-Token", "x")},
-			declare: []string{"PRIVATE-TOKEN"}, auth: &plugin.ConnectorAuth{Header: "PRIVATE-TOKEN"},
-		},
-		{name: "another call's purpose", reqs: []plugin.HTTPRequest{get("a", h.URL+"/x", plugin.PurposeReport)}},
-		{name: "the read purpose", reqs: []plugin.HTTPRequest{get("a", h.URL+"/x", plugin.PurposeRead)}},
-		{name: "the store purpose", reqs: []plugin.HTTPRequest{get("a", h.URL+"/x", plugin.PurposeStore)}},
-		{
-			name: "a purpose with no token", call: plugin.CallStatus,
-			reqs: []plugin.HTTPRequest{get("a", h.URL+"/x", plugin.PurposeReport)}, tokens: map[string]string{plugin.PurposeChanges: changesToken},
-		},
-		{name: "identify asking for a request", call: plugin.CallIdentify, reqs: []plugin.HTTPRequest{get("a", h.URL+"/x", "")}},
-		{name: "links asking for a request", call: plugin.CallLinks, reqs: []plugin.HTTPRequest{get("a", h.URL+"/x", "")}},
-		{name: "an id with a path in it", reqs: []plugin.HTTPRequest{get("../x", h.URL+"/x", "")}},
-		{name: "an empty id", reqs: []plugin.HTTPRequest{get("", h.URL+"/x", "")}},
-		{name: "an id twice in a round", reqs: []plugin.HTTPRequest{get("a", h.URL+"/x", ""), get("a", h.URL+"/y", "")}},
-		{name: "a method not allowed", reqs: []plugin.HTTPRequest{method}},
-		{name: "a body over the cap", reqs: []plugin.HTTPRequest{big}},
-		{name: "too many requests in a round", reqs: tooMany},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			t.Parallel()
-
-			e := exchange(t, h)
-			if c.declare != nil {
-				e.Desc.RequestHeaders = c.declare
-			}
-
-			if c.auth != nil {
-				e.Desc.Auth = c.auth
-			}
-
-			if c.tokens != nil {
-				e.Tokens = c.tokens
-			}
-
-			call := c.call
-			if call == "" {
-				call = plugin.CallChanges
-			}
-
-			_, err := run(t, e, call, script{Rounds: [][]plugin.HTTPRequest{c.reqs}})
-			if !errors.Is(err, ErrRefused) {
-				t.Fatalf("err = %v, want refused", err)
-			}
-
-			if strings.Contains(err.Error(), changesToken) || strings.Contains(err.Error(), reportToken) {
-				t.Errorf("the error carries a token: %v", err)
-			}
-		})
-	}
-}
-
-func TestExchangeRoundShape(t *testing.T) {
-	t.Parallel()
-
-	h := newHost(t, nil)
-	one := [][]plugin.HTTPRequest{{get("a", h.URL+"/a", "")}}
-
-	for name, s := range map[string]script{
-		"answers and asks": {Rounds: one, Both: true},
-		"neither":          {Rounds: one, Empty: true},
-		"an id reused":     {Rounds: [][]plugin.HTTPRequest{{get("a", h.URL+"/a", "")}, {get("a", h.URL+"/b", "")}}},
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			if _, err := run(t, exchange(t, h), plugin.CallChanges, s); !errors.Is(err, ErrRefused) {
-				t.Fatalf("err = %v, want refused", err)
-			}
-		})
-	}
-}
-
-func TestExchangeCaps(t *testing.T) {
-	t.Parallel()
-
-	rounds := func(h *host, n, per int) script {
-		var s script
-
-		for r := range n {
-			var reqs []plugin.HTTPRequest
-			for i := range per {
-				reqs = append(reqs, get(fmt.Sprintf("r%d-%d", r, i), h.URL+"/x", ""))
-			}
-
-			s.Rounds = append(s.Rounds, reqs)
-		}
-
-		return s
-	}
-
-	t.Run("rounds", func(t *testing.T) {
-		t.Parallel()
-
-		h := newHost(t, nil)
-
-		if _, err := run(t, exchange(t, h), plugin.CallChanges, rounds(h, MaxRounds-1, 1)); err != nil {
-			t.Fatalf("%d rounds of requests and one answer: %v", MaxRounds-1, err)
-		}
-	})
-
-	t.Run("one round too many", func(t *testing.T) {
-		t.Parallel()
-
-		h := newHost(t, nil)
-
-		if _, err := run(t, exchange(t, h), plugin.CallChanges, rounds(h, MaxRounds, 1)); !errors.Is(err, ErrRefused) {
-			t.Fatalf("%d rounds of requests: err = %v, want refused", MaxRounds, err)
-		}
-	})
-
-	t.Run("requests", func(t *testing.T) {
-		t.Parallel()
-
-		h := newHost(t, nil)
-
-		if _, err := run(t, exchange(t, h), plugin.CallChanges, rounds(h, MaxRequests/MaxRequestsPerRound, MaxRequestsPerRound)); err != nil {
-			t.Fatalf("%d requests: %v", MaxRequests, err)
-		}
-	})
-
-	t.Run("one request too many", func(t *testing.T) {
-		t.Parallel()
-
-		h := newHost(t, nil)
-		s := rounds(h, MaxRequests/MaxRequestsPerRound+1, MaxRequestsPerRound)
-		s.Rounds[len(s.Rounds)-1] = s.Rounds[len(s.Rounds)-1][:1]
-
-		if _, err := run(t, exchange(t, h), plugin.CallChanges, s); !errors.Is(err, ErrRefused) {
-			t.Fatalf("%d requests: err = %v, want refused", MaxRequests+1, err)
-		}
-
-		if h.hits() != MaxRequests {
-			t.Errorf("%d requests went out, want %d", h.hits(), MaxRequests)
-		}
-	})
-}
-
-func TestExchangeResponseCap(t *testing.T) {
-	t.Parallel()
-
-	h := newHost(t, func(w http.ResponseWriter, _ *http.Request, _ int) {
-		write(w, strings.Repeat("x", MaxBody+1))
-	})
-
-	_, err := run(t, exchange(t, h), plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{get("a", h.URL+"/a", "")}}})
-	if !errors.Is(err, ErrRefused) {
-		t.Fatalf("err = %v, want refused", err)
 	}
 }
 
@@ -511,7 +302,7 @@ func TestAllowedAPIHosts(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			e := exchange(t, h)
+			e := newExchange(t, h)
 			e.Hosts = hosts
 			sent := c.declared && c.confirmed
 
@@ -527,138 +318,11 @@ func TestAllowedAPIHosts(t *testing.T) {
 	}
 }
 
-func TestExchangeRedirects(t *testing.T) {
-	t.Parallel()
-
-	other := newHost(t, nil)
-
-	h := newHost(t, func(w http.ResponseWriter, r *http.Request, _ int) {
-		switch r.URL.Path {
-		case "/same":
-			http.Redirect(w, r, "/there", http.StatusFound)
-		case "/away":
-			http.Redirect(w, r, other.URL+"/stolen", http.StatusTemporaryRedirect)
-		default:
-			write(w, "arrived")
-		}
-	})
-
-	e := exchange(t, h)
-	e.Desc.Auth = &plugin.ConnectorAuth{Header: "PRIVATE-TOKEN"}
-
-	out, err := run(t, e, plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{get("a", h.URL+"/same", plugin.PurposeChanges)}}})
-	if err != nil || len(out) != 1 || out[0].Body != "arrived" {
-		t.Fatalf("same origin: %v %+v", err, out)
-	}
-
-	if got := h.request(1).Header.Get("Private-Token"); got != changesToken {
-		t.Errorf("the redirect on the origin lost the token: %q", got)
-	}
-
-	_, err = run(t, e, plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{get("b", h.URL+"/away", plugin.PurposeChanges)}}})
-	if !errors.Is(err, ErrRefused) {
-		t.Fatalf("away: err = %v, want refused", err)
-	}
-
-	if other.hits() != 0 {
-		t.Errorf("the other host got %d requests", other.hits())
-	}
-
-	tls := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "http://"+r.Host+"/plain", http.StatusFound) //nolint:gosec // the redirect under test
-	}))
-	t.Cleanup(tls.Close)
-
-	te := exchange(t, h)
-	te.HTTP = tls.Client()
-
-	if te.Hosts, err = Allowed(tls.URL, nil, nil); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = run(t, te, plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{get("c", tls.URL+"/x", plugin.PurposeChanges)}}})
-	if !errors.Is(err, ErrRefused) {
-		t.Fatalf("https to http: err = %v, want refused", err)
-	}
-}
-
-func TestExchangeRetries(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name   string
-		answer func(w http.ResponseWriter, n int)
-		status int
-		hits   int
-	}{
-		{name: "a server error passes", status: 200, hits: 2, answer: func(w http.ResponseWriter, n int) {
-			if n == 1 {
-				w.WriteHeader(http.StatusBadGateway)
-			}
-		}},
-		{name: "429 waits as asked", status: 200, hits: 2, answer: func(w http.ResponseWriter, n int) {
-			if n == 1 {
-				w.Header().Set("Retry-After", "1")
-				w.WriteHeader(http.StatusTooManyRequests)
-			}
-		}},
-		{name: "a 403 rate limit", status: 200, hits: 2, answer: func(w http.ResponseWriter, n int) {
-			if n == 1 {
-				w.Header().Set("Ratelimit-Remaining", "0")
-				w.WriteHeader(http.StatusForbidden)
-			}
-		}},
-		{name: "a plain 403 is the answer", status: 403, hits: 1, answer: func(w http.ResponseWriter, _ int) {
-			w.WriteHeader(http.StatusForbidden)
-		}},
-		{name: "404 is the answer", status: 404, hits: 1, answer: func(w http.ResponseWriter, _ int) {
-			w.WriteHeader(http.StatusNotFound)
-		}},
-		{name: "a server error that stays", status: 503, hits: tries, answer: func(w http.ResponseWriter, _ int) {
-			w.WriteHeader(http.StatusServiceUnavailable)
-		}},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			t.Parallel()
-
-			h := newHost(t, func(w http.ResponseWriter, _ *http.Request, n int) { c.answer(w, n) })
-
-			out, err := run(t, exchange(t, h), plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{get("a", h.URL+"/a", plugin.PurposeChanges)}}})
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if out[0].Status != c.status || h.hits() != c.hits {
-				t.Errorf("status %d after %d hits, want %d after %d", out[0].Status, h.hits(), c.status, c.hits)
-			}
-		})
-	}
-
-	t.Run("no answer at all", func(t *testing.T) {
-		t.Parallel()
-
-		h := newHost(t, nil)
-		e := exchange(t, h)
-		h.Close()
-
-		_, err := run(t, e, plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{get("a", h.URL+"/a", plugin.PurposeChanges)}}})
-		if err == nil || errors.Is(err, ErrRefused) {
-			t.Fatalf("err = %v, want a failure that isn't a refusal", err)
-		}
-
-		if strings.Contains(err.Error(), changesToken) {
-			t.Errorf("the error carries the token: %v", err)
-		}
-	})
-}
-
 func TestConnectorHoldsNoToken(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", changesToken)
 
 	h := newHost(t, nil)
-	e := exchange(t, h)
+	e := newExchange(t, h)
 	work := t.TempDir()
 
 	var out []seen
@@ -714,7 +378,7 @@ func TestEveryCallKnowsTheRemote(t *testing.T) {
 	t.Parallel()
 
 	h := newHost(t, nil)
-	e := exchange(t, h)
+	e := newExchange(t, h)
 	e.Remote = "https://git.example.test/team/app.git"
 	e.Plugin.Config = map[string]any{"api": "x"}
 
@@ -725,5 +389,32 @@ func TestEveryCallKnowsTheRemote(t *testing.T) {
 
 	if _, ok := e.Plugin.Config["remote"]; ok {
 		t.Error("the connector's own block was changed")
+	}
+}
+
+// A refusal reads as it always has, naming the connector.
+func TestARefusalNamesTheConnector(t *testing.T) {
+	t.Parallel()
+
+	h := newHost(t, nil)
+
+	_, err := run(t, newExchange(t, h), plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{get("a", "file:///etc/passwd", "")}}})
+	if !errors.Is(err, ErrRefused) || err.Error() != `connector request refused: fake-connector changes: request "a": scheme "file"` {
+		t.Fatalf("%v", err)
+	}
+
+	r := get("h", h.URL+"/h", "")
+	r.Headers = map[string]string{"Cookie": "a=b"}
+
+	e := newExchange(t, h)
+	e.Desc.RequestHeaders = []string{"Cookie"}
+
+	_, err = run(t, e, plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{r}}})
+	if err == nil || err.Error() != `connector request refused: fake-connector changes: request "h": header Cookie is never set by a connector` {
+		t.Fatalf("%v", err)
+	}
+
+	if h.hits() != 0 {
+		t.Fatalf("%d refused requests went out", h.hits())
 	}
 }
