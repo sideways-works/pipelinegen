@@ -1,0 +1,7 @@
+# observed
+go:internal/config#func:Platform
+go:internal/connector#func:Fetch
+go:internal/connector#func:Program
+go:internal/connector#func:hint
+go:internal/testenv#var:cp
+go:plugin#func:Program
