@@ -8,8 +8,9 @@ import (
 	"slices"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/fetch"
 	"github.com/sideways-works/pipelinegen/plugin"
+	"github.com/sideways-works/plugkit/fetch"
+	"github.com/sideways-works/plugkit/pin"
 )
 
 var ErrChecksum = fetch.ErrChecksum
@@ -19,33 +20,36 @@ var ErrPin = fetch.ErrPin
 
 // Program is the name of a pinned connector's program, which names its
 // release files.
-func Program(pin config.ConnectorPin) string { return plugin.Program(pin.Repository) }
+func Program(c config.ConnectorPin) string { return plugin.Program(c.Repository) }
 
 // Fetch returns the pinned connector's binary: dir's copy (filled by a pipeline's bootstrap) when it matches,
 // else cacheDir's, else one downloaded there and checked; a binary that doesn't match its pin never runs.
-func Fetch(ctx context.Context, client *http.Client, dir, cacheDir string, pin config.ConnectorPin) (string, error) {
+func Fetch(ctx context.Context, client *http.Client, dir, cacheDir string, c config.ConnectorPin) (string, error) {
 	f := fetch.Fetcher{Client: client, Cache: cacheDir, Under: "connectors"}
-	p := fetch.Pin{Name: pin.Name, Repository: pin.Repository, Version: pin.Version, SHA256: pin.SHA256, Sums: pin.Sums, URL: pin.URL}
+	p := pin.Pin{
+		Name: c.Name, Repository: c.Repository, Version: c.Version, Program: Program(c),
+		SHA256: pin.Checksums(c.SHA256), Sums: c.Sums, URL: c.URL,
+	}
 
 	if dir != "" {
 		want, err := f.Accepts(ctx, p, config.Platform())
 		if err != nil {
-			return "", hint(pin, err)
+			return "", hint(c, err)
 		}
 
-		if path := filepath.Join(dir, pin.Name); slices.Contains(want, fetch.FileSum(path)) {
+		if path := filepath.Join(dir, c.Name); slices.Contains(want, fetch.FileSum(path)) {
 			return path, nil
 		}
 	}
 
 	got, err := f.Fetch(ctx, p, config.Platform())
 	if err != nil {
-		return "", hint(pin, err)
+		return "", hint(c, err)
 	}
 
 	return got.Path, nil
 }
 
-func hint(pin config.ConnectorPin, err error) error {
-	return fmt.Errorf("connector %s: %w", pin.Name, err)
+func hint(c config.ConnectorPin, err error) error {
+	return fmt.Errorf("connector %s: %w", c.Name, err)
 }

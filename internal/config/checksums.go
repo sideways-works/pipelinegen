@@ -4,15 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"runtime"
 
+	"github.com/sideways-works/plugkit/pin"
 	"go.yaml.in/yaml/v3"
 )
 
 // Checksums are a release's SHA-256 by platform (linux-amd64, darwin-arm64).
 type Checksums map[string]string
 
-const anyPlatform = "*"
+const anyPlatform = pin.AnyPlatform
 
 const (
 	LinuxAMD64  = "linux-amd64"
@@ -57,14 +57,6 @@ func (c Checksums) MarshalYAML() (any, error) {
 }
 
 // Platform is the platform this program runs on, as checksums name it.
-func Platform() string { return runtime.GOOS + "-" + runtime.GOARCH }
+func Platform() string { return pin.Platform() }
 
-func (c Checksums) For(platform string) (string, bool) {
-	if sum, ok := c[platform]; ok {
-		return sum, true
-	}
-
-	sum, ok := c[anyPlatform]
-
-	return sum, ok
-}
+func (c Checksums) For(platform string) (string, bool) { return pin.Checksums(c).For(platform) }

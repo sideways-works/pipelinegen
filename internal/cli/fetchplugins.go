@@ -15,7 +15,9 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/fetch"
+	"github.com/sideways-works/pipelinegen/plugin"
+	"github.com/sideways-works/plugkit/fetch"
+	"github.com/sideways-works/plugkit/pin"
 )
 
 var errCommitPin = errors.New("pinned by commit")
@@ -113,14 +115,17 @@ func commitPinned(p config.Plugin, dir, platform string) error {
 const envReleasesURL = "PIPELINEGEN_TEST_RELEASES_URL"
 
 func fetchPlugin(ctx context.Context, p config.Plugin, platform string) (fetch.Got, error) {
-	pin := fetch.Pin{Name: p.Name, Repository: p.Repository, Version: p.Release.Version, Sums: p.Release.Sums, URL: os.Getenv(envReleasesURL)}
+	rp := pin.Pin{
+		Name: p.Name, Repository: p.Repository, Version: p.Release.Version, Program: plugin.Program(p.Repository),
+		Sums: p.Release.Sums, URL: os.Getenv(envReleasesURL),
+	}
 	if p.Release.SHA256 != "" {
 		// a sha256 pin is the linux-amd64 file's checksum, or a Node plugin's one script's
-		pin.SHA256 = config.Checksums{config.LinuxAMD64: p.Release.SHA256}
-		pin.Script = p.Release.SHA256
+		rp.SHA256 = pin.Checksums{config.LinuxAMD64: p.Release.SHA256}
+		rp.Script = p.Release.SHA256
 	}
 
-	got, err := releases().Fetch(ctx, pin, platform)
+	got, err := releases().Fetch(ctx, rp, platform)
 	if err != nil {
 		return got, fmt.Errorf("plugin %s %s for %s: %w", p.Name, p.Release.Version, platform, err)
 	}

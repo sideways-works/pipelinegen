@@ -17,9 +17,10 @@ import (
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/container"
-	"github.com/sideways-works/pipelinegen/internal/fetch"
 	"github.com/sideways-works/pipelinegen/internal/gitx"
 	"github.com/sideways-works/pipelinegen/internal/packages"
+	"github.com/sideways-works/pipelinegen/plugin"
+	"github.com/sideways-works/plugkit/pin"
 )
 
 var (
@@ -552,12 +553,15 @@ func (b *localBuild) findLinuxTool(ctx context.Context, plat string) (string, er
 		repo = "sideways-works/pipelinegen"
 	}
 
-	pin := fetch.Pin{Name: toolSelf, Repository: repo, Version: boot.Release.Version, Sums: boot.Release.Sums, URL: os.Getenv(envReleasesURL)}
+	rp := pin.Pin{
+		Name: toolSelf, Repository: repo, Version: boot.Release.Version, Program: plugin.Program(repo),
+		Sums: boot.Release.Sums, URL: os.Getenv(envReleasesURL),
+	}
 	if boot.Release.SHA256 != "" {
-		pin.SHA256 = config.Checksums{config.LinuxAMD64: boot.Release.SHA256}
+		rp.SHA256 = pin.Checksums{config.LinuxAMD64: boot.Release.SHA256}
 	}
 
-	got, err := releases().Fetch(ctx, pin, plat)
+	got, err := releases().Fetch(ctx, rp, plat)
 	if err != nil {
 		return "", fmt.Errorf("%w: the image is %s, and this pipelinegen isn't a static build for it: the pinned release: %w; "+
 			"build one with CGO_ENABLED=0, or pass --no-image", errImage, plat, err)

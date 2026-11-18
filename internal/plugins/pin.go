@@ -1,11 +1,8 @@
 package plugins
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/plugkit/pin"
 )
 
 // Why a plugin's binary can't be checked against its pin.
@@ -48,14 +46,7 @@ func PinnedSum(p config.Plugin, dir string) (string, error) {
 }
 
 func sumFor(sums []byte, name string) (string, error) {
-	listed := map[string]string{}
-
-	for line := range strings.SplitSeq(string(sums), "\n") {
-		sum, file, ok := strings.Cut(strings.TrimSpace(line), " ")
-		if ok {
-			listed[strings.TrimPrefix(strings.TrimSpace(file), "*")] = strings.ToLower(sum)
-		}
-	}
+	listed := pin.Listed(sums)
 
 	for _, f := range []string{name + "-" + runtime.GOOS + "-" + runtime.GOARCH, name + ".mjs"} {
 		if sum, ok := listed[f]; ok {
@@ -66,20 +57,7 @@ func sumFor(sums []byte, name string) (string, error) {
 	return "", fmt.Errorf("%w: %s-%s-%s", ErrNotListed, name, runtime.GOOS, runtime.GOARCH)
 }
 
-func FileSHA256(p string) (string, error) {
-	f, err := os.Open(p) //nolint:gosec // the plugin the config names
-	if err != nil {
-		return "", fmt.Errorf("checksum: %w", err)
-	}
-	defer f.Close() //nolint:errcheck // read only
-
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", fmt.Errorf("checksum: %w", err)
-	}
-
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
+func FileSHA256(p string) (string, error) { return pin.FileSHA256(p) }
 
 // NotPinned is a plugin whose binary is not the file its pin names, or can't be checked against
 // it; its answers are kept by its own digest.
