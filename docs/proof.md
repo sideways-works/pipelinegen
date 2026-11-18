@@ -160,10 +160,12 @@ plans every change below, and prints the two tables. It exits non-zero on
 any difference from what the ladder says:
 
 ```sh
-go run ./ci/proof /some/empty/dir
+bazel run //ci/proof -- /some/empty/dir
 ```
 
-It needs git, flock, ps, Go 1.27.1 and bazelisk. The releases it plans with
+The target runs it with the Go SDK that `MODULE.bazel` pins; `go run
+./ci/proof`, as the `proof` suite's step runs it, needs Go 1.27.1 first on
+`PATH`. It also needs git, flock, ps and bazelisk. The releases it plans with
 are pinned in [ci/proof/pins](../ci/proof/pins), and it fetches them
 through GitHub's API with `GITHUB_TOKEN`, which goes only in a request
 header. A run takes about four minutes, the downloads included.
@@ -198,7 +200,8 @@ there before anyone pins it. Once a release passes there,
 `ci/proof/pins` moves to it: the nightly plans with the pins against
 today's table, so a row added after an old pin fails the nightly. A param on the suite picks the mode:
 `PROOF_TOOL: source` on the `pr` and `main` runs, `PROOF_NEWEST: "true"`
-on `newest`. The suite's step refuses both at once. The log's last line names the
+on `newest`. The program reads them as it reads `--source` and
+`--newest`, and refuses two modes at once. The log's last line names the
 tool the run planned with and how many rows differ from the table.
 
 Planning walks outward. In every mode the proof also builds the tool

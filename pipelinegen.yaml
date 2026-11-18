@@ -86,30 +86,24 @@ suites:
       GOFLAGS: -trimpath
       GOCACHE: "{cache}/go-build"
       GOMODCACHE: "{cache}/mod"
-      GOLANGCI_LINT_CACHE: "{cache}/lint"
-      LINT_VERSION: 2.14.0
-      LINT_SHA256: ab90aeb7b066f92a33415b638a50fe5344bbb75a0d32ad30cc248d88f81032ab
+      # bazelisk's download of Bazel
+      XDG_CACHE_HOME: "{cache}/xdg"
     steps:
-      # golangci-lint at its pinned version and checksum over every package,
-      # with the repository's .golangci.yml, then pipelinegen's own check of
-      # the tree (a git work tree at the tested commit with its history)
-      - run: shell
+      # golangci-lint at the version and checksum MODULE.bazel pins over
+      # every package, with the repository's .golangci.yml, then
+      # pipelinegen's own check of the tree (a git work tree at the tested
+      # commit with its history). Bazel's output root, with the pinned tools,
+      # stays with the job, and its server ends once the lint has started.
+      - run: command
         take: ["//:lint"]
-        with:
-          script: |
-            tgz=golangci-lint-$LINT_VERSION-linux-amd64.tar.gz
-            curl -fsSL -o "$PIPELINEGEN_WORK/$tgz" "https://github.com/golangci/golangci-lint/releases/download/v$LINT_VERSION/$tgz"
-            echo "$LINT_SHA256  $PIPELINEGEN_WORK/$tgz" | sha256sum -c -
-            tar -xzf "$PIPELINEGEN_WORK/$tgz" -C "$PIPELINEGEN_WORK" --strip-components=1 "golangci-lint-$LINT_VERSION-linux-amd64/golangci-lint"
-            "$PIPELINEGEN_WORK/golangci-lint" run
-            pipelinegen check
+        with: {each: [bazelisk, "--output_user_root={cache}/bazel", --max_idle_secs=5, run, "//tools:lint"]}
       # the subjects of the commits the build brings
       - run: command
         take: ["//:subjects"]
         with: {each: [go, run, ./internal/commitmsg/cmd, new]}
   proof:
     # one explicit slice: planning a fixture through the released plugins
-    # (go run ./ci/proof); outside the nightly only a change under
+    # (ci/proof); outside the nightly only a change under
     # ci/proof or to the planning and recording code (//:proved) selects
     # it, and then it plans with the tool built from the commit
     tag: slice-pipelinegen-proof
@@ -135,17 +129,9 @@ suites:
       PROOF_WORKERS: "3"
       PROOF_BAZEL_HEAP: 1g
     steps:
-      - run: shell
-        with:
-          shell: [bash, -eu]
-          script: |
-            case $PROOF_NEWEST/$PROOF_TOOL in
-            /) mode=() ;;
-            true/) mode=(--newest) ;;
-            /source) mode=(--source) ;;
-            *) echo "PROOF_NEWEST=$PROOF_NEWEST PROOF_TOOL=$PROOF_TOOL: set at most one, PROOF_NEWEST to true or PROOF_TOOL to source" >&2; exit 2 ;;
-            esac
-            go run ./ci/proof "${mode[@]}" "$PIPELINEGEN_WORK/proof"
+      # the mode comes from the params above, PROOF_NEWEST or PROOF_TOOL
+      - run: command
+        with: {each: [go, run, ./ci/proof, "{work}/proof"]}
   go:
     tests: ["internal/**/*_test.go", "plugin/**/*_test.go"]
     owner: "//:code"

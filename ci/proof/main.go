@@ -28,22 +28,15 @@ func run(args []string) int {
 		Stdout: os.Stdout, Stderr: os.Stderr,
 	}
 
-	for len(args) > 0 {
-		switch args[0] {
-		case "--newest":
-			o.Newest = true
-		case "--source":
-			o.Source = true
-		default:
-			goto done
-		}
-
-		args = args[1:]
-	}
-
-done:
+	args = modeFlags(&o, args)
 	if len(args) != 1 || (o.Newest && o.Source) {
 		fmt.Fprintln(os.Stderr, usage)
+
+		return 2
+	}
+
+	if err := o.ModeFromEnv(os.Getenv("PROOF_NEWEST"), os.Getenv("PROOF_TOOL")); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 
 		return 2
 	}
@@ -92,6 +85,23 @@ done:
 	}
 
 	return 0
+}
+
+func modeFlags(o *proof.Options, args []string) []string {
+	for len(args) > 0 {
+		switch args[0] {
+		case "--newest":
+			o.Newest = true
+		case "--source":
+			o.Source = true
+		default:
+			return args
+		}
+
+		args = args[1:]
+	}
+
+	return args
 }
 
 func checkout() (string, error) {
