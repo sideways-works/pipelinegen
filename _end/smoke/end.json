@@ -1,0 +1,4 @@
+{
+  "ended": "2026-11-18T17:41:33.314494056Z",
+  "why": "suite smoke's work never began: its start step (the tree, the batches) failed or reached its time limit of 20 minutes (limits.steps); the build log says which"
+}
