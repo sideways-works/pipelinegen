@@ -1,0 +1,17 @@
+go:internal/plugins#func:Load
+go:internal/plugins#func:MissingNeeds
+go:internal/plugins#func:binarySum
+go:internal/plugins#func:build
+go:internal/plugins#func:sortedKeys
+go:internal/plugins#method:Set.InForce
+go:internal/plugins#method:Set.OffAt
+go:internal/plugins#method:Set.On
+go:internal/plugins#method:Set.Overrides
+go:internal/plugins#method:Set.on
+go:internal/plugins#method:Set.override
+go:internal/secret#func:PluginEnv
+go:internal/secret#func:sortedKeys
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
