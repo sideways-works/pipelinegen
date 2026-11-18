@@ -1,0 +1,15 @@
+{
+  "label": "internal/cli/graphbound_noplugins_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-18T17:33:22.320071237Z",
+  "failures": [
+    {
+      "test": "TestGraphBoundWithoutPluginsWalkedSelectsWhatSelectorsSelect",
+      "tail": "ipelinegen: suite gspecs: owner pattern //{dir}:{stem} names targets the tree lacks: //gspecs:two\npipelinegen: suite gspecs: owner pattern //{dir}:{stem} names targets the tree lacks: //gspecs:two\npipelinegen: suite gspecs: owner pattern //{dir}:{stem} names targets the tree lacks: //gspecs:two\npipelinegen: suite gspecs: owner pattern //{dir}:{stem} names targets the tree lacks: //gspecs:two\npipelinegen: suite gspecs: owner pattern //{dir}:{stem} names targets the tree lacks: //gspecs:two\npipelinegen: suite gspecs: owner pattern //{dir}:{stem} names targets the tree lacks: //gspecs:two\npipelinegen: suite gspecs: owner pattern //{dir}:{stem} names targets the tree lacks: //gspecs:two\npipelinegen: suite gspecs: owner pattern //{dir}:{stem} names targets the tree lacks: //gspecs:two\npipelinegen: suite gspecs: owner pattern //{dir}:{stem} names targets the tree lacks: //gspecs:two\n    graphbound_noplugins_test.go:6: a library two levels under the owners, walked: head: prepare 03dc6d240e84: data of specs: bazel query: bazelisk --max_idle_secs=900 query set(//e2e:checkout //e2e:orders) --output=streamed_jsonproto --keep_going=false: exit status 37: $TEST_TMPDIR defined, some defaults will be overridden\n        \n        Server terminated abruptly (error code: 14, error message: 'Socket closed', log file: '/tmp/pipelinegen-test-223441360/bazel/_bazel_root/bd80f929c7e56a7e3c7b9007c6f6e919/server/jvm.out')\n--- FAIL: TestGraphBoundWithoutPluginsWalkedSelectsWhatSelectorsSelect (181.46s)"
+    }
+  ],
+  "seconds": 181.46,
+  "recorded": true,
+  "cpu_seconds": 178.46203500000001
+}
