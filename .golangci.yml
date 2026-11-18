@@ -47,10 +47,6 @@ linters:
         # Closing a body we read from: the data is already in hand, so a
         # close error changes nothing.
         - (io.ReadCloser).Close
-    gomoddirectives:
-      # plugkit is replaced by its local checkout until it has a release;
-      # this goes with that replace.
-      replace-local: true
     exhaustive:
       # A default case is a decision about every other value.
       default-signifies-exhaustive: true
