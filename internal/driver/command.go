@@ -241,7 +241,40 @@ func (c *Command) cmd(ctx context.Context, req plugin.DriverRequest, conf comman
 
 	cmd.Env = env
 
+	// A bare name is found on the step's PATH, which puts the tools first,
+	// not on pipelinegen's own.
+	if !strings.ContainsRune(argv[0], filepath.Separator) {
+		if p, ok := lookPathIn(argv[0], env); ok {
+			cmd.Path, cmd.Err = p, nil
+		}
+	}
+
 	return cmd, nil
+}
+
+// lookPathIn finds an executable named name on the PATH that env sets, the
+// last PATH entry winning as it does for a process.
+func lookPathIn(name string, env []string) (string, bool) {
+	var path string
+
+	for _, kv := range env {
+		if v, ok := strings.CutPrefix(kv, "PATH="); ok {
+			path = v
+		}
+	}
+
+	for _, dir := range filepath.SplitList(path) {
+		if dir == "" {
+			continue
+		}
+
+		p := filepath.Join(dir, name)
+		if fi, err := os.Stat(p); err == nil && fi.Mode().IsRegular() && fi.Mode().Perm()&0o111 != 0 {
+			return p, true
+		}
+	}
+
+	return "", false
 }
 
 func common(req plugin.DriverRequest) map[string]string {

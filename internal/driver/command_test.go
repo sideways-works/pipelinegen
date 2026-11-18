@@ -211,3 +211,21 @@ printf '{"passed":false,"failures":[{"test":"t","tail":"no"}],"files":[{"path":"
 		t.Fatalf("the file: %q %v", data, err)
 	}
 }
+
+func TestABareCommandIsFoundOnTheStepsPath(t *testing.T) {
+	tools := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(tools, "only-in-tools"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	env := slices.DeleteFunc(os.Environ(), func(kv string) bool { return strings.HasPrefix(kv, "PATH=") })
+	env = append(env, "PATH="+tools+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	c := &Command{Env: env, Log: io.Discard}
+	req := commandRequest(t, map[string]any{"each": []any{"only-in-tools", "{name}"}}, false, "a")
+
+	if got := ends(t, c, req); !got["a"].Passed {
+		t.Fatalf("a command on the step's PATH only: %+v", got["a"])
+	}
+}

@@ -27,6 +27,7 @@ minor version may change the config or the protocol.
 
 ### Fixed
 
+- The command driver finds a bare command such as `bazelisk` on the step's PATH, which puts the tools first, rather than on pipelinegen's own, so a `run: command` step can name a tool the task fetched.
 - The kit's placement check renders the pipeline without the placement the same way as with it, its tools at the checksums the kit places, so a runner that writes its tools' checksums into the pipeline no longer fails it.
 
 ## [0.3.1] - 2026-11-18
