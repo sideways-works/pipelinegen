@@ -1,0 +1,12 @@
+{
+  "label": "//:proof",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-proof",
+  "updated": "2026-11-18T02:15:30.651450435Z",
+  "failures": [
+    {
+      "test": "(not run)",
+      "tail": "batch 0 stopped before its first slice started, 1 minute after the suite began: not its time limit of 120 minutes (suites.proof.minutes); its task died: the build log says why"
+    }
+  ]
+}
