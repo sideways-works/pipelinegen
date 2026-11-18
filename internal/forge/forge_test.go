@@ -1,7 +1,10 @@
 package forge_test
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/sideways-works/pipelinegen/internal/forge"
@@ -234,5 +237,62 @@ func TestAPathPluginOnGitLabIsListedAndChecked(t *testing.T) {
 
 	if asked := strings.Join(g.Asked(), "\n"); !strings.Contains(asked, "/group/sub/plugins/-/releases/driver/go/v0.2.0/downloads/go-driver-darwin-arm64") {
 		t.Fatalf("fetched:\n%s", asked)
+	}
+}
+
+// GITHUB_TOKEN goes to GitHub's API alone, as its Authorization header: never to the host a
+// listing redirects to, nor to a release file's, nor into an error.
+func TestTheTokenGoesToGitHubsAPIAlone(t *testing.T) {
+	const token = "test-token-not-real"
+
+	var (
+		mu   sync.Mutex
+		seen = map[string][]string{}
+	)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		mu.Lock()
+
+		seen[req.Host] = append(seen[req.Host], req.Header.Get("Authorization"))
+		mu.Unlock()
+
+		switch req.Host {
+		case "api.github.com":
+			http.Redirect(w, req, "https://elsewhere.example.com/o/r/releases", http.StatusFound)
+		case "elsewhere.example.com":
+			_, _ = w.Write([]byte(`[{"tag_name": "v1.0.0", "assets": [{"name": "x", "browser_download_url": "https://github.com/o/r/releases/download/v1.0.0/x"}]}]`)) //nolint:errcheck // a test server
+		case "github.com":
+			http.Redirect(w, req, "https://api.github.com.example.com/x", http.StatusFound)
+		default:
+			w.WriteHeader(http.StatusForbidden)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv(forge.EnvTestURL, srv.URL)
+	t.Setenv("GITHUB_TOKEN", token)
+
+	rs, err := forge.Releases(t.Context(), forge.Client(), "o/r", "")
+	if err != nil || len(rs) != 1 {
+		t.Fatalf("%v %+v", err, rs)
+	}
+
+	_, err = forge.Download(t.Context(), forge.Client(), rs[0], "x")
+	if err == nil || strings.Contains(err.Error(), token) {
+		t.Fatalf("download: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	for host, auths := range seen {
+		for _, a := range auths {
+			if want := map[bool]string{true: "Bearer " + token}[host == "api.github.com"]; a != want {
+				t.Errorf("%s was sent %q", host, a)
+			}
+		}
+	}
+
+	if len(seen["api.github.com"]) != 1 || len(seen["elsewhere.example.com"]) != 1 || len(seen["github.com"]) != 1 || len(seen["api.github.com.example.com"]) != 1 {
+		t.Fatalf("asked %v", seen)
 	}
 }

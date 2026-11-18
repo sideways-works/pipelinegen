@@ -32,13 +32,35 @@ var (
 // Client is the HTTP client for the forges: a bounded one, or in tests one that reaches the
 // tests' server.
 func Client() *http.Client {
-	c := &http.Client{Timeout: 5 * time.Minute}
+	next := http.DefaultTransport
 
 	if u, err := url.Parse(os.Getenv(EnvTestURL)); err == nil && u.Host != "" {
-		c.Transport = rerouted{to: u}
+		next = rerouted{to: u}
 	}
 
-	return c
+	return &http.Client{Timeout: 5 * time.Minute, Transport: gitHubToken{next: next}}
+}
+
+// gitHubAPI is the one host GITHUB_TOKEN is sent to.
+const gitHubAPI = "api.github.com"
+
+// gitHubToken adds GITHUB_TOKEN to each request for GitHub's API over https, a redirect's
+// included, and to no other: the client's own requests never carry it, so no redirect copies it.
+type gitHubToken struct{ next http.RoundTripper }
+
+func (g gitHubToken) RoundTrip(req *http.Request) (*http.Response, error) {
+	token := os.Getenv("GITHUB_TOKEN")
+
+	switch {
+	case req.URL.Scheme == "https" && req.URL.Host == gitHubAPI && token != "":
+		req = req.Clone(req.Context())
+		req.Header.Set("Authorization", "Bearer "+token)
+	case req.Header.Get("Authorization") != "":
+		req = req.Clone(req.Context())
+		req.Header.Del("Authorization")
+	}
+
+	return g.next.RoundTrip(req) //nolint:wrapcheck // the transport's own error
 }
 
 type rerouted struct{ to *url.URL }
@@ -154,7 +176,7 @@ const maxPages = 50
 
 func apiOrigin(repo pin.Repo) string {
 	if repo.Origin == "https://github.com" {
-		return "https://api.github.com"
+		return "https://" + gitHubAPI
 	}
 
 	return repo.Origin + "/api/v3"
@@ -242,11 +264,6 @@ func get(ctx context.Context, c *http.Client, u string) ([]byte, string, error) 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, "", err //nolint:wrapcheck // the caller says what was asked
-	}
-
-	// GitHub's API allows few requests without a token; the token goes to it alone
-	if req.URL.Host == "api.github.com" && os.Getenv("GITHUB_TOKEN") != "" {
-		req.Header.Set("Authorization", "Bearer "+os.Getenv("GITHUB_TOKEN"))
 	}
 
 	resp, err := c.Do(req)
