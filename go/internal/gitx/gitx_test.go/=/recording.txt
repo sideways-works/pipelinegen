@@ -1,0 +1,21 @@
+# observed
+go:internal/gitx#method:Repo.Checkout
+go:internal/gitx#method:Repo.Diff
+go:internal/gitx#method:Repo.IsAncestor
+go:internal/gitx#method:Repo.Resolve
+go:internal/gitx#method:Repo.Show
+go:internal/gitx#method:Repo.owns
+go:internal/gitx#method:Repo.run
+go:internal/secret#func:HardenGit
+go:internal/secret#func:InPipeline
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
+go:internal/testrepo#func:New
+go:internal/testrepo#func:NewFrom
+go:internal/testrepo#func:fixtureDir
+go:internal/testrepo#method:Repo.Commit
+go:internal/testrepo#method:Repo.Git
+go:internal/testrepo#method:Repo.GitIn
+go:internal/testrepo#method:Repo.Write
