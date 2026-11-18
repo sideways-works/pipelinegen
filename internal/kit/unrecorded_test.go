@@ -45,7 +45,7 @@ func TestAReportStepThatCannotRecordFailsTheJob(t *testing.T) {
 			"        args: [git-auth, NPM_TOKEN]\n    attempts: 2\n"), ""},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := strings.Join(swallowedUnrecorded(t.Context(), []byte(c.pipeline)), "; ")
+			got := strings.Join(swallowedUnrecorded(t.Context(), []byte(c.pipeline), nil), "; ")
 
 			switch {
 			case c.want == "" && got != "":

@@ -14,6 +14,8 @@ concourse:
 plugins:
   - {name: go-sbom, kind: sbom, repository: owner/go-sbom, commit: 0123456789abcdef0123456789abcdef01234567}
   - {name: go-correlator, kind: correlator, repository: owner/go-correlator, commit: 0123456789abcdef0123456789abcdef01234567}
+  # the kit puts the runner under test in its place, at its own checksum
+  - {name: runner, kind: runner, repository: owner/pipelinegen-runner-kit, release: {version: v0.1.0, sha256: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc}}
 suites:
   e2e:
     tag: slice-e2e

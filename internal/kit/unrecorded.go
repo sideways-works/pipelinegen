@@ -20,8 +20,9 @@ const exitUnrecorded = 4
 var recordingSteps = []string{"report batch-end", "report suite"}
 
 // swallowedUnrecorded are tasks running a recording step where its exit 4 can't fail the job: in a try,
-// or a script not ending with 4 when the tool does, run with a stand-in tool and no package installs.
-func swallowedUnrecorded(ctx context.Context, text []byte, installs ...string) []string {
+// or a script not ending with 4 when the tool does, run with a stand-in tool and no package installs; a
+// task that runs the tool through a program of the runner's is judged by its runs.
+func swallowedUnrecorded(ctx context.Context, text []byte, runs *taskRuns, installs ...string) []string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(text, &doc); err != nil {
 		return []string{"the pipeline isn't YAML: " + err.Error()}
@@ -40,19 +41,24 @@ func swallowedUnrecorded(ctx context.Context, text []byte, installs ...string) [
 		name := fmt.Sprint(job["name"])
 
 		for _, k := range append([]string{"plan"}, hookKeys...) {
-			out = append(out, swallowedIn(ctx, job[k], name, false, installs)...)
+			out = append(out, unrecordedWalk{runs: runs, installs: installs}.in(ctx, job[k], name, false)...)
 		}
 	}
 
 	return out
 }
 
-func swallowedIn(ctx context.Context, v any, job string, tried bool, installs []string) []string {
+type unrecordedWalk struct {
+	runs     *taskRuns
+	installs []string
+}
+
+func (w unrecordedWalk) in(ctx context.Context, v any, job string, tried bool) []string {
 	switch x := v.(type) {
 	case []any:
 		out := make([]string, 0, len(x))
 		for _, e := range x {
-			out = append(out, swallowedIn(ctx, e, job, tried, installs)...)
+			out = append(out, w.in(ctx, e, job, tried)...)
 		}
 
 		return out
@@ -60,18 +66,7 @@ func swallowedIn(ctx context.Context, v any, job string, tried bool, installs []
 		var out []string
 
 		if task, ok := x["task"]; ok {
-			if step, run := recordingStep(x); step != "" {
-				where := fmt.Sprintf("job %s, task %v (%s)", job, task, step)
-
-				switch {
-				case tried:
-					out = append(out, where+": inside a try, which lets its exit 4 pass")
-				default:
-					if problem := passesUnrecorded(ctx, run, installs); problem != "" {
-						out = append(out, where+": "+problem)
-					}
-				}
-			}
+			out = append(out, w.task(ctx, x, task, job, tried)...)
 		}
 
 		for k, c := range x {
@@ -79,13 +74,46 @@ func swallowedIn(ctx context.Context, v any, job string, tried bool, installs []
 				continue
 			}
 
-			out = append(out, swallowedIn(ctx, c, job, tried || k == "try", installs)...)
+			out = append(out, w.in(ctx, c, job, tried || k == tryKey)...)
 		}
 
 		return out
 	}
 
 	return nil
+}
+
+// task is a task's problem: the exit 4 a try lets pass, or a run that ends otherwise.
+func (w unrecordedWalk) task(ctx context.Context, x map[string]any, task any, job string, tried bool) []string {
+	step, run := recordingStep(x)
+
+	res := w.runs.result(job, x)
+	if step == "" && (res == nil || res.recording == "") {
+		return nil
+	}
+
+	if step == "" {
+		step = res.recording
+	}
+
+	where := fmt.Sprintf("job %s, task %v (%s)", job, task, step)
+
+	var problem string
+
+	switch {
+	case tried:
+		problem = "inside a try, which lets its exit 4 pass"
+	case run != nil:
+		problem = passesUnrecorded(ctx, run, w.installs)
+	default:
+		problem = unrecordedProblem(res.unrecorded, res.said)
+	}
+
+	if problem == "" {
+		return nil
+	}
+
+	return []string{where + ": " + problem}
 }
 
 func recordingStep(task map[string]any) (string, map[string]any) {
@@ -155,13 +183,26 @@ func passesUnrecorded(ctx context.Context, run map[string]any, installs []string
 	var exit *exec.ExitError
 
 	switch {
-	case errors.As(err, &exit) && exit.ExitCode() == exitUnrecorded:
-		return ""
 	case err == nil:
-		return "exits 0 when the tool exits 4"
+		return unrecordedProblem(0, "")
 	case errors.As(err, &exit):
-		return fmt.Sprintf("exits %d when the tool exits 4: %s", exit.ExitCode(), gostrings.TrimSpace(string(out)))
+		return unrecordedProblem(exit.ExitCode(), gostrings.TrimSpace(string(out)))
 	default:
-		return "can't run: " + err.Error()
+		return unrecordedProblem(-1, "can't run: "+err.Error())
 	}
+}
+
+// unrecordedProblem is what a step's exit, when the tool exits 4 for a report, says of it: -1 is a
+// step that couldn't run.
+func unrecordedProblem(code int, said string) string {
+	switch code {
+	case exitUnrecorded:
+		return ""
+	case 0:
+		return "exits 0 when the tool exits 4"
+	case -1:
+		return said
+	}
+
+	return fmt.Sprintf("exits %d when the tool exits 4: %s", code, said)
 }

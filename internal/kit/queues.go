@@ -167,7 +167,7 @@ func unplannedStarts(s plugin.Spec, text []byte) []string {
 
 // unhandedStarts are a pull request run's suite jobs that could start a build for a head nothing handed
 // on: their triggers must be put only inside an across, and plan --from must write the gate.
-func unhandedStarts(s plugin.Spec, text []byte) []string {
+func unhandedStarts(s plugin.Spec, text []byte, runs *taskRuns) []string {
 	var doc map[string]any
 	if err := yaml.Unmarshal(text, &doc); err != nil {
 		return []string{"the pipeline isn't YAML: " + err.Error()}
@@ -217,7 +217,7 @@ func unhandedStarts(s plugin.Spec, text []byte) []string {
 
 	slices.Sort(out)
 
-	steps, err := stepCalls(text)
+	steps, err := stepCalls(text, runs)
 	if err != nil {
 		return append(out, err.Error())
 	}
@@ -301,8 +301,8 @@ func triggeringResources(job map[string]any) []string {
 
 // undecidedPrepares are a continuous run's planning tasks that could run the prepare before the build
 // knows it plans: the first plan call must be plan --decide --gate <dir>, the plan after it through it.
-func undecidedPrepares(s plugin.Spec, text []byte) []string {
-	steps, err := stepCalls(text)
+func undecidedPrepares(s plugin.Spec, text []byte, runs *taskRuns) []string {
+	steps, err := stepCalls(text, runs)
 	if err != nil {
 		return []string{err.Error()}
 	}

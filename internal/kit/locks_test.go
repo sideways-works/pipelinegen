@@ -12,7 +12,7 @@ func TestALockStepIsRefused(t *testing.T) {
 		"jobs:\n- {name: e2e, ensure: {task: end, config: {run: {path: sh, args: [-ec, 'tools/pipelinegen unlock browsers']}}}, plan: []}\n":                          "job e2e, step end: runs pipelinegen unlock",
 		"jobs:\n- {name: e2e, plan: [{task: start, config: {run: {path: sh, args: [-ec, 'echo lock; tools/pipelinegen tree --out source']}}}]}\n":                     "",
 	} {
-		got := strings.Join(lockSteps([]byte(text)), "; ")
+		got := strings.Join(lockSteps([]byte(text), nil), "; ")
 		if (want == "") != (got == "") || !strings.Contains(got, want) {
 			t.Errorf("%s: got %q, want %q", text, got, want)
 		}

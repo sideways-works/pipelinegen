@@ -17,7 +17,7 @@ func TestAShellWrappedCallIsTheToolsCall(t *testing.T) {
         args: ["-ec", "(install)\nexec \"$0\" \"$@\"", tools/pipelinegen, slice, run, --root, source]
 `)
 
-	steps, err := stepCalls(pipeline)
+	steps, err := stepCalls(pipeline, nil)
 	if err != nil || len(steps) != 1 {
 		t.Fatalf("%+v %v", steps, err)
 	}
@@ -110,7 +110,7 @@ func TestEveryWrittenStepInstallsItsPackages(t *testing.T) {
 # ` + s.Images.Builds[0].Key + `
 `)
 
-	steps, err := stepCalls(text)
+	steps, err := stepCalls(text, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

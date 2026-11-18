@@ -40,7 +40,7 @@ func TestEveryStepOfTheToolsGetsTheTrustedKeys(t *testing.T) {
 		{"GITHUB_TOKEN: x", "no " + plugin.EnvTrusted},
 		{plugin.EnvTrusted + `: '{}'`, "isn't the spec's trusted keys"},
 	} {
-		steps, err := stepCalls(pipelineOf(tc.env, ""))
+		steps, err := stepCalls(pipelineOf(tc.env, ""), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -51,7 +51,7 @@ func TestEveryStepOfTheToolsGetsTheTrustedKeys(t *testing.T) {
 		}
 	}
 
-	steps, err := stepCalls([]byte("jobs:\n- name: p\n  plan:\n  - task: say\n    config:\n      run: {path: sh, args: [-ec, \"echo 'run pipelinegen pipeline --out p.yml'\"]}\n"))
+	steps, err := stepCalls([]byte("jobs:\n- name: p\n  plan:\n  - task: say\n    config:\n      run: {path: sh, args: [-ec, \"echo 'run pipelinegen pipeline --out p.yml'\"]}\n"), nil)
 	if err != nil || len(trustedProblems(s, steps)) != 0 {
 		t.Errorf("a command for a person: %v %v", err, trustedProblems(s, steps))
 	}
@@ -66,7 +66,7 @@ func TestEveryStepOfTheToolsIsAPipelinesStep(t *testing.T) {
 		{"PIPELINEGEN_JOB_URL: https://ci/jobs/plan", plugin.EnvPipelineStep + ` is "", not 1`},
 		{plugin.EnvPipelineStep + `: "yes"`, `is "yes", not 1`},
 	} {
-		steps, err := stepCalls(pipelineOf(tc.env, ""))
+		steps, err := stepCalls(pipelineOf(tc.env, ""), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -77,7 +77,7 @@ func TestEveryStepOfTheToolsIsAPipelinesStep(t *testing.T) {
 		}
 	}
 
-	steps, err := stepCalls([]byte("jobs:\n- name: p\n  plan:\n  - task: say\n    config:\n      run: {path: sh, args: [-ec, \"echo 'run pipelinegen pipeline --out p.yml'\"]}\n"))
+	steps, err := stepCalls([]byte("jobs:\n- name: p\n  plan:\n  - task: say\n    config:\n      run: {path: sh, args: [-ec, \"echo 'run pipelinegen pipeline --out p.yml'\"]}\n"), nil)
 	if err != nil || len(pipelineStepProblems(steps)) != 0 {
 		t.Errorf("a command for a person: %v %v", err, pipelineStepProblems(steps))
 	}
@@ -107,7 +107,7 @@ func TestPlanningAChangesTreeHoldsNoTokenThatWrites(t *testing.T) {
 		"PIPELINEGEN_READ_TOKEN: ((r)), PIPELINEGEN_STORE_TOKEN: ((s))": "holding PIPELINEGEN_STORE_TOKEN",
 		"GITHUB_TOKEN: ((t))":                                           "holding GITHUB_TOKEN",
 	} {
-		steps, err := stepCalls(pipelineOf(env, ""))
+		steps, err := stepCalls(pipelineOf(env, ""), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -143,7 +143,7 @@ jobs:
 		string(chain("echo nothing", "mock")):                                                          "plan --from false",
 		string(chain("if tools/pipelinegen plan --run pr --from plans/head; then :; fi", "github-pr")): "a pull request resource starts",
 	} {
-		got := strings.Join(connectorProblems([]byte(text)), "; ")
+		got := strings.Join(connectorProblems([]byte(text), nil), "; ")
 		if (want == "") != (got == "") || !strings.Contains(got, want) {
 			t.Errorf("want %q, got %q", want, got)
 		}
@@ -159,7 +159,7 @@ func TestACallAfterAShellKeywordIsACall(t *testing.T) {
 		"x && tools/pipelinegen plan --from plans/head",
 		"exec tools/pipelinegen plan --from plans/head",
 	} {
-		steps, err := stepCalls([]byte("jobs:\n- name: j\n  plan:\n  - task: t\n    config:\n      run: {path: sh, args: [-ec, \"" + line + "\"]}\n"))
+		steps, err := stepCalls([]byte("jobs:\n- name: j\n  plan:\n  - task: t\n    config:\n      run: {path: sh, args: [-ec, \""+line+"\"]}\n"), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -169,7 +169,7 @@ func TestACallAfterAShellKeywordIsACall(t *testing.T) {
 		}
 	}
 
-	steps, err := stepCalls([]byte("jobs:\n- name: j\n  plan:\n  - task: t\n    config:\n      run: {path: sh, args: [-ec, \"cp tools/pipelinegen elsewhere\"]}\n"))
+	steps, err := stepCalls([]byte("jobs:\n- name: j\n  plan:\n  - task: t\n    config:\n      run: {path: sh, args: [-ec, \"cp tools/pipelinegen elsewhere\"]}\n"), nil)
 	if err != nil || len(steps) != 0 {
 		t.Errorf("a path as a word: %+v %v", steps, err)
 	}
@@ -184,7 +184,7 @@ func TestSSHKeysGoWhereTheirTokensGo(t *testing.T) {
 		"PIPELINEGEN_READ_TOKEN: ((r)), PIPELINEGEN_SSH_KEY_READ: ((other))":                                                      "isn't the spec's var",
 		"PIPELINEGEN_READ_TOKEN: ((r)), PIPELINEGEN_SSH_KEY_READ: ((ssh_read_key)), PIPELINEGEN_SSH_KEY_STORE: ((ssh_store_key))": "a key for what the step doesn't do",
 	} {
-		steps, err := stepCalls(pipelineOf(env, ""))
+		steps, err := stepCalls(pipelineOf(env, ""), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -195,7 +195,7 @@ func TestSSHKeysGoWhereTheirTokensGo(t *testing.T) {
 		}
 	}
 
-	steps, err := stepCalls(pipelineOf("PIPELINEGEN_READ_TOKEN: ((r)), PIPELINEGEN_SSH_KEY_STORE: ((ssh_store_key))", ""))
+	steps, err := stepCalls(pipelineOf("PIPELINEGEN_READ_TOKEN: ((r)), PIPELINEGEN_SSH_KEY_STORE: ((ssh_store_key))", ""), nil)
 	if err != nil || !strings.Contains(strings.Join(proposedPlanProblems(steps), "; "), "holding PIPELINEGEN_SSH_KEY_STORE") {
 		t.Errorf("planning a change's tree with the store key: %v %v", err, proposedPlanProblems(steps))
 	}

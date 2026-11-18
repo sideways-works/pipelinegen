@@ -48,7 +48,7 @@ func TestAStepMountsWhatItsCallReads(t *testing.T) {
 
 	seen := map[string]bool{}
 
-	calls, mounts := callChecks(cmds, Spec(), text, seen)
+	calls, mounts := callChecks(cmds, Spec(), text, nil, seen)
 	if want := []string{"pipelinegen call: pipelinegen report whole: no flag -nope"}; !slices.Equal(calls, want) {
 		t.Errorf("calls %q", calls)
 	}
@@ -117,7 +117,7 @@ func TestATaskMayReadWhatAnEarlierCallWrote(t *testing.T) {
 
 	seen := map[string]bool{}
 
-	calls, mounts := callChecks(cmds, Spec(), text, seen)
+	calls, mounts := callChecks(cmds, Spec(), text, nil, seen)
 	if len(calls) > 0 {
 		t.Errorf("calls %q", calls)
 	}

@@ -81,7 +81,7 @@ func TestAContinuousRunDecidesBeforeItsPrepare(t *testing.T) {
 		"job plan-full: its planning task doesn't ask for the decision": "prepare_in trigger\n\nexec tools/pipelinegen plan --run full --gate handoff",
 		"job plan-full: its decision and its plan don't share one task": "tools/pipelinegen plan --decide --run full --gate handoff\n\nexec tools/pipelinegen plan --run full --gate other",
 	} {
-		got := strings.Join(undecidedPrepares(s, []byte(task(script))), "; ")
+		got := strings.Join(undecidedPrepares(s, []byte(task(script)), nil), "; ")
 		if (want == "") != (got == "") || !strings.Contains(got, want) {
 			t.Errorf("want %q, got %q", want, got)
 		}
@@ -109,7 +109,7 @@ func TestAPullRequestRunsSuitesStartOnlyForAHandOff(t *testing.T) {
 		"job pr-go: triggers on pr-trigger, which no job puts inside an across":       "jobs:\n- {name: pr-go, plan: [{get: trigger, resource: pr-trigger, trigger: true}]}\n",
 		"job plan-pr, step write: plan --from without --gate":                         "jobs:\n- {name: plan-pr, plan: [" + write("") + ", " + gatedPut + "]}\n" + sweep + suite,
 	} {
-		got := strings.Join(unhandedStarts(s, []byte(text)), "; ")
+		got := strings.Join(unhandedStarts(s, []byte(text), nil), "; ")
 		if (want == "") != (got == "") || !strings.Contains(got, want) {
 			t.Errorf("want %q, got %q", want, got)
 		}

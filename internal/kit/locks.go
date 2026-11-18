@@ -6,8 +6,8 @@ import (
 
 // lockSteps are the steps that run pipelinegen lock or unlock: those commands do nothing now, so
 // such a step was written for an older tool.
-func lockSteps(text []byte) []string {
-	steps, err := stepCalls(text)
+func lockSteps(text []byte, runs *taskRuns) []string {
+	steps, err := stepCalls(text, runs)
 	if err != nil {
 		return []string{err.Error()}
 	}

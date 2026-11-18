@@ -196,8 +196,8 @@ type holdings struct {
 	packagesBuilt                                           bool
 }
 
-func (h *holdings) add(v specVariant, text []byte) {
-	if steps, err := stepCalls(text); err == nil {
+func (h *holdings) add(v specVariant, text []byte, runs *taskRuns) {
+	if steps, err := stepCalls(text, runs); err == nil {
 		for _, p := range trustedProblems(v.spec, steps) {
 			h.trusted = appendNew(h.trusted, v.label()+p)
 		}
@@ -220,7 +220,7 @@ func (h *holdings) add(v specVariant, text []byte) {
 	if v.name == packagesRun {
 		h.packagesBuilt = true
 
-		if steps, err := stepCalls(text); err == nil {
+		if steps, err := stepCalls(text, runs); err == nil {
 			for _, p := range packageProblems(v.spec, steps, text) {
 				h.packages = appendNew(h.packages, v.label()+p)
 			}
@@ -228,9 +228,9 @@ func (h *holdings) add(v specVariant, text []byte) {
 	}
 
 	if v.name == connectorRun {
-		h.connector = append(h.connector, connectorProblems(text)...)
+		h.connector = append(h.connector, connectorProblems(text, runs)...)
 
-		if steps, err := stepCalls(text); err == nil {
+		if steps, err := stepCalls(text, runs); err == nil {
 			h.ssh = append(h.ssh, sshKeyProblems(v.spec, steps)...)
 		}
 	}
@@ -264,8 +264,8 @@ func sshKeyProblems(s plugin.Spec, steps []stepCall) []string {
 	return out
 }
 
-func connectorProblems(text []byte) []string {
-	steps, err := stepCalls(text)
+func connectorProblems(text []byte, runs *taskRuns) []string {
+	steps, err := stepCalls(text, runs)
 	if err != nil {
 		return []string{err.Error()}
 	}

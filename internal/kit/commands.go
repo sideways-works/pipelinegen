@@ -32,7 +32,9 @@ type stepCall struct {
 	script  string
 }
 
-func stepCalls(text []byte) ([]stepCall, error) {
+// stepCalls are the calls of the tool the pipeline's tasks make: those a task's run names, as the
+// tool or a line of a script, or else, when runs is given, those it made when it ran.
+func stepCalls(text []byte, runs *taskRuns) ([]stepCall, error) {
 	var doc any
 	if err := yaml.Unmarshal(text, &doc); err != nil {
 		return nil, fmt.Errorf("the pipeline isn't YAML: %w", err)
@@ -53,7 +55,7 @@ func stepCalls(text []byte) ([]stepCall, error) {
 			}
 
 			if cfg, ok := x["config"].(map[string]any); ok && x["task"] != nil {
-				out = append(out, taskCalls(fmt.Sprintf("job %s, step %v", job, x["task"]), x, cfg)...)
+				out = append(out, callsOf(job, x, cfg, runs)...)
 			}
 
 			for _, k := range slices.Sorted(func(yield func(string) bool) {
@@ -77,7 +79,19 @@ func stepCalls(text []byte) ([]stepCall, error) {
 	return out, nil
 }
 
-func taskCalls(where string, step, cfg map[string]any) []stepCall {
+// callsOf are a task's calls: those its run names, else those it made when it ran.
+func callsOf(job string, step, cfg map[string]any, runs *taskRuns) []stepCall {
+	where := fmt.Sprintf("job %s, step %v", job, step["task"])
+
+	if calls := taskCalls(where, step, cfg); len(calls) > 0 {
+		return calls
+	}
+
+	return runs.calls(job, taskBase(where, step, cfg), step)
+}
+
+// taskBase is what every call of a task shares: its mounts, its params and its script.
+func taskBase(where string, step, cfg map[string]any) stepCall {
 	run, _ := cfg["run"].(map[string]any) //nolint:errcheck // a task without a run calls nothing
 	p, _ := run["path"].(string)          //nolint:errcheck // a path that isn't a string is no call
 	args := stringList(run["args"])
@@ -99,6 +113,16 @@ func taskCalls(where string, step, cfg map[string]any) []stepCall {
 			}
 		}
 	}
+
+	return base
+}
+
+// taskCalls are the calls of the tool a task's run names.
+func taskCalls(where string, step, cfg map[string]any) []stepCall {
+	run, _ := cfg["run"].(map[string]any) //nolint:errcheck // a task without a run calls nothing
+	p, _ := run["path"].(string)          //nolint:errcheck // a path that isn't a string is no call
+	args := stringList(run["args"])
+	base := taskBase(where, step, cfg)
 
 	if path.Base(p) == toolName {
 		c := base
@@ -237,8 +261,8 @@ func unquote(s string) []string {
 
 // callChecks are the calls the tool can't run and the steps that don't mount what their command reads
 // or keep what it writes; an output no earlier call of the task wrote is an empty directory.
-func callChecks(cmds Commands, s plugin.Spec, text []byte, seen map[string]bool) (calls, mounts []string) { //nolint:nonamedreturns // two kinds of problem
-	steps, err := stepCalls(text)
+func callChecks(cmds Commands, s plugin.Spec, text []byte, runs *taskRuns, seen map[string]bool) (calls, mounts []string) { //nolint:nonamedreturns // two kinds of problem
+	steps, err := stepCalls(text, runs)
 	if err != nil {
 		return []string{err.Error()}, nil
 	}

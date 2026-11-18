@@ -5,6 +5,8 @@ package kit
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -250,7 +252,7 @@ func (k *kit) runner(ctx context.Context) {
 
 		var ans plugin.PipelineAnswer
 
-		req := plugin.PipelineRequest{Request: k.p.NewRequest(work), Spec: Spec(), Root: root}
+		req := plugin.PipelineRequest{Request: k.p.NewRequest(work), Spec: k.pinned(Spec()), Root: root}
 		if err := k.call(ctx, plugin.CallPipeline, req, &ans); err != nil {
 			k.Check("pipeline answers", "%v", err)
 
@@ -331,7 +333,7 @@ func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 			work := k.WorkDir()
 
 			var ans plugin.PipelineAnswer
-			if err := k.call(ctx, plugin.CallPipeline, plugin.PipelineRequest{Request: k.p.NewRequest(work), Spec: v.spec, Root: root}, &ans); err != nil || len(ans.Files) != 1 {
+			if err := k.call(ctx, plugin.CallPipeline, plugin.PipelineRequest{Request: k.p.NewRequest(work), Spec: k.pinned(v.spec), Root: root}, &ans); err != nil || len(ans.Files) != 1 {
 				k.Check("pipeline answers for the spec "+v.name, "%v (%d files)", err, len(ans.Files))
 
 				continue
@@ -345,7 +347,9 @@ func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 			}
 		}
 
-		c, m := callChecks(k.o.Commands, v.spec, text, seen)
+		runs := runTasks(ctx, taskRunner{spec: k.pinned(v.spec), runner: k.o.Path, work: k.WorkDir(), installs: installsOf(v.spec)}, text)
+
+		c, m := callChecks(k.o.Commands, v.spec, text, runs, seen)
 		for _, p := range c {
 			calls = appendNew(calls, p)
 		}
@@ -354,9 +358,9 @@ func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 			mounts = appendNew(mounts, v.label()+p)
 		}
 
-		held.add(v, text)
+		held.add(v, text, runs)
 
-		sh.add(ctx, v, text)
+		sh.add(ctx, v, text, runs)
 	}
 
 	held.report(k)
@@ -379,13 +383,13 @@ type shapes struct {
 	limits, queues, follows, handed, unrecorded, locks []string
 }
 
-func (sh *shapes) add(ctx context.Context, v specVariant, text []byte) {
+func (sh *shapes) add(ctx context.Context, v specVariant, text []byte, runs *taskRuns) {
 	sh.limits = appendLabelled(sh.limits, v, unlimitedSteps(text))
 	sh.queues = appendLabelled(sh.queues, v, serializedJobs(v.spec, text))
-	sh.follows = appendLabelled(sh.follows, v, append(unplannedStarts(v.spec, text), undecidedPrepares(v.spec, text)...))
-	sh.handed = appendLabelled(sh.handed, v, unhandedStarts(v.spec, text))
-	sh.unrecorded = appendLabelled(sh.unrecorded, v, swallowedUnrecorded(ctx, text, installsOf(v.spec)...))
-	sh.locks = appendLabelled(sh.locks, v, lockSteps(text))
+	sh.follows = appendLabelled(sh.follows, v, append(unplannedStarts(v.spec, text), undecidedPrepares(v.spec, text, runs)...))
+	sh.handed = appendLabelled(sh.handed, v, unhandedStarts(v.spec, text, runs))
+	sh.unrecorded = appendLabelled(sh.unrecorded, v, swallowedUnrecorded(ctx, text, runs, installsOf(v.spec)...))
+	sh.locks = appendLabelled(sh.locks, v, lockSteps(text, runs))
 }
 
 func (k *kit) shapeChecks(sh shapes) {
@@ -431,8 +435,54 @@ func specVariants() []specVariant {
 	return []specVariant{
 		{"", Spec()}, {olderLocksRun, olderLocksSpec("")}, {"set by itself", self}, {splitTokens, splitSpec()},
 		{connectorRun, connectorSpec()}, {continuousRun, continuousSpec()}, {olderLocksPerBatchRun, olderLocksSpec("batch")},
-		{stepsRun, stepsSpec()}, {packagesRun, packagesSpec()},
+		{stepsRun, stepsSpec()}, {packagesRun, packagesSpec()}, {preparedRun, preparedSpec()},
 	}
+}
+
+const preparedRun = "a planner with a prepare command"
+
+// preparedSpec has the planner prepare the plugins' caches with a git token of its own, which
+// the planning task hands the prepare command through pipelinegen git-auth.
+func preparedSpec() plugin.Spec {
+	s := Spec()
+
+	planner, _ := s.CI["planner"].(map[string]any) //nolint:errcheck // the fixture's planner is a map
+	planner["prepare"] = "true"
+	planner["secrets"] = map[string]any{"GO_TOKEN": "go_token"}
+	planner["git_token"] = "GO_TOKEN"
+
+	return s
+}
+
+// pinned is a spec whose runner is the one under test and whose other tools pinned by a release are
+// the kit's stand-in, each at its checksum, as the kit places them where a task runs.
+func (k *kit) pinned(s plugin.Spec) plugin.Spec {
+	runner := fileSum(k.o.Path)
+	standIn := sha256.Sum256([]byte(standInTool))
+
+	s.Tools = slices.Clone(s.Tools)
+
+	for i, t := range s.Tools {
+		switch {
+		case t.Kind == plugin.KindRunner:
+			s.Tools[i].SHA256 = runner
+		case t.Version != "":
+			s.Tools[i].SHA256 = hex.EncodeToString(standIn[:])
+		}
+	}
+
+	return s
+}
+
+func fileSum(p string) string {
+	data, err := os.ReadFile(p) //nolint:gosec // the plugin under test
+	if err != nil {
+		return ""
+	}
+
+	sum := sha256.Sum256(data)
+
+	return hex.EncodeToString(sum[:])
 }
 
 func (k *kit) builds(v specVariant) bool {
