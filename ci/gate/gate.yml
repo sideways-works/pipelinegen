@@ -2,7 +2,7 @@
 # builds, vets and lints it, and runs every test and the proof with the tool
 # built from it.
 #
-#   fly -t <target> execute -c ci/gate/gate.yml -i source=. -i tools=<dir with bazelisk> \
+#   fly -t <target> execute --include-ignored -c ci/gate/gate.yml -i source=. -i tools=<dir with bazelisk> \
 #     -i plugins=<dir with go-sbom and go-correlator> [-i modproxy=<module proxy dir>]
 platform: linux
 image_resource:
@@ -12,7 +12,7 @@ inputs:
   - name: source
   - name: tools
   - name: plugins
-  # private modules the build needs come as files, in the form of a module proxy
+  # an optional local module proxy
   - name: modproxy
     optional: true
 params:

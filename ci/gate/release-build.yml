@@ -2,7 +2,7 @@
 # checkout of this repository) builds TAG of repo twice and compares the two;
 # its files come back in out/TAG.
 #
-#   fly -t <target> execute -c ci/gate/release-build.yml -i repo=<clone> -i release-tools=. \
+#   fly -t <target> execute --include-ignored -c ci/gate/release-build.yml -i repo=<clone> -i release-tools=. \
 #     -i tools=<dir with bazelisk> [-i modproxy=<module proxy dir>] -o out=<dir>
 platform: linux
 image_resource:
@@ -12,7 +12,7 @@ inputs:
   - name: repo
   - name: release-tools
   - name: tools
-  # private modules the build needs come as files, in the form of a module proxy
+  # an optional local module proxy
   - name: modproxy
     optional: true
 outputs:
