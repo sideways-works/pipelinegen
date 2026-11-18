@@ -142,7 +142,7 @@ func pickRunner(cfg *config.Config, name string) (config.Plugin, error) {
 	}
 
 	return config.Plugin{}, fmt.Errorf("%w: no runner plugin is configured: add one to plugins "+
-		"(kind runner, for Concourse sideways-works/pipelinegen-runner-concourse)", errRunner)
+		"(kind runner; for Concourse, runner/concourse of https://github.com/sideways-works/pipelinegen-plugins)", errRunner)
 }
 
 // pipelineText asks the runner conf for its pipeline, holding the runs it owns: the spec's runs
