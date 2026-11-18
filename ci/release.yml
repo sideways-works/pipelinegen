@@ -1,7 +1,8 @@
 # Builds and publishes the release of the version tag in source, with the
 # release command of release-tools (//ci/release, see internal/release), only
 # once the nightly passed on its commit. bazelisk comes from Go's module
-# proxy, checked against Go's checksum database; Bazel then fetches the Go SDK
+# proxy, checked against Go's checksum database, with the Go toolchain it
+# needs fetched and checked the same way; Bazel then fetches the Go SDK
 # and gh that MODULE.bazel pins by checksum.
 platform: linux
 image_resource:
@@ -23,5 +24,5 @@ run:
       cd release-tools
       # Bazel builds the command without the token; only the command's own
       # process gets it, and gh reads it from there
-      env -u GITHUB_TOKEN go run github.com/bazelbuild/bazelisk@v1.30.0 run --script_path="$PWD/../release" //ci/release
+      env -u GITHUB_TOKEN GOTOOLCHAIN=auto go run github.com/bazelbuild/bazelisk@v1.30.0 run --script_path="$PWD/../release" //ci/release
       exec ../release tagged ../source "$REPOSITORY" ../dist pipelinegen/nightly
