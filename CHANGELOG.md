@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Changed
+
+- The plugin protocol's parts that know no kind (calls and their exit codes, the connector exchange, pinned downloads, the container runner, the kit's harness) come from the module `github.com/sideways-works/plugkit`. `plugin` names its types as its own, so plugins build unchanged, and nothing a plugin reads or writes changes
+
 ## [0.3.1] - 2026-11-18
 
 ### Added
