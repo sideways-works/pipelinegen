@@ -48,7 +48,7 @@ the way the core calls it, on a fixture tree of the plugin's own, and exits
 
 ## Releasing
 
-Release with `go run ./ci/release` from this repository, as
+Release with `bazel run //ci/release` from this repository, as
 [releases.md](../releases.md) describes: static binaries (or one bundled
 `.mjs` file for a Node plugin), the plugin's own `describe` answer as
 `plugin.json`, and `SHA256SUMS`. Repositories pin a plugin by version and

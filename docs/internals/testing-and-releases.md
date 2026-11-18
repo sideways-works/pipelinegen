@@ -7,9 +7,13 @@ docs check enforces, and how a release is cut.
 
 ```sh
 TEST_TMPDIR=$HOME/.cache/pipelinegen-test GOFLAGS=-trimpath go test ./...
-golangci-lint run      # version 2.14, the repository's .golangci.yml
-go run ./cmd/pipelinegen check   # this repository's own check, from the tree that lands
+bazel run //tools:lint   # golangci-lint, then this repository's own check, from the tree that lands
+bazel run //ci:gate      # build, vet, the lint, every test and the proof, before a branch lands
 ```
+
+The targets run the Go SDK and golangci-lint that `MODULE.bazel` pins by
+checksum, and the lint fails when `.tool-versions` names other versions.
+The `lint` suite's step runs `//tools:lint` too.
 
 - Tests start Bazel 9.2.0 through bazelisk and run the pinned bazel-diff,
   which they fetch once into the user's cache and check against its
@@ -51,8 +55,8 @@ exists.
 ## The book's outputs
 
 Every command output the book shows is in `docs/transcripts/`, and the
-docs check fails when a page shows something else. `go run ./ci/book
-<scratch dir>` runs every step of the book on a fresh copy of
+docs check fails when a page shows something else. `bazel run //ci/book
+-- <scratch dir>` runs every step of the book on a fresh copy of
 `example-notes/`, as a reader would, and fails when what the tool prints
 differs from those transcripts; `--update` writes the new outputs into the
 transcripts and the pages instead. It refuses to run unless the

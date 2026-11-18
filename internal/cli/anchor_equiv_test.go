@@ -23,7 +23,7 @@ import (
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// The anchor runs on the work directory go run ./ci/proof leaves behind.
+// The anchor runs on the work directory ci/proof leaves behind.
 const (
 	anchorWorkEnv    = "PIPELINEGEN_TEST_ANCHOR_WORK"
 	anchorPluginsEnv = "PIPELINEGEN_TEST_ANCHOR_PLUGINS"

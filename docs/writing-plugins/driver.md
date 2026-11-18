@@ -644,7 +644,7 @@ ran.
 
 ## Releasing
 
-Release a driver like any plugin, with `go run ./ci/release` from this
+Release a driver like any plugin, with `bazel run //ci/release` from this
 repository ([releases.md](../releases.md)): static binaries, the
 driver's `describe` answer as `plugin.json`, and `SHA256SUMS`.
 Repositories pin a driver by version and checksum in an entry with

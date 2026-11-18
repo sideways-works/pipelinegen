@@ -19,7 +19,10 @@ security problem goes through the private route in
 ## A working copy
 
 You need Go (the version in `go.mod`), git, and
-[bazelisk](https://github.com/bazelbuild/bazelisk) on your `PATH`.
+[bazelisk](https://github.com/bazelbuild/bazelisk) on your `PATH`, as
+`bazel` too. The checks and the programs under `ci/` run as Bazel targets,
+with the Go SDK and golangci-lint that `MODULE.bazel` pins at the versions
+`.tool-versions` names.
 
 ```sh
 git clone https://github.com/sideways-works/pipelinegen.git
@@ -32,9 +35,16 @@ cp ci/commit-msg "$(git rev-parse --git-path hooks)/commit-msg"
 
 ```sh
 TEST_TMPDIR=$HOME/.cache/pipelinegen-test GOFLAGS=-trimpath go test ./...
-golangci-lint run ./...           # version 2.14, the repository's .golangci.yml
-go run ./cmd/pipelinegen check    # this repository's own check
+bazel run //tools:lint            # golangci-lint, then this repository's own check
 ```
+
+`//tools:lint` runs golangci-lint with the repository's `.golangci.yml` and
+a cache of its own over every package, then `pipelinegen check` built from
+the tree, and fails when `.tool-versions` names other versions than the
+pinned ones. `bazel run //ci:gate` runs all of it, `go build` and `go vet`
+first and the proof (`docs/proof.md`) last, as a branch's gate before it
+lands; `ci/gate/` holds the same gate, the proof and a release build as
+task files for a CI worker.
 
 - Tests start Bazel 9.2.0 through bazelisk and run the pinned bazel-diff,
   which they download once into your user cache and check against its
@@ -73,7 +83,7 @@ the pull request.
 
 ## Releases
 
-Releases are cut by the maintainers with `go run ./ci/release`; see
+Releases are cut by the maintainers with `bazel run //ci/release`; see
 [releases.md](docs/releases.md). Every release has its entry in
 [CHANGELOG.md](CHANGELOG.md).
 
