@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/sideways-works/pipelinegen/plugin"
 )
@@ -217,7 +218,9 @@ func goPrograms(src, name string) []program {
 	dirs, _ := os.ReadDir(filepath.Join(src, "cmd")) //nolint:errcheck // cmd exists; an unreadable one adds no program
 
 	for _, d := range dirs {
-		if d.IsDir() && d.Name() != name && rootMain(filepath.Join(src, "cmd", d.Name())) {
+		// a directory with a go.mod of its own is another module, which the root's go build can't build
+		dir := filepath.Join(src, "cmd", d.Name())
+		if d.IsDir() && d.Name() != name && !exists(filepath.Join(dir, "go.mod")) && rootMain(dir) {
 			out = append(out, program{name: d.Name(), main: "cmd/" + d.Name()})
 		}
 	}
@@ -553,6 +556,8 @@ func finish(ctx context.Context, o IO, dir, src string, programs []program, tag,
 	return writeSums(out)
 }
 
+const versionWait = time.Minute
+
 func checkProgram(ctx context.Context, p program, first bool, tag, out, arch string) error {
 	// the repository's own program's plugin.json is checked whenever there is one
 	file := describeFile(p, first)
@@ -574,7 +579,11 @@ func checkProgram(ctx context.Context, p program, first bool, tag, out, arch str
 	// a program with a version command must print the tag
 	self := filepath.Join(out, p.name+"-linux-"+arch)
 	if info, err := os.Stat(self); err == nil && info.Mode()&0o111 != 0 {
-		cmd := exec.CommandContext(ctx, self, "version") //nolint:gosec // the release's own program
+		// a program that takes version for something else, a server say, mustn't hold the build
+		vctx, cancel := context.WithTimeout(ctx, versionWait)
+		defer cancel()
+
+		cmd := exec.CommandContext(vctx, self, "version") //nolint:gosec // the release's own program
 
 		if said, err := cmd.Output(); err == nil {
 			if s := strings.TrimRight(string(said), "\n"); s != "" && s != tag {

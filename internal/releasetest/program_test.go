@@ -117,6 +117,8 @@ func TestARepositoryReleasesEachOfItsPrograms(t *testing.T) {
 		"cmd/widget/main.go": "", "cmd/widget-sbom/main.go": program,
 		"cmd/widget-runner/main.go": program, "cmd/widget-agent/main.go": agent,
 		"cmd/notes/notes.go": "package notes\n",
+		// another module, which the root's build leaves alone
+		"cmd/tool/go.mod": "module example.com/tool\n\ngo 1.27\n", "cmd/tool/main.go": program,
 	}
 
 	work := widget(t, files)
