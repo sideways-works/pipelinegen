@@ -1,0 +1,14 @@
+{
+  "label": "internal/cli/listless_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-18T08:43:44.86652061Z",
+  "failures": [
+    {
+      "test": "TestASliceWithoutAListRunsWhenAnOwnTestFileWithoutUnitsChanges",
+      "tail": "=== RUN   TestASliceWithoutAListRunsWhenAnOwnTestFileWithoutUnitsChanges\n=== PAUSE TestASliceWithoutAListRunsWhenAnOwnTestFileWithoutUnitsChanges\n=== CONT  TestASliceWithoutAListRunsWhenAnOwnTestFileWithoutUnitsChanges\n    listless_test.go:106: head: prepare 33b4fdfcbeca: data of specs: bazel query: bazelisk --max_idle_secs=30 query set(//e2e:checkout //e2e:orders) --output=streamed_jsonproto --keep_going=false: exit status 37: $TEST_TMPDIR defined, some defaults will be overridden\n        INFO: Checking for file changes...\n        \n        Server terminated abruptly (error code: 14, error message: 'Socket closed', log file: '/tmp/pipelinegen-test-3763598026/bazel/_bazel_root/0b2d3ffd549c58382e799482325b8589/server/jvm.out')\n--- FAIL: TestASliceWithoutAListRunsWhenAnOwnTestFileWithoutUnitsChanges (128.00s)"
+    }
+  ],
+  "seconds": 128,
+  "recorded": true
+}
