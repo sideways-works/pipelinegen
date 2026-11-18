@@ -594,13 +594,7 @@ fixture tree of its own. It checks:
   `tools/plugins/<name>`, the fixture spec's runner pin made the runner's
   checksum, and every other tool a stand-in that notes each call, opens
   every gate but a decision's and writes the outputs a call names. It
-  writes and runs the pipeline twice more, once with a stand-in plugin and
-  once with the runner itself pinned by `sums` and no `sha256`, the list
-  the pin names already beside it as `tools/plugins/<name>.SHA256SUMS`:
-  each task it runs must get as far as calling the tool, or exit 0, and
-  leave the list matching the pin and the tool matching its line in it,
-  so a runner that checks only a `sha256` fails. The
-  kit does this for the spec
+  runs the tasks for the spec
   and for its variants: an older tool's spec with a lock on every suite,
   per build and per batch, a pipeline that sets itself, a config that splits the token by purpose and, for a runner with
   `connector_changes`, a pull request run whose changes come from a
@@ -610,13 +604,19 @@ fixture tree of its own. It checks:
   with a cached image, and planner packages, where every task the runner
   writes that runs pipelinegen installs its packages first, every cached
   image the spec names is built, and the registry's vars reach no task that
-  runs the repository's code (the pushing var no job that does). A
+  runs the repository's code (the pushing var no job that does). It runs
+  the spec's tasks twice more, once with a stand-in plugin and once with
+  the runner itself pinned by `sums` and no `sha256`, the list the pin
+  names already beside the tool as `tools/plugins/<name>.SHA256SUMS`: each
+  task must get as far as calling the tool, or exit 0, and leave the list
+  matching the pin and the tool matching its line in it, so a runner that
+  checks only a `sha256` fails. A
   runner must report `placement`; when the config the kit is
   given has a `placement`, the pipeline written with it must be the one
   written without it but for worker tags and the gets a moved step needs
   on its worker: a get the placement adds fetches a resource the pipeline
-  declares as a get of the same job already does (the same `passed`,
-  `params` and `version`) under a name of its own, never triggers, and
+  declares as a get of the same job already does, the same in everything
+  but its name and `trigger`, under a name of its own, never triggers, and
   only a task's `image` and `input_mapping` may name it, in place of the
   get it copies. The connector variant's pipeline sweeps the changes (`unplanned`),
   plans them in two steps (`plan --out`, `plan --from`), and has no

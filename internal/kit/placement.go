@@ -235,7 +235,7 @@ func addedGet(job string, get map[string]any, gets map[string]string, declared m
 		}
 	}
 
-	return fmt.Sprintf("job %s: get %s fetches %v as no get of the job does without the placement (passed, params or version differ)", job, g, res)
+	return fmt.Sprintf("job %s: get %s fetches %v as no get of the job does without the placement, in more than its name and trigger", job, g, res)
 }
 
 // fetchOf is what a get fetches, whatever its name and whether it triggers.
