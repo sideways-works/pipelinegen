@@ -296,6 +296,13 @@ because it starts empty. The one exception is the directory the tool runs
 from, with the plugins beside it: it may be an input, an output or a
 cache, so a bootstrap can fetch it in the task itself. A missing binary
 fails at once and loudly.
+A task whose run names no call of the tool, because it runs a program of
+the runner's that calls it, the kit runs: when the pipeline marks it as
+the tool's step with `PIPELINEGEN_PIPELINE_STEP`, in its job's order,
+offline, with every pinned tool already in `tools` at its pin and your
+runner in `tools/plugins/<name>`. Such a step must keep tools it finds at
+their pins rather than fetch them again; what it calls is checked as a
+script's calls are.
 [Conformance](../plugins.md#conformance) has the full list.
 
 A tool's repository names the program it holds. A repository named

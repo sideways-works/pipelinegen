@@ -583,11 +583,23 @@ fixture tree of its own. It checks:
   file, and the second run may change nothing in the cache;
 - for a runner: `pipeline` turns the kit's fixture spec into exactly one
   file, the same bytes every time. The kit reads every call of
-  `pipelinegen` in it (a task's own, or a line of a script), for the spec
+  `pipelinegen` in it (a task's own, or a line of a script). A task the
+  pipeline marks as the tool's step (`PIPELINEGEN_PIPELINE_STEP`) whose
+  run names no call, one that runs the runner's own program say, the kit
+  runs instead, and checks the calls it makes as it checks the ones a
+  task names. It runs each in the order its job does, with the inputs
+  the job's earlier tasks put out or a get fetched, empty outputs and
+  caches, its params, no package installs and no network, and every tool
+  the spec pins already in `tools` at its pin: the runner under test in
+  `tools/plugins/<name>`, the fixture spec's runner pin made the runner's
+  checksum, and every other tool a stand-in that notes each call, opens
+  every gate but a decision's and writes the outputs a call names. The
+  kit does this for the spec
   and for its variants: an older tool's spec with a lock on every suite,
   per build and per batch, a pipeline that sets itself, a config that splits the token by purpose and, for a runner with
   `connector_changes`, a pull request run whose changes come from a
-  connector; for a runner with `steps`, suites run by drivers; and for a
+  connector; a planner whose prepare command has a git token of its own
+  (`git-auth`); for a runner with `steps`, suites run by drivers; and for a
   runner with `steps` and `packages`, suites with packages, one of them
   with a cached image, and planner packages, where every task the runner
   writes that runs pipelinegen installs its packages first, every cached
