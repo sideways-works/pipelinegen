@@ -1,0 +1,15 @@
+{
+  "label": "internal/cli/configmeaning_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-18T17:26:32.898080353Z",
+  "failures": [
+    {
+      "test": "TestAConfigChangeSelectsByWhatItMeans",
+      "tail": "=== RUN   TestAConfigChangeSelectsByWhatItMeans\n=== PAUSE TestAConfigChangeSelectsByWhatItMeans\n=== CONT  TestAConfigChangeSelectsByWhatItMeans\n    configmeaning_test.go:106: a set-up step's settings: everything: the base's configuration can't plan, so what it selected can't be known: head: bazel query: bazelisk --max_idle_secs=30 query kind(\"source file\", deps(//...)) + buildfiles(//...) --output=label --keep_going=false: exit status 37: $TEST_TMPDIR defined, some defaults will be overridden\n        \n        Server terminated abruptly (error code: 14, error message: 'Socket closed', log file: '/tmp/pipelinegen-test-202687072/bazel/_bazel_root/cfa8ccb3f24efc8d64ad84451244218c/server/jvm.out')\n--- FAIL: TestAConfigChangeSelectsByWhatItMeans (161.03s)"
+    }
+  ],
+  "seconds": 161.03,
+  "recorded": true,
+  "cpu_seconds": 110.31607699999995
+}
