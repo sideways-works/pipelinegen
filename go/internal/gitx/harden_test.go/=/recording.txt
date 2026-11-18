@@ -1,0 +1,10 @@
+# observed
+go:internal/gitx#method:Repo.Checkout
+go:internal/gitx#method:Repo.Git
+go:internal/gitx#method:Repo.run
+go:internal/secret#func:HardenGit
+go:internal/secret#func:InPipeline
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
