@@ -171,7 +171,8 @@ problems become warnings), and unite the two plans (`withBaseConfig`): a
 slice only the base's config selects has the reason `base-config`. A
 trusted run unites them with `affected.UnionTrusted`: a slice the base's
 config selects is added only when the head's plan of the suite has it
-among its slices (`SuitePlan.Slices`), and a suite only the base's config
+among its slices (`SuitePlan.Slices`), a whole-suite check only when the
+head's config has it in the suite, and a suite only the base's config
 has isn't added at all; each one left out is a warning of the plan, which
 says whether the head's config excludes the slice or no longer has it. A
 proposed change keeps the whole union (`affected.Union`). A base

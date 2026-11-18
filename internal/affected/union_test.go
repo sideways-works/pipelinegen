@@ -55,11 +55,14 @@ func TestUnionTrustedAddsOnlyWhatTheHeadHas(t *testing.T) {
 		{Suite: "e2e", Selected: []bazel.Slice{a}, Untouched: []string{b.Label}, slices: []bazel.Slice{a, b}},
 	}}
 	byBase := &Plan{Suites: []SuitePlan{
-		{Suite: "e2e", All: true, Reason: "MODULE.bazel changed", Selected: []bazel.Slice{a, b, x, y}},
+		{Suite: "e2e", All: true, Reason: "MODULE.bazel changed", Selected: []bazel.Slice{a, b, x, y}, WholeSuite: []string{"gone", "reconcile"}},
 		{Suite: "old", Selected: []bazel.Slice{a}},
 		{Suite: "idle", Selected: []bazel.Slice{}},
 	}}
-	head := &config.Config{Suites: map[string]config.Suite{"e2e": {Tests: []string{"e2e/*.spec.ts"}, Exclude: []string{"e2e/x.spec.ts"}}}}
+	head := &config.Config{Suites: map[string]config.Suite{"e2e": {
+		Tests: []string{"e2e/*.spec.ts"}, Exclude: []string{"e2e/x.spec.ts"},
+		WholeSuite: []config.WholeSuiteCheck{{Name: "reconcile"}},
+	}}}
 
 	got := UnionTrusted(own, byBase, head, "")
 
@@ -76,10 +79,15 @@ func TestUnionTrustedAddsOnlyWhatTheHeadHas(t *testing.T) {
 		t.Fatalf("reasons of b: %+v", rs)
 	}
 
+	if strings.Join(s.WholeSuite, ",") != "reconcile" {
+		t.Fatalf("whole-suite checks %v: one the head dropped came back", s.WholeSuite)
+	}
+
 	want := []string{
 		"own",
 		"e2e/x.spec.ts: the base's configuration had it in e2e; this commit's configuration excludes it, so it no longer runs there",
 		"e2e/y.spec.ts: the base's configuration had it in e2e; this commit's configuration leaves it out, so it no longer runs there",
+		"whole-suite check gone: the base's configuration had it in e2e; this commit's configuration doesn't, so it no longer runs there",
 		"suite old: the base's configuration had it; this commit's configuration doesn't, so it no longer runs",
 	}
 	if strings.Join(got.Warnings, "\n") != strings.Join(want, "\n") {

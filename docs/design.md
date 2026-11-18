@@ -491,8 +491,8 @@ selection but never remove it for itself; a removal takes effect from the
 next change on. A trusted run (the default branch's own) is planned the
 same way, since the config's meaning can change between its base and
 its head, but its config is the branch's: the base's selection adds only
-the slices its config still has in each suite, and no suite its config
-dropped, and the plan's warnings name each one left out. A suite whose
+the slices and whole-suite checks its config still has in each suite, and
+no suite its config dropped, and the plan's warnings name each one left out. A suite whose
 base predates an exclude would otherwise run the excluded test until the
 suite passed again, which a test that can't pass there never lets it do.
 How Bazel runs (`bazel`) is taken from the change.

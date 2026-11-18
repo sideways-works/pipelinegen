@@ -69,10 +69,11 @@ func union(own, byBase *Plan, head *trustedHead) *Plan {
 			continue
 		}
 
-		var notes []string
+		var notes, checkNotes []string
 
 		bs.Selected, notes = head.keep(out.Suites[i], bs.Selected)
-		out.Warnings = append(out.Warnings, notes...)
+		bs.WholeSuite, checkNotes = head.keepChecks(bs.Suite, bs.WholeSuite)
+		out.Warnings = append(append(out.Warnings, notes...), checkNotes...)
 		out.Suites[i] = unionSuite(out.Suites[i], bs)
 	}
 
@@ -283,6 +284,26 @@ func leftOutNote(names []string, suite string, excluded bool) string {
 	}
 
 	return fmt.Sprintf("%s: the base's configuration had %s in %s; this commit's configuration %s, so %s", strings.Join(names, ", "), it, suite, how, runs)
+}
+
+// keepChecks is what of the base's whole-suite checks in a suite the head's config still has, and a
+// note of each it left out.
+func (h *trustedHead) keepChecks(suite string, checks []string) ([]string, []string) {
+	if h == nil {
+		return checks, nil
+	}
+
+	var kept, notes []string
+
+	for _, w := range checks {
+		if slices.ContainsFunc(h.cfg.Suites[suite].WholeSuite, func(c config.WholeSuiteCheck) bool { return c.Name == w }) {
+			kept = append(kept, w)
+		} else if h.cfg.RunCovers(h.run, suite) {
+			notes = append(notes, fmt.Sprintf("whole-suite check %s: the base's configuration had it in %s; this commit's configuration doesn't, so it no longer runs there", w, suite))
+		}
+	}
+
+	return kept, notes
 }
 
 // suiteGone notes a suite the base's config has and the head's doesn't, when the base's selected

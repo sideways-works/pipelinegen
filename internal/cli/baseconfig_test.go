@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -10,8 +12,10 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/bazel"
 	"github.com/sideways-works/pipelinegen/internal/bazeldifftest"
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/gitx"
 	"github.com/sideways-works/pipelinegen/internal/testrepo"
+	"github.com/sideways-works/pipelinegen/plugin"
 )
 
 // specsRepo is the fixture with the specs suite in the main run, two more specs, and a config whose
@@ -156,4 +160,75 @@ func reasonsIn(p *affected.Plan, suite, name string) []affected.Reason {
 	}
 
 	return nil
+}
+
+func TestATrustedRunDoesNotEmitAWholeSuiteCheckItsConfigRemoved(t *testing.T) {
+	testrepo.Parallel(t)
+
+	r, cfg := specsRepo(t)
+
+	r.Write(config.FileName, cfg)
+	base := r.Commit("the base has the reconcile check")
+
+	check := "    whole_suite:\n      - name: reconcile\n        task: ci/reconcile.yml\n        also_on: [\"//api/money:money\"]\n"
+	if !strings.Contains(cfg, check) {
+		t.Fatal("the fixture's e2e suite has no reconcile check")
+	}
+
+	r.Write(config.FileName, strings.Replace(cfg, check, "", 1))
+
+	data, err := os.ReadFile(filepath.Join(r.Dir, "MODULE.bazel"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r.Write("MODULE.bazel", string(data)+"# bumped\n")
+	head := r.Commit("remove the check, in a change that runs everything")
+
+	headCfg, err := config.Load(filepath.Join(r.Dir, config.FileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	jobs := func(p *affected.Plan) []string {
+		t.Helper()
+
+		bare := t.TempDir()
+		gitT(t, bare, "init", "-q", "--bare")
+
+		out := t.TempDir()
+		em := &emitter{dir: filepath.Join(out, "emit"), pools: filepath.Join(out, "pools"), cfg: headCfg, store: &gitstore.Store{Remote: "file://" + bare}, root: r.Dir}
+
+		emitted, err := em.build(t.Context(), p, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var e plugin.Emission
+		if err := json.Unmarshal(emitted.data, &e); err != nil {
+			t.Fatal(err)
+		}
+
+		var names []string
+		for _, j := range e.Jobs {
+			names = append(names, j.Name)
+		}
+
+		return names
+	}
+
+	p := planBoth(t, r, base, head, true)
+	if got := jobs(p); slices.Contains(got, "e2e-whole-reconcile") {
+		t.Errorf("trusted: emitted %v", got)
+	}
+
+	want := "whole-suite check reconcile: the base's configuration had it in e2e; this commit's configuration doesn't, so it no longer runs there"
+	if !slices.Contains(p.Warnings, want) {
+		t.Errorf("trusted: no notice of the removed check: %q", p.Warnings)
+	}
+
+	// a proposed change can't drop a check by removing it
+	if got := jobs(planBoth(t, r, base, head, false)); !slices.Contains(got, "e2e-whole-reconcile") {
+		t.Errorf("proposed: emitted %v", got)
+	}
 }
