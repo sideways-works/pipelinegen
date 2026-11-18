@@ -1,0 +1,13 @@
+{
+  "label": "internal/report/report_test.go",
+  "state": "errored",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-18T02:14:47.496225431Z",
+  "failures": [
+    {
+      "test": "(stopped)",
+      "tail": "batch 0 stopped while slice internal/affected/affected_test.go ran, 16 minutes after the suite began: not its time limit of 120 minutes (suites.go.minutes); its task died: the build log says why"
+    }
+  ],
+  "recorded": true
+}

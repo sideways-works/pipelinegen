@@ -1,0 +1,13 @@
+{
+  "label": "internal/config/steps_test.go",
+  "state": "errored",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-18T02:14:49.40092221Z",
+  "failures": [
+    {
+      "test": "(stopped)",
+      "tail": "batch 2 stopped while slice internal/cli/anchor_equiv_test.go ran, 16 minutes after the suite began: not its time limit of 120 minutes (suites.go.minutes); its task died: the build log says why"
+    }
+  ],
+  "recorded": true
+}
