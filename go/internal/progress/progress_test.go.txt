@@ -1,0 +1,6 @@
+go:internal/progress#func:Count
+go:internal/progress#func:Stage
+go:internal/progress#func:Start
+go:internal/progress#func:from
+go:internal/progress#method:Meter.line
+go:internal/progress#method:Meter.say
