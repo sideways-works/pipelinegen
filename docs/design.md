@@ -287,7 +287,8 @@ selected in the plan posts "nothing selected" and ends.
   keeps what the lists held.
 - Builds of different changes run side by side on a suite job: nothing
   queues them, and no lock is taken, inside a repository or between
-  repositories. Admission by each node's free memory is coming next.
+  repositories. A batch waits instead until its worker has the memory it
+  should use free, whichever pipeline holds the rest.
 - Task caches (the Go, npm and Bazel caches) belong to a job in Concourse,
   so a static pipeline keeps them warm from run to run.
 - When the config changes, the pipeline is set again (by a person, or by

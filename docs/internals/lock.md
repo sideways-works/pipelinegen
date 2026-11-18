@@ -4,8 +4,9 @@ pipelinegen no longer takes a lock between runs. A suite used to take a
 lease, a ref under `refs/pipelinegen/locks/` (or a file under `locks/` on
 the branch store's `-locks` branch), around its build or each batch, to
 keep two repositories' pipelines from overfilling a shared machine. That
-job moves to admission by each node's observed free memory and pressure,
-which is coming next; see [sharing machines](../how-to/sharing-machines.md#between-repositories).
+job is now the wait for memory: a batch starts once its worker has its
+predicted peak free and low memory pressure, whichever pipeline holds the
+rest; see [sharing machines](../how-to/sharing-machines.md#between-repositories).
 
 What is left, for one release:
 

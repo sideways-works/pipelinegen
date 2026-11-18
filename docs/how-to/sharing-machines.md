@@ -1,9 +1,9 @@
 # Sharing machines
 
-Two things decide where and what runs at once: the runner's placement,
-which puts each step on workers, and Concourse's own limits on what a
-worker takes. pipelinegen takes no lock: nothing queues one build behind
-another.
+Three things decide where and what runs at once: the runner's placement,
+which puts each step on workers, Concourse's own limits on what a worker
+takes, and the worker's free memory, which a batch waits for before it
+starts. pipelinegen takes no lock: nothing queues one build behind another.
 
 ## Which workers
 
@@ -135,11 +135,13 @@ began; less `inactive_file` in `memory.stat` for the working set), or
 ## Between repositories
 
 Concourse can't see across pipelines, and pipelinegen no longer takes a
-lock between them. Admission by each node's observed free memory and
-pressure is coming next: a suite's batches will start when their node has
-room. Until it lands, nothing in pipelinegen keeps two repositories'
-pipelines from overfilling a shared machine: only placement that puts
-their heavy suites on different workers does.
+lock between them. What replaced the lock is the wait for memory above:
+the room a batch waits for is the worker's, whichever pipeline holds the
+rest, so another repository's batches that fill the machine keep this
+one's waiting as its own would. Nothing is reserved: two batches that read
+the same free memory at once both start, and a suite not yet measured
+starts without waiting. Placement that puts the two pipelines' heavy
+suites on different workers keeps them apart outright.
 
 A config that still has `suites.<name>.lock` loads: `check` says the key
 is no longer read, and you remove it once the pipeline runs this release.
