@@ -216,15 +216,23 @@ func getenv(env []string, name string) string {
 // from it that runs Bazel or reads runfiles of its own must not see them.
 var bazelRun = []string{"BUILD_WORKSPACE_DIRECTORY", "BUILD_WORKING_DIRECTORY", "BUILD_EXECROOT", "BUILD_ID", "JAVA_RUNFILES", "PYTHON_RUNFILES"}
 
-// ChildEnv is env for what a target starts: the pinned Go first on PATH, then the directories of
-// the other pinned tools, Go used as it is (no GOROOT of another SDK, no switch to another
-// toolchain), and nothing of `bazel run`'s own.
+// fromBazelRun says whether a variable is one Bazel sets for what it runs, so a child must not see
+// it. TEST_TMPDIR stays: Bazel sets it only for a test, never for `bazel run`, and the tests read the
+// person's own as where their Bazel keeps its output.
+func fromBazelRun(name string) bool {
+	return slices.Contains(bazelRun, name) || strings.HasPrefix(name, "RUNFILES_") ||
+		(strings.HasPrefix(name, "TEST_") && name != "TEST_TMPDIR")
+}
+
+// ChildEnv is env for what a target starts, as `go run` would start it: PATH as it is with the
+// pinned Go first, then the directories of the other pinned tools; Go used as it is (no GOROOT of
+// another SDK, no switch to another toolchain); and nothing `bazel run` set.
 func ChildEnv(env []string, goTool string, tools ...string) []string {
 	out := make([]string, 0, len(env)+2)
 
 	for _, kv := range env {
 		name, _, _ := strings.Cut(kv, "=")
-		if slices.Contains(bazelRun, name) || strings.HasPrefix(name, "RUNFILES_") || name == "GOROOT" || name == "GOTOOLCHAIN" || name == "PATH" {
+		if fromBazelRun(name) || name == "GOROOT" || name == "GOTOOLCHAIN" || name == "PATH" {
 			continue
 		}
 

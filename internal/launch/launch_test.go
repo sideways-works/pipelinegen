@@ -29,9 +29,10 @@ func TestChildEnvRunsThePinnedGoAndHidesBazelRun(t *testing.T) {
 	env := ChildEnv([]string{
 		"HOME=/home/x", "PATH=/usr/bin", "GOROOT=/other/go", "GOTOOLCHAIN=auto", "GOFLAGS=-trimpath",
 		"BUILD_WORKSPACE_DIRECTORY=/src", "BUILD_WORKING_DIRECTORY=/src/a", "RUNFILES_DIR=/r", "JAVA_RUNFILES=/r",
+		"TEST_SRCDIR=/r", "TEST_TMPDIR=/home/x/bazel",
 	}, "/sdk/bin/go", "/gh/bin")
 
-	want := []string{"HOME=/home/x", "GOFLAGS=-trimpath", "PATH=/sdk/bin:/gh/bin:/usr/bin", "GOTOOLCHAIN=local"}
+	want := []string{"HOME=/home/x", "GOFLAGS=-trimpath", "TEST_TMPDIR=/home/x/bazel", "PATH=/sdk/bin:/gh/bin:/usr/bin", "GOTOOLCHAIN=local"}
 	if !slices.Equal(env, want) {
 		t.Errorf("got %q, want %q", env, want)
 	}
