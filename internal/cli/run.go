@@ -145,6 +145,7 @@ func runPlan(ctx context.Context, args []string, stdout io.Writer) (err error) {
 	var (
 		b                              buildFlags
 		cache, bdPath, out, from, gate string
+		em                             emitFlags
 		decide, begin                  bool
 	)
 
@@ -157,6 +158,7 @@ func runPlan(ctx context.Context, args []string, stdout io.Writer) (err error) {
 	pathVar(fs, &out, "out", "", "plan into this directory, writing no record and no status (a proposed change's first step)", writes)
 	pathVar(fs, &from, "from", "", "write the plan --out left in this directory and show the run (the second step)", reads)
 	pathVar(fs, &gate, "gate", "", "write gate.json here, open only when this step hands the change on to its suite jobs: a branch's run when it wrote the plan, also writing version, the hand-off its suite jobs follow, and reading there the decision --decide left; a pull request's second step (-from) when it wrote the plan, or found it planned with none of its suites begun after missed_after, as the sweep would hand it on again", writes)
+	em.register(fs)
 	fs.BoolVar(&begin, "begin", false, "a pull request's planning build, before its first step: record that it plans the head, so the run's sweep leaves the head to it until its plan's limit has passed; a refused write only warns")
 	fs.BoolVar(&decide, "decide", false, "a continuous run's build, before its planner's prepare: decide whether it plans, waiting while a round of the run is in progress, and plan nothing; a build that won't plan writes the closed gate in --gate, one that will leaves its decision there for the plan step")
 
@@ -164,7 +166,7 @@ func runPlan(ctx context.Context, args []string, stdout io.Writer) (err error) {
 		return err
 	}
 
-	if err := planBegin(out, from, gate, decide, begin); err != nil {
+	if err := planBegin(out, from, gate, em.dir, decide, begin); err != nil {
 		return err
 	}
 
@@ -184,15 +186,14 @@ func runPlan(ctx context.Context, args []string, stdout io.Writer) (err error) {
 	// after the store's scratch repository is back in the cache.
 	defer trimAfter(cfg, cache, start)
 
-	store := openStore(cfg)
-	store.Seed = storeSeed(cache, store.Remote)
-	store.Proposed = ch.Proposed() || !trustedRun(cfg, ch.Run, ch.ID)
-
+	store := planStore(cfg, ch, cache)
 	defer closeStore(store, &err)
 
 	switch {
 	case out != "":
 		return planOut(ctx, cfg, ch, store, b.trigger, cache, bdPath, out, stdout)
+	case em.dir != "":
+		return planFromEmit(ctx, cfg, ch, store, b.trigger, from, em.emitter(cfg, ch, store, b.trigger), stdout)
 	case from != "":
 		return planFromGated(ctx, cfg, ch, store, b.trigger, from, gate, stdout)
 	case begin:
@@ -217,8 +218,18 @@ func planBranchGated(ctx context.Context, cfg *config.Config, ch runs.Change, st
 	})
 }
 
-func planModes(out, from, gate string, decide, begin bool) error {
+func planStore(cfg *config.Config, ch runs.Change, cache string) *gitstore.Store {
+	store := openStore(cfg)
+	store.Seed = storeSeed(cache, store.Remote)
+	store.Proposed = ch.Proposed() || !trustedRun(cfg, ch.Run, ch.ID)
+
+	return store
+}
+
+func planModes(out, from, gate, emit string, decide, begin bool) error {
 	switch {
+	case emit != "" && (from == "" || gate != ""):
+		return fmt.Errorf("%w: --emit goes with --from, and without --gate", errUsage)
 	case begin && (decide || out != "" || from != "" || gate != ""):
 		return fmt.Errorf("%w: --begin is a step of its own, before the plan: no --out, --from, --gate or --decide", errUsage)
 	case out != "" && from != "":
@@ -234,8 +245,8 @@ func planModes(out, from, gate string, decide, begin bool) error {
 
 // planBegin writes the second step's gate shut before anything else, so every way the step ends
 // without a hand-off leaves it shut.
-func planBegin(out, from, gate string, decide, begin bool) error {
-	if err := planModes(out, from, gate, decide, begin); err != nil {
+func planBegin(out, from, gate, emit string, decide, begin bool) error {
+	if err := planModes(out, from, gate, emit, decide, begin); err != nil {
 		return err
 	}
 

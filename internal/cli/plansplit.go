@@ -132,14 +132,33 @@ func admittedFirst(ctx context.Context, cfg *config.Config, ch runs.Change, stor
 	return true, nil
 }
 
+// planFromEmit writes the plan as planFrom does and emits it; a plan already written is emitted
+// again, since piperun reruns a step that ended unseen, and an emission is taken only with its end.
+func planFromEmit(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, from string, em *emitter, stdout io.Writer) error {
+	handOn, err := planFromWith(ctx, cfg, ch, store, trigger, from, em, stdout)
+	if !handOn {
+		endPlanning(ctx, ch, store, stdout)
+	}
+
+	return err
+}
+
 // planFrom tells whether the build hands the head on: when it wrote the plan, or found it planned and
 // stalled as the sweep judges a head, never for a head whose suites began.
 func planFrom(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, dir string, stdout io.Writer) (bool, error) {
+	return planFromWith(ctx, cfg, ch, store, trigger, dir, nil, stdout)
+}
+
+// planFromWith is planFrom, and with an emitter emits the plan it wrote, or the one it found.
+func planFromWith(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, dir string, em *emitter, stdout io.Writer) (bool, error) {
 	id := reportID(ch)
 
 	if _, ok, err := readPlan(ctx, store, id); err != nil || ok {
-		if err != nil {
+		switch {
+		case err != nil:
 			return false, err
+		case em != nil:
+			return true, em.stored(ctx, stdout)
 		}
 
 		return handAgain(ctx, cfg, ch, store, stdout)
@@ -175,14 +194,30 @@ func planFrom(ctx context.Context, cfg *config.Config, ch runs.Change, store *gi
 		return false, errors.Join(err, r.PlanFailed(ctx, err))
 	}
 
+	// an emission piperun would refuse fails the plan before it is written, saying why
+	var emitted emission
+	if em != nil {
+		if emitted, err = em.build(ctx, plan, false); err != nil {
+			return false, errors.Join(err, r.PlanFailed(ctx, err))
+		}
+	}
+
 	if err := startRun(ctx, store, r, plan, nil); err != nil {
+		if em != nil && errors.Is(err, report.ErrPlanned) {
+			return true, em.stored(ctx, stdout)
+		}
+
 		// another build wrote the plan first, and hands the head on.
 		return false, plannedAlready(err, ch, stdout)
 	}
 
 	sweepStore(ctx, cfg, ch, store, trigger, plan)
 
-	return true, say(stdout, "%s %s: %s\n", ch.Run, ch.ID, summary(plan))
+	if err := say(stdout, "%s %s: %s\n", ch.Run, ch.ID, summary(plan)); err != nil || em == nil {
+		return true, err
+	}
+
+	return true, em.write(emitted, stdout)
 }
 
 // A head the sweep gave up on goes too: a planning build started by hand is how a person starts its

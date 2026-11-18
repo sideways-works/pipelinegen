@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Added
+
+- `plan --from <dir> --emit <dir>` also writes piperun's emission of the plan (`emit.json`): per suite its prepare, a pool of its selected slices longest first, its selected whole-suite checks and its end, named `<suite>-prepare`, `<suite>-slices`, `<suite>-whole-<check>` and `<suite>-end` (functions of the `plugin` package, for the piperun runner), with the plan beside it as the build's record (`plan.json`) and each pool's slices with their predicted peaks in `--pools` (default `pools`). An emission over piperun's limits (500 instances, 2,000 items a pool, 48 KB) fails the plan before it is written, naming the limit; a plan written before is emitted again without the slices that passed
+
 ### Changed
 
 - The plugin protocol's parts that know no kind (calls and their exit codes, the connector exchange, pinned downloads, the container runner, the kit's harness) come from the module `github.com/sideways-works/plugkit`. `plugin` names its types as its own, so plugins build unchanged, and nothing a plugin reads or writes changes
