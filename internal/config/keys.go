@@ -101,6 +101,8 @@ func walkKeys(t reflect.Type, prefix string, out *[]KeyDoc) {
 			walkKeys(ft, path, out)
 		case ft.Kind() == reflect.Map && structOf(ft.Elem()) != nil:
 			walkKeys(structOf(ft.Elem()), path+".<name>", out)
+		// a group's entries take the keys of the entry that holds them
+		case ft.Kind() == reflect.Slice && structOf(ft.Elem()) == t:
 		case ft.Kind() == reflect.Slice && structOf(ft.Elem()) != nil:
 			walkKeys(structOf(ft.Elem()), path+"[]", out)
 		}

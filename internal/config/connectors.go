@@ -36,11 +36,13 @@ const (
 
 const KindConnector = plugin.KindConnector
 
-// ConnectorPin is a connector's release: the repository whose GitHub release holds it, its
-// version, and its binaries' checksums by platform or the checksum of its SHA256SUMS.
+// ConnectorPin is a connector's release: the repository whose release holds it, its directory
+// there when the repository holds several plugins, its version, and its binaries' checksums by
+// platform or the checksum of its SHA256SUMS.
 type ConnectorPin struct {
 	Name       string    `json:"name"`
 	Repository string    `json:"repository"`
+	Path       string    `json:"path,omitempty"`
 	Version    string    `json:"version"`
 	SHA256     Checksums `json:"sha256,omitempty"`
 	Sums       string    `json:"sums,omitempty"`
@@ -64,6 +66,9 @@ var PinnedConnectors = map[string]ConnectorPin{
 	},
 }
 
+// Program names the connector's release files.
+func (c ConnectorPin) Program() string { return ProgramOf(c.Repository, c.Path) }
+
 func (c *Config) ConnectorsUsed() []string {
 	var out []string
 
@@ -86,7 +91,7 @@ func (c *Config) ConnectorPin(name string) ConnectorPin {
 			continue
 		}
 
-		pin := ConnectorPin{Name: name, Repository: p.Repository, Version: p.Release.Version, Sums: p.Release.Sums}
+		pin := ConnectorPin{Name: name, Repository: p.Repository, Path: p.Path, Version: p.Release.Version, Sums: p.Release.Sums}
 		if p.Release.SHA256 != "" {
 			pin.SHA256 = Checksums{anyPlatform: p.Release.SHA256}
 		}

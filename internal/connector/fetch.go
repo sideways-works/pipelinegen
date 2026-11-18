@@ -8,7 +8,6 @@ import (
 	"slices"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/plugin"
 	"github.com/sideways-works/plugkit/fetch"
 	"github.com/sideways-works/plugkit/pin"
 )
@@ -20,14 +19,14 @@ var ErrPin = fetch.ErrPin
 
 // Program is the name of a pinned connector's program, which names its
 // release files.
-func Program(c config.ConnectorPin) string { return plugin.Program(c.Repository) }
+func Program(c config.ConnectorPin) string { return c.Program() }
 
 // Fetch returns the pinned connector's binary: dir's copy (filled by a pipeline's bootstrap) when it matches,
 // else cacheDir's, else one downloaded there and checked; a binary that doesn't match its pin never runs.
 func Fetch(ctx context.Context, client *http.Client, dir, cacheDir string, c config.ConnectorPin) (string, error) {
 	f := fetch.Fetcher{Client: client, Cache: cacheDir, Under: "connectors"}
 	p := pin.Pin{
-		Name: c.Name, Repository: c.Repository, Version: c.Version, Program: Program(c),
+		Name: c.Name, Repository: c.Repository, Path: c.Path, Version: c.Version, Program: Program(c),
 		SHA256: pin.Checksums(c.SHA256), Sums: c.Sums, URL: c.URL,
 	}
 

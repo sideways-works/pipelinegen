@@ -675,16 +675,31 @@ without `paths` or a known `normalize` makes the config invalid.
 
 The plugins the repository uses, each an executable pinned by a release and
 its checksum, or by a commit before the first release. See
-[plugins](../plugins.md).
+[plugins](../plugins.md). Plugins that come from one repository may share
+it in a group:
+
+```yaml
+plugins:
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: go, kind: driver, path: driver/go, release: {version: <tag>, sums: <checksum>}}
+      - {name: go-sbom, kind: sbom, path: sbom/go, release: {version: <tag>, sums: <checksum>}, config: {modules: [.]}}
+  - {name: shell, kind: driver, repository: sideways-works/pipelinegen-driver-shell, release: {version: <tag>, sums: <checksum>}}
+```
+
+A group reads exactly as the same entries written one by one, each with
+the group's repository.
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
 | `plugins` | list | none | The plugins; see [the guide](../how-to/plugins.md). Planning and recording go through the sbom and correlator plugins; with none, every suite is bound by the Bazel graph. The pipeline needs a runner. |
 | `plugins[].name` | string | (required) | The plugin's name in this config, unique. |
 | `plugins[].kind` | `correlator`, `sbom`, `runner`, `driver` or `connector` | (required) | What the plugin is. With several runners, each run names the one whose pipeline holds it in `runs.<name>.runner`, and `pipelinegen pipeline --for <name>` writes each runner's. A driver runs a suite's slices for its `steps`; `command` is built in and needs no entry. A connector entry, named `github` or `git`, pins the release of that connector in place of pipelinegen's own pin, and takes a `release` and no `config` ([pinning a connector](#pinning-a-connector)). |
-| `plugins[].repository` | `owner/name` | (required) | Where its releases come from. A repository `pipelinegen-KIND-NAME` holds the program `NAME-KIND`, which names its release files and its `./cmd/NAME-KIND`; any other holds the program of its own name. |
+| `plugins[].repository` | git URL or `owner/name` | (required) | Where its releases come from: the URL you would clone, `https://github.com/owner/name` or `git@github.com:owner/name.git` say, or `owner/name` as GitHub's shorthand. Releases are fetched from GitHub's and GitLab's release files; another host is read but has nothing to fetch yet. Messages and listings name it as the config writes it. Without a `path`, a repository `pipelinegen-KIND-NAME` holds the program `NAME-KIND`, which names its release files and its `./cmd/NAME-KIND`; any other holds the program of its own name. |
+| `plugins[].path` | directory | none | The plugin's directory in a repository that holds several plugins, `driver/go` say. Its releases are tagged `<path>/vX.Y.Z` and hold its files, and the path names its program: `KIND/NAME` holds `NAME-KIND` (`go-driver`), a deeper path the last directory and the one above it. Without it the repository is one plugin, tagged `vX.Y.Z`. |
+| `plugins[].with` | list | none | Makes the entry a group of plugins from one repository: the entry has only `repository` and `with`, and each entry under `with` takes that repository and sets every other key of its own (`name`, `kind`, `path`, `release`, `config` and the rest). An entry under `with` that names a repository is refused. Names stay unique across every entry and group. See [the guide](../how-to/plugins.md). |
 | `plugins[].release` | mapping | | A released version. Give either `release` or `commit`. |
-| `plugins[].release.version` | string | | The release's tag. |
+| `plugins[].release.version` | string | | The release's tag, or with a `path` what follows `<path>/` in it: `v0.2.1` for the tag `driver/go/v0.2.1`. |
 | `plugins[].release.sha256` | string | | The SHA-256 of the release's `linux-amd64` file (its `.mjs` file for a Node plugin), checked before it runs. Give this or `sums`. |
 | `plugins[].release.sums` | string | | The SHA-256 of the release's `SHA256SUMS`, in place of `sha256`: one pin for every platform. The bootstrap keeps the file beside the plugin as `<name>.SHA256SUMS`, and the plugin's file for the platform it runs on (`<program>-<os>-<arch>`, or its `.mjs`, the program being the one its repository holds) is checked by its line there. A machine on another platform, a Mac say, checks its own binary by the same pin. |
 | `plugins[].include` | list of patterns | none | Files the plugin claims besides those it detects as its own. |

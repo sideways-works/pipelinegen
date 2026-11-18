@@ -133,3 +133,36 @@ func TestADriverPinnedByCommitIsBuiltNotFetched(t *testing.T) {
 		t.Fatalf("slice run: %d %q\n%s", code, stdout, stderr)
 	}
 }
+
+// A plugin of a repository holding several is fetched from its own release, tagged with its path.
+func TestADriverOfAMonorepoIsFetchedByItsPathsTag(t *testing.T) {
+	f, stub, repo := fetchingDriver(t, "path: driver/stub, release: {version: v1, sha256: "+sumOf(nil)+"}")
+
+	stub = append(stub, []byte("# "+t.Name()+"\n")...)
+
+	serveRelease(repo, "v1", "stub-driver-"+config.Platform(), []byte("the repository's own release"))
+	serveRelease(repo, "driver/stub/v1", "stub-driver-"+config.Platform(), stub)
+
+	cfg, err := os.ReadFile(filepath.Join(f.root, config.FileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writeFile(t, filepath.Join(f.root, config.FileName), strings.Replace(string(cfg), sumOf(nil), sumOf(stub), 1))
+
+	stdout, stderr, code := f.sliceRun(t)
+	if code != 0 || strings.TrimSpace(stdout) != "slice e2e/cart.spec.ts: passed" {
+		t.Fatalf("slice run: %d %q\n%s", code, stdout, stderr)
+	}
+}
+
+func TestABuildFromACommitOfAMonorepoBuildsInItsPath(t *testing.T) {
+	err := commitPinned(config.Plugin{
+		Name: "go", Kind: config.KindDriver, Repository: "git@github.com:o/plugins.git", Path: "driver/go",
+		Commit: "0123456789abcdef0123456789abcdef01234567",
+	}, "/tools", config.Platform())
+
+	if err == nil || !strings.Contains(err.Error(), "git clone git@github.com:o/plugins.git go-driver && git -C go-driver checkout 0123456789abcdef0123456789abcdef01234567 && (cd go-driver/driver/go && CGO_ENABLED=0 go build -trimpath -o /tools/go ./cmd/go-driver)") {
+		t.Fatal(err)
+	}
+}

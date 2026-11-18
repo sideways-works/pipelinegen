@@ -277,8 +277,11 @@ type SpecTool struct {
 	Name       string `json:"name"`
 	Kind       string `json:"kind"`
 	Repository string `json:"repository,omitempty"`
-	Version    string `json:"version,omitempty"`
-	SHA256     string `json:"sha256,omitempty"`
+	// Path is the tool's directory in a repository holding several: its release is tagged
+	// <path>/<version>, and its files are named for the program the path gives.
+	Path    string `json:"path,omitempty"`
+	Version string `json:"version,omitempty"`
+	SHA256  string `json:"sha256,omitempty"`
 	// Sums, in place of SHA256, checks the release's SHA256SUMS, kept beside the tool as
 	// <name>.SHA256SUMS; the platform's file (<program>-<os>-<arch> or <program>.mjs) is checked by it.
 	Sums   string `json:"sums,omitempty"`

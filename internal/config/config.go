@@ -77,6 +77,9 @@ type Config struct {
 	Plugins      []Plugin         `yaml:"plugins"`
 	Connectors   []Connector      `yaml:"connectors"`
 	Generated    []map[string]any `yaml:"generated"`
+
+	// groupProblems are what replacing the plugins' groups by their entries met.
+	groupProblems []string
 }
 
 // Learn is the retired built-in binding's section: nothing reads it, and
@@ -93,9 +96,12 @@ type FileUnits struct {
 }
 
 type Plugin struct {
-	Name           string         `yaml:"name"`
-	Kind           string         `yaml:"kind"`
-	Repository     string         `yaml:"repository"`
+	Name       string `yaml:"name"`
+	Kind       string `yaml:"kind"`
+	Repository string `yaml:"repository"`
+	// Path is a plugin's directory in a repository holding several: its releases are tagged
+	// <path>/vX.Y.Z.
+	Path           string         `json:"path,omitempty"  yaml:"path,omitempty"`
 	Release        *Release       `yaml:"release"`
 	Commit         string         `yaml:"commit"`
 	Include        []string       `yaml:"include"`
@@ -103,6 +109,9 @@ type Plugin struct {
 	Config         map[string]any `yaml:"config"`
 	Fill           *bool          `yaml:"fill"`
 	CollectSeconds int            `yaml:"collect_seconds"`
+	// With makes the entry a group: each of its entries takes the group's repository. Loading
+	// replaces a group by its entries.
+	With []Plugin `json:"-" yaml:"with,omitempty"`
 }
 
 // Fills tells whether the local commands fill the plugin's caches.
@@ -712,6 +721,8 @@ func ParseHistory(data []byte) (*Config, error) {
 }
 
 func (c *Config) defaults() {
+	c.Plugins, c.groupProblems = ungroup(c.Plugins)
+
 	if c.Concourse.URL == "" {
 		c.Concourse.URL = os.Getenv(EnvConcourseURL)
 	}
@@ -1241,6 +1252,10 @@ func (c *Config) validateNarrowing(bad func(string, ...any)) {
 }
 
 func (c *Config) validatePlugins(bad func(string, ...any)) {
+	for _, p := range c.groupProblems {
+		bad("%s", p)
+	}
+
 	names := map[string]bool{}
 
 	for _, p := range c.Plugins {
@@ -1263,6 +1278,8 @@ func (c *Config) validatePlugins(bad func(string, ...any)) {
 		}
 
 		names[p.Name] = true
+
+		validateSource(p, bad)
 
 		switch {
 		case p.CollectSeconds < 0:

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -15,7 +16,6 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/plugin"
 	"github.com/sideways-works/plugkit/fetch"
 	"github.com/sideways-works/plugkit/pin"
 )
@@ -98,8 +98,8 @@ func usableAsIs(p config.Plugin, dir string) bool {
 
 func commitPinned(p config.Plugin, dir, platform string) error {
 	prog := p.Program()
-	build := fmt.Sprintf("git clone https://github.com/%s %s && git -C %s checkout %s && (cd %s && CGO_ENABLED=0 go build -trimpath -o %s ./cmd/%s)",
-		p.Repository, prog, prog, p.Commit, prog, filepath.Join(dir, p.Name), prog)
+	build := fmt.Sprintf("git clone %s %s && git -C %s checkout %s && (cd %s && CGO_ENABLED=0 go build -trimpath -o %s ./cmd/%s)",
+		config.CloneURL(p.Repository), prog, prog, p.Commit, path.Join(prog, p.Path), filepath.Join(dir, p.Name), prog)
 
 	if platform != config.Platform() {
 		return fmt.Errorf("%w: plugin %s is pinned by commit %s, which has no release to download for %s: "+
@@ -116,7 +116,7 @@ const envReleasesURL = "PIPELINEGEN_TEST_RELEASES_URL"
 
 func fetchPlugin(ctx context.Context, p config.Plugin, platform string) (fetch.Got, error) {
 	rp := pin.Pin{
-		Name: p.Name, Repository: p.Repository, Version: p.Release.Version, Program: plugin.Program(p.Repository),
+		Name: p.Name, Repository: p.Repository, Path: p.Path, Version: p.Release.Version, Program: p.Program(),
 		Sums: p.Release.Sums, URL: os.Getenv(envReleasesURL),
 	}
 	if p.Release.SHA256 != "" {

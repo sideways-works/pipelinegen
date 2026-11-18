@@ -314,6 +314,15 @@ name, the tool's included. A bootstrap fetches, builds and caches by that
 name (`plugin.Program` says it), so both spellings of a renamed repository
 give the same files and the same cache entries.
 
+A tool's `repository` may be any git URL
+(`https://github.com/owner/name`, `git@github.com:owner/name.git`) as well
+as `owner/name`, and a tool with a `path` is one plugin of a repository
+that holds several: its release is tagged `<path>/<version>`, and the path
+names its program (`driver/go` holds `go-driver`, built from
+`driver/go/cmd/go-driver`). A bootstrap that knows neither fetches the
+wrong release for such a tool, so it should refuse one with a `path` or a
+URL it can't read.
+
 A tool in the spec carries `sha256` (its linux-amd64 file's checksum) or
 `sums` (the checksum of its release's `SHA256SUMS`). For `sums`, the
 bootstrap fetches `SHA256SUMS`, checks it by `sums`, keeps it beside the

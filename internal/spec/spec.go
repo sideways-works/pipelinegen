@@ -192,7 +192,7 @@ func tools(cfg *config.Config) []plugin.SpecTool {
 		plugin.SpecTool{Name: "bazelisk", Kind: plugin.ToolBazelisk, Version: b.Bazelisk.Version, SHA256: b.Bazelisk.SHA256})
 
 	for _, p := range cfg.Plugins {
-		t := plugin.SpecTool{Name: p.Name, Kind: p.Kind, Repository: p.Repository, Commit: p.Commit}
+		t := plugin.SpecTool{Name: p.Name, Kind: p.Kind, Repository: p.Repository, Path: p.Path, Commit: p.Commit}
 		if p.Release != nil {
 			t.Version, t.SHA256, t.Sums = p.Release.Version, p.Release.SHA256, p.Release.Sums
 		}
@@ -211,7 +211,7 @@ func tools(cfg *config.Config) []plugin.SpecTool {
 		pin := cfg.ConnectorPin(name)
 		sum, _ := pin.SHA256.For(config.LinuxAMD64)
 
-		out = append(out, plugin.SpecTool{Name: name, Kind: config.KindConnector, Repository: pin.Repository, Version: pin.Version, SHA256: sum})
+		out = append(out, plugin.SpecTool{Name: name, Kind: config.KindConnector, Repository: pin.Repository, Path: pin.Path, Version: pin.Version, SHA256: sum})
 	}
 
 	return out
