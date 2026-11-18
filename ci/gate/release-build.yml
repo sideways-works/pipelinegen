@@ -1,0 +1,31 @@
+# A release build on a CI worker: the release command of release-tools (a
+# checkout of this repository) builds TAG of repo twice and compares the two;
+# its files come back in out/TAG.
+#
+#   fly -t <target> execute -c ci/gate/release-build.yml -i repo=<clone> -i release-tools=. \
+#     -i tools=<dir with bazelisk> [-i modproxy=<module proxy dir>] -o out=<dir>
+platform: linux
+image_resource:
+  type: registry-image
+  source: {repository: golang, tag: 1.27.1}
+inputs:
+  - name: repo
+  - name: release-tools
+  - name: tools
+  # private modules the build needs come as files, in the form of a module proxy
+  - name: modproxy
+    optional: true
+outputs:
+  - name: out
+params:
+  TAG: ""
+  GOFLAGS: -trimpath
+run:
+  path: bash
+  args:
+    - -ec
+    - |
+      # the inputs belong to another user than the task; git must still read them
+      git config --global --add safe.directory '*'
+      if [ -d modproxy ]; then export GOPROXY="file://$PWD/modproxy,https://proxy.golang.org,direct" GONOSUMDB=github.com/sideways-works GOPRIVATE=; fi
+      cd release-tools && exec ../tools/bazelisk run //ci/release -- build ../repo "$TAG" "../out/$TAG"

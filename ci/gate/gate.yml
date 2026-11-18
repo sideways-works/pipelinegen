@@ -1,0 +1,30 @@
+# A gate of a branch on a CI worker before it lands: bazel run //ci:gate
+# builds, vets and lints it, and runs every test and the proof with the tool
+# built from it.
+#
+#   fly -t <target> execute -c ci/gate/gate.yml -i source=. -i tools=<dir with bazelisk> \
+#     -i plugins=<dir with go-sbom and go-correlator> [-i modproxy=<module proxy dir>]
+platform: linux
+image_resource:
+  type: registry-image
+  source: {repository: golang, tag: 1.27.1}
+inputs:
+  - name: source
+  - name: tools
+  - name: plugins
+  # private modules the build needs come as files, in the form of a module proxy
+  - name: modproxy
+    optional: true
+params:
+  GOFLAGS: -trimpath
+  # how many workers the proof plans with; its default when empty
+  PROOF_WORKERS: ""
+run:
+  path: bash
+  args:
+    - -ec
+    - |
+      # the inputs belong to another user than the task; git must still read them
+      git config --global --add safe.directory '*'
+      if [ -d modproxy ]; then export GOPROXY="file://$PWD/modproxy,https://proxy.golang.org,direct" GONOSUMDB=github.com/sideways-works GOPRIVATE=; fi
+      PLUGINS=$PWD/plugins; export PLUGINS; cd source && exec ../tools/bazelisk run //ci:gate -- --proof-work "$PWD/../proof"

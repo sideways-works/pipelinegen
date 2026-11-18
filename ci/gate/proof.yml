@@ -1,0 +1,25 @@
+# The proof on a CI worker, with the tool built from the branch and the
+# plugins given as files.
+#
+#   fly -t <target> execute -c ci/gate/proof.yml -i source=. -i tools=<dir with bazelisk> \
+#     -i plugins=<dir with go-sbom and go-correlator>
+platform: linux
+image_resource:
+  type: registry-image
+  source: {repository: golang, tag: 1.27.1}
+inputs:
+  - name: source
+  - name: tools
+  - name: plugins
+params:
+  GOFLAGS: -trimpath
+  # how many workers the proof plans with; its default when empty
+  PROOF_WORKERS: ""
+run:
+  path: bash
+  args:
+    - -ec
+    - |
+      # the inputs belong to another user than the task; git must still read them
+      git config --global --add safe.directory '*'
+      PLUGINS=$PWD/plugins; export PLUGINS; cd source && exec ../tools/bazelisk run //ci/proof -- --source "$PWD/../proof"
