@@ -1,5 +1,5 @@
-// Package forgetest is a GitHub of the tests' own: its API's release listing and its release
-// files, for every repository the test adds releases to.
+// Package forgetest is a GitHub and a GitLab of the tests' own: their APIs' release listings and
+// their release files, for every repository the test adds releases to.
 package forgetest
 
 import (
@@ -10,6 +10,7 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -26,8 +27,8 @@ type release struct {
 	files      map[string][]byte
 }
 
-// GitHub serves github.com and api.github.com; forge.Client reaches it once Start set
-// forge.EnvTestURL.
+// GitHub serves github.com, api.github.com and gitlab.com, each project's releases on both;
+// forge.Client reaches it once Start set forge.EnvTestURL.
 type GitHub struct {
 	URL string
 	// PerPage is how many releases a page of the listing holds, so a test sees several pages.
@@ -106,21 +107,32 @@ func (g *GitHub) serve(w http.ResponseWriter, req *http.Request) {
 	case req.Host == "github.com" && strings.Contains(req.URL.Path, "/releases/download/"):
 		project, rest, _ := strings.Cut(strings.TrimPrefix(req.URL.Path, "/"), "/releases/download/")
 		i := strings.LastIndex(rest, "/")
-
-		for _, r := range g.releases[project] {
-			if data, ok := r.files[rest[i+1:]]; ok && r.tag == rest[:max(i, 0)] && !r.draft {
-				g.asked = append(g.asked, req.URL.Path)
-				_, _ = w.Write(data) //nolint:errcheck // a test server
-
-				return
-			}
-		}
-
-		http.NotFound(w, req)
+		g.download(w, req, project, rest[:max(i, 0)], rest[i+1:])
+	case req.Host == gitLab && strings.HasPrefix(req.URL.Path, "/api/v4/projects/") && strings.HasSuffix(req.URL.Path, "/releases"):
+		g.list(w, req, strings.TrimSuffix(strings.TrimPrefix(req.URL.Path, "/api/v4/projects/"), "/releases"))
+	case req.Host == gitLab && strings.Contains(req.URL.Path, "/-/releases/"):
+		project, rest, _ := strings.Cut(strings.TrimPrefix(req.URL.Path, "/"), "/-/releases/")
+		i := strings.LastIndex(rest, "/downloads/")
+		g.download(w, req, project, rest[:max(i, 0)], rest[i+len("/downloads/"):])
 	default:
 		http.NotFound(w, req)
 	}
 }
+
+func (g *GitHub) download(w http.ResponseWriter, req *http.Request, project, tag, file string) {
+	for _, r := range g.releases[project] {
+		if data, ok := r.files[file]; ok && r.tag == tag && !r.draft {
+			g.asked = append(g.asked, req.URL.Path)
+			_, _ = w.Write(data) //nolint:errcheck // a test server
+
+			return
+		}
+	}
+
+	http.NotFound(w, req)
+}
+
+const gitLab = "gitlab.com"
 
 type asset struct {
 	Name string `json:"name"`
@@ -146,9 +158,15 @@ func (g *GitHub) list(w http.ResponseWriter, req *http.Request, project string) 
 	page, _ := strconv.Atoi(req.URL.Query().Get("page")) //nolint:errcheck // no page is the first
 	page = max(page, 1)
 
-	var all []listedRelease
+	var all []any
 
 	for _, r := range slices.Backward(rs) {
+		if req.Host == gitLab {
+			all = append(all, gitLabRelease(project, r))
+
+			continue
+		}
+
 		lr := listedRelease{Tag: r.tag, Draft: r.draft, Prerelease: r.prerelease, Assets: []asset{}}
 		for _, name := range sortedNames(r.files) {
 			lr.Assets = append(lr.Assets, asset{Name: name, URL: "https://github.com/" + project + "/releases/download/" + r.tag + "/" + name})
@@ -159,10 +177,28 @@ func (g *GitHub) list(w http.ResponseWriter, req *http.Request, project string) 
 
 	from, to := min((page-1)*g.PerPage, len(all)), min(page*g.PerPage, len(all))
 	if to < len(all) {
-		w.Header().Set("Link", fmt.Sprintf(`<https://api.github.com/repos/%s/releases?per_page=100&page=%d>; rel="next"`, project, page+1))
+		next := fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=100&page=%d", project, page+1)
+		if req.Host == gitLab {
+			next = fmt.Sprintf("https://gitlab.com/api/v4/projects/%s/releases?per_page=100&page=%d", url.PathEscape(project), page+1)
+		}
+
+		w.Header().Set("Link", "<"+next+`>; rel="next"`)
 	}
 
 	_ = json.NewEncoder(w).Encode(all[from:to]) //nolint:errcheck,errchkjson // a test server
+}
+
+// gitLabRelease is a release as GitLab's API lists it: a release yet to come is its prerelease,
+// and each file a link to its download.
+func gitLabRelease(project string, r release) map[string]any {
+	links := make([]map[string]string, 0, len(r.files))
+	for _, name := range sortedNames(r.files) {
+		links = append(links, map[string]string{
+			"name": name, "direct_asset_url": "https://gitlab.com/" + project + "/-/releases/" + url.PathEscape(r.tag) + "/downloads/" + name,
+		})
+	}
+
+	return map[string]any{"tag_name": r.tag, "upcoming_release": r.prerelease, "assets": map[string]any{"links": links}}
 }
 
 func sortedNames(files map[string][]byte) []string {

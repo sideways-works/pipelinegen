@@ -193,3 +193,46 @@ func TestAReleaseWithoutPluginJSONIsAsked(t *testing.T) {
 		t.Fatalf("%v %+v", err, c)
 	}
 }
+
+// A plugin of a monorepo on GitLab: its releases listed a page at a time by the project's escaped
+// path, one yet to come taken as a prerelease, and its files fetched by the escaped tag.
+func TestAPathPluginOnGitLabIsListedAndChecked(t *testing.T) {
+	g := forgetest.Start(t)
+	repo := "https://gitlab.com/group/sub/plugins"
+
+	g.Release("group/sub/plugins", "driver/go/v0.1.0", false, forgetest.Plugin("go-driver", "go-driver", "driver", "v0.1.0", "linux-amd64"))
+	sums := g.Release("group/sub/plugins", "driver/go/v0.2.0", false, forgetest.Plugin("go-driver", "go-driver", "driver", "v0.2.0", "linux-amd64", "darwin-arm64"))
+	g.Release("group/sub/plugins", "sbom/go/v0.9.0", false, forgetest.Plugin("go-sbom", "go-sbom", "sbom", "v0.9.0", "linux-amd64"))
+	g.Release("group/sub/plugins", "driver/go/v0.3.0", true, forgetest.Plugin("go-driver", "go-driver", "driver", "v0.3.0", "linux-amd64"))
+
+	for _, spelling := range []string{repo, "git@gitlab.com:group/sub/plugins.git"} {
+		rs, err := forge.Releases(t.Context(), forge.Client(), spelling, "driver/go")
+		if err != nil || len(rs) != 3 {
+			t.Fatalf("%s: %v %+v", spelling, err, rs)
+		}
+
+		if r, _ := forge.Newest(rs, false); r.Tag != "driver/go/v0.2.0" {
+			t.Fatalf("%s: newest %s", spelling, r.Tag)
+		}
+
+		if r, _ := forge.Newest(rs, true); r.Tag != "driver/go/v0.3.0" {
+			t.Fatalf("%s: newest with prereleases %s", spelling, r.Tag)
+		}
+	}
+
+	rs, err := forge.Releases(t.Context(), forge.Client(), repo, "driver/go")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, _ := forge.Newest(rs, false)
+
+	c, err := checker(t).Check(t.Context(), repo, "driver/go", "go-driver", r)
+	if err != nil || c.Sums != sums || c.Kind != "driver" || len(c.Files) != 2 {
+		t.Fatalf("%v %+v", err, c)
+	}
+
+	if asked := strings.Join(g.Asked(), "\n"); !strings.Contains(asked, "/group/sub/plugins/-/releases/driver/go/v0.2.0/downloads/go-driver-darwin-arm64") {
+		t.Fatalf("fetched:\n%s", asked)
+	}
+}
