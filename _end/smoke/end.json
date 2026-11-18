@@ -1,0 +1,4 @@
+{
+  "ended": "2026-11-18T02:14:49.233565208Z",
+  "why": "suite smoke stopped 1 minute after its work began, before these slices reported: not its time limit of 120 minutes (suites.smoke.minutes); its prepare or a batch failed, or the build was aborted: the build log says which"
+}
