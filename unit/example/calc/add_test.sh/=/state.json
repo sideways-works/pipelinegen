@@ -1,0 +1,12 @@
+{
+  "label": "example/calc/add_test.sh",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-unit",
+  "updated": "2026-11-18T02:14:42.846251776Z",
+  "failures": [
+    {
+      "test": "(not run)",
+      "tail": "batch 0 stopped before its first slice started, 3 minutes after the suite began: not its time limit of 120 minutes (suites.unit.minutes); its task died: the build log says why"
+    }
+  ]
+}
