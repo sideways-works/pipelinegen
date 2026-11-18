@@ -55,10 +55,9 @@ After:
 
 ```yaml
 plugins:
-  - name: go
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-go
-    release: {version: <tag>, sha256: <the release's checksum>}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: go, kind: driver, path: driver/go, release: {version: <tag>, sums: <the checksum of its SHA256SUMS>}}
 suites:
   go:
     tests: ["internal/**/*_test.go", "plugin/**/*_test.go"]
@@ -138,10 +137,9 @@ where every path is from the example's root:
 
 ```yaml
 plugins:
-  - name: shell
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-shell
-    release: {version: <tag>, sha256: <the release's checksum>}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: shell, kind: driver, path: driver/shell, release: {version: <tag>, sums: <the checksum of its SHA256SUMS>}}
 suites:
   smoke:
     tests: ["**/*_smoke.sh"]

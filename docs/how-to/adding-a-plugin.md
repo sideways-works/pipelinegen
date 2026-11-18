@@ -61,7 +61,7 @@ A repository that is one plugin is tagged `vX.Y.Z`. Leave out the
 directory:
 
 ```sh
-pipelinegen plugin add https://github.com/sideways-works/pipelinegen-driver-shell --name shell
+pipelinegen plugin add https://github.com/acme/lint-driver --name lint
 ```
 
 Its entry is one of its own, at the end of `plugins`, with `repository` in

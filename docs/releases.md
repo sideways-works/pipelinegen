@@ -35,9 +35,8 @@ version it leads to needs the nightly.
 in, and builds it twice in fresh directories. If the two builds differ in
 a single byte, it stops. What it builds depends on the repository, and
 NAME is the program it holds: a repository named `pipelinegen-KIND-NAME`,
-KIND a plugin kind, holds `NAME-KIND` (`pipelinegen-sbom-go` builds
-`go-sbom`), and any other repository, pipelinegen included, the program of
-its own name:
+KIND a plugin kind, holds `NAME-KIND`, and any other repository,
+pipelinegen included, the program of its own name:
 
 | Repository | Files |
 |---|---|
@@ -279,14 +278,12 @@ concourse:
     bootstrap:
       release: {version: v0.2.0, sha256: <pipelinegen-linux-amd64's sum>}
 plugins:
-  - name: concourse
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.2.0, sha256: <concourse-runner-linux-amd64's sum>}
-  - name: go
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.2.0, sums: <the sum of the release's SHA256SUMS>}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      # go-correlator-linux-amd64's sum
+      - {name: go, kind: correlator, path: correlator/go, release: {version: v0.4.0, sha256: 613a2f85ad9869bb1efb9dc7430a72619d90d08534e4b1764e78e5a935ba590a}}
+      # the sum of the release's SHA256SUMS
+      - {name: shell, kind: driver, path: driver/shell, release: {version: v0.4.0, sums: ccba3ad11a223e3f148f05afe010831766ba776c314caf8c2d797496b58231af}}
 ```
 
 The bootstrap keeps a release's `SHA256SUMS` beside the plugin as

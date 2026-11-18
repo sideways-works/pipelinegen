@@ -258,7 +258,7 @@ otherwise. `affected`, `why` and `try` plan with it too.
 
 Where the code and its proposed changes live, when that isn't the `github`
 section. The first connector is the code's. The one there is today is
-`git`, the [git connector](https://github.com/sideways-works/pipelinegen-connector-git),
+`git`, the [git connector](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/git),
 for a plain git server with no host API: its proposed changes are the
 branches whose names match `changes.branches`. pipelinegen lists the
 remote's branches with git and the read credential, and the connector
@@ -294,10 +294,10 @@ runs:
 ### Pinning a connector
 
 Not in a release yet. Each connector is a plugin of its own, which
-pipelinegen runs: the GitHub connector
-([pipelinegen-connector-github](https://github.com/sideways-works/pipelinegen-connector-github))
+pipelinegen runs, in the plugins repository by kind: the GitHub connector
+([connector/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/github))
 for the `github` section, and the git connector
-([pipelinegen-connector-git](https://github.com/sideways-works/pipelinegen-connector-git))
+([connector/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/git))
 for `connectors` entries of plugin `git`. pipelinegen pins a release of
 each, with its checksum for every platform, and fetches the one a config
 uses the way it fetches [bazel-diff](#bazel_diff): a config needs no line
@@ -312,10 +312,9 @@ another release:
 
 ```yaml
 plugins:
-  - name: github
-    kind: connector
-    repository: sideways-works/pipelinegen-connector-github
-    release: {version: v0.1.0, sums: ...}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: github, kind: connector, path: connector/github, release: {version: <tag>, sums: <checksum>}}
 ```
 
 The entry takes `release` (`sha256` for one platform, or `sums`) and no
@@ -682,13 +681,15 @@ it in a group:
 plugins:
   - repository: https://github.com/sideways-works/pipelinegen-plugins
     with:
-      - {name: go, kind: driver, path: driver/go, release: {version: <tag>, sums: <checksum>}}
-      - {name: go-sbom, kind: sbom, path: sbom/go, release: {version: <tag>, sums: <checksum>}, config: {modules: [.]}}
-  - {name: shell, kind: driver, repository: sideways-works/pipelinegen-driver-shell, release: {version: <tag>, sums: <checksum>}}
+      - {name: go, kind: driver, path: driver/go, release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}}
+      - {name: go-sbom, kind: sbom, path: sbom/go, release: {version: v0.4.0, sums: e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d}, config: {modules: [.]}}
+  - {name: lint, kind: driver, repository: https://github.com/acme/lint-driver, release: {version: <tag>, sums: <checksum>}}
 ```
 
 A group reads exactly as the same entries written one by one, each with
-the group's repository. `pipelinegen plugin add` and `pipelinegen plugin
+the group's repository. pipelinegen's own plugins are in one repository
+by kind, so a config pins them in one group; a plugin in a repository of
+its own, like `lint` above, has an entry of its own. `pipelinegen plugin add` and `pipelinegen plugin
 upgrade` write the pins, each checked by downloading what it names
 ([adding a plugin](../how-to/adding-a-plugin.md)).
 
@@ -721,21 +722,23 @@ put every step on untagged workers. For concourse-runner the block is a
 `default` list of tags and `rules`, tried in order, each `for` one kind of
 step (`pipeline`, `planning`, `checks`, `suite`, `bookkeeping`), optionally
 of one `suite` and one `run`, with its `tags`. The
-[runner's README](https://github.com/sideways-works/pipelinegen-runner-concourse#placement)
+[runner's README](https://github.com/sideways-works/pipelinegen-plugins/tree/main/runner/concourse#placement)
 has the details.
 
 ```yaml
 plugins:
-  - name: concourse
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v1.2.3, sha256: ...}
-    config:
-      placement:
-        default: [linux]
-        rules:
-          - {for: planning, tags: []}
-          - {for: suite, suite: e2e, tags: [browsers]}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - name: concourse
+        kind: runner
+        path: runner/concourse
+        release: {version: v1.2.3, sums: ...}
+        config:
+          placement:
+            default: [linux]
+            rules:
+              - {for: planning, tags: []}
+              - {for: suite, suite: e2e, tags: [browsers]}
 ```
 
 The keys that placed steps before, `concourse.planner.tags`,

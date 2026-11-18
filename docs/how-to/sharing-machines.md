@@ -18,16 +18,18 @@ nightly's suites:
 
 ```yaml
 plugins:
-  - name: concourse
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: ..., sha256: ...}
-    config:
-      placement:
-        default: [small]
-        rules:
-          - {for: suite, run: nightly, tags: [nightly]}   # every nightly suite, e2e too
-          - {for: suite, suite: e2e, tags: [browsers]}    # e2e in every other run
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - name: concourse
+        kind: runner
+        path: runner/concourse
+        release: {version: ..., sums: ...}
+        config:
+          placement:
+            default: [small]
+            rules:
+              - {for: suite, run: nightly, tags: [nightly]}   # every nightly suite, e2e too
+              - {for: suite, suite: e2e, tags: [browsers]}    # e2e in every other run
 ```
 
 A suite's bookkeeping (each batch's end, the suite's end) that no rule

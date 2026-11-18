@@ -9,8 +9,8 @@ protocol with every field is [plugins.md](../plugins.md).
 
 pipelinegen's core knows units, the links between them and what each slice
 touched when it ran. It knows no language, package ecosystem or CI system.
-That knowledge lives in plugins: each is an executable in a repository of
-its own, released and pinned like pipelinegen itself. A plugin is a plain
+That knowledge lives in plugins: each is an executable, released and
+pinned like pipelinegen itself. A plugin is a plain
 program that reads files and answers in JSON. It starts no server, opens no
 database and uses no network. A driver is the one exception: it runs the
 tests, in the suite's batch task.
@@ -104,44 +104,42 @@ say, such as where a run leaves its coverage.
 
 ## Adding plugins to a repository
 
-`pipelinegen plugin add` writes a plugin's entry with its pin, checked
-file by file ([adding a plugin](adding-a-plugin.md)). By hand, name each
-plugin with its kind, its repository and a release with the checksum of
-its `linux-amd64` file (the `.mjs` file for a Node plugin), or a
-40-character commit to build:
+pipelinegen's own plugins live together in one repository,
+[sideways-works/pipelinegen-plugins](https://github.com/sideways-works/pipelinegen-plugins),
+each in a directory of its kind and name: `sbom/go`, `correlator/go`,
+`driver/playwright`, `runner/concourse`. Each is released on its own,
+tagged with its directory, so `sbom/go/v0.4.0` is a release of go-sbom
+alone, and its directory's README says what it reads and which settings
+it takes. `pipelinegen plugin add <git-url> <path>...` writes the pins,
+each checked file by file ([adding a plugin](adding-a-plugin.md)):
+
+```sh
+pipelinegen plugin add https://github.com/sideways-works/pipelinegen-plugins sbom/go correlator/go
+```
+
+The pins go into one group for the repository: the repository once, and
+under `with` an entry per plugin with its kind, its `path` and a release,
+pinned by the checksum of the release's `SHA256SUMS`, which lists the
+checksum of each of its files. Written by hand they read the same, and a
+40-character `commit` in place of `release` builds that commit instead:
 
 ```yaml
 plugins:
-  - name: go-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-go
-    release: {version: <tag>, sha256: <the release's checksum>}
-    config: {modules: [backend]}
-  - name: go-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-go
-    release: {version: <tag>, sha256: <the release's checksum>}
-    config: {modules: [backend]}
-  - name: concourse
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: <tag>, sha256: <the release's checksum>}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: go-sbom, kind: sbom, path: sbom/go, release: {version: v0.4.0, sums: e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d}, config: {modules: [backend]}}
+      - {name: go-correlator, kind: correlator, path: correlator/go, release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}, config: {modules: [backend]}}
+      - {name: concourse, kind: runner, path: runner/concourse, release: {version: <tag>, sums: <checksum>}}
 ```
 
-A plugin's repository is named for its kind first: a repository
-`pipelinegen-KIND-NAME`, KIND one of sbom, correlator, runner, driver or
-connector, holds the program `NAME-KIND`, whose release files are
-`NAME-KIND-linux-amd64` (or `NAME-KIND.mjs`) and whose source is
-`./cmd/NAME-KIND`. So `sideways-works/pipelinegen-sbom-go` holds `go-sbom`,
-and `sideways-works/pipelinegen-correlator-oapi-codegen` holds
-`oapi-codegen-correlator`. Any other repository holds the program of its
-own name. The plugins' repositories had their programs' names before, and
-a config that still says `sideways-works/go-sbom` keeps working while
-GitHub redirects the old name. A config that uses the new name needs a
-pipelinegen and a concourse-runner released with this rule, since older
-ones look for files named after the whole repository; with those, both
-spellings fetch the same files and keep the same cached answers, and
-pipelinegen plans the same under either.
+A plugin's directory names its program kind first: `KIND/NAME`, KIND one
+of sbom, correlator, runner, driver or connector, holds the program
+`NAME-KIND`, whose release files are `NAME-KIND-linux-amd64` (or
+`NAME-KIND.mjs`). So `sbom/go` holds `go-sbom`, and
+`correlator/oapi-codegen` holds `oapi-codegen-correlator`. A plugin in a
+repository of its own has an entry of its own with no `path`, and is
+tagged `vX.Y.Z`; a repository named `pipelinegen-KIND-NAME` holds
+`NAME-KIND`, any other the program of its own name.
 
 `name` is yours to choose and names the executable. `include` and `exclude`
 take path patterns that widen or narrow what the plugin claims. `config` is

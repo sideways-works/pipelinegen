@@ -3,7 +3,7 @@
 This page is for people changing the pipeline's shape or the commands its
 steps call. `pipelinegen pipeline` asks the configured runner plugin for
 the pipeline
-([concourse-runner](https://github.com/sideways-works/pipelinegen-runner-concourse) for
+([concourse-runner](https://github.com/sideways-works/pipelinegen-plugins/tree/main/runner/concourse) for
 Concourse); the core writes no pipeline itself. Its jobs call `plan`,
 `tree`, `batches`, `report` and `slice`. The earlier shape, one pipeline
 per run, and why it was left are in

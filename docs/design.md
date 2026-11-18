@@ -82,15 +82,17 @@ concourse:
       bazelisk: {version: v1.30.0, sha256: ...}
   include: ci/root.yml            # the repository's own root jobs
 plugins:
-  - name: concourse               # the runner, which writes the Concourse pipeline
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.2.0, sha256: ...}
-    config:
-      placement:                  # which workers each step runs on, in the runner's words
-        default: [cloud-1]
-        rules:
-          - {for: suite, suite: e2e, tags: [cloud-2]}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins   # the plugins, one directory each
+    with:
+      - name: concourse           # the runner, which writes the Concourse pipeline
+        kind: runner
+        path: runner/concourse
+        release: {version: <tag>, sums: ...}
+        config:
+          placement:              # which workers each step runs on, in the runner's words
+            default: [cloud-1]
+            rules:
+              - {for: suite, suite: e2e, tags: [cloud-2]}
 keep: {runs: {for: 5d}, lists: {for: 90d}}   # which runs and lists the sweep keeps
 suites:
   e2e:

@@ -30,10 +30,10 @@ On your own machine, `pipelinegen slices`, `check`, `affected`, `why` and
 
 Talking to a git host belongs to one of the six kinds of plugin, the
 connector ([concepts](../concepts/connectors.md)). Each connector is a
-plugin in a repository of its own:
-[pipelinegen-connector-github](https://github.com/sideways-works/pipelinegen-connector-github)
+plugin of the plugins repository, in a directory of its kind:
+[connector/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/github)
 for a config's `github:` section, and
-[pipelinegen-connector-git](https://github.com/sideways-works/pipelinegen-connector-git)
+[connector/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/git)
 for a plain git server under [`connectors`](../reference/config.md#connectors).
 Not in a release yet: pipelinegen fetches the release of the connector a
 config uses that it pins, checked by its checksum, so a config needs no new
@@ -45,7 +45,8 @@ GitLab and Gitea come after. This table changes as they land.
 The book's commands download releases with `curl` from the repositories'
 release pages. That works once the repositories are public; until then,
 download them with an account that can read them, for example with `gh
-release download <version> -R sideways-works/<repository>`.
+release download <kind>/<name>/<version> -R
+sideways-works/pipelinegen-plugins` for a plugin.
 
 ## CI systems
 
@@ -55,17 +56,17 @@ those jobs by hand.
 
 | CI system | Runner plugin |
 |---|---|
-| Concourse | [concourse-runner](https://github.com/sideways-works/pipelinegen-runner-concourse) |
+| Concourse | [concourse-runner](https://github.com/sideways-works/pipelinegen-plugins/tree/main/runner/concourse) |
 | others | none yet: write a runner ([writing a runner](../writing-plugins/runner.md) says what the pipeline must do), or [run the steps by hand](../how-to/any-ci-by-hand.md) in its jobs |
 
 ## Languages and tools
 
 | Domain | sbom plugin (what exists) | Correlators (how it connects, what ran) |
 |---|---|---|
-| Go | [go-sbom](https://github.com/sideways-works/pipelinegen-sbom-go) | [go-correlator](https://github.com/sideways-works/pipelinegen-correlator-go) |
-| TypeScript and React | [ts-sbom](https://github.com/sideways-works/pipelinegen-sbom-ts), and [npm-sbom](https://github.com/sideways-works/pipelinegen-sbom-npm) for packages | [react-correlator](https://github.com/sideways-works/pipelinegen-correlator-react) |
-| PostgreSQL | [pg-sbom](https://github.com/sideways-works/pipelinegen-sbom-pg) | [sql-correlator](https://github.com/sideways-works/pipelinegen-correlator-sql), [gorm-correlator](https://github.com/sideways-works/pipelinegen-correlator-gorm) |
-| OpenAPI | [openapi-sbom](https://github.com/sideways-works/pipelinegen-sbom-openapi) | [oapi-codegen-correlator](https://github.com/sideways-works/pipelinegen-correlator-oapi-codegen) |
+| Go | [go-sbom](https://github.com/sideways-works/pipelinegen-plugins/tree/main/sbom/go) | [go-correlator](https://github.com/sideways-works/pipelinegen-plugins/tree/main/correlator/go) |
+| TypeScript and React | [ts-sbom](https://github.com/sideways-works/pipelinegen-plugins/tree/main/sbom/ts), and [npm-sbom](https://github.com/sideways-works/pipelinegen-plugins/tree/main/sbom/npm) for packages | [react-correlator](https://github.com/sideways-works/pipelinegen-plugins/tree/main/correlator/react) |
+| PostgreSQL | [pg-sbom](https://github.com/sideways-works/pipelinegen-plugins/tree/main/sbom/pg) | [sql-correlator](https://github.com/sideways-works/pipelinegen-plugins/tree/main/correlator/sql), [gorm-correlator](https://github.com/sideways-works/pipelinegen-plugins/tree/main/correlator/gorm) |
+| OpenAPI | [openapi-sbom](https://github.com/sideways-works/pipelinegen-plugins/tree/main/sbom/openapi) | [oapi-codegen-correlator](https://github.com/sideways-works/pipelinegen-plugins/tree/main/correlator/oapi-codegen) |
 
 Any other language works with the build graph alone, without plugins.
 

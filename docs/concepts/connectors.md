@@ -5,8 +5,8 @@ repository under test. It recognises the repository from its remote URL,
 lists the changes proposed for a branch (pull requests or merge requests,
 with their head commit, whether they are drafts, their labels, and whether
 they come from a fork), and shows the results there: a status on each
-commit and one comment per proposed change. Each connector is a plugin in
-a repository of its own ([below](#today)).
+commit and one comment per proposed change. Each connector is a plugin,
+in the plugins repository with the others ([below](#today)).
 
 Plugins come in six kinds, each answering one question:
 
@@ -35,11 +35,11 @@ change from a fork never runs with a token.
 Two connectors exist, each a plugin:
 
 - the GitHub connector,
-  [pipelinegen-connector-github](https://github.com/sideways-works/pipelinegen-connector-github),
+  [connector/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/github),
   which a config's `github:` section in `pipelinegen.yaml` uses: it lists
   the pull requests, sets the statuses and keeps the comment;
 - the git connector,
-  [pipelinegen-connector-git](https://github.com/sideways-works/pipelinegen-connector-git),
+  [connector/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/git),
   for a plain git server with review branches as proposed changes, under
   `connectors:`.
 

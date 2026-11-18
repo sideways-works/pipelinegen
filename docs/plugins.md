@@ -5,8 +5,10 @@ how the core calls one. pipelinegen's core knows units, links between
 units, and what a run touched. It keeps the graph, walks it from what
 changed, asks bazel-diff, applies the narrowing level and the sample, and
 reports. Everything that knows a language, a package ecosystem, a
-database, a CI system or a git host is a plugin, an executable in a
-repository of its own. There are six kinds; the store (where pipelinegen
+database, a CI system or a git host is a plugin, an executable with
+releases of its own; pipelinegen's are in one repository, a directory
+each by kind
+([sideways-works/pipelinegen-plugins](https://github.com/sideways-works/pipelinegen-plugins)). There are six kinds; the store (where pipelinegen
 keeps what it learned) is still a design ([writing a
 store](writing-plugins/store.md)), and the other five are these:
 
@@ -258,26 +260,29 @@ keeping the answer by that pin. An uncovered file its `candidates` or
 
 ### Pinned and verified
 
-The config names each plugin by repository and by a release with its
-checksum, or by a commit before the first release. The bootstrap fetches
+The config names each plugin by repository, with its directory in a
+repository of several, and by a release with its checksum, or by a commit
+before the first release. The bootstrap fetches
 each into `tools/plugins/<name>` and checks it like the tool itself:
 
 ```yaml
 plugins:
-  - name: go-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-go
-    release: {version: <tag>, sha256: ...}   # or commit: <sha>
-    exclude: ["tools/**"]
-  - name: go-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-go
-    release: {version: <tag>, sha256: ...}
-    config: {pure_calls: [errors.New]}
-  - name: concourse
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: <tag>, sha256: ...}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - name: go-sbom
+        kind: sbom
+        path: sbom/go
+        release: {version: v0.4.0, sums: e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d}   # or commit: <sha>
+        exclude: ["tools/**"]
+      - name: go-correlator
+        kind: correlator
+        path: correlator/go
+        release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}
+        config: {pure_calls: [errors.New]}
+      - name: concourse
+        kind: runner
+        path: runner/concourse
+        release: {version: <tag>, sums: ...}
 ```
 
 `config` is the plugin's own block, passed in every request. The answer
@@ -1496,9 +1501,9 @@ pipeline` refuses a suite with steps for a runner without the capability
 ## Connectors
 
 Not in a release yet: the core calls its connectors as plugins. The GitHub
-connector ([pipelinegen-connector-github](https://github.com/sideways-works/pipelinegen-connector-github))
+connector ([connector/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/github))
 serves a config's `github` section, and the git connector
-([pipelinegen-connector-git](https://github.com/sideways-works/pipelinegen-connector-git))
+([connector/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/git))
 a plain git server under `connectors`. The core pins a release of each and
 fetches the one a config uses, checked by its checksum.
 
