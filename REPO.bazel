@@ -1,3 +1,7 @@
+# The root package's filegroups take the example's targets, which keep no
+# visibility of their own so the example also loads as a workspace alone.
+repo(default_visibility = ["//:__pkg__"])
+
 # Fixture workspaces the Go tests copy: their labels are their own root's,
 # so they can't load as part of this one.
 ignore_directories(["**/testdata/**", "example-notes"])
