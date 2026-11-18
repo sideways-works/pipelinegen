@@ -27,4 +27,6 @@ run:
       # the inputs belong to another user than the task; git must still read them
       git config --global --add safe.directory '*'
       if [ -d modproxy ]; then export GOPROXY="file://$PWD/modproxy,https://proxy.golang.org,direct" GONOSUMDB=github.com/sideways-works GOPRIVATE=; fi
-      PLUGINS=$PWD/plugins; export PLUGINS; cd source && exec ../tools/bazelisk run //ci:gate -- --proof-work "$PWD/../proof"
+      # bazelisk and whatever else the tools hold come first, for the tests and the proof too
+      export PATH="$PWD/tools:$PATH" PLUGINS="$PWD/plugins"
+      cd source && exec bazelisk run //ci:gate -- --proof-work "$PWD/../proof"
