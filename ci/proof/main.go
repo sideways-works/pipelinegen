@@ -15,7 +15,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/proof"
 )
 
-const usage = "usage: go run ./ci/proof [--newest | --source] <work dir>"
+const usage = "usage: bazel run //ci/proof -- [--newest | --source] <work dir>"
 
 func main() {
 	os.Exit(run(os.Args[1:]))

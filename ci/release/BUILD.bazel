@@ -1,0 +1,34 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+# The release command: bazel run //ci/release -- build DIR TAG OUT, and its
+# other forms (docs/releases.md).
+go_binary(
+    name = "release",
+    args = [
+        "--go=$(rlocationpath @go_sdk//:bin/go)",
+        "run",
+        "./ci/release",
+    ],
+    data = [
+        "@go_sdk//:bin/go",
+        "@go_sdk//:files",
+    ],
+    embed = ["//ci/launch:lib"],
+)
+
+# The program's own files, without this BUILD file: the slices that run
+# the program with go take them.
+filegroup(
+    name = "srcs",
+    srcs = glob(
+        ["**"],
+        exclude = ["BUILD.bazel"],
+    ),
+    visibility = ["//:__pkg__"],
+)
+
+filegroup(
+    name = "files",
+    srcs = glob(["**"]),
+    visibility = ["//ci:__pkg__"],
+)

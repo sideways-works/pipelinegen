@@ -65,7 +65,7 @@ filegroup(
     ),
     data = [
         ":example",
-        "//ci/launch:files",
+        "//ci:files",
         "//tools:files",
     ],
     tags = ["slice-pipelinegen-lint"],
@@ -123,7 +123,7 @@ filegroup(
 # releases it plans with.
 filegroup(
     name = "proof",
-    srcs = glob(["ci/proof/**"]) + glob(
+    srcs = ["//ci/proof:srcs"] + glob(
         ["internal/proof/*.go"],
         exclude = ["**/*_test.go"],
     ),
@@ -136,7 +136,7 @@ filegroup(
 # The release command, which the release tests build and run.
 filegroup(
     name = "release",
-    srcs = glob(["ci/release/**"]),
+    srcs = ["//ci/release:srcs"],
 )
 
 # The library of the launcher every `bazel run` target is (ci/launch).

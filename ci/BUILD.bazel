@@ -1,0 +1,31 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+# What a branch passes before it lands: build, vet, lint, every test and
+# the proof with the tool built from the checkout.
+# bazel run //ci:gate -- [--proof-work DIR] [PACKAGE...]
+go_binary(
+    name = "gate",
+    args = [
+        "--go=$(rlocationpath @go_sdk//:bin/go)",
+        "--lint=$(rlocationpath //tools:golangci-lint)",
+        "gate",
+    ],
+    data = [
+        "//tools:golangci-lint",
+        "@go_sdk//:bin/go",
+        "@go_sdk//:files",
+    ],
+    embed = ["//ci/launch:lib"],
+)
+
+# Every file under ci/, for the commit subjects' slice.
+filegroup(
+    name = "files",
+    srcs = glob(["**"]) + [
+        "//ci/book:files",
+        "//ci/launch:files",
+        "//ci/proof:files",
+        "//ci/release:files",
+    ],
+    visibility = ["//:__pkg__"],
+)

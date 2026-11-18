@@ -1,0 +1,34 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+# The check that the book shows what the tool prints:
+# bazel run //ci/book -- [--update] SCRATCH_DIR
+go_binary(
+    name = "book",
+    args = [
+        "--go=$(rlocationpath @go_sdk//:bin/go)",
+        "run",
+        "./ci/book",
+    ],
+    data = [
+        "@go_sdk//:bin/go",
+        "@go_sdk//:files",
+    ],
+    embed = ["//ci/launch:lib"],
+)
+
+# The program's own files, without this BUILD file: the slices that run
+# the program with go take them.
+filegroup(
+    name = "srcs",
+    srcs = glob(
+        ["**"],
+        exclude = ["BUILD.bazel"],
+    ),
+    visibility = ["//:__pkg__"],
+)
+
+filegroup(
+    name = "files",
+    srcs = glob(["**"]),
+    visibility = ["//ci:__pkg__"],
+)

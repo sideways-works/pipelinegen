@@ -1,4 +1,4 @@
-// Package releasetest checks the release command (go run ./ci/release) on a small repository of
+// Package releasetest checks the release command (ci/release) on a small repository of
 // its own.
 package releasetest
 

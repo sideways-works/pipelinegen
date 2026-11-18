@@ -14,7 +14,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/release"
 )
 
-const usage = "usage: go run ./ci/release build DIR TAG OUT | publish REPO TAG OUT | tested REPO COMMIT CONTEXT... | notice DIR"
+const usage = "usage: bazel run //ci/release -- build DIR TAG OUT | publish REPO TAG OUT | tested REPO COMMIT CONTEXT... | notice DIR"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)

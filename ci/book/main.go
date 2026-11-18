@@ -27,7 +27,7 @@ func run(args []string) int {
 	}
 
 	if len(args) != 1 {
-		fmt.Fprintln(os.Stderr, "usage: go run ./ci/book [--update] <scratch dir>")
+		fmt.Fprintln(os.Stderr, "usage: bazel run //ci/book -- [--update] <scratch dir>")
 
 		return 2
 	}

@@ -663,7 +663,7 @@ func checkNotice(ctx context.Context, o IO, src, name string) error {
 
 	got, err := os.ReadFile(filepath.Join(src, "NOTICE")) //nolint:gosec // the release's own NOTICE
 	if err != nil || string(got) != want {
-		return refuse("NOTICE is not the one its release files need: write it with `go run ./ci/release notice DIR` in pipelinegen's checkout, and commit it")
+		return refuse("NOTICE is not the one its release files need: write it with `bazel run //ci/release -- notice DIR` in pipelinegen's checkout, and commit it")
 	}
 
 	return nil
