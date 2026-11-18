@@ -67,7 +67,7 @@ func (k *kit) parts(ctx context.Context) {
 	}
 
 	if err != nil || len(f.Record) == 0 {
-		k.check(partsCheck, "the fixture names no recording command (%s: {\"record\": {\"slice\", \"run\", \"parts\"}}), so collect never gathered a slice run twice", kitFile)
+		k.Check(partsCheck, "the fixture names no recording command (%s: {\"record\": {\"slice\", \"run\", \"parts\"}}), so collect never gathered a slice run twice", kitFile)
 
 		return
 	}
@@ -89,7 +89,7 @@ func (k *kit) parts(ctx context.Context) {
 		}
 	}
 
-	k.check(partsCheck, strings.Join(problems, "; "))
+	k.Check(partsCheck, strings.Join(problems, "; "))
 }
 
 func (k *kit) recordParts(ctx context.Context, name string, r kitRecord) []string {
@@ -101,7 +101,7 @@ func (k *kit) recordParts(ctx context.Context, name string, r kitRecord) []strin
 		r.Parts = 2
 	}
 
-	batch := k.work()
+	batch := k.WorkDir()
 	tree, cov := filepath.Join(batch, plugin.ObserveTree), filepath.Join(batch, plugin.ObserveCoverage)
 
 	if err := os.MkdirAll(cov, 0o750); err != nil {
@@ -171,7 +171,7 @@ func (k *kit) collectAt(ctx context.Context, step plugin.Plugin, action, slice, 
 		return nil
 	}
 
-	req := plugin.CollectRequest{Request: step.NewRequest(k.work()), Action: action, Slice: slice, Dir: dir, Stack: stack}
+	req := plugin.CollectRequest{Request: step.NewRequest(k.WorkDir()), Action: action, Slice: slice, Dir: dir, Stack: stack}
 	if err := k.callAs(ctx, step, plugin.CallCollect, req, nil); err != nil {
 		return []string{action + ": " + err.Error()}
 	}
@@ -181,7 +181,7 @@ func (k *kit) collectAt(ctx context.Context, step plugin.Plugin, action, slice, 
 
 func (k *kit) observeParts(ctx context.Context, step plugin.Plugin, tree, slice string, dirs []string) []string {
 	touched := func(dirs []string) (int, error) {
-		work := k.work()
+		work := k.WorkDir()
 
 		var ans plugin.ObserveAnswer
 
@@ -216,11 +216,7 @@ func (k *kit) observeParts(ctx context.Context, step plugin.Plugin, tree, slice 
 
 func (k *kit) callAs(ctx context.Context, p plugin.Plugin, call string, req, answer any) error {
 	err := p.Call(ctx, call, req, answer)
-	if err != nil {
-		k.seen.WriteString(err.Error())
-	}
-
-	k.seen.WriteString(canonical(answer))
+	k.Saw(err, answer)
 
 	return err
 }

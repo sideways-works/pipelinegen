@@ -301,28 +301,28 @@ func connectorProblems(text []byte) []string {
 }
 
 func (h *holdings) report(k *kit) {
-	k.check("every step of the tool's gets the spec's trusted keys", strings.Join(firstFew(h.trusted), "; "))
-	k.check("every step of the tool's is told it runs as a pipeline's step", strings.Join(firstFew(h.step), "; "))
-	k.check("the repository's tasks get their declared secrets and nothing else", strings.Join(firstFew(h.repo), "; "))
-	k.check("with tokens by purpose, planning a change's own tree holds no token that writes", strings.Join(firstFew(h.planning), "; "))
+	k.Check("every step of the tool's gets the spec's trusted keys", strings.Join(firstFew(h.trusted), "; "))
+	k.Check("every step of the tool's is told it runs as a pipeline's step", strings.Join(firstFew(h.step), "; "))
+	k.Check("the repository's tasks get their declared secrets and nothing else", strings.Join(firstFew(h.repo), "; "))
+	k.Check("with tokens by purpose, planning a change's own tree holds no token that writes", strings.Join(firstFew(h.planning), "; "))
 
 	if k.can(plugin.CapSSHKeys) {
-		k.check("a step holds the ssh key of each purpose it holds the token of, and no other", strings.Join(firstFew(h.ssh), "; "))
+		k.Check("a step holds the ssh key of each purpose it holds the token of, and no other", strings.Join(firstFew(h.ssh), "; "))
 	} else {
-		k.skip("a step holds the ssh key of each purpose it holds the token of, and no other", "the runner hands steps no ssh key")
+		k.Skip("a step holds the ssh key of each purpose it holds the token of, and no other", "the runner hands steps no ssh key")
 	}
 
 	if h.packagesBuilt {
-		k.check("every step the runner writes installs its packages first, every cached image is built, and the registry's credentials reach "+
+		k.Check("every step the runner writes installs its packages first, every cached image is built, and the registry's credentials reach "+
 			"no step that runs the repository's code", strings.Join(firstFew(h.packages), "; "))
 	} else {
-		k.skip("every step the runner writes installs its packages first, every cached image is built, and the registry's credentials reach "+
+		k.Skip("every step the runner writes installs its packages first, every cached image is built, and the registry's credentials reach "+
 			"no step that runs the repository's code", "the runner installs no packages")
 	}
 
 	if k.can(plugin.CapConnectorChanges) {
-		k.check("a connector's changes are swept, planned in two steps and handed on", strings.Join(firstFew(h.connector), "; "))
+		k.Check("a connector's changes are swept, planned in two steps and handed on", strings.Join(firstFew(h.connector), "; "))
 	} else {
-		k.skip("a connector's changes are swept, planned in two steps and handed on", "the runner doesn't build a connector's chain")
+		k.Skip("a connector's changes are swept, planned in two steps and handed on", "the runner doesn't build a connector's chain")
 	}
 }

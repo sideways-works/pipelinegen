@@ -35,7 +35,7 @@ func (k *kit) cached(ctx context.Context, claimed []plugin.Claim) {
 	if changed != "" {
 		k.everySetHolding(ctx, claimed, sets, changed)
 	} else {
-		k.skip(heldCheck, "no two sets of the fixture share an input")
+		k.Skip(heldCheck, "no two sets of the fixture share an input")
 	}
 
 	if changed == "" && len(claimed) > 0 {
@@ -47,19 +47,19 @@ func (k *kit) cached(ctx context.Context, claimed []plugin.Claim) {
 	}
 
 	if changed == "" {
-		k.skip(cachedCheck, "the fixture has no file to change")
+		k.Skip(cachedCheck, "the fixture has no file to change")
 
 		return
 	}
 
-	repo := k.work()
+	repo := k.WorkDir()
 	if err := fixtureRepo(ctx, k.o.Tree, repo); err != nil {
-		k.check(cachedCheck, "a git copy of the fixture: %v", err)
+		k.Check(cachedCheck, "a git copy of the fixture: %v", err)
 
 		return
 	}
 
-	answers := k.work()
+	answers := k.WorkDir()
 
 	steps := []struct {
 		what  string
@@ -72,7 +72,7 @@ func (k *kit) cached(ctx context.Context, claimed []plugin.Claim) {
 
 	before, err := k.cachedTree(ctx, repo, answers)
 	if err != nil {
-		k.check(cachedCheck, "cold: %v", err)
+		k.Check(cachedCheck, "cold: %v", err)
 
 		return
 	}
@@ -80,7 +80,7 @@ func (k *kit) cached(ctx context.Context, claimed []plugin.Claim) {
 	for _, st := range steps {
 		if st.edit {
 			if err := appendCommit(ctx, repo, changed); err != nil {
-				k.check(cachedCheck, "changing %s: %v", changed, err)
+				k.Check(cachedCheck, "changing %s: %v", changed, err)
 
 				return
 			}
@@ -88,20 +88,20 @@ func (k *kit) cached(ctx context.Context, claimed []plugin.Claim) {
 
 		warm, err := k.cachedTree(ctx, repo, st.cache)
 		if err != nil {
-			k.check(cachedCheck, "%s: %v", st.what, err)
+			k.Check(cachedCheck, "%s: %v", st.what, err)
 
 			return
 		}
 
-		cold, err := k.cachedTree(ctx, repo, k.work())
+		cold, err := k.cachedTree(ctx, repo, k.WorkDir())
 		if err != nil {
-			k.check(cachedCheck, "cold, %s: %v", st.what, err)
+			k.Check(cachedCheck, "cold, %s: %v", st.what, err)
 
 			return
 		}
 
 		if a, b := treeText(warm), treeText(cold); a != b {
-			k.check(cachedCheck, "%s, the cache served other units or links than the plugin answers cold%s", st.what, k.hint())
+			k.Check(cachedCheck, "%s, the cache served other units or links than the plugin answers cold%s", st.what, k.hint())
 
 			return
 		}
@@ -111,7 +111,7 @@ func (k *kit) cached(ctx context.Context, claimed []plugin.Claim) {
 		}
 	}
 
-	k.check(cachedCheck, "")
+	k.Check(cachedCheck, "")
 }
 
 const endsCheck = "a link changes only when one of its ends does"
@@ -120,7 +120,7 @@ const endsCheck = "a link changes only when one of its ends does"
 // end as changed all the same, so it costs selections, not correctness.
 func (k *kit) endsChanged(before, after *deps.Tree, path string) {
 	if k.desc.Kind == plugin.KindCorrelator && k.o.SBOM == "" {
-		k.skip(endsCheck, "no companion sbom (--sbom): the digests of the links' ends are unknown")
+		k.Skip(endsCheck, "no companion sbom (--sbom): the digests of the links' ends are unknown")
 
 		return
 	}
@@ -156,12 +156,12 @@ func (k *kit) endsChanged(before, after *deps.Tree, path string) {
 	}
 
 	if len(odd) == 0 {
-		k.check(endsCheck, "")
+		k.Check(endsCheck, "")
 
 		return
 	}
 
-	k.out = append(k.out, Result{
+	k.Add(Result{
 		Check: endsCheck, Note: true,
 		Problem: "after " + path + " changed, links changed while neither end did, so planning selects their sources' slices too: " + strings.Join(firstFew(odd), "; "),
 	})
@@ -199,7 +199,7 @@ const (
 func (k *kit) cachedSet(ctx context.Context, dir string) (*plugins.Set, error) {
 	cfg := &config.Config{}
 
-	bin := k.work()
+	bin := k.WorkDir()
 	link := func(name, exe string) error {
 		return os.Symlink(exe, filepath.Join(bin, name))
 	}
@@ -220,7 +220,7 @@ func (k *kit) cachedSet(ctx context.Context, dir string) (*plugins.Set, error) {
 
 	return plugins.Load(ctx, plugins.Options{
 		Config: cfg, Dir: bin, Cache: filepath.Dir(k.p.Cache), Answers: &plugincache.Cache{Dir: dir},
-		Work: k.work(), Described: map[string]plugin.Description{kitPlugin: k.desc},
+		Work: k.WorkDir(), Described: map[string]plugin.Description{kitPlugin: k.desc},
 	})
 }
 
@@ -266,7 +266,7 @@ func (k *kit) answerSets(ctx context.Context, claimed []plugin.Claim) []plugin.S
 
 	var ans plugin.LinksAnswer
 
-	work := k.work()
+	work := k.WorkDir()
 
 	if k.call(ctx, plugin.CallLinks, plugin.TreeRequest{Request: k.p.NewRequest(work), Tree: k.o.Tree, Claimed: claimed}, &ans) != nil {
 		return nil
@@ -293,9 +293,9 @@ func (k *kit) everySetHolding(ctx context.Context, claimed []plugin.Claim, cold 
 	} else {
 		var ans plugin.LinksAnswer
 
-		work := k.work()
+		work := k.WorkDir()
 		if err := k.call(ctx, plugin.CallLinks, plugin.TreeRequest{Request: k.p.NewRequest(work), Tree: k.o.Tree, Paths: []string{path}, Claimed: claimed}, &ans); err != nil {
-			k.check(heldCheck, "links about %s: %v", path, err)
+			k.Check(heldCheck, "links about %s: %v", path, err)
 
 			return
 		}
@@ -315,7 +315,7 @@ func (k *kit) everySetHolding(ctx context.Context, claimed []plugin.Claim, cold 
 		}
 	}
 
-	k.check(heldCheck, ifNot(len(missing) == 0, "asked about "+path+", it left out the sets of "+strings.Join(missing, ", ")))
+	k.Check(heldCheck, ifNot(len(missing) == 0, "asked about "+path+", it left out the sets of "+strings.Join(missing, ", ")))
 }
 
 func sharedInput(sets []plugin.Set) string {

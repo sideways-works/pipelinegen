@@ -23,11 +23,11 @@ const staleHashParam = "PIPELINEGEN_PIPELINE_SHA256"
 func (k *kit) placement(ctx context.Context, root string, placed []byte) {
 	const name = placementCheck
 
-	k.check("describe says it reads its placement from its own config", ifNot(k.can(plugin.CapPlacement),
+	k.Check("describe says it reads its placement from its own config", ifNot(k.can(plugin.CapPlacement),
 		"no "+plugin.CapPlacement+" capability: pipelinegen refuses a runner without it"))
 
 	if _, ok := k.o.Config[config.PlacementKey]; !ok {
-		k.skip(name, "the config the kit was given has no "+config.PlacementKey)
+		k.Skip(name, "the config the kit was given has no "+config.PlacementKey)
 
 		return
 	}
@@ -36,18 +36,18 @@ func (k *kit) placement(ctx context.Context, root string, placed []byte) {
 	bare.Config = maps.Clone(k.o.Config)
 	delete(bare.Config, config.PlacementKey)
 
-	work := k.work()
+	work := k.WorkDir()
 
 	var ans plugin.PipelineAnswer
 	if err := k.call(ctx, plugin.CallPipeline, plugin.PipelineRequest{Request: bare.NewRequest(work), Spec: Spec(), Root: root}, &ans); err != nil || len(ans.Files) != 1 {
-		k.check(name, "the pipeline without the placement: %v (%d files)", err, len(ans.Files))
+		k.Check(name, "the pipeline without the placement: %v (%d files)", err, len(ans.Files))
 
 		return
 	}
 
 	unplaced, err := os.ReadFile(filepath.Join(work, filepath.Clean(ans.Files[0]))) //nolint:gosec // inside the call's work directory
 	if err != nil {
-		k.check(name, "%v", err)
+		k.Check(name, "%v", err)
 
 		return
 	}
@@ -57,13 +57,13 @@ func (k *kit) placement(ctx context.Context, root string, placed []byte) {
 
 	switch {
 	case errA != nil || errB != nil:
-		k.check(name, "a pipeline isn't YAML: %v %v", errA, errB)
+		k.Check(name, "a pipeline isn't YAML: %v %v", errA, errB)
 	case a != b:
-		k.check(name, "the pipelines with and without the placement differ in more than worker tags")
+		k.Check(name, "the pipelines with and without the placement differ in more than worker tags")
 	case canonicalYAML(placed) == canonicalYAML(unplaced):
-		k.check(name, "the placement moved no step: give the kit a placement that places one")
+		k.Check(name, "the placement moved no step: give the kit a placement that places one")
 	default:
-		k.check(name, "")
+		k.Check(name, "")
 	}
 }
 

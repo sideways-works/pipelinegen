@@ -192,14 +192,14 @@ func (k *kit) connectorFixture() (*connectorFixture, error) {
 
 func (k *kit) connector(ctx context.Context) {
 	if k.o.Tree == "" {
-		k.check("the fixture exercises every call the connector declares", "no --tree, so identify, links and the calls of its capabilities never ran")
+		k.Check("the fixture exercises every call the connector declares", "no --tree, so identify, links and the calls of its capabilities never ran")
 
 		return
 	}
 
 	fx, err := k.connectorFixture()
 	if err != nil {
-		k.check("the fixture names the connector's host", "%v", err)
+		k.Check("the fixture names the connector's host", "%v", err)
 
 		return
 	}
@@ -219,7 +219,7 @@ func (k *kit) connector(ctx context.Context) {
 	var links plugin.WebLinks
 
 	err = k.exchangeCall(ctx, e, plugin.CallLinks, k.args(fx, plugin.CallLinks, host), &links)
-	k.check("links answers without a request", errText(err))
+	k.Check("links answers without a request", errText(err))
 
 	if k.can(plugin.CapChanges) {
 		k.changes(ctx, e, fx, host)
@@ -231,7 +231,7 @@ func (k *kit) connector(ctx context.Context) {
 	stray := host.stray
 	host.mu.Unlock()
 
-	k.check("every request finds a response in the fixture", ifNot(len(stray) == 0, "none for "+strings.Join(firstFew(stray), ", ")))
+	k.Check("every request finds a response in the fixture", ifNot(len(stray) == 0, "none for "+strings.Join(firstFew(stray), ", ")))
 }
 
 func (k *kit) exchange(host *fakeHost) (*connector.Exchange, bool) {
@@ -256,7 +256,7 @@ func (k *kit) exchange(host *fakeHost) (*connector.Exchange, bool) {
 
 	hosts, err := connector.Allowed(host.URL, k.desc.APIHosts, []string{host.URL})
 	if err != nil {
-		k.check("the fixture names the connector's host", "%v", err)
+		k.Check("the fixture names the connector's host", "%v", err)
 
 		return nil, false
 	}
@@ -280,12 +280,8 @@ func (k *kit) args(fx *connectorFixture, call string, host *fakeHost) json.RawMe
 }
 
 func (k *kit) exchangeCall(ctx context.Context, e *connector.Exchange, call string, args json.RawMessage, answer any) error {
-	err := e.Call(ctx, call, k.work(), args, answer)
-	if err != nil {
-		k.seen.WriteString(err.Error())
-	}
-
-	k.seen.WriteString(canonical(answer))
+	err := e.Call(ctx, call, k.WorkDir(), args, answer)
+	k.Saw(err, answer)
 
 	return err
 }
@@ -299,20 +295,20 @@ func (k *kit) identify(ctx context.Context, e *connector.Exchange, remote string
 
 	switch {
 	case err != nil:
-		k.check("identify claims the fixture's remote", "%v", err)
+		k.Check("identify claims the fixture's remote", "%v", err)
 	case !mine.Mine || mine.Repository == "":
-		k.check("identify claims the fixture's remote", "it answered %s", canonical(mine))
+		k.Check("identify claims the fixture's remote", "it answered %s", canonical(mine))
 	default:
-		k.check("identify claims the fixture's remote", "")
+		k.Check("identify claims the fixture's remote", "")
 	}
 
 	err = k.exchangeCall(ctx, e, plugin.CallIdentify, mustJSON(plugin.IdentifyArgs{Remote: foreignRemote}), &theirs)
 
 	switch {
 	case err != nil:
-		k.check("identify disowns a remote elsewhere", "%v", err)
+		k.Check("identify disowns a remote elsewhere", "%v", err)
 	default:
-		k.check("identify disowns a remote elsewhere", ifNot(!theirs.Mine, "it claimed "+foreignRemote))
+		k.Check("identify disowns a remote elsewhere", ifNot(!theirs.Mine, "it claimed "+foreignRemote))
 	}
 }
 
@@ -320,19 +316,19 @@ func (k *kit) identify(ctx context.Context, e *connector.Exchange, remote string
 // fixture shows from a fork admitted to run.
 func (k *kit) changes(ctx context.Context, e *connector.Exchange, fx *connectorFixture, host *fakeHost) {
 	if _, ok := fx.Calls[plugin.CallChanges]; !ok {
-		k.check("the fixture exercises every call the connector declares", "it declares changes, and the fixture names no arguments for it")
+		k.Check("the fixture exercises every call the connector declares", "it declares changes, and the fixture names no arguments for it")
 
 		return
 	}
 
 	var a plugin.ChangesAnswer
 	if err := k.exchangeCall(ctx, e, plugin.CallChanges, k.args(fx, plugin.CallChanges, host), &a); err != nil {
-		k.check("changes answers", "%v", err)
+		k.Check("changes answers", "%v", err)
 
 		return
 	}
 
-	k.check("changes answers", ifNot(len(a.Changes) > 0, "it listed no change; the fixture's should show some"))
+	k.Check("changes answers", ifNot(len(a.Changes) > 0, "it listed no change; the fixture's should show some"))
 
 	byID := map[string]plugin.Change{}
 
@@ -353,16 +349,16 @@ func (k *kit) changes(ctx context.Context, e *connector.Exchange, fx *connectorF
 		byID[c.ID] = c
 	}
 
-	k.check("every change is well formed and says where it comes from", strings.Join(firstFew(problems), "; "))
+	k.Check("every change is well formed and says where it comes from", strings.Join(firstFew(problems), "; "))
 
 	if !k.can(plugin.CapForks) {
-		k.skip("a change from a fork never runs", "no forks capability: every change is unknown, and none runs")
+		k.Skip("a change from a fork never runs", "no forks capability: every change is unknown, and none runs")
 
 		return
 	}
 
 	if len(fx.Forks) == 0 && (fx.NoForks == "" || len(fx.Same) == 0) {
-		k.check("a change from a fork never runs", "the connector declares forks, and the fixture names no change from a fork (\"forks\": [ids]), "+
+		k.Check("a change from a fork never runs", "the connector declares forks, and the fixture names no change from a fork (\"forks\": [ids]), "+
 			"or says why its host has none (\"no_forks\") and names changes from the same repository (\"same\": [ids])")
 
 		return
@@ -387,7 +383,7 @@ func (k *kit) changes(ctx context.Context, e *connector.Exchange, fx *connectorF
 		}
 	}
 
-	k.check("a change from a fork never runs", strings.Join(problems, "; "))
+	k.Check("a change from a fork never runs", strings.Join(problems, "; "))
 }
 
 func (k *kit) reports(ctx context.Context, e *connector.Exchange, fx *connectorFixture, host *fakeHost) {
@@ -425,7 +421,7 @@ func (k *kit) reports(ctx context.Context, e *connector.Exchange, fx *connectorF
 		}
 
 		if _, ok := fx.Calls[c.name]; !ok {
-			k.check("the fixture exercises every call the connector declares", "it declares %s, and the fixture names no arguments for %s", c.capability, c.name)
+			k.Check("the fixture exercises every call the connector declares", "it declares %s, and the fixture names no arguments for %s", c.capability, c.name)
 
 			continue
 		}
@@ -434,11 +430,11 @@ func (k *kit) reports(ctx context.Context, e *connector.Exchange, fx *connectorF
 
 		switch {
 		case err != nil:
-			k.check(c.name+" answers", "%v", err)
+			k.Check(c.name+" answers", "%v", err)
 		case c.check != nil:
-			k.check(c.name+" answers", c.check())
+			k.Check(c.name+" answers", c.check())
 		default:
-			k.check(c.name+" answers", "")
+			k.Check(c.name+" answers", "")
 		}
 	}
 }

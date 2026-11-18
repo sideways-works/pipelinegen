@@ -20,14 +20,10 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/plugins"
 	"github.com/sideways-works/pipelinegen/internal/toolcalls"
 	"github.com/sideways-works/pipelinegen/plugin"
+	pkit "github.com/sideways-works/plugkit/kit"
 )
 
-type Result struct {
-	Check   string
-	Problem string
-	Skipped bool
-	Note    bool
-}
+type Result = pkit.Result
 
 type Options struct {
 	Path string
@@ -49,14 +45,20 @@ type Options struct {
 }
 
 type kit struct {
+	*pkit.Harness
+
 	o       Options
 	p       plugin.Plugin
 	desc    plugin.Description
-	out     []Result
-	n       int
-	seen    strings.Builder
 	copies  copies
 	touched []string
+}
+
+// current calls the plugin as the kit has it now: describe tells the caches it gets.
+type current struct{ k *kit }
+
+func (c current) Call(ctx context.Context, call string, req, answer any) error {
+	return c.k.p.Call(ctx, call, req, answer)
 }
 
 // Canary is what the kit puts in the token's variable: a plugin never gets
@@ -64,14 +66,7 @@ type kit struct {
 const Canary = "pipelinegen-kit-canary-0f8c2e"
 
 func (k *kit) call(ctx context.Context, call string, req any, answer any) error {
-	err := k.p.Call(ctx, call, req, answer)
-	if err != nil {
-		k.seen.WriteString(err.Error())
-	}
-
-	k.seen.WriteString(canonical(answer))
-
-	return err
+	return k.Call(ctx, call, req, answer)
 }
 
 func (k *kit) can(call string) bool { return slices.Contains(k.desc.Capabilities, call) }
@@ -90,22 +85,23 @@ func Run(ctx context.Context, o Options) []Result {
 	o.Tree, o.Path, o.Work, o.Cache = absOrEmpty(o.Tree), absOrEmpty(o.Path), absOrEmpty(o.Work), absOrEmpty(o.Cache)
 
 	k := &kit{o: o, p: plugin.Plugin{Name: filepath.Base(o.Path), Path: o.Path, Config: o.Config, Cache: o.Cache}}
+	k.Harness = &pkit.Harness{Plugin: current{k}, Work: o.Work, Canary: Canary}
 
 	if k.p.Cache == "" {
 		k.p.Cache = filepath.Join(o.Work, "cache")
 	}
 
-	restore := setCanary()
+	restore := pkit.SetEnv("GITHUB_TOKEN", Canary)
 	defer restore()
 
 	if err := pinToolchains(o.Tree, o.Work); err != nil {
-		k.check("the fixture's version files are copied to the work directory", "%v", err)
+		k.Check("the fixture's version files are copied to the work directory", "%v", err)
 
-		return k.out
+		return k.Results()
 	}
 
 	if !k.describe(ctx) {
-		return k.out
+		return k.Results()
 	}
 
 	k.p.Caches = k.desc.Caches
@@ -126,13 +122,9 @@ func Run(ctx context.Context, o Options) []Result {
 		k.driverChecks(ctx)
 	}
 
-	k.check("no answer or message carries the token", ifNot(!strings.Contains(k.seen.String(), Canary), "the token's value came back"))
+	k.CheckCanary()
 
-	return k.out
-}
-
-func (k *kit) skip(name, why string) {
-	k.out = append(k.out, Result{Check: name, Problem: why, Skipped: true})
+	return k.Results()
 }
 
 // unexercised fails a plugin whose fixture never let the kit call what it
@@ -150,32 +142,16 @@ func (k *kit) unexercised() bool {
 		}
 	}
 
-	k.check("the fixture exercises every call the plugin declares", "no --tree, so %s never ran", strings.Join(calls, ", "))
+	k.Check("the fixture exercises every call the plugin declares", "no --tree, so %s never ran", strings.Join(calls, ", "))
 
 	return true
 }
 
-func (k *kit) check(name, problem string, args ...any) {
-	if problem != "" && len(args) > 0 {
-		problem = fmt.Sprintf(problem, args...)
-	}
-
-	k.out = append(k.out, Result{Check: name, Problem: problem})
-}
-
-func (k *kit) work() string {
-	k.n++
-	dir := filepath.Join(k.o.Work, fmt.Sprintf("call-%d", k.n))
-	_ = os.MkdirAll(dir, 0o750) //nolint:errcheck // a failure shows as the call's own
-
-	return dir
-}
-
-func (k *kit) request() plugin.Request { return k.p.NewRequest(k.work()) }
+func (k *kit) request() plugin.Request { return k.p.NewRequest(k.WorkDir()) }
 
 func (k *kit) describe(ctx context.Context) bool {
 	if err := k.call(ctx, plugin.CallDescribe, k.request(), &k.desc); err != nil {
-		k.check("describe answers", "%v", err)
+		k.Check("describe answers", "%v", err)
 
 		return false
 	}
@@ -232,10 +208,10 @@ func (k *kit) describe(ctx context.Context) bool {
 		problems = append(problems, describeDriver(d)...)
 	}
 
-	k.check("describe answers the protocol", strings.Join(problems, "; "))
+	k.Check("describe answers the protocol", strings.Join(problems, "; "))
 
 	if slices.Contains(d.Capabilities, plugin.CallBind) && !plugins.ToolchainsTold(d) {
-		k.out = append(k.out, Result{
+		k.Add(Result{
 			Check: "bind answers can be cached", Note: true,
 			Problem: fmt.Sprintf("it needs %s and reports no toolchains for them, so its bind is asked on every plan", strings.Join(d.Needs, ", ")),
 		})
@@ -254,22 +230,11 @@ func (k *kit) refusals(ctx context.Context) {
 		plugin.KindDriver:     plugin.CallUnits,
 	}
 
-	for _, call := range []string{"no-such-call", others[k.desc.Kind]} {
-		err := k.call(ctx, call, k.request(), nil)
-
-		switch {
-		case err == nil:
-			k.check("refuses "+call, "answered it")
-		case errors.Is(err, plugin.ErrCantTell):
-			k.check("refuses "+call, "said it can't tell, which is an answer")
-		default:
-			k.check("refuses "+call, "")
-		}
-	}
+	k.Refuses(ctx, func() any { return k.request() }, "no-such-call", others[k.desc.Kind])
 }
 
 func (k *kit) runner(ctx context.Context) {
-	root := k.work()
+	root := k.WorkDir()
 
 	var (
 		texts   [][]byte
@@ -277,26 +242,26 @@ func (k *kit) runner(ctx context.Context) {
 	)
 
 	for range 2 {
-		work := k.work()
+		work := k.WorkDir()
 
 		var ans plugin.PipelineAnswer
 
 		req := plugin.PipelineRequest{Request: k.p.NewRequest(work), Spec: Spec(), Root: root}
 		if err := k.call(ctx, plugin.CallPipeline, req, &ans); err != nil {
-			k.check("pipeline answers", "%v", err)
+			k.Check("pipeline answers", "%v", err)
 
 			return
 		}
 
 		if len(ans.Files) != 1 {
-			k.check("pipeline answers one file", "%d files", len(ans.Files))
+			k.Check("pipeline answers one file", "%d files", len(ans.Files))
 
 			return
 		}
 
 		text, err := os.ReadFile(filepath.Join(work, filepath.Clean(ans.Files[0]))) //nolint:gosec // inside the call's work directory
 		if err != nil || len(text) == 0 {
-			k.check("pipeline answers one file", "the file is missing or empty: %v", err)
+			k.Check("pipeline answers one file", "the file is missing or empty: %v", err)
 
 			return
 		}
@@ -305,15 +270,15 @@ func (k *kit) runner(ctx context.Context) {
 		notices = append(notices, ans.Notices...)
 	}
 
-	k.check("pipeline answers one file", "")
-	k.check("the pipeline's notices are one line each", brokenNotices(notices))
-	k.check("pipeline is the same every time", ifNot(bytes.Equal(texts[0], texts[1]), "two calls wrote different pipelines"))
+	k.Check("pipeline answers one file", "")
+	k.Check("the pipeline's notices are one line each", brokenNotices(notices))
+	k.Check("pipeline is the same every time", ifNot(bytes.Equal(texts[0], texts[1]), "two calls wrote different pipelines"))
 	k.placement(ctx, root, texts[0])
 
-	k.check("the pipeline references only the token, the declared secrets and the repository's own vars", strayVars(texts[0], Spec()))
+	k.Check("the pipeline references only the token, the declared secrets and the repository's own vars", strayVars(texts[0], Spec()))
 
 	if k.o.Commands == nil {
-		k.skip("the pipeline's steps call what the tool has and mount what it reads", "no command table given")
+		k.Skip("the pipeline's steps call what the tool has and mount what it reads", "no command table given")
 
 		return
 	}
@@ -359,18 +324,18 @@ func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 		text := plain
 
 		if v.name != "" {
-			work := k.work()
+			work := k.WorkDir()
 
 			var ans plugin.PipelineAnswer
 			if err := k.call(ctx, plugin.CallPipeline, plugin.PipelineRequest{Request: k.p.NewRequest(work), Spec: v.spec, Root: root}, &ans); err != nil || len(ans.Files) != 1 {
-				k.check("pipeline answers for the spec "+v.name, "%v (%d files)", err, len(ans.Files))
+				k.Check("pipeline answers for the spec "+v.name, "%v (%d files)", err, len(ans.Files))
 
 				continue
 			}
 
 			var err error
 			if text, err = os.ReadFile(filepath.Join(work, filepath.Clean(ans.Files[0]))); err != nil { //nolint:gosec // inside the call's work directory
-				k.check("pipeline answers for the spec "+v.name, "%v", err)
+				k.Check("pipeline answers for the spec "+v.name, "%v", err)
 
 				continue
 			}
@@ -401,9 +366,9 @@ func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 		}
 	}
 
-	k.check("the pipeline calls only commands and flags the tool has", strings.Join(firstFew(calls), "; "))
-	k.check("every step mounts what its pipelinegen command reads and keeps what it writes", strings.Join(firstFew(mounts), "; "))
-	k.check("the pipeline has every step the contracts name", ifNot(len(missing) == 0, "no step runs pipelinegen "+strings.Join(missing, ", pipelinegen ")))
+	k.Check("the pipeline calls only commands and flags the tool has", strings.Join(firstFew(calls), "; "))
+	k.Check("every step mounts what its pipelinegen command reads and keeps what it writes", strings.Join(firstFew(mounts), "; "))
+	k.Check("the pipeline has every step the contracts name", ifNot(len(missing) == 0, "no step runs pipelinegen "+strings.Join(missing, ", pipelinegen ")))
 }
 
 type shapes struct {
@@ -420,16 +385,16 @@ func (sh *shapes) add(ctx context.Context, v specVariant, text []byte) {
 }
 
 func (k *kit) shapeChecks(sh shapes) {
-	k.check("no step takes a lock, even for an older tool's spec that holds one: none runs pipelinegen lock or unlock", strings.Join(firstFew(sh.locks), "; "))
-	k.check("every step the pipeline runs has a time limit", strings.Join(firstFew(sh.limits), "; "))
-	k.check("no job is serialized unless the spec asks, a planning job never", strings.Join(firstFew(sh.queues), "; "))
+	k.Check("no step takes a lock, even for an older tool's spec that holds one: none runs pipelinegen lock or unlock", strings.Join(firstFew(sh.locks), "; "))
+	k.Check("every step the pipeline runs has a time limit", strings.Join(firstFew(sh.limits), "; "))
+	k.Check("no job is serialized unless the spec asks, a planning job never", strings.Join(firstFew(sh.queues), "; "))
 
 	if k.can(plugin.CapContinuous) {
-		k.check("a continuous run's suite jobs start only for a commit its planning job planned, which decides before its prepare", strings.Join(firstFew(sh.follows), "; "))
+		k.Check("a continuous run's suite jobs start only for a commit its planning job planned, which decides before its prepare", strings.Join(firstFew(sh.follows), "; "))
 	}
 
-	k.check("a pull request run's suite jobs start only for a head its planning job or its sweep hands on, through the gate plan --from writes", strings.Join(firstFew(sh.handed), "; "))
-	k.check("no job passes when a report step could not write the run's records (exit 4)", strings.Join(firstFew(sh.unrecorded), "; "))
+	k.Check("a pull request run's suite jobs start only for a head its planning job or its sweep hands on, through the gate plan --from writes", strings.Join(firstFew(sh.handed), "; "))
+	k.Check("no job passes when a report step could not write the run's records (exit 4)", strings.Join(firstFew(sh.unrecorded), "; "))
 }
 
 func appendLabelled(out []string, v specVariant, problems []string) []string {
@@ -626,7 +591,7 @@ func (k *kit) sbom(ctx context.Context) {
 
 	again, ok := k.units(ctx, nil, claimed)
 	if ok {
-		k.check("units are the same every time", ifNot(canonical(full) == canonical(again), "two calls answered differently"))
+		k.Check("units are the same every time", ifNot(canonical(full) == canonical(again), "two calls answered differently"))
 	}
 
 	k.checkUnits(full)
@@ -670,7 +635,7 @@ func (k *kit) claimedOnly(claimed []plugin.Claim, sets []plugin.Set, answer func
 		}
 	}
 
-	k.check("a set's inputs are files of the tree", ifNot(len(missing) == 0,
+	k.Check("a set's inputs are files of the tree", ifNot(len(missing) == 0,
 		"no such file, and not listed as absent: "+strings.Join(firstFew(missing), ", ")))
 
 	keep := map[string]bool{kitFile: true}
@@ -687,7 +652,7 @@ func (k *kit) claimedOnly(claimed []plugin.Claim, sets []plugin.Set, answer func
 		}
 	}
 
-	copyDir := k.work()
+	copyDir := k.WorkDir()
 
 	err := filepath.WalkDir(k.o.Tree, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -715,7 +680,7 @@ func (k *kit) claimedOnly(claimed []plugin.Claim, sets []plugin.Set, answer func
 		return os.WriteFile(filepath.Join(copyDir, rel), data, 0o600) //nolint:gosec // rel is a path the walk found under the fixture
 	})
 	if err != nil {
-		k.check("answers depend only on claimed files", "copying the fixture: %v", err)
+		k.Check("answers depend only on claimed files", "copying the fixture: %v", err)
 
 		return
 	}
@@ -725,7 +690,7 @@ func (k *kit) claimedOnly(claimed []plugin.Claim, sets []plugin.Set, answer func
 
 	defer func() { k.o.Tree = tree }()
 
-	k.check("answers depend only on claimed files", answer())
+	k.Check("answers depend only on claimed files", answer())
 }
 
 func (k *kit) detect(ctx context.Context) []plugin.Claim {
@@ -734,7 +699,7 @@ func (k *kit) detect(ctx context.Context) []plugin.Claim {
 	}
 
 	paths := k.candidates()
-	work := k.work()
+	work := k.WorkDir()
 
 	var ans plugin.DetectAnswer
 
@@ -744,7 +709,7 @@ func (k *kit) detect(ctx context.Context) []plugin.Claim {
 	}
 
 	if err != nil {
-		k.check("detect answers", "%v", err)
+		k.Check("detect answers", "%v", err)
 
 		return nil
 	}
@@ -761,8 +726,8 @@ func (k *kit) detect(ctx context.Context) []plugin.Claim {
 		}
 	}
 
-	k.check("detect claims only what it was asked about, each in a role", strings.Join(problems, "; "))
-	k.check("detect claims something in the fixture", ifNot(len(ans.Claims) > 0, "it claimed nothing"))
+	k.Check("detect claims only what it was asked about, each in a role", strings.Join(problems, "; "))
+	k.Check("detect claims something in the fixture", ifNot(len(ans.Claims) > 0, "it claimed nothing"))
 
 	return ans.Claims
 }
@@ -797,7 +762,7 @@ func (k *kit) candidates() []string {
 func (k *kit) units(ctx context.Context, paths []string, claimed []plugin.Claim) (plugin.UnitsAnswer, bool) {
 	var ans plugin.UnitsAnswer
 
-	work := k.work()
+	work := k.WorkDir()
 
 	req := plugin.TreeRequest{Request: k.p.NewRequest(work), Tree: k.o.Tree, Paths: paths, Claimed: claimed}
 
@@ -815,7 +780,7 @@ func (k *kit) units(ctx context.Context, paths []string, claimed []plugin.Claim)
 	}
 
 	if err != nil {
-		k.check("units answers", "%v", err)
+		k.Check("units answers", "%v", err)
 
 		return ans, false
 	}
@@ -864,8 +829,8 @@ func (k *kit) checkUnits(a plugin.UnitsAnswer) {
 
 	problems = append(problems, k.linkProblems(links, ids)...)
 
-	k.check("units are well formed", strings.Join(firstFew(problems), "; "))
-	k.check("units describe something in the fixture", ifNot(len(units) > 0, "no units"))
+	k.Check("units are well formed", strings.Join(firstFew(problems), "; "))
+	k.Check("units describe something in the fixture", ifNot(len(units) > 0, "no units"))
 }
 
 func (k *kit) linkProblems(links []plugin.Link, ids map[string]bool) []string {
@@ -907,7 +872,7 @@ func (k *kit) checkComplete(a plugin.UnitsAnswer, claimed []plugin.Claim) {
 		}
 	}
 
-	k.check("files said to be covered whole are claimed ones", strings.Join(firstFew(problems), "; "))
+	k.Check("files said to be covered whole are claimed ones", strings.Join(firstFew(problems), "; "))
 }
 
 func (k *kit) checkAnchors(a plugin.UnitsAnswer, claimed []plugin.Claim) {
@@ -925,7 +890,7 @@ func (k *kit) checkAnchors(a plugin.UnitsAnswer, claimed []plugin.Claim) {
 		}
 	}
 
-	k.check("a claim's anchor is one of the plugin's units", strings.Join(firstFew(problems), "; "))
+	k.Check("a claim's anchor is one of the plugin's units", strings.Join(firstFew(problems), "; "))
 }
 
 // checkPaths: an answer for some paths agrees with the whole answer, which
@@ -974,7 +939,7 @@ func (k *kit) checkPaths(ctx context.Context, full plugin.UnitsAnswer, claimed [
 		}
 	}
 
-	k.check("an answer for some paths agrees with the whole tree's", strings.Join(firstFew(problems), "; "))
+	k.Check("an answer for some paths agrees with the whole tree's", strings.Join(firstFew(problems), "; "))
 }
 
 func (k *kit) correlator(ctx context.Context) {
@@ -991,9 +956,9 @@ func (k *kit) correlator(ctx context.Context) {
 		k.checkCopies()
 	} else {
 		// the core caches units and links only
-		k.skip(cachedCheck, "it answers no links")
-		k.skip(heldCheck, "it answers no links")
-		k.skip(unitsCheck, "it answers no links")
+		k.Skip(cachedCheck, "it answers no links")
+		k.Skip(heldCheck, "it answers no links")
+		k.Skip(unitsCheck, "it answers no links")
 	}
 
 	if k.can(plugin.CallBind) {
@@ -1021,7 +986,7 @@ func (k *kit) links(ctx context.Context, claimed []plugin.Claim) {
 	var answers [2]plugin.LinksAnswer
 
 	for i := range answers {
-		work := k.work()
+		work := k.WorkDir()
 
 		req := plugin.TreeRequest{Request: k.p.NewRequest(work), Tree: k.o.Tree, Claimed: claimed}
 
@@ -1035,7 +1000,7 @@ func (k *kit) links(ctx context.Context, claimed []plugin.Claim) {
 		}
 
 		if err != nil {
-			k.check("links answers", "%v", err)
+			k.Check("links answers", "%v", err)
 
 			return
 		}
@@ -1043,12 +1008,12 @@ func (k *kit) links(ctx context.Context, claimed []plugin.Claim) {
 		answers[i].Files = nil
 	}
 
-	k.check("links are the same every time", ifNot(canonical(answers[0]) == canonical(answers[1]), "two calls answered differently"))
+	k.Check("links are the same every time", ifNot(canonical(answers[0]) == canonical(answers[1]), "two calls answered differently"))
 
 	first := answers[0]
 
 	k.claimedOnly(claimed, first.Sets, func() string {
-		work := k.work()
+		work := k.WorkDir()
 
 		var other plugin.LinksAnswer
 
@@ -1075,7 +1040,7 @@ func (k *kit) links(ctx context.Context, claimed []plugin.Claim) {
 		links = append(links, s.Links...)
 	}
 
-	k.check("links are well formed", strings.Join(firstFew(k.linkProblems(links, nil)), "; "))
+	k.Check("links are well formed", strings.Join(firstFew(k.linkProblems(links, nil)), "; "))
 }
 
 type bindRecord struct {
@@ -1088,7 +1053,7 @@ func (k *kit) bind(ctx context.Context, claimed []plugin.Claim) {
 	var answers [2]string
 
 	for i := range answers {
-		work := k.work()
+		work := k.WorkDir()
 
 		req := map[string]any{
 			"protocol": plugin.Protocol, "work": work, "cache": k.p.Cache, "config": k.o.Config,
@@ -1098,7 +1063,7 @@ func (k *kit) bind(ctx context.Context, claimed []plugin.Claim) {
 
 		var ans plugin.Answer
 		if err := k.call(ctx, plugin.CallBind, req, &ans); err != nil {
-			k.check("bind answers", "%v", err)
+			k.Check("bind answers", "%v", err)
 
 			return
 		}
@@ -1125,12 +1090,12 @@ func (k *kit) bind(ctx context.Context, claimed []plugin.Claim) {
 			problems = append(problems, err.Error())
 		}
 
-		k.check("bind's files are well formed", strings.Join(firstFew(problems), "; "))
+		k.Check("bind's files are well formed", strings.Join(firstFew(problems), "; "))
 
 		answers[i] = canonical(ids) + canonical(records)
 	}
 
-	k.check("bind is the same every time", ifNot(answers[0] == answers[1], "two calls answered differently"))
+	k.Check("bind is the same every time", ifNot(answers[0] == answers[1], "two calls answered differently"))
 }
 
 const kitFile = ".pipelinegen-kit.json"
@@ -1162,20 +1127,20 @@ func (k *kit) observe(ctx context.Context) {
 		outside = append(outside, fmt.Sprintf("config.%s = %q is under neither %s/ nor %s/", r.Key, r.Value, plugin.ObserveTree, plugin.ObserveCoverage))
 	}
 
-	k.check("observe reads only what the step that observes sees (the tree and the coverage output)", strings.Join(outside, "; "))
+	k.Check("observe reads only what the step that observes sees (the tree and the coverage output)", strings.Join(outside, "; "))
 
 	// dirs[0] is the setup's, the rest the slice's parts
-	setup, missing := k.work(), filepath.Join(k.work(), "missing")
+	setup, missing := k.WorkDir(), filepath.Join(k.WorkDir(), "missing")
 
 	err := k.observeCall(ctx, plugin.ObserveRequest{Request: k.request(), Tree: k.o.Tree, Slice: "s", Dirs: []string{setup, missing}}, &plugin.ObserveAnswer{})
-	k.check("observe can't tell from a missing part", ifNot(errors.Is(err, plugin.ErrCantTell), fmt.Sprintf("it answered %v", err)))
+	k.Check("observe can't tell from a missing part", ifNot(errors.Is(err, plugin.ErrCantTell), fmt.Sprintf("it answered %v", err)))
 
-	empty := k.work()
+	empty := k.WorkDir()
 
 	var ans plugin.ObserveAnswer
 
 	err = k.observeCall(ctx, plugin.ObserveRequest{Request: k.request(), Tree: k.o.Tree, Slice: "s", Dirs: []string{setup, empty}}, &ans)
-	k.check("observe can't tell from an empty directory", ifNot(errors.Is(err, plugin.ErrCantTell), fmt.Sprintf("it answered %v with %d touched: an empty directory is no evidence of a recording", err, len(ans.Touched))))
+	k.Check("observe can't tell from an empty directory", ifNot(errors.Is(err, plugin.ErrCantTell), fmt.Sprintf("it answered %v with %d touched: an empty directory is no evidence of a recording", err, len(ans.Touched))))
 
 	k.observeFixture(ctx)
 }
@@ -1194,7 +1159,7 @@ func (k *kit) observeFixture(ctx context.Context) {
 
 	data, err := os.ReadFile(filepath.Join(k.o.Tree, kitFile))
 	if err != nil || json.Unmarshal(data, &f) != nil || f.Observe == nil || len(f.Observe.Dirs) < 2 {
-		k.check("observe attributes the fixture's recording", "the fixture names no recording (%s: {\"observe\": {\"slice\", \"dirs\"}}), so observe never saw one", kitFile)
+		k.Check("observe attributes the fixture's recording", "the fixture names no recording (%s: {\"observe\": {\"slice\", \"dirs\"}}), so observe never saw one", kitFile)
 
 		return
 	}
@@ -1205,7 +1170,7 @@ func (k *kit) observeFixture(ctx context.Context) {
 	}
 
 	observe := func(tree string, dirs []string) (plugin.ObserveAnswer, error) {
-		work := k.work()
+		work := k.WorkDir()
 
 		var ans plugin.ObserveAnswer
 
@@ -1221,23 +1186,23 @@ func (k *kit) observeFixture(ctx context.Context) {
 
 	k.touched = ans.Touched
 	if err != nil {
-		k.check("observe attributes the fixture's recording", "%v", err)
+		k.Check("observe attributes the fixture's recording", "%v", err)
 	} else {
-		k.check("observe attributes the fixture's recording", ifNot(len(ans.Touched) > 0, "it touched nothing"))
+		k.Check("observe attributes the fixture's recording", ifNot(len(ans.Touched) > 0, "it touched nothing"))
 	}
 
 	// the setup is told by its place, first, whatever its name, and may
 	// have left nothing: the slice's own parts still count
-	noSetup := append([]string{filepath.Join(k.work(), "not-the-setup-name")}, dirs[1:]...)
+	noSetup := append([]string{filepath.Join(k.WorkDir(), "not-the-setup-name")}, dirs[1:]...)
 
 	ans, err = observe(k.o.Tree, noSetup)
 	if err != nil {
-		k.check("observe takes the first directory as the setup, which may be missing", "%v", err)
+		k.Check("observe takes the first directory as the setup, which may be missing", "%v", err)
 	} else {
-		k.check("observe takes the first directory as the setup, which may be missing", ifNot(len(ans.Touched) > 0, "with no setup, the slice's parts touched nothing"))
+		k.Check("observe takes the first directory as the setup, which may be missing", ifNot(len(ans.Touched) > 0, "with no setup, the slice's parts touched nothing"))
 	}
 
-	ans, err = observe(k.work(), dirs)
+	ans, err = observe(k.WorkDir(), dirs)
 
 	problem := ""
 
@@ -1249,11 +1214,11 @@ func (k *kit) observeFixture(ctx context.Context) {
 		problem = "it answered an empty list for a recording it couldn't map back to the tree"
 	}
 
-	k.check("observe can't tell from a recording it can't attribute", problem)
+	k.Check("observe can't tell from a recording it can't attribute", problem)
 }
 
 func (k *kit) collect(ctx context.Context) {
-	dir := k.work()
+	dir := k.WorkDir()
 
 	var problems []string
 
@@ -1275,7 +1240,7 @@ func (k *kit) collect(ctx context.Context) {
 		}
 	}
 
-	k.check("collect with nothing running succeeds", strings.Join(problems, "; "))
+	k.Check("collect with nothing running succeeds", strings.Join(problems, "; "))
 }
 
 func named(files []string, name string) []string {
@@ -1290,27 +1255,7 @@ func named(files []string, name string) []string {
 	return out
 }
 
-func setCanary() func() {
-	old, had := os.LookupEnv("GITHUB_TOKEN")
-	_ = os.Setenv("GITHUB_TOKEN", Canary) //nolint:errcheck // a failure leaves the check weaker, not wrong
-
-	return func() {
-		if had {
-			_ = os.Setenv("GITHUB_TOKEN", old) //nolint:errcheck // restoring the caller's environment
-		} else {
-			_ = os.Unsetenv("GITHUB_TOKEN") //nolint:errcheck // restoring the caller's environment
-		}
-	}
-}
-
-func canonical(v any) string {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return err.Error()
-	}
-
-	return string(data)
-}
+func canonical(v any) string { return pkit.Canonical(v) }
 
 func ifNot(ok bool, problem string) string {
 	if ok {
@@ -1331,7 +1276,7 @@ func firstFew[T any](s []T) []T {
 // observeCall calls observe as the observing step runs it, in a directory of only the tree and the
 // coverage output, so a plugin that reads what another step made fails here as in the pipeline.
 func (k *kit) observeCall(ctx context.Context, req plugin.ObserveRequest, answer any) error {
-	step := k.work()
+	step := k.WorkDir()
 	coverage := filepath.Join(step, plugin.ObserveCoverage)
 
 	if err := os.MkdirAll(coverage, 0o750); err != nil {
@@ -1364,11 +1309,7 @@ func (k *kit) observeCall(ctx context.Context, req plugin.ObserveRequest, answer
 	p.Dir = step
 
 	err := p.Call(ctx, plugin.CallObserve, req, answer)
-	if err != nil {
-		k.seen.WriteString(err.Error())
-	}
-
-	k.seen.WriteString(canonical(answer))
+	k.Saw(err, answer)
 
 	return err
 }
@@ -1407,7 +1348,7 @@ func (k *kit) recordedClaims(ctx context.Context, claimed []plugin.Claim) {
 
 	problems = append(problems, k.erasedRuns(ctx, erased)...)
 
-	k.check("a claim marked recorded is a file the recording holds", strings.Join(problems, "; "))
+	k.Check("a claim marked recorded is a file the recording holds", strings.Join(problems, "; "))
 }
 
 func (k *kit) erasedRuns(ctx context.Context, files []string) []string {
@@ -1420,7 +1361,7 @@ func (k *kit) erasedRuns(ctx context.Context, files []string) []string {
 	}
 
 	sbom := plugin.Plugin{Name: kitSBOM, Path: k.o.SBOM, Config: k.o.SBOMConfig, Cache: k.p.Cache}
-	work := k.work()
+	work := k.WorkDir()
 
 	var ans plugin.UnitsAnswer
 

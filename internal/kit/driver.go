@@ -82,7 +82,7 @@ func (k *kit) driverChecks(ctx context.Context) {
 	f, ok := k.driverFixture()
 	if !ok {
 		if k.desc.HasVerb(plugin.CallRun) || k.desc.HasVerb(plugin.CallSetup) || k.desc.HasVerb(plugin.CallPrepare) {
-			k.check("the fixture exercises every verb the driver declares", "no driver section in %s of --tree, so its verbs never ran", kitFile)
+			k.Check("the fixture exercises every verb the driver declares", "no driver section in %s of --tree, so its verbs never ran", kitFile)
 		}
 
 		return
@@ -94,7 +94,7 @@ func (k *kit) driverChecks(ctx context.Context) {
 
 	if k.desc.HasVerb(plugin.CallRun) {
 		if len(f.Slices) < 2 {
-			k.check("the fixture names slices to run", "it names %d; a bundle needs two", len(f.Slices))
+			k.Check("the fixture names slices to run", "it names %d; a bundle needs two", len(f.Slices))
 
 			return
 		}
@@ -157,18 +157,18 @@ func (e *ends) End(_ context.Context, sl plugin.DriverSlice, ev *plugin.DriverEv
 }
 
 func (k *kit) runFixture(ctx context.Context, f kitDriver, batch, record bool, marks *ends, stack bool) (*ends, string) {
-	tree := k.work()
+	tree := k.WorkDir()
 	if err := copyTree(k.o.Tree, tree); err != nil {
 		return &ends{got: map[string]string{}, errs: []string{err.Error()}}, ""
 	}
 
-	coverage := k.work()
+	coverage := k.WorkDir()
 
 	var todo []plugin.DriverSlice
 
 	for _, sl := range f.Slices {
-		sl.Extras = filepath.Join(k.work(), "extras")
-		sl.Files = filepath.Join(k.work(), "files")
+		sl.Extras = filepath.Join(k.WorkDir(), "extras")
+		sl.Files = filepath.Join(k.WorkDir(), "files")
 
 		if record {
 			sl.Recording = filepath.Join(coverage, filepath.FromSlash(sl.Name))
@@ -185,7 +185,7 @@ func (k *kit) runFixture(ctx context.Context, f kitDriver, batch, record bool, m
 	exe := &driver.Exec{Label: k.p.Name, Path: k.p.Path, Env: os.Environ(), Dir: tree, Log: io.Discard}
 
 	req := plugin.DriverRequest{
-		Protocol: plugin.Protocol, Work: k.work(), Cache: k.p.Cache, Config: conf,
+		Protocol: plugin.Protocol, Work: k.WorkDir(), Cache: k.p.Cache, Config: conf,
 		Tree: tree, Suite: kitSuite, Record: record, Stack: stack,
 	}
 
@@ -195,7 +195,7 @@ func (k *kit) runFixture(ctx context.Context, f kitDriver, batch, record bool, m
 	if marks != nil {
 		e = marks
 		e.got = map[string]string{}
-		dir := filepath.Join(k.work(), "marks")
+		dir := filepath.Join(k.WorkDir(), "marks")
 		// a stack suite's bundle, or one of a suite whose correlators
 		// collect at each slice's edges
 		r = &driver.Runner{Hooks: &marking{ends: e}, Record: true, Stack: stack, Collects: !stack, Log: io.Discard,
@@ -245,7 +245,7 @@ func (k *kit) driverModes(ctx context.Context, f kitDriver, record bool) {
 	one, oneRec := k.runFixture(ctx, f, false, record, nil, false)
 	all, allRec := k.runFixture(ctx, f, true, record, nil, false)
 
-	k.check("run answers every slice, one by one and bundled, "+what, strings.Join(append(one.errs, all.errs...), "; "))
+	k.Check("run answers every slice, one by one and bundled, "+what, strings.Join(append(one.errs, all.errs...), "; "))
 
 	var differ []string
 
@@ -260,7 +260,7 @@ func (k *kit) driverModes(ctx context.Context, f kitDriver, record bool) {
 		}
 	}
 
-	k.check("one by one and bundled give each slice the same result, "+what, strings.Join(differ, "; "))
+	k.Check("one by one and bundled give each slice the same result, "+what, strings.Join(differ, "; "))
 
 	if !record {
 		return
@@ -283,7 +283,7 @@ func (k *kit) driverModes(ctx context.Context, f kitDriver, record bool) {
 		}
 	}
 
-	k.check("one by one and bundled leave each slice the same recording", strings.Join(lost, "; "))
+	k.Check("one by one and bundled leave each slice the same recording", strings.Join(lost, "; "))
 }
 
 func recording(dir string) ([]string, error) {
@@ -343,7 +343,7 @@ func (k *kit) driverMarks(ctx context.Context, f kitDriver) {
 
 		got := slices.Clone(marked.marks)
 
-		k.check(v.what+" marks each slice's start and stop, one slice at a time", ifNot(sameMarks(got, want),
+		k.Check(v.what+" marks each slice's start and stop, one slice at a time", ifNot(sameMarks(got, want),
 			fmt.Sprintf("marks %v, want each slice's start then stop, in pairs", got)))
 
 		var differ []string
@@ -354,7 +354,7 @@ func (k *kit) driverMarks(ctx context.Context, f kitDriver) {
 			}
 		}
 
-		k.check(v.what+", marked, gives each slice its result on its own", strings.Join(append(marked.errs, differ...), "; "))
+		k.Check(v.what+", marked, gives each slice its result on its own", strings.Join(append(marked.errs, differ...), "; "))
 	}
 }
 
@@ -379,16 +379,16 @@ func sameMarks(got, want []string) bool {
 
 // driverSetup: a set-up gets ready and stops when its stdin closes.
 func (k *kit) driverSetup(ctx context.Context, f kitDriver) {
-	tree := k.work()
+	tree := k.WorkDir()
 	if err := copyTree(k.o.Tree, tree); err != nil {
-		k.check("setup gets ready and stops", "%v", err)
+		k.Check("setup gets ready and stops", "%v", err)
 
 		return
 	}
 
 	exe := &driver.Exec{Label: k.p.Name, Path: k.p.Path, Env: os.Environ(), Dir: tree, Log: io.Discard, StopWait: 10 * time.Second}
 	req := plugin.DriverRequest{
-		Protocol: plugin.Protocol, Work: k.work(), Cache: k.p.Cache, Config: f.Setup,
+		Protocol: plugin.Protocol, Work: k.WorkDir(), Cache: k.p.Cache, Config: f.Setup,
 		Tree: tree, Suite: kitSuite,
 	}
 
@@ -397,12 +397,12 @@ func (k *kit) driverSetup(ctx context.Context, f kitDriver) {
 
 	r, err := exe.Setup(sctx, req)
 	if err != nil {
-		k.check("setup gets ready and stops", "%v", err)
+		k.Check("setup gets ready and stops", "%v", err)
 
 		return
 	}
 
-	k.check("setup gets ready and stops", ifNot(r.Stop(ctx) == nil, "it did not stop when its stdin closed"))
+	k.Check("setup gets ready and stops", ifNot(r.Stop(ctx) == nil, "it did not stop when its stdin closed"))
 }
 
 // driverPrepare: a prepare step, given the fixture's prepare settings,
@@ -411,22 +411,22 @@ func (k *kit) driverPrepare(ctx context.Context, f kitDriver) {
 	const name = "prepare fills the prepared directory"
 
 	if f.Prepare == nil {
-		k.check(name, "the driver prepares, and the fixture's driver section has no prepare settings, so prepare never ran")
+		k.Check(name, "the driver prepares, and the fixture's driver section has no prepare settings, so prepare never ran")
 
 		return
 	}
 
-	tree := k.work()
+	tree := k.WorkDir()
 	if err := copyTree(k.o.Tree, tree); err != nil {
-		k.check(name, "%v", err)
+		k.Check(name, "%v", err)
 
 		return
 	}
 
-	prepared := k.work()
+	prepared := k.WorkDir()
 	exe := &driver.Exec{Label: k.p.Name, Path: k.p.Path, Env: os.Environ(), Dir: tree, Log: io.Discard}
 	req := plugin.DriverRequest{
-		Protocol: plugin.Protocol, Work: k.work(), Cache: k.p.Cache, Config: f.Prepare,
+		Protocol: plugin.Protocol, Work: k.WorkDir(), Cache: k.p.Cache, Config: f.Prepare,
 		Tree: tree, Suite: kitSuite, Prepared: prepared,
 	}
 
@@ -434,13 +434,13 @@ func (k *kit) driverPrepare(ctx context.Context, f kitDriver) {
 	defer cancel()
 
 	if err := exe.Prepare(pctx, req); err != nil {
-		k.check(name, "%v", err)
+		k.Check(name, "%v", err)
 
 		return
 	}
 
 	entries, err := os.ReadDir(prepared)
-	k.check(name, ifNot(err == nil && len(entries) > 0, "it exited 0 and left the prepared directory empty"))
+	k.Check(name, ifNot(err == nil && len(entries) > 0, "it exited 0 and left the prepared directory empty"))
 }
 
 func copyTree(src, dst string) error {

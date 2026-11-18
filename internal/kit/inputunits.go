@@ -49,20 +49,20 @@ func (k *kit) fixtureEdits() []fixtureEdit {
 // the cold one, and the plugin is asked about no more files than the stale sets hold.
 func (k *kit) inputUnits(ctx context.Context, sets []plugin.Set) {
 	if !slices.ContainsFunc(sets, func(s plugin.Set) bool { return len(s.InputUnits) > 0 }) {
-		k.skip(unitsCheck, "no set of the fixture names input units")
+		k.Skip(unitsCheck, "no set of the fixture names input units")
 
 		return
 	}
 
 	if k.o.SBOM == "" {
-		k.skip(unitsCheck, "no companion sbom (--sbom): the input units' digests are unknown")
+		k.Skip(unitsCheck, "no companion sbom (--sbom): the input units' digests are unknown")
 
 		return
 	}
 
 	edits := k.fixtureEdits()
 	if len(edits) == 0 {
-		k.check(unitsCheck, "the fixture names no edits (%s: {\"edits\": [{\"path\", \"old\", \"new\"}]}), so no set keyed on input units was served after a change", kitFile)
+		k.Check(unitsCheck, "the fixture names no edits (%s: {\"edits\": [{\"path\", \"old\", \"new\"}]}), so no set keyed on input units was served after a change", kitFile)
 
 		return
 	}
@@ -75,16 +75,16 @@ func (k *kit) inputUnits(ctx context.Context, sets []plugin.Set) {
 		}
 	}
 
-	k.check(unitsCheck, strings.Join(problems, "; "))
+	k.Check(unitsCheck, strings.Join(problems, "; "))
 }
 
 func (k *kit) inputUnitEdit(ctx context.Context, sets []plugin.Set, e fixtureEdit) string {
-	repo := k.work()
+	repo := k.WorkDir()
 	if err := fixtureRepo(ctx, k.o.Tree, repo); err != nil {
 		return fmt.Sprintf("a git copy of the fixture: %v", err)
 	}
 
-	answers := k.work()
+	answers := k.WorkDir()
 
 	before, _, err := k.cachedTreeSet(ctx, repo, answers)
 	if err != nil {
@@ -100,7 +100,7 @@ func (k *kit) inputUnitEdit(ctx context.Context, sets []plugin.Set, e fixtureEdi
 		return fmt.Sprintf("warm after editing %s: %v", e.Path, err)
 	}
 
-	cold, err := k.cachedTree(ctx, repo, k.work())
+	cold, err := k.cachedTree(ctx, repo, k.WorkDir())
 	if err != nil {
 		return fmt.Sprintf("cold after editing %s: %v", e.Path, err)
 	}

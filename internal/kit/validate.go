@@ -55,13 +55,13 @@ func (k *kit) driverValidate(ctx context.Context, f kitDriver) {
 
 	var a plugin.ValidateAnswer
 
-	err := k.call(ctx, plugin.CallValidate, plugin.ValidateRequest{Request: k.p.NewRequest(k.work()), Steps: steps}, &a)
+	err := k.call(ctx, plugin.CallValidate, plugin.ValidateRequest{Request: k.p.NewRequest(k.WorkDir()), Steps: steps}, &a)
 	if err == nil && len(a.Steps) != len(steps) {
 		err = fmt.Errorf("%w: it answered %d steps of %d", plugin.ErrFailed, len(a.Steps), len(steps))
 	}
 
 	if err != nil {
-		k.check("validate answers every step", "%v", err)
+		k.Check("validate answers every step", "%v", err)
 
 		return
 	}
@@ -84,9 +84,9 @@ func (k *kit) driverValidate(ctx context.Context, f kitDriver) {
 		}
 	}
 
-	k.check("validate takes the fixture's settings", strings.Join(took, "; "))
-	k.check("validate refuses a key no driver takes, naming it", strings.Join(refused, "; "))
-	k.check("each verb refuses what validate refuses, before it runs anything", strings.Join(verbs, "; "))
+	k.Check("validate takes the fixture's settings", strings.Join(took, "; "))
+	k.Check("validate refuses a key no driver takes, naming it", strings.Join(refused, "; "))
+	k.Check("each verb refuses what validate refuses, before it runs anything", strings.Join(verbs, "; "))
 }
 
 func namesKey(problems []plugin.SettingError, key string) bool {
@@ -100,7 +100,7 @@ func namesKey(problems []plugin.SettingError, key string) bool {
 }
 
 func (k *kit) verbRefuses(ctx context.Context, verb string, conf map[string]any) string {
-	tree := k.work()
+	tree := k.WorkDir()
 	if err := copyTree(k.o.Tree, tree); err != nil {
 		return err.Error()
 	}
@@ -108,8 +108,8 @@ func (k *kit) verbRefuses(ctx context.Context, verb string, conf map[string]any)
 	f, _ := k.driverFixture()
 
 	req := plugin.DriverRequest{
-		Protocol: plugin.Protocol, Work: k.work(), Cache: k.p.Cache, Config: conf,
-		Tree: tree, Suite: kitSuite, Prepared: k.work(), Slices: f.Slices,
+		Protocol: plugin.Protocol, Work: k.WorkDir(), Cache: k.p.Cache, Config: conf,
+		Tree: tree, Suite: kitSuite, Prepared: k.WorkDir(), Slices: f.Slices,
 	}
 
 	in, err := json.Marshal(req)

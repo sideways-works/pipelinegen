@@ -111,7 +111,7 @@ func (k *kit) hint() string {
 
 func (k *kit) checkCopies() {
 	if k.copies.uncacheable == 0 && len(k.copies.warnings) == 0 {
-		k.check(copiesCheck, "")
+		k.Check(copiesCheck, "")
 
 		return
 	}
@@ -126,5 +126,5 @@ func (k *kit) checkCopies() {
 
 	fmt.Fprintf(&b, ". The plugin's describe reports the toolchains %v. A toolchain picked by directory may differ in the copies: the kit puts the nearest %s at or above the fixture at the top of its work directory, so name the version the fixture needs in one of them", k.desc.Toolchains, strings.Join(versionFiles, ", "))
 
-	k.out = append(k.out, Result{Check: copiesCheck, Problem: b.String(), Note: true})
+	k.Add(Result{Check: copiesCheck, Problem: b.String(), Note: true})
 }

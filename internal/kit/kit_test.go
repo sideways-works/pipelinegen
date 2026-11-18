@@ -17,6 +17,7 @@ import (
 
 	"github.com/sideways-works/pipelinegen/internal/testenv"
 	"github.com/sideways-works/pipelinegen/plugin"
+	pkit "github.com/sideways-works/plugkit/kit"
 )
 
 // TestMain doubles as the fake plugins: with KIT_FAKE set, the test binary
@@ -909,18 +910,18 @@ func TestTheKitsCopiesUseTheFixturesToolchain(t *testing.T) {
 func TestCompleteNamesClaimedFiles(t *testing.T) {
 	claimed := []plugin.Claim{{Path: "a.js", Role: "source"}}
 
-	k := &kit{desc: plugin.Description{Kind: plugin.KindSBOM}}
+	k := &kit{Harness: &pkit.Harness{}, desc: plugin.Description{Kind: plugin.KindSBOM}}
 	k.checkComplete(plugin.UnitsAnswer{Complete: []string{"a.js"}, Sets: []plugin.Set{{Complete: []string{"b.js"}}}}, claimed)
 
-	if len(k.out) != 1 || !strings.Contains(k.out[0].Problem, "b.js is said to be covered whole, but wasn't claimed") || strings.Contains(k.out[0].Problem, "a.js") {
-		t.Errorf("sbom: %+v", k.out)
+	if len(k.Results()) != 1 || !strings.Contains(k.Results()[0].Problem, "b.js is said to be covered whole, but wasn't claimed") || strings.Contains(k.Results()[0].Problem, "a.js") {
+		t.Errorf("sbom: %+v", k.Results())
 	}
 
-	k = &kit{desc: plugin.Description{Kind: plugin.KindCorrelator}}
+	k = &kit{Harness: &pkit.Harness{}, desc: plugin.Description{Kind: plugin.KindCorrelator}}
 	k.checkComplete(plugin.UnitsAnswer{Complete: []string{"a.js"}}, claimed)
 
-	if len(k.out) != 1 || !strings.Contains(k.out[0].Problem, "a correlator says a.js is covered whole") {
-		t.Errorf("correlator: %+v", k.out)
+	if len(k.Results()) != 1 || !strings.Contains(k.Results()[0].Problem, "a correlator says a.js is covered whole") {
+		t.Errorf("correlator: %+v", k.Results())
 	}
 }
 
@@ -931,12 +932,12 @@ func TestAnAnchorIsAUnit(t *testing.T) {
 		{Path: "e/en.json", Role: "catalog", Anchor: "loc:c"},
 	}
 
-	k := &kit{desc: plugin.Description{Kind: plugin.KindSBOM}}
+	k := &kit{Harness: &pkit.Harness{}, desc: plugin.Description{Kind: plugin.KindSBOM}}
 	k.checkAnchors(plugin.UnitsAnswer{Units: []plugin.Unit{{ID: "loc:c", Digest: "a"}}}, claimed)
 
-	if len(k.out) != 1 || !strings.Contains(k.out[0].Problem, "d/en.json names the anchor loc:d, which no unit is") ||
-		!strings.Contains(k.out[0].Problem, "e/en.json names the anchor loc:c without by_units") || strings.Contains(k.out[0].Problem, "c/en.json") {
-		t.Errorf("%+v", k.out)
+	if len(k.Results()) != 1 || !strings.Contains(k.Results()[0].Problem, "d/en.json names the anchor loc:d, which no unit is") ||
+		!strings.Contains(k.Results()[0].Problem, "e/en.json names the anchor loc:c without by_units") || strings.Contains(k.Results()[0].Problem, "c/en.json") {
+		t.Errorf("%+v", k.Results())
 	}
 }
 

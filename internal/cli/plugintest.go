@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/sideways-works/pipelinegen/internal/kit"
+	pkit "github.com/sideways-works/plugkit/kit"
 )
 
 var errKit = errors.New("the plugin fails the protocol")
@@ -76,7 +77,7 @@ func runPlugin(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	defer os.RemoveAll(work) //nolint:errcheck // a scratch directory
 
-	failed, err := printResults(stdout, kit.Run(ctx, kit.Options{Path: exePath, Tree: tree, Config: pluginCfg, Work: work, Cache: cache, Commands: ToolCommands(), SBOM: sbom, SBOMConfig: sbomCfg})) //nolint:contextcheck // describing the commands runs none of them
+	failed, err := pkit.Print(stdout, kit.Run(ctx, kit.Options{Path: exePath, Tree: tree, Config: pluginCfg, Work: work, Cache: cache, Commands: ToolCommands(), SBOM: sbom, SBOMConfig: sbomCfg})) //nolint:contextcheck // describing the commands runs none of them
 	if err != nil {
 		return err
 	}
@@ -86,32 +87,6 @@ func runPlugin(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	return nil
-}
-
-func printResults(stdout io.Writer, results []kit.Result) (int, error) {
-	failed := 0
-
-	for _, r := range results {
-		var err error
-
-		switch {
-		case r.Skipped:
-			err = say(stdout, "skip  %s: %s\n", r.Check, r.Problem)
-		case r.Note:
-			err = say(stdout, "note  %s: %s\n", r.Check, r.Problem)
-		case r.Problem == "":
-			err = say(stdout, "ok    %s\n", r.Check)
-		default:
-			failed++
-			err = say(stdout, "FAIL  %s: %s\n", r.Check, r.Problem)
-		}
-
-		if err != nil {
-			return failed, err
-		}
-	}
-
-	return failed, nil
 }
 
 func companion(sbom, cfgFile string) (string, map[string]any, error) {

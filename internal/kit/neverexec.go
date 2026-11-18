@@ -52,10 +52,10 @@ func markerFiles(marks string) map[string]string {
 // neverExecutes runs the plugin's tree calls and observe on a fixture copy holding files that leave a
 // marker when run; it proves only what these files would show.
 func (k *kit) neverExecutes(ctx context.Context) {
-	marks, tree := k.work(), k.work()
+	marks, tree := k.WorkDir(), k.WorkDir()
 
 	if err := copyFixture(k.o.Tree, tree); err != nil {
-		k.check(neverExecCheck, "copying the fixture: %v", err)
+		k.Check(neverExecCheck, "copying the fixture: %v", err)
 
 		return
 	}
@@ -63,13 +63,13 @@ func (k *kit) neverExecutes(ctx context.Context) {
 	for name, body := range markerFiles(marks) {
 		p := filepath.Join(tree, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
-			k.check(neverExecCheck, "%v", err)
+			k.Check(neverExecCheck, "%v", err)
 
 			return
 		}
 
 		if err := os.WriteFile(p, []byte(body), 0o600); err != nil {
-			k.check(neverExecCheck, "%v", err)
+			k.Check(neverExecCheck, "%v", err)
 
 			return
 		}
@@ -90,7 +90,7 @@ func (k *kit) neverExecutes(ctx context.Context) {
 	}
 
 	if k.can(plugin.CallObserve) {
-		_ = k.observeCall(ctx, plugin.ObserveRequest{Request: k.request(), Tree: tree, Slice: "s", Dirs: []string{k.work(), k.work()}}, &plugin.ObserveAnswer{}) //nolint:errcheck // only what it runs counts
+		_ = k.observeCall(ctx, plugin.ObserveRequest{Request: k.request(), Tree: tree, Slice: "s", Dirs: []string{k.WorkDir(), k.WorkDir()}}, &plugin.ObserveAnswer{}) //nolint:errcheck // only what it runs counts
 	}
 
 	var ran []string
@@ -100,7 +100,7 @@ func (k *kit) neverExecutes(ctx context.Context) {
 		ran = append(ran, e.Name())
 	}
 
-	k.check(neverExecCheck, ifNot(len(ran) == 0, "it ran the fixture's "+strings.Join(ran, ", ")))
+	k.Check(neverExecCheck, ifNot(len(ran) == 0, "it ran the fixture's "+strings.Join(ran, ", ")))
 }
 
 func (k *kit) detectQuietly(ctx context.Context) []plugin.Claim {
@@ -108,7 +108,7 @@ func (k *kit) detectQuietly(ctx context.Context) []plugin.Claim {
 		return nil
 	}
 
-	work := k.work()
+	work := k.WorkDir()
 
 	var ans plugin.DetectAnswer
 	if k.call(ctx, plugin.CallDetect, plugin.DetectRequest{Request: k.p.NewRequest(work), Tree: k.o.Tree, Paths: k.candidates()}, &ans) != nil {

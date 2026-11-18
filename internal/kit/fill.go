@@ -43,20 +43,20 @@ func (k *kit) fills(ctx context.Context) {
 		}
 	}
 
-	k.check("fill is declared as the core runs it", strings.Join(problems, "; "))
+	k.Check("fill is declared as the core runs it", strings.Join(problems, "; "))
 
 	if len(problems) > 0 {
 		return
 	}
 
 	if k.o.Tree == "" {
-		k.check("a second fill changes nothing", "no --tree, so no fill ran")
+		k.Check("a second fill changes nothing", "no --tree, so no fill ran")
 
 		return
 	}
 
 	for _, cache := range sortedFills(k.desc.Fill) {
-		k.check("a second fill of "+cache+" changes nothing", k.fillTwice(ctx, cache))
+		k.Check("a second fill of "+cache+" changes nothing", k.fillTwice(ctx, cache))
 	}
 }
 
