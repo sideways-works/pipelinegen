@@ -18,9 +18,18 @@ import (
 var errKit = errors.New("the plugin fails the protocol")
 
 func runPlugin(ctx context.Context, args []string, stdout io.Writer) error {
+	return subcommands(ctx, args, []sub{
+		{"test", "check a plugin against the protocol: <executable> [--tree <dir>]", func(ctx context.Context, args []string) error { return pluginTest(ctx, args, stdout) }},
+		{"add", "pin the newest release of each plugin a repository holds at a path, checked file by file: <git-url> [<path>...]", func(ctx context.Context, args []string) error { return pluginAdd(ctx, args, stdout) }},
+		{"upgrade", "move the named plugins' pins, or every release pin, to their newest releases: [<name>...]", func(ctx context.Context, args []string) error { return pluginUpgrade(ctx, args, stdout) }},
+		{"new", "start a plugin from the plugins repository's template of its kind: <kind> <name>", func(ctx context.Context, args []string) error { return pluginNew(ctx, args, stdout) }},
+	})
+}
+
+func pluginTest(ctx context.Context, args []string, stdout io.Writer) error {
 	var tree, cfgFile, cache, sbom, sbomCfgFile string
 
-	fs := flag.NewFlagSet("plugin", flag.ContinueOnError)
+	fs := flag.NewFlagSet("plugin test", flag.ContinueOnError)
 	pathVar(fs, &tree, "tree", "", "a fixture tree of the plugin's own, for sboms and correlators", reads)
 	pathVar(fs, &cfgFile, "config", "", "a JSON file with the plugin's config block", readsFile)
 	pathVar(fs, &cache, "cache", "", "the plugin's cache directory, already filled (a Go module cache in <dir>/gomodcache)", reads|writes)
@@ -28,31 +37,17 @@ func runPlugin(ctx context.Context, args []string, stdout io.Writer) error {
 	pathVar(fs, &sbomCfgFile, "sbom-config", "", "a JSON file with the companion sbom's config block", readsFile)
 
 	// asked to describe itself, the command hands over its flags.
-	if _, ok := ctx.Value(describeKey{}).(*[]*flag.FlagSet); ok {
-		return parse(ctx, fs, nil)
-	}
+	if _, ok := ctx.Value(describeKey{}).(*[]*flag.FlagSet); ok || len(args) == 0 || strings.HasPrefix(args[0], "-") {
+		if err := parse(ctx, fs, args); err != nil || ok {
+			return err
+		}
 
-	if len(args) > 0 && strings.HasPrefix(args[0], "-") {
-		return parse(ctx, fs, args)
-	}
-
-	if len(args) == 0 || args[0] != "test" {
-		return fmt.Errorf("%w: plugin test <executable> [--tree <dir>] [--config <file.json>]", errUsage)
-	}
-
-	rest := args[1:]
-	if len(rest) == 0 {
 		return fmt.Errorf("%w: plugin test needs the plugin's executable", errUsage)
 	}
 
-	// flags before the executable, --help among them.
-	if strings.HasPrefix(rest[0], "-") {
-		return parse(ctx, fs, rest)
-	}
+	exe := args[0]
 
-	exe := rest[0]
-
-	if err := parse(ctx, fs, rest[1:]); err != nil {
+	if err := parse(ctx, fs, args[1:]); err != nil {
 		return err
 	}
 

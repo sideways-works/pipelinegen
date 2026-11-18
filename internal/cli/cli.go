@@ -60,7 +60,7 @@ func commands() []command {
 		{"seed", "put HEAD's local recordings into the shared store as its lists, the base of the branch's first runs: [--dry-run] [--replace]", runSeed},
 		{"baseline", "declare HEAD good by hand as a run's base, so its first runs need not run everything: --run <run> [--dry-run]", runBaseline},
 		{"version", "print pipelinegen's version", runVersion},
-		{"plugin", "check a plugin against the protocol: test <executable> [--tree <dir>]", runPlugin},
+		{"plugin", "check, pin and start plugins: test, add, upgrade, new", runPlugin},
 		{"plugins", "inspect the configured sbom and correlator plugins: claims", runPlugins},
 		{"git-auth", "print shell lines that have git authenticate with the token in a variable: <ENV_NAME>", runGitAuth},
 		{"help", "list the commands, or describe one with its flags: [<command>]", runHelp},

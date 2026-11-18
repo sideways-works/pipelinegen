@@ -688,7 +688,9 @@ plugins:
 ```
 
 A group reads exactly as the same entries written one by one, each with
-the group's repository.
+the group's repository. `pipelinegen plugin add` and `pipelinegen plugin
+upgrade` write the pins, each checked by downloading what it names
+([adding a plugin](../how-to/adding-a-plugin.md)).
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
@@ -697,7 +699,7 @@ the group's repository.
 | `plugins[].kind` | `correlator`, `sbom`, `runner`, `driver` or `connector` | (required) | What the plugin is. With several runners, each run names the one whose pipeline holds it in `runs.<name>.runner`, and `pipelinegen pipeline --for <name>` writes each runner's. A driver runs a suite's slices for its `steps`; `command` is built in and needs no entry. A connector entry, named `github` or `git`, pins the release of that connector in place of pipelinegen's own pin, and takes a `release` and no `config` ([pinning a connector](#pinning-a-connector)). |
 | `plugins[].repository` | git URL or `owner/name` | (required) | Where its releases come from: the URL you would clone, `https://github.com/owner/name` or `git@github.com:owner/name.git` say, or `owner/name` as GitHub's shorthand. Releases are fetched from GitHub's and GitLab's release files; another host is read but has nothing to fetch yet. Messages and listings name it as the config writes it. Without a `path`, a repository `pipelinegen-KIND-NAME` holds the program `NAME-KIND`, which names its release files and its `./cmd/NAME-KIND`; any other holds the program of its own name. |
 | `plugins[].path` | directory | none | The plugin's directory in a repository that holds several plugins, `driver/go` say. Its releases are tagged `<path>/vX.Y.Z` and hold its files, and the path names its program: `KIND/NAME` holds `NAME-KIND` (`go-driver`), a deeper path the last directory and the one above it. Without it the repository is one plugin, tagged `vX.Y.Z`. |
-| `plugins[].with` | list | none | Makes the entry a group of plugins from one repository: the entry has only `repository` and `with`, and each entry under `with` takes that repository and sets every other key of its own (`name`, `kind`, `path`, `release`, `config` and the rest). An entry under `with` that names a repository is refused. Names stay unique across every entry and group. See [the guide](../how-to/plugins.md). |
+| `plugins[].with` | list | none | Makes the entry a group of plugins from one repository: the entry has only `repository` and `with`, and each entry under `with` takes that repository and sets every other key of its own (`name`, `kind`, `path`, `release`, `config` and the rest). An entry under `with` that names a repository is refused. Names stay unique across every entry and group. See [adding a plugin](../how-to/adding-a-plugin.md). |
 | `plugins[].release` | mapping | | A released version. Give either `release` or `commit`. |
 | `plugins[].release.version` | string | | The release's tag, or with a `path` what follows `<path>/` in it: `v0.2.1` for the tag `driver/go/v0.2.1`. |
 | `plugins[].release.sha256` | string | | The SHA-256 of the release's `linux-amd64` file (its `.mjs` file for a Node plugin), checked before it runs. Give this or `sums`. |

@@ -843,22 +843,38 @@ commit. It takes no flags.
 
 ## `pipelinegen plugin`
 
-`pipelinegen plugin test <executable>` checks a plugin against the protocol, the way the core will call it, and
-prints one line per check (`ok` or `FAIL` with what went wrong); it exits 1
-when any check fails. Run it in the plugin's own CI. See
-[plugins](../plugins.md#conformance).
+Checks a plugin against the protocol, pins plugins' releases in the
+config, and starts a plugin of your own.
+
+| Subcommand | What it does | Exits 1 when |
+|---|---|---|
+| `plugin test <executable>` | Checks a plugin against the protocol, the way the core will call it, and prints one line per check (`ok` or `FAIL` with what went wrong). Run it in the plugin's own CI. See [plugins](../plugins.md#conformance). | any check fails |
+| `plugin add <git-url> [<path>...]` | For each path, the plugin a repository of several holds in that directory, or with no path the repository's own plugin: finds its newest release that is no prerelease (tagged `<path>/vX.Y.Z`, or `vX.Y.Z`), downloads the release's `SHA256SUMS` and every file of the plugin's program it lists, checks each, reads the plugin's name and kind from its `plugin.json`, and writes its pin by `sums` into the config. A plugin at a path goes into the repository's group (`with`), made at the end of `plugins` when there is none; a repository's own plugin gets an entry of its own. The config is edited in place, keeping its comments and layout, and written only once every plugin is pinned. Prints a line per plugin. See [adding a plugin](../how-to/adding-a-plugin.md). | the config doesn't read, a release can't be listed, has no `SHA256SUMS` or a file that doesn't match it, or the name is taken |
+| `plugin upgrade [<name>...]` | Moves the named plugins' pins, or every plugin's pinned by a release, to their newest releases, each checked as `add` checks one, keeping each pin's form (`sums`, or `sha256` of the `linux-amd64` file or Node script). Prints `<name>: <old> -> <new>`, or `<name>: <version>, the newest`. | as `add`, or a named plugin is missing or pinned by commit |
+| `plugin new <kind> <name>` | Writes a new plugin, `<name>-<kind>`, from the template the plugins repository releases for its kind: `templates/<kind>/` at the newest tag `templates/vX.Y.Z` that is no prerelease, fetched with git. The template's module becomes the new module path and its one program under `cmd/` becomes `<name>-<kind>`, in every file's text and path. | the directory holds files, the tag or the kind's template is missing, or the template holds a link |
 
 ```sh
 pipelinegen plugin test ./bin/go-sbom --tree testdata/tree
+pipelinegen plugin add https://github.com/sideways-works/pipelinegen-plugins driver/go sbom/go
+pipelinegen plugin upgrade --pre go-sbom
+pipelinegen plugin new correlator rust --into ../rust-correlator
 ```
 
-| Flag | Default | Meaning |
-|---|---|---|
-| `--tree` | none | A fixture tree of the plugin's own. Sboms and correlators need one for more than `describe`. |
-| `--config` | none | A JSON file with the plugin's config block, passed in every request. |
-| `--cache` | a fresh directory | The plugin's cache directory, filled beforehand the way the planning job's prepare fills it: one directory per cache the plugin declares (`gomodcache` holding the repository's Go modules, say). A Go plugin needs it on any tree with third-party modules. |
-| `--sbom` | none | An sbom plugin run beside a correlator, listing the units its links name. The checks that compare the links' ends' digests need it, and say so when it is missing. |
-| `--sbom-config` | none | A JSON file with the companion sbom's config block. |
+| Flag | Default | Subcommands | Meaning |
+|---|---|---|---|
+| `--tree` | none | `test` | A fixture tree of the plugin's own. Sboms and correlators need one for more than `describe`. |
+| `--config` | none | `test` | A JSON file with the plugin's config block, passed in every request. |
+| `--cache` | a fresh directory | `test` | The plugin's cache directory, filled beforehand the way the planning job's prepare fills it: one directory per cache the plugin declares (`gomodcache` holding the repository's Go modules, say). A Go plugin needs it on any tree with third-party modules. |
+| `--sbom` | none | `test` | An sbom plugin run beside a correlator, listing the units its links name. The checks that compare the links' ends' digests need it, and say so when it is missing. |
+| `--sbom-config` | none | `test` | A JSON file with the companion sbom's config block. |
+| `--root` | `.` | `add`, `upgrade` | The repository's root. |
+| `--config` | `<root>/pipelinegen.yaml` | `add`, `upgrade` | The config file it edits. |
+| `--version` | the newest that is no prerelease | `add`, `new` | The release to pin, `vX.Y.Z`, the same for every path; for `new`, the templates' release. |
+| `--name` | the name in the plugin's `plugin.json` | `add` | The entry's name, with one path. |
+| `--pre` | `false` | `upgrade` | Moves to a prerelease too, when it is the newest. |
+| `--into` | `<name>-<kind>` in the current directory | `new` | The directory to write the plugin into, new or empty. |
+| `--from` | `https://github.com/sideways-works/pipelinegen-plugins` | `new` | The git URL of the repository whose `templates/vX.Y.Z` tags hold the templates, one directory a kind under `templates/`. |
+| `--module` | the template's, with `templates/<kind>` made `<kind>/<name>` | `new` | The new plugin's Go module path. |
 
 ## `pipelinegen lists`
 

@@ -35,8 +35,12 @@ var stepNeeds = map[string]toolcalls.Command{
 	"git-auth": {Named: true},
 	// runAlsoTo takes pull requests' numbers after its flags.
 	"also-to": {Words: true, Needs: toolcalls.Needs{Token: toolcalls.TokenRequired}},
-	// runPlugin takes test and the plugin's executable.
-	"plugin": {Words: true},
+	// plugin test takes the plugin's executable, add a repository and paths, upgrade names, new a
+	// kind and a name.
+	"plugin test":    {Words: true},
+	"plugin add":     {Words: true},
+	"plugin upgrade": {Words: true},
+	"plugin new":     {Words: true},
 }
 
 func reportNeeds() toolcalls.Needs {

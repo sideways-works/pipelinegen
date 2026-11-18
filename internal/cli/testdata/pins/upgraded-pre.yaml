@@ -1,0 +1,19 @@
+pipeline: shop
+
+suites:
+  unit: {tag: slice-unit, run_slice: ci/unit.yml}
+
+# the plugins, each pinned by its release
+plugins:
+  # what Go code exists
+  - name: go-sbom
+    kind: sbom
+    repository: o/pipelinegen-sbom-go
+    release: {version: v0.3.0-rc.1, sha256: decf70c09c21449c3769d4df159f4cc9f19ee0bf724efd71d272fdb1d2024050}  # the first release
+    config: {modules: [.]}
+
+  - repository: https://github.com/o/plugins
+    with:
+      - {name: go-correlator, kind: correlator, path: correlator/go, release: {version: v0.1.1, sums: d520a54aacada3395dcabda9596671805ea478538757c5f0ee3fdb7bf0d56213}}
+
+  - {name: stub, kind: driver, repository: o/stub, commit: 0123456789abcdef0123456789abcdef01234567}

@@ -55,6 +55,7 @@
   * [Bundle a suite's slices, or run each alone](how-to/batching.md)
   * [Move a suite from task files to drivers](how-to/moving-to-drivers.md)
   * [Configure plugins](how-to/plugins.md)
+  * [Add a plugin](how-to/adding-a-plugin.md)
   * [Estimate what you would save](how-to/estimate-savings.md)
   * [Declare runs](how-to/declaring-runs.md)
   * [Start without a full first run](how-to/starting-narrow.md)

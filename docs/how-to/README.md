@@ -21,6 +21,8 @@ The terms are in the [concepts](../concepts/README.md) and the
   of shell scripts.
 - [Configure plugins](plugins.md): how planning and recording use them,
   and what happens when one can't tell.
+- [Add a plugin](adding-a-plugin.md): pin a plugin's release with
+  `plugin add`, move pins with `plugin upgrade`, start one of your own.
 
 ## Trying it out
 

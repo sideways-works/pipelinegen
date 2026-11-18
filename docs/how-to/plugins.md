@@ -104,9 +104,11 @@ say, such as where a run leaves its coverage.
 
 ## Adding plugins to a repository
 
-Name each plugin in `pipelinegen.yaml` with its kind, its repository and a
-release with the checksum of its `linux-amd64` file (the `.mjs` file for a
-Node plugin), or a 40-character commit to build:
+`pipelinegen plugin add` writes a plugin's entry with its pin, checked
+file by file ([adding a plugin](adding-a-plugin.md)). By hand, name each
+plugin with its kind, its repository and a release with the checksum of
+its `linux-amd64` file (the `.mjs` file for a Node plugin), or a
+40-character commit to build:
 
 ```yaml
 plugins:
