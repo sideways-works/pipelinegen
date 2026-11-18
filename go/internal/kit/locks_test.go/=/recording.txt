@@ -1,0 +1,14 @@
+# observed
+go:internal/kit#func:appendNew
+go:internal/kit#func:commandStarts
+go:internal/kit#func:lockSteps
+go:internal/kit#func:names
+go:internal/kit#func:shellWrapped
+go:internal/kit#func:stepCalls
+go:internal/kit#func:stringList
+go:internal/kit#func:taskCalls
+go:internal/kit#func:unquote
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
