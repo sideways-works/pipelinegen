@@ -73,7 +73,7 @@ func (e *emitter) build(ctx context.Context, plan *affected.Plan, again bool) (e
 
 		if again {
 			var err error
-			if todo, err = e.notPassed(ctx, sp); err != nil {
+			if todo, ps.Whole, err = e.notPassed(ctx, sp); err != nil {
 				return out, err
 			}
 		}
@@ -99,21 +99,31 @@ func (e *emitter) build(ctx context.Context, plan *affected.Plan, again bool) (e
 	return out, nil
 }
 
-func (e *emitter) notPassed(ctx context.Context, sp affected.SuitePlan) ([]bazel.Slice, error) {
+// notPassed are the suite's selected slices and whole-suite checks that haven't passed.
+func (e *emitter) notPassed(ctx context.Context, sp affected.SuitePlan) ([]bazel.Slice, []string, error) {
 	states, err := report.States(ctx, e.store, reportID(e.ch), sp.Suite)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var out []bazel.Slice
+	var (
+		todo  []bazel.Slice
+		whole []string
+	)
 
 	for _, sl := range sp.Selected {
 		if states[sl.Name] != report.Passed {
-			out = append(out, sl)
+			todo = append(todo, sl)
 		}
 	}
 
-	return out, nil
+	for _, w := range sp.WholeSuite {
+		if states[report.WholeName(w)] != report.Passed {
+			whole = append(whole, w)
+		}
+	}
+
+	return todo, whole, nil
 }
 
 // poolSlices are what a session needs of each slice, with its recorded duration for the pool's order

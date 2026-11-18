@@ -137,7 +137,10 @@ func TestARerunEmitsTheWrittenPlanWithoutWhatPassed(t *testing.T) {
 	writeFile(t, result, `{"passed": true, "tests": 1, "failures": []}`)
 
 	r := &report.Reporter{Config: c.cfg, ID: reportID(c.ch), Store: s, GitHub: report.Nowhere{}}
-	if _, err := r.Slice(t.Context(), report.SliceEvent{Suite: "e2e", Slice: "a", Label: "//e2e:a", Result: result}); err != nil {
+	if _, err := r.Slices(t.Context(), []report.SliceEvent{
+		{Suite: "e2e", Slice: "a", Label: "//e2e:a", Result: result},
+		{Suite: "e2e", Slice: report.WholeName("money"), Label: report.WholeName("money"), Result: result},
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -152,7 +155,8 @@ func TestARerunEmitsTheWrittenPlanWithoutWhatPassed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if em := readEmission(t, c.em.dir); len(em.Pools) != 1 || !slices.Equal(em.Pools[0].Items, []string{"b"}) || len(em.Jobs) != 3 {
+	// the check passed too: the prepare and the end are left
+	if em := readEmission(t, c.em.dir); len(em.Pools) != 1 || !slices.Equal(em.Pools[0].Items, []string{"b"}) || len(em.Jobs) != 2 || em.Jobs[1].Name != "e2e-end" {
 		t.Fatalf("emitted again: %+v", em)
 	}
 
