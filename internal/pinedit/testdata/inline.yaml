@@ -1,0 +1,2 @@
+pipeline: shop
+plugins: [{name: x, kind: sbom, repository: o/x, commit: 0000000000000000000000000000000000000000}]

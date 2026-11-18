@@ -1,0 +1,28 @@
+pipeline: shop
+
+# the plugins, pinned
+plugins:
+  # Go: what exists and who uses it
+  - name: go-sbom
+    kind: sbom
+    repository: sideways-works/pipelinegen-sbom-go
+    release: {version: v0.3.0, sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    config: {modules: [.]}
+
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: go, kind: driver, path: driver/go, release: {version: v0.3.0, sums: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}
+      # the correlator reads the coverage
+      - {name: go-correlator, kind: correlator, path: correlator/go, release: {version: v0.3.0-rc.1, sha256: cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc}}
+        # a note on the entry above
+
+  - repository: git@gitlab.com:group/tools.git
+    with:
+      - name: lint
+        kind: driver
+        path: driver/lint
+        release:
+          version: 'v1.1.0'
+          sums: dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+
+runs: {}

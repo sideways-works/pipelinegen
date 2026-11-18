@@ -1,0 +1,8 @@
+pipeline: shop
+# no plugins yet
+runs: {}
+
+plugins:
+  - repository: https://github.com/o/plugins
+    with:
+      - {name: go, kind: driver, path: driver/go, release: {version: v0.2.1, sums: "4444444444444444444444444444444444444444444444444444444444444444"}}
