@@ -14,7 +14,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/release"
 )
 
-const usage = "usage: bazel run //ci/release -- build DIR TAG OUT | publish REPO TAG OUT | tested REPO COMMIT CONTEXT... | notice DIR"
+const usage = "usage: bazel run //ci/release -- build DIR TAG OUT | publish REPO TAG OUT | tested REPO COMMIT CONTEXT... | notice DIR | patch DIR REPO TAG OUT"
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -36,6 +36,8 @@ func run(ctx context.Context, args []string) int {
 		err = release.Publish(ctx, o, args[1], args[2], args[3])
 	case len(args) >= 4 && args[0] == "tested":
 		err = release.Tested(ctx, o, args[1], args[2], args[3:])
+	case len(args) == 5 && args[0] == "patch":
+		err = release.Patch(ctx, o, args[1], args[2], args[3], args[4])
 	case len(args) == 2 && args[0] == "notice":
 		err = notice(ctx, o, args[1])
 	default:

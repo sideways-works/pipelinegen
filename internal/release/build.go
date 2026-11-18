@@ -71,8 +71,9 @@ func moduleLine(goMod string) string {
 // nestedTags: a Go module nested under the root module's path (SUB/go.mod declaring ROOT/SUB) is released
 // with the repository, so its tag SUB/TAG must name the same commit; other nested modules are not.
 func nestedTags(ctx context.Context, src, tag string) error {
-	if !exists(filepath.Join(src, "go.mod")) {
-		return nil
+	subs, err := releasedWith(src)
+	if err != nil || len(subs) == 0 {
+		return err
 	}
 
 	commit, err := output(ctx, src, "git", "-C", src, "rev-parse", tag+"^{commit}")
@@ -82,37 +83,7 @@ func nestedTags(ctx context.Context, src, tag string) error {
 
 	root := moduleLine(filepath.Join(src, "go.mod"))
 
-	var mods []string
-
-	err = filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if d.IsDir() && (d.Name() == "testdata" || d.Name() == "node_modules") {
-			return filepath.SkipDir
-		}
-
-		if !d.IsDir() && d.Name() == "go.mod" && filepath.Dir(p) != src {
-			mods = append(mods, p)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("nested modules: %w", err)
-	}
-
-	slices.Sort(mods)
-
-	for _, mod := range mods {
-		rel, _ := filepath.Rel(src, filepath.Dir(mod)) //nolint:errcheck // under src
-		sub := filepath.ToSlash(rel)
-
-		if moduleLine(mod) != root+"/"+sub {
-			continue
-		}
-
+	for _, sub := range subs {
 		got, err := output(ctx, src, "git", "-C", src, "rev-parse", "-q", "--verify", "refs/tags/"+sub+"/"+tag+"^{commit}")
 		if err != nil || got != commit {
 			return refuse("the nested module %s/%s needs the tag %s/%s on the commit of %s", root, sub, sub, tag, tag)
@@ -120,6 +91,46 @@ func nestedTags(ctx context.Context, src, tag string) error {
 	}
 
 	return nil
+}
+
+// releasedWith are the directories, slash-separated from src, of the nested modules released with
+// src's root module: those whose path is the root's and their directory.
+func releasedWith(src string) ([]string, error) {
+	if !exists(filepath.Join(src, "go.mod")) {
+		return nil, nil
+	}
+
+	root := moduleLine(filepath.Join(src, "go.mod"))
+
+	var subs []string
+
+	err := filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if d.IsDir() && (d.Name() == "testdata" || d.Name() == "node_modules" || d.Name() == ".git") {
+			return filepath.SkipDir
+		}
+
+		if d.IsDir() || d.Name() != "go.mod" || filepath.Dir(p) == src {
+			return nil
+		}
+
+		rel, _ := filepath.Rel(src, filepath.Dir(p)) //nolint:errcheck // under src
+		if sub := filepath.ToSlash(rel); moduleLine(p) == root+"/"+sub {
+			subs = append(subs, sub)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("nested modules: %w", err)
+	}
+
+	slices.Sort(subs)
+
+	return subs, nil
 }
 
 // versionVar is a package-level `var Version = "dev"`, which the build

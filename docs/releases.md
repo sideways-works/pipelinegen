@@ -6,11 +6,18 @@ the same way, by the release command of this repository, run in its
 checkout:
 
 ```sh
-go run ./ci/release build   DIR TAG OUT    # build TAG of the checkout in DIR into OUT
-go run ./ci/release publish REPO TAG OUT   # attach OUT to TAG's GitHub release of REPO
-go run ./ci/release tested  REPO COMMIT CONTEXT...   # fail unless one of these statuses passed on COMMIT
-go run ./ci/release notice  DIR            # write the NOTICE the release of the checkout in DIR needs
+bazel run //ci/release -- build   DIR TAG OUT    # build TAG of the checkout in DIR into OUT
+bazel run //ci/release -- publish REPO TAG OUT   # attach OUT to TAG's GitHub release of REPO
+bazel run //ci/release -- tested  REPO COMMIT CONTEXT...   # fail unless one of these statuses passed on COMMIT
+bazel run //ci/release -- notice  DIR            # write the NOTICE the release of the checkout in DIR needs
+bazel run //ci/release -- patch   DIR REPO TAG OUT   # tag main, build, publish and check by download
 ```
+
+The target builds the command with the Go SDK that `MODULE.bazel` pins
+and runs it where `bazel run` was started, so relative paths mean what
+they say; it puts that SDK first on `PATH`, so the release is built with
+it too. The pipeline's `release` job, which has no Bazel, runs the same
+command as `go run ./ci/release`.
 
 A release is made only from a commit that a run of every test passed on.
 pipelinegen's everyday runs select the tests a change reaches, so only its
@@ -114,8 +121,8 @@ By hand, in a fresh clone of the repository (never a working checkout),
 with the commands run in a checkout of pipelinegen's `main`:
 
 1. Check out the commit to release, detached, and make sure it is on
-   `main`. For a pipelinegen release (not a candidate), `go run
-   ./ci/release tested sideways-works/pipelinegen <commit>
+   `main`. For a pipelinegen release (not a candidate), `bazel run
+   //ci/release -- tested sideways-works/pipelinegen <commit>
    pipelinegen/nightly` must pass: a commit the nightly hasn't run waits
    for it.
 2. Run the repository's checks. For Go, `go test ./...`
@@ -130,8 +137,8 @@ with the commands run in a checkout of pipelinegen's `main`:
    for first on `PATH`. When the fixture has third-party modules, it also
    needs `--cache <dir>` with them in `<dir>/gomodcache` (run
    `GOMODCACHE=<dir>/gomodcache go mod download` in the fixture).
-4. Make sure the commit has `LICENSE` and the `NOTICE` that `go run
-   ./ci/release notice <clone>` writes, and, in a repository
+4. Make sure the commit has `LICENSE` and the `NOTICE` that `bazel run
+   //ci/release -- notice <clone>` writes, and, in a repository
    with a `CHANGELOG.md` (pipelinegen's), the release's entry there: a
    heading `## [X.Y.Z] - <date>`, or for a candidate that heading or
    `## [Unreleased]`. The build refuses a tag without them, and releases
@@ -139,11 +146,11 @@ with the commands run in a checkout of pipelinegen's `main`:
    `CHANGELOG.md`, as a plugin's, is released without that check.
 5. Tag the commit `vX.Y.Z`, and each nested module released with it
    `SUB/vX.Y.Z` on the same commit.
-6. Build with `go run ./ci/release build <clone> vX.Y.Z <out>`. For a Node
+6. Build with `bazel run //ci/release -- build <clone> vX.Y.Z <out>`. For a Node
    package, write down the Node version: the build uses the `node` on
    `PATH`, and only the same version is sure to give the same bytes.
-7. Push the tags, then run `go run ./ci/release publish owner/name vX.Y.Z
-   <out>`. A `gh` login is enough, so leave `GH_TOKEN` unset instead of
+7. Push the tags, then run `bazel run //ci/release -- publish owner/name
+   vX.Y.Z <out>`. A `gh` login is enough, so leave `GH_TOKEN` unset instead of
    putting a token on a command line.
 8. Download the release into an empty directory, run
    `sha256sum -c SHA256SUMS` there, and compare its `SHA256SUMS` with the
@@ -152,6 +159,18 @@ with the commands run in a checkout of pipelinegen's `main`:
    the `newest` proof has passed with it, move
    [ci/proof/pins](../ci/proof/pins) to it (see
    [the proof](proof.md)).
+
+`patch` takes steps 5 to 8 for a release of `main`'s head, once steps 1
+to 4 hold: `bazel run //ci/release -- patch <clone> owner/name vX.Y.Z
+<out>`. It fetches `origin` in the clone and refuses a `main` that doesn't
+fast-forward to `origin/main` or a clone with changes not committed. It
+tags `main`'s head and each nested module released with it, and pushes
+those tags alone; a tag that exists stays where it is. It builds into
+`<out>`, or keeps the build there from an earlier try, publishes it,
+downloads the release into a directory of its own, checks the files
+against their `SHA256SUMS` and that file against the build's, and prints
+the checksum of `SHA256SUMS`. Run it again after a failure: it picks up
+where it stopped.
 
 A pushed tag is never moved or deleted, and a published release is never
 changed. A wrong release gets a new version.
