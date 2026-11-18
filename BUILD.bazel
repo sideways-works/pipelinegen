@@ -51,8 +51,9 @@ filegroup(
 )
 
 # The lint suite's second slice: the subjects of the commits a build
-# brings. Every tracked file reaches it (this package's files, and the
-# example's through its targets), so a docs-only change checks them too.
+# brings. Every tracked file reaches it (this package's files, and those of
+# the example, ci/ and tools/ through their targets), so a docs-only change
+# checks them too.
 filegroup(
     name = "subjects",
     srcs = glob(

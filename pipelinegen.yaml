@@ -92,11 +92,14 @@ suites:
       # golangci-lint at the version and checksum MODULE.bazel pins over
       # every package, with the repository's .golangci.yml, then
       # pipelinegen's own check of the tree (a git work tree at the tested
-      # commit with its history). Bazel's output root, with the pinned tools,
-      # stays with the job, and its server ends once the lint has started.
+      # commit with its history). Bazel's output, with the pinned tools, stays
+      # with the job at a path of its own, since Bazel names an output base
+      # after the checkout's path, which changes between builds; its server
+      # ends once the lint has started.
       - run: command
         take: ["//:lint"]
-        with: {each: [bazelisk, "--output_user_root={cache}/bazel", --max_idle_secs=5, run, "//tools:lint"]}
+        with:
+          each: [bazelisk, "--output_user_root={cache}/bazel/root", "--output_base={cache}/bazel/base", --max_idle_secs=5, run, "//tools:lint"]
       # the subjects of the commits the build brings
       - run: command
         take: ["//:subjects"]
