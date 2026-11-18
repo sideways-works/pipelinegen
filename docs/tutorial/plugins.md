@@ -14,9 +14,9 @@ or more that say what uses it and what each test ran (correlators):
 | Your code | Add | Guide |
 |---|---|---|
 | Go | go-sbom and go-correlator | this page |
-| TypeScript, React, browser tests of a web app | ts-sbom, npm-sbom and react-correlator | [react-correlator's README](https://github.com/sideways-works/pipelinegen-correlator-react) |
-| PostgreSQL migrations | pg-sbom, with sql-correlator for SQL in code or gorm-correlator for GORM | [pg-sbom's README](https://github.com/sideways-works/pipelinegen-sbom-pg) |
-| An OpenAPI contract with oapi-codegen | openapi-sbom and oapi-codegen-correlator | [openapi-sbom's README](https://github.com/sideways-works/pipelinegen-sbom-openapi) |
+| TypeScript, React, browser tests of a web app | ts-sbom, npm-sbom and react-correlator | [react-correlator's README](https://github.com/sideways-works/pipelinegen-plugins/tree/main/correlator/react) |
+| PostgreSQL migrations | pg-sbom, with sql-correlator for SQL in code or gorm-correlator for GORM | [pg-sbom's README](https://github.com/sideways-works/pipelinegen-plugins/tree/main/sbom/pg) |
+| An OpenAPI contract with oapi-codegen | openapi-sbom and oapi-codegen-correlator | [openapi-sbom's README](https://github.com/sideways-works/pipelinegen-plugins/tree/main/sbom/openapi) |
 | anything else | nothing: keep `bind: graph` and go on to [step 7](tasks.md) | |
 
 Browser tests of a Go backend need go-correlator only to bind them to the
@@ -24,35 +24,41 @@ backend code they reach; react-correlator adds the frontend side.
 
 ## Pin the plugins
 
-Each plugin is a release of its own repository, pinned in the config by
-version and by the checksum of its Linux binary, which the release's
-`SHA256SUMS` lists, as the drivers of step 3 are. The notes service is Go
-with an OpenAPI contract, so it takes the Go pair and the OpenAPI pair,
-listed under `plugins` before the drivers:
+The plugins live in the same repository as the drivers of step 3, each
+in a directory of its kind and name (`sbom/go`, `correlator/go`), and are
+pinned the same way: by version and by the checksum of the release's
+`SHA256SUMS`. The notes service is Go with an OpenAPI contract, so it
+takes the Go pair and the OpenAPI pair, in the group with the drivers:
 
 ```yaml
 plugins:
-  - name: go-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
-  - name: go-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
-  - name: openapi-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-openapi
-    release: {version: v0.2.0, sha256: fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab}
-  - name: oapi-codegen-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-oapi-codegen
-    release: {version: v0.2.0, sha256: 155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce}
-    config:
-      # the server appends the route of each request it serves here
-      request_log: work/command/requests.log
-      request_log_lines: patterns
-      other_routes: ["GET /"]
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: go-sbom, kind: sbom, path: sbom/go, release: {version: v0.4.0, sums: e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d}}
+      - name: go-correlator
+        kind: correlator
+        path: correlator/go
+        release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}
+      - {name: openapi-sbom, kind: sbom, path: sbom/openapi, release: {version: v0.4.0, sums: d9906494cc33ad4c500d72f4595e56ae9724145dbfffd1fb1e604f1f2b54787a}}
+      - name: oapi-codegen-correlator
+        kind: correlator
+        path: correlator/oapi-codegen
+        release: {version: v0.4.0, sums: c7353aed77ddcaa21eadb50b7cce4101973ee2e5ed9aa6bfd4d0d97e29b37f1a}
+        config:
+          # the server appends the route of each request it serves here
+          request_log: work/command/requests.log
+          request_log_lines: patterns
+          other_routes: ["GET /"]
+      - {name: go, kind: driver, path: driver/go, release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}}
+      - {name: playwright, kind: driver, path: driver/playwright, release: {version: v0.4.0, sums: 98cec967c5d0d7823832a9c1fbad37f71d195f000a5627a9c4e3177c349fbd0b}}
+```
+
+`pipelinegen plugin add` writes the four pins into the group, each named
+as the plugin names itself, which these names are; the `config` block is
+yours to add:
+
+```sh
+pipelinegen plugin add https://github.com/sideways-works/pipelinegen-plugins sbom/go correlator/go sbom/openapi correlator/oapi-codegen
 ```
 
 `name` is yours to choose; it names the executable. The plugins find their
@@ -126,36 +132,44 @@ made ([step 7](tasks.md)).
 
 The CI pipeline downloads the pinned plugins itself. On your machine,
 pipelinegen looks for them in `tools/plugins/<name>` under the
-repository's root, beside the drivers of step 3. Download each and check
-it against the pin:
+repository's root, beside the drivers of step 3. Download each with its
+release's `SHA256SUMS`, as for the drivers:
 
 ```sh
 curl -fsSL -o tools/plugins/go-sbom \
-  https://github.com/sideways-works/pipelinegen-sbom-go/releases/download/v0.2.0/go-sbom-linux-amd64
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/sbom/go/v0.4.0/go-sbom-linux-amd64
+curl -fsSL -o tools/plugins/go-sbom.SHA256SUMS \
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/sbom/go/v0.4.0/SHA256SUMS
 curl -fsSL -o tools/plugins/go-correlator \
-  https://github.com/sideways-works/pipelinegen-correlator-go/releases/download/v0.2.0/go-correlator-linux-amd64
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/correlator/go/v0.4.0/go-correlator-linux-amd64
+curl -fsSL -o tools/plugins/go-correlator.SHA256SUMS \
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/correlator/go/v0.4.0/SHA256SUMS
 curl -fsSL -o tools/plugins/openapi-sbom \
-  https://github.com/sideways-works/pipelinegen-sbom-openapi/releases/download/v0.2.0/openapi-sbom-linux-amd64
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/sbom/openapi/v0.4.0/openapi-sbom-linux-amd64
+curl -fsSL -o tools/plugins/openapi-sbom.SHA256SUMS \
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/sbom/openapi/v0.4.0/SHA256SUMS
 curl -fsSL -o tools/plugins/oapi-codegen-correlator \
-  https://github.com/sideways-works/pipelinegen-correlator-oapi-codegen/releases/download/v0.2.0/oapi-codegen-correlator-linux-amd64
-chmod +x tools/plugins/*
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/correlator/oapi-codegen/v0.4.0/oapi-codegen-correlator-linux-amd64
+curl -fsSL -o tools/plugins/oapi-codegen-correlator.SHA256SUMS \
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/correlator/oapi-codegen/v0.4.0/SHA256SUMS
+chmod +x tools/plugins/go-sbom tools/plugins/go-correlator tools/plugins/openapi-sbom tools/plugins/oapi-codegen-correlator
 ```
 
-Then check each against its pin, with the checksums from the config in a
-file (`tools/sums` here):
+Then check each list against its pin, with the checksums from the config
+in a file (`tools/sums` here):
 
 <!-- output: sha-plugins -->
 ```
 $ sha256sum -c tools/sums
-tools/plugins/go-sbom: OK
-tools/plugins/go-correlator: OK
-tools/plugins/openapi-sbom: OK
-tools/plugins/oapi-codegen-correlator: OK
+tools/plugins/go-sbom.SHA256SUMS: OK
+tools/plugins/go-correlator.SHA256SUMS: OK
+tools/plugins/openapi-sbom.SHA256SUMS: OK
+tools/plugins/oapi-codegen-correlator.SHA256SUMS: OK
 ```
 
 On macOS, or for a release without a binary for your system, build them
 from source instead (`go install
-github.com/sideways-works/pipelinegen-sbom-go/cmd/go-sbom@v0.2.0`,
+github.com/sideways-works/pipelinegen-plugins/sbom/go/cmd/go-sbom@v0.4.0`,
 the same for the others) and copy the binaries into `tools/plugins/`.
 
 ## The Go plugins' module cache

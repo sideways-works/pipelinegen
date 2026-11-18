@@ -33,7 +33,7 @@ func run(args []string) int {
 	}
 
 	if o.Plugins == "" {
-		fmt.Fprintln(os.Stderr, "PLUGINS: a directory holding the pinned plugins: go-sbom, go-correlator, openapi-sbom, oapi-codegen-correlator, concourse, go, playwright")
+		fmt.Fprintln(os.Stderr, "PLUGINS: a directory holding the pinned plugins: go-sbom, go-correlator, openapi-sbom, oapi-codegen-correlator, concourse, go, playwright, and beside each pinned by sums its release's SHA256SUMS as <name>.SHA256SUMS")
 
 		return 2
 	}

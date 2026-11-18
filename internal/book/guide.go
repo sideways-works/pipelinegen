@@ -23,14 +23,10 @@ go_deps.from_file(go_mod = "//:go.mod")
 `
 
 const driverEntries = `plugins:
-  - name: go
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
-  - name: playwright
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-playwright
-    release: {version: v0.2.0, sha256: 1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: go, kind: driver, path: driver/go, release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}}
+      - {name: playwright, kind: driver, path: driver/playwright, release: {version: v0.4.0, sums: 98cec967c5d0d7823832a9c1fbad37f71d195f000a5627a9c4e3177c349fbd0b}}
 `
 
 const firstConfig = `pipeline: notes
@@ -73,44 +69,39 @@ func TestTitleKeepsShortTitles(t *testing.T) {
 }
 `
 
-// pluginSums and driverSums are the guide's tools/sums and tools/drivers.sums: the pinned releases'
-// checksums, the same as the plugin entries and example-notes give.
-const pluginSums = `9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95  tools/plugins/go-sbom
-2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210  tools/plugins/go-correlator
-fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab  tools/plugins/openapi-sbom
-155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce  tools/plugins/oapi-codegen-correlator
+// pluginSums and driverSums are the guide's tools/sums and tools/drivers.sums: the checksums of the
+// pinned releases' SHA256SUMS, the same as the plugin entries and example-notes give.
+const pluginSums = `e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d  tools/plugins/go-sbom.SHA256SUMS
+fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020  tools/plugins/go-correlator.SHA256SUMS
+d9906494cc33ad4c500d72f4595e56ae9724145dbfffd1fb1e604f1f2b54787a  tools/plugins/openapi-sbom.SHA256SUMS
+c7353aed77ddcaa21eadb50b7cce4101973ee2e5ed9aa6bfd4d0d97e29b37f1a  tools/plugins/oapi-codegen-correlator.SHA256SUMS
 `
 
-const driverSums = `ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76  tools/plugins/go
-1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9  tools/plugins/playwright
+const driverSums = `9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887  tools/plugins/go.SHA256SUMS
+98cec967c5d0d7823832a9c1fbad37f71d195f000a5627a9c4e3177c349fbd0b  tools/plugins/playwright.SHA256SUMS
 `
 
-const pluginEntries = `plugins:
-  - name: go-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
-  - name: go-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
-  - name: openapi-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-openapi
-    release: {version: v0.2.0, sha256: fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab}
-  - name: oapi-codegen-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-oapi-codegen
-    release: {version: v0.2.0, sha256: 155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce}
-    config:
-      # the server appends the route of each request it serves here
-      request_log: work/command/requests.log
-      request_log_lines: patterns
-      other_routes: ["GET /"]
+// pluginEntries go into the plugins repository's group before the drivers.
+const pluginEntries = `    with:
+      - {name: go-sbom, kind: sbom, path: sbom/go, release: {version: v0.4.0, sums: e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d}}
+      - name: go-correlator
+        kind: correlator
+        path: correlator/go
+        release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}
+      - {name: openapi-sbom, kind: sbom, path: sbom/openapi, release: {version: v0.4.0, sums: d9906494cc33ad4c500d72f4595e56ae9724145dbfffd1fb1e604f1f2b54787a}}
+      - name: oapi-codegen-correlator
+        kind: correlator
+        path: correlator/oapi-codegen
+        release: {version: v0.4.0, sums: c7353aed77ddcaa21eadb50b7cce4101973ee2e5ed9aa6bfd4d0d97e29b37f1a}
+        config:
+          # the server appends the route of each request it serves here
+          request_log: work/command/requests.log
+          request_log_lines: patterns
+          other_routes: ["GET /"]
 `
 
 func bindByRecording(s string) string {
-	s = strings.Replace(s, "plugins:\n", pluginEntries, 1)
+	s = strings.Replace(s, "    with:\n", pluginEntries, 1)
 	s = strings.ReplaceAll(s, "    tests: [\"**/*_test.go\"]\n", "    tests: [\"**/*_test.go\"]\n    bind: recorded\n    correlators: [go-correlator]\n")
 	s = strings.ReplaceAll(s, "    owner: \"//e2e:e2e\"\n", "    owner: \"//e2e:e2e\"\n    bind: recorded\n    correlators: [go-correlator, oapi-codegen-correlator]\n")
 	s = strings.ReplaceAll(s, "go.mod, go.sum, ", "")
@@ -126,7 +117,7 @@ const buildBazel = `load("@gazelle//:def.bzl", "gazelle")
 gazelle(name = "gazelle")
 `
 
-const coverModule = "github.com/sideways-works/pipelinegen-correlator-go/cover@v0.2.0"
+const coverModule = "github.com/sideways-works/pipelinegen-plugins/correlator/go/cover@v0.4.0"
 
 const e2eSteps = `    # the specs talk to one server for the whole batch, whose coverage
     # go-correlator takes at each spec's edges
@@ -151,9 +142,9 @@ const e2eSteps = `    # the specs talk to one server for the whole batch, whose 
 `
 
 func runTheServer(s string) string {
-	s = strings.Replace(s, "    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}\n",
-		"    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}\n"+
-			"    config:\n      # the running server's counters pass through here between specs\n      cover_dir: work/command/ctl\n", 1)
+	s = strings.Replace(s, "        release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}\n",
+		"        release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}\n"+
+			"        config:\n          # the running server's counters pass through here between specs\n          cover_dir: work/command/ctl\n", 1)
 	s = strings.Replace(s, "  - paths: [cmd/notes/BUILD.bazel]\n    reason: builds the server, which the browser specs run; their recordings bind its code\n",
 		"  - paths: [cmd/notes/BUILD.bazel]\n    reason: builds the server, which the browser specs run; their recordings bind its code\n"+
 			"  - paths: [cmd/notes/cover.go]\n    reason: links go-correlator's cover package into the e2e suite's coverage build only, which Bazel never builds\n", 1)
@@ -171,7 +162,7 @@ func (g *guide) withoutCover() error {
 		var keep []string
 
 		for l := range strings.SplitSeq(string(data), "\n") {
-			if !strings.Contains(l, "pipelinegen-correlator-go/cover ") {
+			if !strings.Contains(l, "/correlator/go/cover ") {
 				keep = append(keep, l)
 			}
 		}
@@ -191,6 +182,10 @@ func (g *guide) executable() error {
 	}
 
 	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), sumsSuffix) {
+			continue
+		}
+
 		p := filepath.Join(g.notes, "tools", "plugins", e.Name())
 
 		info, err := os.Stat(p)
@@ -213,6 +208,10 @@ func (g *guide) onItsPort(config string) string {
 func (g *guide) drivers() error {
 	for _, p := range []string{"go", "playwright"} {
 		if err := g.copyFile(filepath.Join(g.plugins, p), "tools/plugins/"+p, 0o755); err != nil {
+			return err
+		}
+
+		if err := g.copyFile(filepath.Join(g.plugins, p+sumsSuffix), "tools/plugins/"+p+sumsSuffix, 0o644); err != nil {
 			return err
 		}
 	}
@@ -347,6 +346,10 @@ func (g *guide) run(ctx context.Context) error {
 		func() error {
 			for _, p := range []string{"go-sbom", "go-correlator", "openapi-sbom", "oapi-codegen-correlator"} {
 				if err := g.copyFile(filepath.Join(g.plugins, p), "tools/plugins/"+p, 0o644); err != nil {
+					return err
+				}
+
+				if err := g.copyFile(filepath.Join(g.plugins, p+sumsSuffix), "tools/plugins/"+p+sumsSuffix, 0o644); err != nil {
 					return err
 				}
 			}

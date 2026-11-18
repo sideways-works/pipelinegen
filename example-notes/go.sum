@@ -86,8 +86,8 @@ github.com/rogpeppe/go-internal v1.12.0 h1:exVL4IDcn6na9z1rAb56Vxr+CgyK3nn3O+epU
 github.com/rogpeppe/go-internal v1.12.0/go.mod h1:E+RYuTGaKKdloAfM02xzb0FW3Paa99yedzYV+kq4uf4=
 github.com/sergi/go-diff v1.1.0 h1:we8PVUC3FE2uYfodKH/nBHMSetSfHDR6scGdBi+erh0=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
-github.com/sideways-works/pipelinegen-correlator-go/cover v0.2.0 h1:4msOfcyYMDVC3pbxcXApMYUrxUZxZXKSFXCjQV5v/AA=
-github.com/sideways-works/pipelinegen-correlator-go/cover v0.2.0/go.mod h1:lflTC+/nDUPKmxWo5HlGyGY2uHFlRd405O9vnshZYRc=
+github.com/sideways-works/pipelinegen-plugins/correlator/go/cover v0.4.0 h1:+hTVg2Vyc52X7TCc10Oxm2CRVPaA2Nrf4wFUKv05ExI=
+github.com/sideways-works/pipelinegen-plugins/correlator/go/cover v0.4.0/go.mod h1:gZDrgiW5Q1QwqnRm9tTvH/qASoTeYfdOc2p7YdQ/0vc=
 github.com/speakeasy-api/jsonpath v0.6.0 h1:IhtFOV9EbXplhyRqsVhHoBmmYjblIRh5D1/g8DHMXJ8=
 github.com/speakeasy-api/jsonpath v0.6.0/go.mod h1:ymb2iSkyOycmzKwbEAYPJV/yi2rSmvBCLZJcyD+VVWw=
 github.com/speakeasy-api/openapi-overlay v0.10.2 h1:VOdQ03eGKeiHnpb1boZCGm7x8Haj6gST0P3SGTX95GU=

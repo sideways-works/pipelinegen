@@ -1,5 +1,5 @@
 $ sha256sum -c tools/sums
-tools/plugins/go-sbom: OK
-tools/plugins/go-correlator: OK
-tools/plugins/openapi-sbom: OK
-tools/plugins/oapi-codegen-correlator: OK
+tools/plugins/go-sbom.SHA256SUMS: OK
+tools/plugins/go-correlator.SHA256SUMS: OK
+tools/plugins/openapi-sbom.SHA256SUMS: OK
+tools/plugins/oapi-codegen-correlator.SHA256SUMS: OK

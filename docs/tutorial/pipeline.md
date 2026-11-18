@@ -54,7 +54,7 @@ concourse:
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 
 plugins:
-  # ... the plugins of step 6 and the drivers of step 3 ...
+  # ... the group of steps 3 and 6, the drivers and the plugins ...
   - name: concourse
     kind: runner
     repository: sideways-works/pipelinegen-runner-concourse

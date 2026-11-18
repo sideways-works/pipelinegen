@@ -29,43 +29,34 @@ concourse:
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 
 plugins:
-  - name: go-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.2.0, sha256: 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95}
-  - name: go-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
-    config:
-      # the running server's counters pass through here between specs
-      cover_dir: work/command/ctl
-  - name: openapi-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-openapi
-    release: {version: v0.2.0, sha256: fb9adfeebe3a4498d12f3b774c76c158026fd4e90c608121b31d067be9a7cbab}
-  - name: oapi-codegen-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-oapi-codegen
-    release: {version: v0.2.0, sha256: 155b4bce79efb0b098b3868014e89399f43a749f4496a7c64027b34634ac1bce}
-    config:
-      # the server appends the route of each request it serves here
-      request_log: work/command/requests.log
-      request_log_lines: patterns
-      other_routes: ["GET /"]
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: go-sbom, kind: sbom, path: sbom/go, release: {version: v0.4.0, sums: e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d}}
+      - name: go-correlator
+        kind: correlator
+        path: correlator/go
+        release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}
+        config:
+          # the running server's counters pass through here between specs
+          cover_dir: work/command/ctl
+      - {name: openapi-sbom, kind: sbom, path: sbom/openapi, release: {version: v0.4.0, sums: d9906494cc33ad4c500d72f4595e56ae9724145dbfffd1fb1e604f1f2b54787a}}
+      - name: oapi-codegen-correlator
+        kind: correlator
+        path: correlator/oapi-codegen
+        release: {version: v0.4.0, sums: c7353aed77ddcaa21eadb50b7cce4101973ee2e5ed9aa6bfd4d0d97e29b37f1a}
+        config:
+          # the server appends the route of each request it serves here
+          request_log: work/command/requests.log
+          request_log_lines: patterns
+          other_routes: ["GET /"]
+      # the drivers that run the suites' tests
+      - {name: go, kind: driver, path: driver/go, release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}}
+      - {name: playwright, kind: driver, path: driver/playwright, release: {version: v0.4.0, sums: 98cec967c5d0d7823832a9c1fbad37f71d195f000a5627a9c4e3177c349fbd0b}}
+  # TODO: move to runner/concourse of the plugins repository at its v0.4.0
   - name: concourse
     kind: runner
     repository: sideways-works/pipelinegen-runner-concourse
     release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
-  # the drivers that run the suites' tests
-  - name: go
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
-  - name: playwright
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-playwright
-    release: {version: v0.2.0, sha256: 1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9}
 
 suites:
   go:

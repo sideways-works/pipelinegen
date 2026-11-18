@@ -14,7 +14,7 @@ tests with `go test -run`, makes each file's result from Go's output and,
 in a recording run, builds with coverage of every package of the module
 and leaves each file's coverage where go-correlator reads it. Its
 settings (a time limit, build tags, the packages a recording covers) are
-in [go-driver's README](https://github.com/sideways-works/pipelinegen-driver-go).
+in [go-driver's README](https://github.com/sideways-works/pipelinegen-plugins/tree/main/driver/go).
 
 ## Browser tests with Playwright, against a Go server
 
@@ -65,13 +65,13 @@ start and its end. go-correlator takes the server's counters at those
 edges through `cover_dir`, which goes into its entry:
 
 ```yaml
-  - name: go-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.2.0, sha256: 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210}
-    config:
-      # the running server's counters pass through here between specs
-      cover_dir: work/command/ctl
+      - name: go-correlator
+        kind: correlator
+        path: correlator/go
+        release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}
+        config:
+          # the running server's counters pass through here between specs
+          cover_dir: work/command/ctl
 ```
 
 The run step leaves `batch` off, so pipelinegen calls playwright-driver
@@ -80,14 +80,14 @@ after each call, which is why the specs need no fixture that marks their
 start and end. A suite that bundles recorded stack slices (`batch: true`)
 needs that marks fixture, whose `marks.mjs` `playwright-driver marks
 <dir>` writes ([playwright-driver's
-README](https://github.com/sideways-works/pipelinegen-driver-playwright)).
+README](https://github.com/sideways-works/pipelinegen-plugins/tree/main/driver/playwright)).
 
 ### The server's side
 
 The server hands its counters over while it keeps running through
 go-correlator's `cover` package, the module
-`github.com/sideways-works/pipelinegen-correlator-go/cover` at `v0.2.0`, linked
-into the coverage build only. A file with the build tag the prepare step
+`github.com/sideways-works/pipelinegen-plugins/correlator/go/cover` at
+`v0.4.0`, linked into the coverage build only. A file with the build tag the prepare step
 passes links it, [cmd/notes/cover.go](../../example-notes/cmd/notes/cover.go):
 
 ```go
@@ -98,15 +98,15 @@ package main
 // A coverage build of the server links go-correlator's cover package: while
 // the server keeps running across the browser specs, it hands its counters
 // to pipelinegen at each spec's end and starts the next spec from zero.
-import _ "github.com/sideways-works/pipelinegen-correlator-go/cover"
+import _ "github.com/sideways-works/pipelinegen-plugins/correlator/go/cover"
 ```
 
 Add the module to `go.mod`:
 
 <!-- output: go-get-cover -->
 ```
-$ go get github.com/sideways-works/pipelinegen-correlator-go/cover@v0.2.0 && go mod tidy
-go: added github.com/sideways-works/pipelinegen-correlator-go/cover v0.2.0
+$ go get github.com/sideways-works/pipelinegen-plugins/correlator/go/cover@v0.4.0 && go mod tidy
+go: added github.com/sideways-works/pipelinegen-plugins/correlator/go/cover v0.4.0
 ```
 
 The file is for the prepare step's `go build`, not for Bazel: keep it out

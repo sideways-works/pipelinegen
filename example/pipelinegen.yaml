@@ -43,15 +43,15 @@ concourse:
 
 
 plugins:
+  # TODO: move to runner/concourse of the plugins repository at its v0.4.0
   - name: concourse
     kind: runner
     repository: sideways-works/pipelinegen-runner-concourse
     release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
-  # runs shell test files function by function
-  - name: shell
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-shell
-    release: {version: v0.2.0, sha256: 38d59a75f3cf9818085cbe1c54225c94f68c7db626c37490de18b0d0debe5ed8}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      # runs shell test files function by function
+      - {name: shell, kind: driver, path: driver/shell, release: {version: v0.4.0, sums: ccba3ad11a223e3f148f05afe010831766ba776c314caf8c2d797496b58231af}}
 
 suites:
   unit:

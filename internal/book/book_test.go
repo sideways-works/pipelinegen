@@ -101,45 +101,61 @@ func TestFill(t *testing.T) {
 	}
 }
 
-const pinnedConfig = `concourse:
+func pinnedConfig(files map[string][]byte) string {
+	sum := func(p string) string { return sumOf(files[p]) }
+
+	return `concourse:
   planner:
     bootstrap:
       release: {version: v0.1.13-rc.2, sha256: 564d3a72a9bc06fa09f08202f5563102dbef83cf4d6dafe4f29c998196ebd02f}
 plugins:
-  - name: go-sbom
-    kind: sbom
-    repository: sideways-works/go-sbom
-    release: {version: v0.1.3-rc.3, sha256: fd95aa5ad762e5fb145e16aff50c608d7b43969a01509106dc70a7de8f64573f}
+  - repository: https://github.com/o/plugins
+    with:
+      - {name: go-sbom, kind: sbom, path: sbom/go, release: {version: v0.1.3-rc.3, sums: ` + sum("/p/go-sbom.SHA256SUMS") + `}}
+      - name: go-correlator
+        kind: correlator
+        path: correlator/go
+        release: {version: v0.1.3, sums: ` + sum("/p/go-correlator.SHA256SUMS") + `}
+        config: {cover_dir: ctl}
   - name: concourse
     kind: runner
-    release: {version: v0.1.7, sha256: 82ab6387d22e3b7c1442c1fcbb2af2d7d9db7c7604f41476b9164957759578e7}
+    release: {version: v0.1.7, sha256: ` + sum("/p/concourse") + `}
 `
+}
 
 func TestPinProblems(t *testing.T) {
-	sums := map[string]string{
-		"/p/go-sbom":   "fd95aa5ad762e5fb145e16aff50c608d7b43969a01509106dc70a7de8f64573f",
-		"/p/concourse": "82ab6387d22e3b7c1442c1fcbb2af2d7d9db7c7604f41476b9164957759578e7",
+	files := map[string][]byte{
+		"/p/go-sbom":                  []byte("sbom"),
+		"/p/go-sbom.SHA256SUMS":       []byte(sumOf([]byte("sbom")) + "  go-sbom-linux-amd64\n"),
+		"/p/go-correlator":            []byte("correlator"),
+		"/p/go-correlator.SHA256SUMS": []byte(sumOf([]byte("correlator")) + "  go-correlator-linux-amd64\n"),
+		"/p/concourse":                []byte("runner"),
 	}
-	sum := func(p string) (string, error) {
-		if s, ok := sums[p]; ok {
-			return s, nil
+	read := func(p string) ([]byte, error) {
+		if data, ok := files[p]; ok {
+			return data, nil
 		}
 
-		return "", os.ErrNotExist
+		return nil, os.ErrNotExist
 	}
+	config := pinnedConfig(files)
 
-	if bad := PinProblems(pinnedConfig, "/p", "v0.1.13-rc.2", sum); len(bad) != 0 {
+	if bad := PinProblems(config, "/p", "v0.1.13-rc.2", read); len(bad) != 0 {
 		t.Errorf("the pinned releases: %v", bad)
 	}
 
-	delete(sums, "/p/concourse")
-	sums["/p/go-sbom"] = "00"
+	correlatorPin := sumOf(files["/p/go-correlator.SHA256SUMS"])
 
-	bad := PinProblems(pinnedConfig, "/p", "v0.1.13", sum)
+	delete(files, "/p/concourse")
+	files["/p/go-sbom"] = []byte("another build")
+	files["/p/go-correlator.SHA256SUMS"] = []byte("another list")
+
+	bad := PinProblems(config, "/p", "v0.1.13", read)
 	want := []string{
 		"pipelinegen on PATH is v0.1.13; example-notes pins v0.1.13-rc.2",
-		"/p/go-sbom: 00, the pin is fd95aa5ad762e5fb145e16aff50c608d7b43969a01509106dc70a7de8f64573f",
-		"/p/concourse: missing, the pin is 82ab6387d22e3b7c1442c1fcbb2af2d7d9db7c7604f41476b9164957759578e7",
+		"/p/go-sbom: " + sumOf([]byte("another build")) + ", which /p/go-sbom.SHA256SUMS doesn't list",
+		"/p/go-correlator.SHA256SUMS: " + sumOf([]byte("another list")) + ", the pin is " + correlatorPin,
+		"/p/concourse: missing, the pin is " + sumOf([]byte("runner")),
 	}
 
 	if !slices.Equal(bad, want) {
@@ -150,7 +166,7 @@ func TestPinProblems(t *testing.T) {
 func TestTheGuideEdits(t *testing.T) {
 	cfg := bindByRecording(firstConfig + coverage)
 
-	for _, want := range []string{"plugins:\n  - name: go-sbom", "    bind: recorded\n    correlators: [go-correlator]\n    steps:\n      - run: go\n",
+	for _, want := range []string{"    with:\n      - {name: go-sbom,", "    bind: recorded\n    correlators: [go-correlator]\n    steps:\n      - run: go\n",
 		"correlators: [go-correlator, oapi-codegen-correlator]", "MODULE.bazel.lock, .bazelversion, package.json", "  - paths: [cmd/notes/BUILD.bazel]"} {
 		if !strings.Contains(cfg, want) {
 			t.Errorf("the config lacks %q:\n%s", want, cfg)

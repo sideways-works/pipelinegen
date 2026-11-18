@@ -2,8 +2,6 @@ package book
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -28,15 +26,8 @@ type Options struct {
 	Stdout, Stderr io.Writer
 }
 
-func fileSum(path string) (string, error) {
-	data, err := os.ReadFile(path) //nolint:gosec // a plugin binary to check
-	if err != nil {
-		return "", fmt.Errorf("sum: %w", err)
-	}
-
-	s := sha256.Sum256(data)
-
-	return hex.EncodeToString(s[:]), nil
+func readPlugin(path string) ([]byte, error) {
+	return os.ReadFile(path) //nolint:gosec,wrapcheck // a pinned plugin's file to check; a missing one is the problem it names
 }
 
 // Check runs every step of the book on a fresh copy of example-notes and compares what the tool
@@ -54,7 +45,7 @@ func Check(ctx context.Context, o Options) error {
 		return fmt.Errorf("check: pipelinegen version: %w", err)
 	}
 
-	if bad := PinProblems(string(config), o.Plugins, strings.TrimRight(string(version), "\n"), fileSum); len(bad) > 0 {
+	if bad := PinProblems(string(config), o.Plugins, strings.TrimRight(string(version), "\n"), readPlugin); len(bad) > 0 {
 		return fmt.Errorf("%w:\n  %s", ErrNotPinned, strings.Join(bad, "\n  "))
 	}
 

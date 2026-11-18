@@ -192,7 +192,8 @@ func newExampleRun(t *testing.T) *exampleRun {
 		t.Fatal(err)
 	}
 
-	shell := regexp.MustCompile(`(?m)^  - name: shell\n(    .*\n)+`)
+	// the example pins its shell driver in the plugins repository's group, which holds it alone
+	shell := regexp.MustCompile(`(?m)^  - repository: \S+\n    with:\n(?:      #.*\n)*      - \{name: shell, .*\n`)
 	if !shell.Match(data) {
 		t.Fatal("the example's config has no shell driver")
 	}

@@ -3,12 +3,17 @@
 package book
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/sideways-works/plugkit/pin"
 )
 
 // splitLines splits text at line boundaries as Python's str.splitlines does: \n, \r\n, \r and the
@@ -222,14 +227,25 @@ func Fill(docs, transcripts string, pages ...string) ([]string, error) {
 	return filled, nil
 }
 
+// sumsSuffix names the release's SHA256SUMS kept beside a plugin pinned by sums, as pipelinegen
+// reads it.
+const sumsSuffix = ".SHA256SUMS"
+
 var (
 	bootstrapRelease = regexp.MustCompile(`bootstrap:\s*\n\s*release: \{version: (\S+), sha256`)
-	pinnedPlugin     = regexp.MustCompile(`- name: (\S+)\n(?:\s+\S.*\n)*?\s+release: \{version: \S+, sha256: ([0-9a-f]{64})\}`)
+	pinnedPlugin     = regexp.MustCompile(`- (?:\{name: ([^,\s]+),[^\n]*?|name: (\S+)\n(?:[ \t]+\S.*\n)*?[ \t]+)release: \{version: \S+, (sha256|sums): ([0-9a-f]{64})\}`)
 )
 
+func sumOf(data []byte) string {
+	s := sha256.Sum256(data)
+
+	return hex.EncodeToString(s[:])
+}
+
 // PinProblems are what keeps the outputs from being the pinned releases': the pipelinegen on PATH
-// must be the version config pins, and each plugin in plugins its pinned binary.
-func PinProblems(config, plugins, version string, sum func(string) (string, error)) []string {
+// must be the version config pins, and each plugin in plugins its pinned binary, beside the
+// SHA256SUMS a pin by sums names.
+func PinProblems(config, plugins, version string, read func(string) ([]byte, error)) []string {
 	var bad []string
 
 	boot := bootstrapRelease.FindStringSubmatch(config)
@@ -241,16 +257,36 @@ func PinProblems(config, plugins, version string, sum func(string) (string, erro
 		bad = append(bad, fmt.Sprintf("pipelinegen on PATH is %s; example-notes pins %s", version, boot[1]))
 	}
 
-	for _, m := range pinnedPlugin.FindAllStringSubmatch(config, -1) {
-		path := filepath.Join(plugins, m[1])
-
-		got, err := sum(path)
+	sum := func(path string) string {
+		data, err := read(path)
 		if err != nil {
-			got = "missing"
+			return "missing"
 		}
 
-		if got != m[2] {
-			bad = append(bad, fmt.Sprintf("%s: %s, the pin is %s", path, got, m[2]))
+		return sumOf(data)
+	}
+
+	for _, m := range pinnedPlugin.FindAllStringSubmatch(config, -1) {
+		path, by, want := filepath.Join(plugins, m[1]+m[2]), m[3], m[4]
+
+		if by == "sha256" {
+			if got := sum(path); got != want {
+				bad = append(bad, fmt.Sprintf("%s: %s, the pin is %s", path, got, want))
+			}
+
+			continue
+		}
+
+		list := path + sumsSuffix
+		if got := sum(list); got != want {
+			bad = append(bad, fmt.Sprintf("%s: %s, the pin is %s", list, got, want))
+
+			continue
+		}
+
+		data, _ := read(list) //nolint:errcheck // read once already, its checksum the pin's
+		if got := sum(path); !slices.Contains(slices.Collect(maps.Values(pin.Listed(data))), got) {
+			bad = append(bad, fmt.Sprintf("%s: %s, which %s doesn't list", path, got, list))
 		}
 	}
 

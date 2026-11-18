@@ -1,2 +1,2 @@
-$ go get github.com/sideways-works/pipelinegen-correlator-go/cover@v0.2.0 && go mod tidy
-go: added github.com/sideways-works/pipelinegen-correlator-go/cover v0.2.0
+$ go get github.com/sideways-works/pipelinegen-plugins/correlator/go/cover@v0.4.0 && go mod tidy
+go: added github.com/sideways-works/pipelinegen-plugins/correlator/go/cover v0.4.0

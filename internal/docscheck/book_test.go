@@ -331,9 +331,10 @@ func TestConfigKeysShownExist(t *testing.T) {
 }
 
 var (
-	releasePinRE  = regexp.MustCompile(`version: (v[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?), sha256: ([0-9a-f]{64})`)
-	downloadRE    = regexp.MustCompile(`releases/download/(v[0-9][^/\s]*)/([a-z-]+?)-linux-(?:amd64|arm64)`)
-	fileSumRE     = regexp.MustCompile(`([0-9a-f]{64})  tools/plugins/([a-z-]+)`)
+	releasePinRE  = regexp.MustCompile(`version: (v[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?), (?:sha256|sums): ([0-9a-f]{64})`)
+	downloadRE    = regexp.MustCompile(`releases/download/(?:[a-z0-9-]+/)*(v[0-9][^/\s]*)/([a-z-]+?)-linux-(?:amd64|arm64)`)
+	sumsDownRE    = regexp.MustCompile(`releases/download/([a-z0-9-]+/[a-z0-9-]+)/(v[0-9][^/\s]*)/SHA256SUMS`)
+	fileSumRE     = regexp.MustCompile(`([0-9a-f]{64})  tools/plugins/([a-z-]+)(\.SHA256SUMS)?`)
 	versionVarRE  = regexp.MustCompile(`VERSION=(v[0-9][^\s]*)`)
 	pinnedSamples = []string{"example-notes/pipelinegen.yaml", "example/pipelinegen.yaml"}
 )
@@ -343,7 +344,7 @@ func TestPinsShownAreTheExamples(t *testing.T) {
 
 	sums := map[string]string{}     // version+sha256 pairs the examples pin
 	byRepo := map[string]string{}   // the program a repository holds: its pinned version
-	byPlugin := map[string]string{} // a plugin entry's name: its sha256
+	byPlugin := map[string]string{} // a plugin entry's name: its sha256, or with .SHA256SUMS its sums
 
 	for _, s := range pinnedSamples {
 		cfg, err := config.Load(filepath.Join(root, s))
@@ -356,9 +357,14 @@ func TestPinsShownAreTheExamples(t *testing.T) {
 				continue
 			}
 
-			sums[p.Release.Version+" "+p.Release.SHA256] = s
+			sums[p.Release.Version+" "+p.Release.Pin()] = s
 			byRepo[p.Program()] = p.Release.Version
-			byPlugin[p.Name] = p.Release.SHA256
+
+			if p.Release.Sums != "" {
+				byPlugin[p.Name+".SHA256SUMS"] = p.Release.Sums
+			} else {
+				byPlugin[p.Name] = p.Release.SHA256
+			}
 		}
 
 		if r := cfg.Concourse.Planner.Bootstrap.Release; r != nil {
@@ -392,9 +398,15 @@ func TestPinsShownAreTheExamples(t *testing.T) {
 			}
 		}
 
+		for _, m := range sumsDownRE.FindAllStringSubmatch(text, -1) {
+			if v, ok := byRepo[config.ProgramOf("", m[1])]; ok && v != m[2] {
+				t.Errorf("%s downloads the SHA256SUMS of %s %s; the examples pin %s", p, m[1], m[2], v)
+			}
+		}
+
 		for _, m := range fileSumRE.FindAllStringSubmatch(text, -1) {
-			if s, ok := byPlugin[m[2]]; ok && s != m[1] {
-				t.Errorf("%s checks tools/plugins/%s against another checksum than the examples pin", p, m[2])
+			if s, ok := byPlugin[m[2]+m[3]]; ok && s != m[1] {
+				t.Errorf("%s checks tools/plugins/%s%s against another checksum than the examples pin", p, m[2], m[3])
 			}
 		}
 

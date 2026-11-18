@@ -62,7 +62,9 @@ differs from those transcripts; `--update` writes the new outputs into the
 transcripts and the pages instead. It refuses to run unless the
 `pipelinegen` on `PATH` is the release `example-notes/pipelinegen.yaml`
 pins and each plugin in `$PLUGINS` is its pinned binary, so the book always
-shows the pinned releases.
+shows the pinned releases. A plugin pinned by sums needs its release's
+`SHA256SUMS` beside it as `<name>.SHA256SUMS`, which the book copies into
+`tools/plugins/` with it, as the tutorial has the reader do.
 
 It is a job of its own, run nightly and on release tags, not on every
 change. Its image needs:

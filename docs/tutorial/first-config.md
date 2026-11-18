@@ -9,14 +9,10 @@ service has two:
 pipeline: notes
 
 plugins:
-  - name: go
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.2.0, sha256: ea8ef7dbb3b6b8d14fddd3342ab4c6090e0818d8d44b878dcb51ca0cf4720e76}
-  - name: playwright
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-playwright
-    release: {version: v0.2.0, sha256: 1062d19c4dfbb2cc4cfddbf1eeb786c9d89a9040c012d495444fdac6e39572f9}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      - {name: go, kind: driver, path: driver/go, release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}}
+      - {name: playwright, kind: driver, path: driver/playwright, release: {version: v0.4.0, sums: 98cec967c5d0d7823832a9c1fbad37f71d195f000a5627a9c4e3177c349fbd0b}}
 
 suites:
   go:
@@ -40,8 +36,20 @@ without a setting.
 `steps` say how a suite's tests run. Each names a
 [driver](../concepts/drivers.md), a plugin that runs one kind of test:
 go-driver runs Go test files with `go test`, playwright-driver runs
-Playwright specs. Each driver is a release of its own repository, pinned
-under `plugins` by version and by the checksum of its Linux binary.
+Playwright specs. The drivers live in pipelinegen's plugins repository,
+each in a directory of its kind and name (`driver/go`), and each is
+released on its own. Under `plugins` a group names the repository once,
+and each entry its `path` and a release, pinned by version and by the
+checksum of the release's `SHA256SUMS`, the list of its files' checksums.
+`pipelinegen plugin add` writes such entries for you, each named as its
+plugin names itself (`go-driver`) unless `--name` gives it another
+([adding a plugin](../how-to/adding-a-plugin.md)):
+
+```sh
+pipelinegen plugin add https://github.com/sideways-works/pipelinegen-plugins driver/go --name go
+pipelinegen plugin add https://github.com/sideways-works/pipelinegen-plugins driver/playwright --name playwright
+```
+
 Nothing runs a test before [step 7](tasks.md), which completes the steps
 (the browser specs need a server).
 
@@ -52,16 +60,22 @@ pipelinegen looks for them in `tools/plugins/<name>` under the
 repository's root, and `pipelinegen check` asks each what settings its
 steps take. One it doesn't find there it fetches from its pinned release
 into your user cache, checked against the pin. To keep them in the tree
-instead, download each, keep `tools/` out of git, and check each against
+instead, download each with its release's `SHA256SUMS` beside it as
+`<name>.SHA256SUMS`, keep `tools/` out of git, and check each list against
 its pin, the checksums from the config in a file (`tools/drivers.sums`
-here):
+here). pipelinegen then checks each driver against its line in the list
+beside it before it runs it:
 
 ```sh
 mkdir -p tools/plugins
 curl -fsSL -o tools/plugins/go \
-  https://github.com/sideways-works/pipelinegen-driver-go/releases/download/v0.2.0/go-driver-linux-amd64
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/driver/go/v0.4.0/go-driver-linux-amd64
+curl -fsSL -o tools/plugins/go.SHA256SUMS \
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/driver/go/v0.4.0/SHA256SUMS
 curl -fsSL -o tools/plugins/playwright \
-  https://github.com/sideways-works/pipelinegen-driver-playwright/releases/download/v0.2.0/playwright-driver-linux-amd64
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/driver/playwright/v0.4.0/playwright-driver-linux-amd64
+curl -fsSL -o tools/plugins/playwright.SHA256SUMS \
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/driver/playwright/v0.4.0/SHA256SUMS
 chmod +x tools/plugins/go tools/plugins/playwright
 echo '/tools/' >> .gitignore
 ```
@@ -69,8 +83,8 @@ echo '/tools/' >> .gitignore
 <!-- output: sha-drivers -->
 ```
 $ sha256sum -c tools/drivers.sums
-tools/plugins/go: OK
-tools/plugins/playwright: OK
+tools/plugins/go.SHA256SUMS: OK
+tools/plugins/playwright.SHA256SUMS: OK
 ```
 
 `/tools/` keeps the downloads and the checksum file out of git; a file git
@@ -82,7 +96,7 @@ does, and keep the checksum files under `tools/plugins/` too.
 
 On macOS, or for a release without a binary for your system, build a
 driver from source instead (`go install
-github.com/sideways-works/pipelinegen-driver-go/cmd/go-driver@v0.2.0`,
+github.com/sideways-works/pipelinegen-plugins/driver/go/cmd/go-driver@v0.4.0`,
 the same for playwright-driver) and copy the binary into
 `tools/plugins/` under the name the config gives it.
 
