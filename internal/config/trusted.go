@@ -30,6 +30,10 @@ type Trusted struct {
 	RunSuites    map[string][]string `json:"run_suites,omitempty"`
 	Steps        map[string][]Step   `json:"suite_steps,omitempty"`
 	RunnerConfig *json.RawMessage    `json:"runner_config,omitempty"`
+	// RunRunners and RunnerConfigs, only with several runners, are each run's owner and each
+	// runner's config block by name; with one, RunnerConfig is its block and it owns every run.
+	RunRunners    map[string]string          `json:"run_runners,omitempty"`
+	RunnerConfigs map[string]json.RawMessage `json:"runner_configs,omitempty"`
 }
 
 type TrustedPlugin struct {
@@ -48,6 +52,7 @@ func (c *Config) Trusted() Trusted {
 		StoreBackend: c.Store.Backend, StoreBranch: c.Store.Branch,
 		BazelDiff: c.BazelDiff, Bazelisk: c.Bazel.Bazelisk, StartupFlags: c.Bazel.StartupFlags,
 		ConcourseBranch: c.Concourse.Branch, RunnerConfig: c.runnerConfig(),
+		RunRunners: c.runRunners(), RunnerConfigs: c.runnerConfigs(),
 	}
 
 	if b, err := json.Marshal(c.Concourse.Planner.Bootstrap); err == nil {
@@ -88,6 +93,7 @@ func (c *Config) Trusted() Trusted {
 // one spelled otherwise, in another order or with its default written out is unedited.
 func (c *Config) WithTrusted(t Trusted) []string {
 	own := c.Trusted()
+	owners, runners := c.owners(), c.runnerNames()
 
 	var edited []string
 
@@ -122,7 +128,14 @@ func (c *Config) WithTrusted(t Trusted) []string {
 	c.trustPlugins(t.Plugins)
 	c.trustConnectors(t.Connectors)
 	c.trustSteps(t.Steps)
-	c.trustRunnerConfig(t.RunnerConfig, same)
+
+	if t.RunnerConfigs != nil {
+		c.trustRunnerConfigs(t.RunnerConfigs, same)
+	} else {
+		c.trustRunnerConfig(t.RunnerConfig, same)
+	}
+
+	edited = append(edited, c.trustRunRunners(owners, runners, t)...)
 
 	return append(edited, c.trustRunSuites(t.RunSuites)...)
 }

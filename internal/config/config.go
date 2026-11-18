@@ -130,11 +130,10 @@ const (
 	KindRunner     = "runner"
 )
 
+// Runner is the only runner plugin; with several, none is the runner and RunnerNamed picks one.
 func (c *Config) Runner() (Plugin, bool) {
-	for _, p := range c.Plugins {
-		if p.Kind == KindRunner {
-			return p, true
-		}
+	if runners := c.Runners(); len(runners) == 1 {
+		return runners[0], true
 	}
 
 	return Plugin{}, false
@@ -1243,7 +1242,6 @@ func (c *Config) validateNarrowing(bad func(string, ...any)) {
 
 func (c *Config) validatePlugins(bad func(string, ...any)) {
 	names := map[string]bool{}
-	runners := 0
 
 	for _, p := range c.Plugins {
 		switch {
@@ -1278,14 +1276,6 @@ func (c *Config) validatePlugins(bad func(string, ...any)) {
 				bad("plugin %s: pattern %q: %v", p.Name, g, err)
 			}
 		}
-
-		if p.Kind == KindRunner {
-			runners++
-		}
-	}
-
-	if runners > 1 {
-		bad("plugins: at most one runner")
 	}
 }
 

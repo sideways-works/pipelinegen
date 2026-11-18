@@ -202,6 +202,9 @@ type Run struct {
 	// WaitMinutes is how long a continuous run's newest build waits for the round in progress
 	// before it fails naming the round; a newer commit ends the wait at once.
 	WaitMinutes int `yaml:"wait_minutes"`
+	// Runner names the runner plugin whose pipeline holds the run; others leave it out. Without
+	// it, the only runner configured.
+	Runner string `yaml:"runner"`
 }
 
 // IdleLength is how many minutes a continuous run's round may go without a recorded step before
@@ -577,6 +580,7 @@ func (c *Config) validateRun(name string, r Run, bad func(string, ...any)) {
 	}
 
 	c.validateTrigger(where, r.Trigger, bad)
+	c.validateRunRunner(where, r, bad)
 
 	if r.IdleMinutes != 0 && (!r.Trigger.Continuous || r.IdleMinutes < 1) {
 		bad("%s: idle_minutes is for a continuous run, and at least 1", where)

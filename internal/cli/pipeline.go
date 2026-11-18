@@ -28,12 +28,14 @@ func runPipeline(ctx context.Context, args []string, stdout io.Writer) error {
 		plugins     string
 		vars        bool
 		gate        string
+		owner       string
 	)
 
 	fs := flag.NewFlagSet("pipeline", flag.ContinueOnError)
 	c.register(fs)
 	pathVar(fs, &out, "out", "", "write the pipeline to this file (default stdout)", writesFile)
 	pathVar(fs, &runner, "runner", "", "the runner plugin's executable (default <plugins>/<its name>)", readsFile)
+	textVar(fs, &owner, "for", "", "the runner plugin whose pipeline to write, with the runs it owns (default the only runner configured)")
 	pathVar(fs, &plugins, "plugins", filepath.Join("tools", "plugins"), "the directory the bootstrap fetched the plugins into", reads)
 	fs.BoolVar(&vars, "vars", false, "print the vars the pipeline references, one per line, instead of the pipeline")
 	pathVar(fs, &gate, "gate", "", "in the pipeline's own job: write gate.json here, open only when the checkout's config is the default branch's newest, so builds that run side by side never set an older pipeline over a newer one", writes)
@@ -58,14 +60,17 @@ func runPipeline(ctx context.Context, args []string, stdout io.Writer) error {
 		cfg.Concourse.URL = varsOnlyURL
 	}
 
-	text, notices, err := pipelineText(ctx, cfg, c.root, runner, plugins)
+	conf, err := pickRunner(cfg, owner)
 	if err != nil {
 		return err
 	}
 
-	if conf, ok := cfg.Runner(); ok {
-		sayNotices(os.Stderr, conf.Name, notices)
+	text, notices, err := pipelineText(ctx, cfg, c.root, conf, runner, plugins)
+	if err != nil {
+		return err
 	}
+
+	sayNotices(os.Stderr, conf.Name, notices)
 
 	if vars {
 		text = []byte(strings.Join(pipelineVars(text), "\n") + "\n")
@@ -113,13 +118,36 @@ func pipelineVars(text []byte) []string {
 	return out
 }
 
-func pipelineText(ctx context.Context, cfg *config.Config, root, runner, plugins string) ([]byte, []string, error) {
-	conf, ok := cfg.Runner()
-	if !ok {
-		return nil, nil, fmt.Errorf("%w: no runner plugin is configured: add one to plugins "+
-			"(kind runner, for Concourse sideways-works/pipelinegen-runner-concourse)", errRunner)
+// pickRunner is the runner plugin named, or the only one configured.
+func pickRunner(cfg *config.Config, name string) (config.Plugin, error) {
+	runners := cfg.Runners()
+
+	names := make([]string, 0, len(runners))
+	for _, p := range runners {
+		names = append(names, p.Name)
 	}
 
+	switch {
+	case name != "":
+		if p, ok := cfg.RunnerNamed(name); ok {
+			return p, nil
+		}
+
+		return config.Plugin{}, fmt.Errorf("%w: --for %s: no runner plugin of that name (runners: %s)", errUsage, name, strings.Join(names, ", "))
+	case len(runners) == 1:
+		return runners[0], nil
+	case len(runners) > 1:
+		return config.Plugin{}, fmt.Errorf("%w: %d runners are configured (%s): name the one whose pipeline to write with --for",
+			errUsage, len(runners), strings.Join(names, ", "))
+	}
+
+	return config.Plugin{}, fmt.Errorf("%w: no runner plugin is configured: add one to plugins "+
+		"(kind runner, for Concourse sideways-works/pipelinegen-runner-concourse)", errRunner)
+}
+
+// pipelineText asks the runner conf for its pipeline, holding the runs it owns: the spec's runs
+// are those alone, and its other_runs names the rest, which other runners' pipelines hold.
+func pipelineText(ctx context.Context, cfg *config.Config, root string, conf config.Plugin, runner, plugins string) ([]byte, []string, error) {
 	if runner == "" {
 		runner = filepath.Join(plugins, conf.Name)
 	}
@@ -140,6 +168,13 @@ func pipelineText(ctx context.Context, cfg *config.Config, root, runner, plugins
 		return nil, nil, err
 	}
 
+	s.Runs, s.OtherRuns = ownedRuns(cfg, conf.Name, s.Runs)
+	if len(cfg.Runners()) > 1 {
+		s.Runner = conf.Name
+	}
+
+	owned := ownedConfig(cfg, conf.Name)
+
 	work, err := os.MkdirTemp("", "pipelinegen-runner-")
 	if err != nil {
 		return nil, nil, fmt.Errorf("pipeline: %w", err)
@@ -157,7 +192,7 @@ func pipelineText(ctx context.Context, cfg *config.Config, root, runner, plugins
 		return nil, nil, err
 	}
 
-	if err := runnerCan(cfg, conf.Name, desc); err != nil {
+	if err := runnerCan(owned, conf.Name, desc); err != nil {
 		return nil, nil, err
 	}
 
@@ -176,6 +211,36 @@ func pipelineText(ctx context.Context, cfg *config.Config, root, runner, plugins
 	}
 
 	return text, noticeLines(append(ans.Notices, runnerInstalls(cfg, conf.Name, desc)...)), nil
+}
+
+func ownedRuns(cfg *config.Config, runner string, all []plugin.SpecRun) ([]plugin.SpecRun, []string) {
+	var (
+		own    []plugin.SpecRun
+		others []string
+	)
+
+	for _, r := range all {
+		if cfg.RunRunner(r.Name) == runner {
+			own = append(own, r)
+		} else {
+			others = append(others, r.Name)
+		}
+	}
+
+	return own, others
+}
+
+// ownedConfig is the config as far as the runner's pipeline holds it, for what the runner must
+// be able to build: the runs it owns.
+func ownedConfig(cfg *config.Config, runner string) *config.Config {
+	c := *cfg
+	c.Runs = map[string]config.Run{}
+
+	for _, name := range cfg.OwnedRuns(runner) {
+		c.Runs[name] = cfg.Runs[name]
+	}
+
+	return &c
 }
 
 // runnerInstalls says when the config declares packages and the runner can't install them: the

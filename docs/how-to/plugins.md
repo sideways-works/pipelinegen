@@ -144,8 +144,9 @@ pipelinegen plans the same under either.
 `name` is yours to choose and names the executable. `include` and `exclude`
 take path patterns that widen or narrow what the plugin claims. `config` is
 passed to the plugin as it is, in every call; each plugin's README lists
-its keys. A config has at most one runner, and the pipeline's settings are
-under `concourse:`. The proof's fixture
+its keys. A config usually has one runner, and the pipeline's settings
+are under `concourse:`. With several, each run names the one that owns it
+in `runs.<name>.runner`. The proof's fixture
 ([internal/proof/fixture.go](../../internal/proof/fixture.go)) is a complete config
 with the Go pair.
 

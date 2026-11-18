@@ -512,9 +512,12 @@ exits 1 when there is any problem and 0 when there is none. See
 
 ## `pipelinegen pipeline`
 
-Writes the repository's one pipeline from the config, through the
-configured runner plugin (see [plugins](../plugins.md)); without a runner
-it fails and says so. The Concourse runner writes, for each run, the
+Writes the repository's pipeline from the config, through the configured
+runner plugin (see [plugins](../plugins.md)); without a runner it fails
+and says so. With several runners, `--for` names the one whose pipeline it
+writes, and that pipeline holds the runs whose `runs.<name>.runner` names
+it: the runner gets only those as the spec's `runs`, and the names of the
+others as `other_runs`. The Concourse runner writes, for each run, the
 resource that starts it, a planning job `plan-<run>` and a job per suite
 `<run>-<suite>`; a job `pipeline` that runs when the config changes on
 `concourse.branch` and fails when the pipeline set is stale (or sets it,
@@ -531,6 +534,7 @@ same notices as `runner-notice` warnings when the runner is at hand.
 | `--config` | `<root>/pipelinegen.yaml` | The config file. |
 | `--out` | stdout | Writes the pipeline to this file instead. |
 | `--runner` | `<plugins>/<name>` | The runner plugin's executable, for running it outside a pipeline. |
+| `--for` | the only runner | The name of the runner plugin whose pipeline to write, with the runs it owns. Needed when the config has several runners. |
 | `--plugins` | `tools/plugins` | The directory the bootstrap fetched the plugins into. |
 | `--vars` | `false` | Prints the vars the pipeline references, one per line, instead of the pipeline: the token, the declared secrets, the repository's credentials and those in `concourse.include`. Whoever sets the pipeline passes exactly those. It needs no `concourse.url`. |
 | `--gate` | none | In the pipeline's own job: writes `gate.json` into this directory, `["1"]` when the checkout's config files are the default branch's now and `[]` otherwise, and writes no pipeline when it is shut. That job's builds run side by side, so one of an older config never sets or checks its pipeline over a newer one's. It reads the branch's tip from the remote. |

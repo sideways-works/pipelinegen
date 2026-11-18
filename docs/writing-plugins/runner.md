@@ -20,6 +20,16 @@ are in [plugins.md](../plugins.md#runners).
   `"notices"`, one line each: `pipelinegen pipeline` prints them and
   `pipelinegen check` reports them as warnings.
 
+A config may have several runners, each run naming its owner in
+`runs.<name>.runner`. The spec's `runs` are then the runs your runner owns
+alone, and `other_runs` names the rest, which other runners' pipelines
+hold: write nothing for them, and take a placement rule that names one of
+them as a rule for a run elsewhere, not as one for a run the spec lacks.
+The spec's `trusted` string still covers every run. With several
+runners the spec's `runner` is your entry's name, and your pipeline's own
+job that runs `pipelinegen pipeline` must pass it as `--for <name>`; with
+one runner `runner` is left out and the command finds it alone.
+
 ## What the pipeline must do
 
 The core knows no CI system; the pipeline's steps call its commands:

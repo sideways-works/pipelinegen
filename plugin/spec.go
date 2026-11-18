@@ -26,8 +26,13 @@ type Spec struct {
 	GitHub   SpecGitHub     `json:"github"`
 	CI       map[string]any `json:"ci"`
 	Runs     []SpecRun      `json:"runs"`
-	Suites   []SpecSuite    `json:"suites"`
-	Tools    []SpecTool     `json:"tools"`
+	// OtherRuns name the config's runs other runners own, which this pipeline leaves out; Runs
+	// are the runner's own. Runner, with several runners, is this one's entry name, which the
+	// pipeline's own call of `pipelinegen pipeline` passes as --for.
+	OtherRuns []string    `json:"other_runs,omitempty"`
+	Runner    string      `json:"runner,omitempty"`
+	Suites    []SpecSuite `json:"suites"`
+	Tools     []SpecTool  `json:"tools"`
 	// ConfigFiles are the files the pipeline is made from, relative to
 	// the repository's root: a change to one sets the pipeline again.
 	ConfigFiles []string `json:"config_files"`

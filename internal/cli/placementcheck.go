@@ -12,14 +12,23 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/spec"
 )
 
-// runnerFindings asks the runner for the pipeline when the config is checked, so what it refuses shows
-// before the pipeline job sets it.
+// runnerFindings asks each runner for its pipeline when the config is checked, so what one refuses
+// shows before the pipeline job sets it.
 func runnerFindings(ctx context.Context, cfg *config.Config, root, pluginsDir string) []check.Finding {
-	conf, ok := cfg.Runner()
-	if !ok || len(cfg.Runs) == 0 {
+	if len(cfg.Runs) == 0 {
 		return nil
 	}
 
+	var out []check.Finding
+
+	for _, conf := range cfg.Runners() {
+		out = append(out, runnerFindingsOf(ctx, cfg, conf, root, pluginsDir)...)
+	}
+
+	return out
+}
+
+func runnerFindingsOf(ctx context.Context, cfg *config.Config, conf config.Plugin, root, pluginsDir string) []check.Finding {
 	if _, err := os.Stat(filepath.Join(pluginsDir, conf.Name)); err != nil {
 		return nil
 	}
@@ -31,7 +40,7 @@ func runnerFindings(ctx context.Context, cfg *config.Config, root, pluginsDir st
 		c.Concourse.URL = varsOnlyURL
 	}
 
-	_, notices, err := pipelineText(ctx, &c, root, "", pluginsDir)
+	_, notices, err := pipelineText(ctx, &c, root, conf, "", pluginsDir)
 	if err == nil {
 		out := make([]check.Finding, 0, len(notices))
 

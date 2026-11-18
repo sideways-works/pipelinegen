@@ -105,13 +105,18 @@ func flowList(v any) string {
 }
 
 // runnerConfig is the runner's config block as canonical JSON for the trusted keys, the same
-// bytes however the file orders it; nil only without a runner.
+// bytes however the file orders it; nil without a runner, and with several, which runnerConfigs
+// holds by name.
 func (c *Config) runnerConfig() *json.RawMessage {
-	p, ok := c.Runner()
-	if !ok {
+	runners := c.Runners()
+	if len(runners) != 1 {
 		return nil
 	}
 
+	return configBlock(runners[0])
+}
+
+func configBlock(p Plugin) *json.RawMessage {
 	b := json.RawMessage("{}")
 
 	if len(p.Config) > 0 {

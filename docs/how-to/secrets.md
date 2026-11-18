@@ -123,8 +123,9 @@ config the pipeline was made from instead: `git.remote`, `git.ssh_key`,
 `github.tokens`, `github.status_prefix`, `store.backend`, `store.branch`,
 `bazel_diff`, `bazel.bazelisk`, `bazel.startup_flags`, the plugins' pins,
 `concourse.planner.bootstrap`, the `connectors` except their `links`,
-`concourse.branch`, the runner's `config` block, and the suites each run
-names (a change may add to them, never take one out). Together they say
+`concourse.branch`, each runner's `config` block, the runner each run
+names in `runs.<name>.runner`, and the suites each run names (a change may
+add to them, never take one out). Together they say
 where a run reads and writes, which credential serves which purpose, which
 binaries a step runs, where the pipeline's steps run and which suites a
 run waits for. The pipeline hands them to every step as
