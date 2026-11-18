@@ -1,5 +1,7 @@
 # The releases the plugin proof plans with: name, repository, tag,
-# linux-amd64 checksum. The proof fetches each and checks it.
+# linux-amd64 checksum. A plugin of a repository of several is tagged
+# with its directory: sbom/go/v0.4.0 is v0.4.0 of the plugin at sbom/go.
+# The proof fetches each and checks it.
 pipelinegen sideways-works/pipelinegen v0.2.1 69557cdf885d5e60dcbeb6bbc402cf2ff742cce0b68618ccfd47024a3e91fb36
-go-sbom sideways-works/pipelinegen-sbom-go v0.2.0 9bc2115506021ab2f324258a54486951e69873a166fb43c723a8566e508fbb95
-go-correlator sideways-works/pipelinegen-correlator-go v0.2.0 2abdbae3cdb4ed1d04bdc926a417907e36ba01846eb05b02fd30ccb471d6a210
+go-sbom sideways-works/pipelinegen-plugins sbom/go/v0.4.0 acd7afd74056bac530e457ea30f29f4c60f039db330adde2f80221e6c17a8156
+go-correlator sideways-works/pipelinegen-plugins correlator/go/v0.4.0 613a2f85ad9869bb1efb9dc7430a72619d90d08534e4b1764e78e5a935ba590a
