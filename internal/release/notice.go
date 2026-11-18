@@ -604,13 +604,31 @@ func Notice(ctx context.Context, o IO, dir string) (string, error) {
 }
 
 func noticeFor(ctx context.Context, o IO, dir, name string) (string, error) {
-	switch isGo := exists(filepath.Join(dir, "go.mod")); {
-	case isGo && !exists(filepath.Join(dir, "cmd", name)) && rootMain(dir):
-		name = plugin.Program(filepath.Base(moduleLine(filepath.Join(dir, "go.mod"))))
+	var programs []program
+	if exists(filepath.Join(dir, "go.mod")) {
+		programs = goPrograms(dir, name)
+	}
 
-		return GoNotice(ctx, dir, name, []string{"."})
-	case isGo && exists(filepath.Join(dir, "cmd", name)):
-		return GoNotice(ctx, dir, name, []string{"./cmd/" + name})
+	switch {
+	case programs != nil:
+		names := make([]string, 0, len(programs))
+		mains := make([]string, 0, len(programs))
+
+		for _, p := range programs {
+			names = append(names, p.name)
+			if p.main == "." {
+				mains = append(mains, ".")
+			} else {
+				mains = append(mains, "./"+p.main)
+			}
+		}
+
+		listed := strings.Join(names, ", ")
+		if i := strings.LastIndex(listed, ", "); i >= 0 {
+			listed = listed[:i] + " and " + listed[i+2:]
+		}
+
+		return GoNotice(ctx, dir, listed, mains)
 	case exists(filepath.Join(dir, "package.json")):
 		builds, err := noticeBuilds(dir)
 		if err != nil {

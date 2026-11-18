@@ -22,11 +22,12 @@ import (
 // are cross-built here and never run in CI.
 var platforms = []string{"linux-amd64", "linux-arm64", "darwin-amd64", "darwin-arm64"}
 
-var reserved = []string{"plugin.json", sumsFile, licenseFile, noticeFileName}
+var reserved = []string{pluginFile, sumsFile, licenseFile, noticeFileName}
 
 const (
 	licenseFile    = "LICENSE"
 	noticeFileName = "NOTICE"
+	pluginFile     = "plugin.json"
 )
 
 // releaseList is the file a Go module names its extra release files in,
@@ -196,6 +197,53 @@ func buildGo(ctx context.Context, o IO, src, name, tag, out, main string) error 
 	return nil
 }
 
+// program is one program a Go repository releases, built from its main package main (cmd/NAME,
+// or . for a main package at the root).
+type program struct{ name, main string }
+
+// goPrograms are the programs a Go module releases: name's, from cmd/NAME or a main package at the
+// root, and beside cmd/NAME every other main package under cmd/, each by its directory's name.
+func goPrograms(src, name string) []program {
+	if !exists(filepath.Join(src, "cmd", name)) {
+		if rootMain(src) {
+			return []program{{name: plugin.Program(path.Base(moduleLine(filepath.Join(src, "go.mod")))), main: "."}}
+		}
+
+		return nil
+	}
+
+	out := []program{{name: name, main: "cmd/" + name}}
+
+	dirs, _ := os.ReadDir(filepath.Join(src, "cmd")) //nolint:errcheck // cmd exists; an unreadable one adds no program
+
+	for _, d := range dirs {
+		if d.IsDir() && d.Name() != name && rootMain(filepath.Join(src, "cmd", d.Name())) {
+			out = append(out, program{name: d.Name(), main: "cmd/" + d.Name()})
+		}
+	}
+
+	return out
+}
+
+// describeFile is where a program's describe answer goes: plugin.json for the repository's own
+// program, <name>.plugin.json for each other one that is a plugin, none for one that isn't.
+func describeFile(p program, first bool) string {
+	switch {
+	case first && p.name != "pipelinegen":
+		return pluginFile
+	case first:
+		return ""
+	}
+
+	for _, kind := range plugin.Kinds {
+		if strings.HasSuffix(p.name, "-"+kind) {
+			return p.name + ".plugin.json"
+		}
+	}
+
+	return ""
+}
+
 func rootMain(src string) bool {
 	files, _ := filepath.Glob(filepath.Join(src, "*.go")) //nolint:errcheck // a valid pattern
 
@@ -331,10 +379,11 @@ type discard struct{}
 
 func (discard) Write(p []byte) (int, error) { return len(p), nil }
 
-// describe writes a plugin's describe answer without toolchains as its plugin.json: one machine's versions
-// say nothing of the release and would differ between machines. Being a plugin is never read from answering.
-func describe(ctx context.Context, name, exe, out string) error {
-	if name == "pipelinegen" {
+// describe writes a plugin's describe answer without toolchains as file (plugin.json for the
+// repository's own program): one machine's versions say nothing of the release and would differ
+// between machines. Being a plugin is never read from answering.
+func describe(ctx context.Context, name, exe, out, file string) error {
+	if file == "" {
 		return nil
 	}
 
@@ -381,7 +430,7 @@ func describe(ctx context.Context, name, exe, out string) error {
 		return refuse("describe's answer isn't a JSON object")
 	}
 
-	if err := os.WriteFile(filepath.Join(out, "plugin.json"), text.Bytes(), 0o644); err != nil { //nolint:gosec // a release file
+	if err := os.WriteFile(filepath.Join(out, file), text.Bytes(), 0o644); err != nil { //nolint:gosec // a release file
 		return fmt.Errorf("describe: %w", err)
 	}
 
@@ -428,49 +477,61 @@ func buildOnce(ctx context.Context, o IO, dir, tag, out string) error {
 
 	isGo := exists(filepath.Join(src, "go.mod"))
 
-	var mains []string
+	var programs []program
+	if isGo {
+		programs = goPrograms(src, name)
+	}
 
 	switch {
-	case isGo && !exists(filepath.Join(src, "cmd", name)) && rootMain(src):
-		name = plugin.Program(path.Base(moduleLine(filepath.Join(src, "go.mod"))))
-		mains = []string{"."}
-	case isGo && exists(filepath.Join(src, "cmd", name)):
-		mains = []string{"cmd/" + name}
+	case programs != nil:
+		if err := buildPrograms(ctx, o, src, tag, out, arch, programs); err != nil {
+			return err
+		}
 	case exists(filepath.Join(src, "package.json")):
 		if err := buildNode(ctx, o, src, name, tag, out); err != nil {
 			return err
 		}
 
-		if err := describe(ctx, name, filepath.Join(out, name+".mjs"), out); err != nil {
+		if err := describe(ctx, name, filepath.Join(out, name+".mjs"), out, describeFile(program{name: name}, true)); err != nil {
 			return err
 		}
+
+		programs = []program{{name: name}}
 	default:
 		return refuse("%s is neither a Go module with cmd/%s or a main package at its root, nor a Node package", dir, name)
 	}
 
-	if mains != nil {
-		if err := buildGo(ctx, o, src, name, tag, out, mains[0]); err != nil {
+	return finish(ctx, o, dir, src, programs, tag, out, arch)
+}
+
+// buildPrograms builds each program for every platform with its describe answer, then the files
+// the module names for the release, none of which may take a program's name.
+func buildPrograms(ctx context.Context, o IO, src, tag, out, arch string, programs []program) error {
+	var own []string
+
+	for i, p := range programs {
+		if err := buildGo(ctx, o, src, p.name, tag, out, p.main); err != nil {
 			return err
 		}
 
-		if err := describe(ctx, name, filepath.Join(out, name+"-linux-"+arch), out); err != nil {
+		file := describeFile(p, i == 0)
+		if err := describe(ctx, p.name, filepath.Join(out, p.name+"-linux-"+arch), out, file); err != nil {
 			return err
 		}
 
-		own := make([]string, 0, len(platforms))
-		for _, p := range platforms {
-			own = append(own, name+"-"+p)
+		for _, platform := range platforms {
+			own = append(own, p.name+"-"+platform)
 		}
 
-		if err := goExtras(ctx, src, out, own); err != nil {
-			return err
+		if file != "" && i > 0 {
+			own = append(own, file)
 		}
 	}
 
-	return finish(ctx, o, dir, src, name, tag, out, arch)
+	return goExtras(ctx, src, out, own)
 }
 
-func finish(ctx context.Context, o IO, dir, src, name, tag, out, arch string) error {
+func finish(ctx context.Context, o IO, dir, src string, programs []program, tag, out, arch string) error {
 	// the licence, and the notices the programs' third-party code
 	// requires, travel with the files they cover
 	for _, f := range []string{licenseFile, noticeFileName} {
@@ -483,25 +544,44 @@ func finish(ctx context.Context, o IO, dir, src, name, tag, out, arch string) er
 		return err
 	}
 
-	pj, err := os.ReadFile(filepath.Join(out, "plugin.json")) //nolint:gosec // the build's own file
-	switch {
-	case name != "pipelinegen" && err != nil:
-		return refuse("the plugin %s has no plugin.json", name)
-	case err == nil && !regexp.MustCompile(`"version": *"`+regexp.QuoteMeta(tag)+`"`).Match(pj):
-		return refuse("the built plugin doesn't report %s as its version", tag)
+	for i, p := range programs {
+		if err := checkProgram(ctx, p, i == 0, tag, out, arch); err != nil {
+			return err
+		}
+	}
+
+	return writeSums(out)
+}
+
+func checkProgram(ctx context.Context, p program, first bool, tag, out, arch string) error {
+	// the repository's own program's plugin.json is checked whenever there is one
+	file := describeFile(p, first)
+	if first {
+		file = pluginFile
+	}
+
+	if file != "" {
+		pj, err := os.ReadFile(filepath.Join(out, file)) //nolint:gosec // the build's own file
+
+		switch {
+		case describeFile(p, first) != "" && err != nil:
+			return refuse("the plugin %s has no %s", p.name, file)
+		case err == nil && !regexp.MustCompile(`"version": *"`+regexp.QuoteMeta(tag)+`"`).Match(pj):
+			return refuse("the built plugin %s doesn't report %s as its version", p.name, tag)
+		}
 	}
 
 	// a program with a version command must print the tag
-	self := filepath.Join(out, name+"-linux-"+arch)
+	self := filepath.Join(out, p.name+"-linux-"+arch)
 	if info, err := os.Stat(self); err == nil && info.Mode()&0o111 != 0 {
 		cmd := exec.CommandContext(ctx, self, "version") //nolint:gosec // the release's own program
 
 		if said, err := cmd.Output(); err == nil {
 			if s := strings.TrimRight(string(said), "\n"); s != "" && s != tag {
-				return refuse("%s version says %s, not %s", name, s, tag)
+				return refuse("%s version says %s, not %s", p.name, s, tag)
 			}
 		}
 	}
 
-	return writeSums(out)
+	return nil
 }

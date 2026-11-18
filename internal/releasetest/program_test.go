@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -101,5 +102,83 @@ func TestANodePackageNamesTheBundlesItsNoticeCovers(t *testing.T) {
 
 	if b, err := cmd.CombinedOutput(); err == nil || !strings.Contains(string(b), `package.json names no builds under "pipelinegen": {"notice": [...]}`) {
 		t.Errorf("a package without its notice builds: %v\n%s", err, b)
+	}
+}
+
+func TestARepositoryReleasesEachOfItsPrograms(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds three programs four times")
+	}
+
+	// a program that is no plugin answers no describe
+	agent := strings.Replace(program, `case "describe":`, `case "never":`, 1)
+
+	files := map[string]string{
+		"cmd/widget/main.go": "", "cmd/widget-sbom/main.go": program,
+		"cmd/widget-runner/main.go": program, "cmd/widget-agent/main.go": agent,
+		"cmd/notes/notes.go": "package notes\n",
+	}
+
+	work := widget(t, files)
+	run(t, filepath.Join(work, "widget"), "git", "remote", "set-url", "origin", "https://github.com/owner/pipelinegen-sbom-widget.git")
+	renotice(t, work)
+	run(t, work, releaseBin(t), "build", "widget", "v1.2.3", "out")
+
+	sums, err := os.ReadFile(filepath.Join(work, "out", "SHA256SUMS"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{"LICENSE", "NOTICE", "plugin.json"}
+
+	for _, prog := range []string{"widget-sbom", "widget-runner", "widget-agent"} {
+		for _, platform := range []string{"linux-amd64", "linux-arm64", "darwin-amd64", "darwin-arm64"} {
+			want = append(want, prog+"-"+platform)
+		}
+	}
+
+	want = append(want, "widget-runner.plugin.json")
+
+	var listed []string
+
+	for line := range strings.SplitSeq(strings.TrimSpace(string(sums)), "\n") {
+		_, name, _ := strings.Cut(line, "  ")
+		listed = append(listed, name)
+	}
+
+	slices.Sort(want)
+	slices.Sort(listed)
+
+	if !slices.Equal(listed, want) {
+		t.Errorf("SHA256SUMS lists %q, want %q", listed, want)
+	}
+
+	described, err := os.ReadFile(filepath.Join(work, "out", "widget-runner.plugin.json"))
+	if err != nil || !strings.Contains(string(described), `"version":"v1.2.3"`) || strings.Contains(string(described), "toolchains") {
+		t.Errorf("widget-runner.plugin.json: %v %s", err, described)
+	}
+
+	notice, err := os.ReadFile(filepath.Join(work, "out", "NOTICE"))
+	if err != nil || !strings.HasPrefix(string(notice), "widget-sbom, widget-agent and widget-runner\n") {
+		t.Errorf("NOTICE: %v %.80q", err, notice)
+	}
+}
+
+func TestEachPluginOfARepositoryMustDescribeItself(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds two programs four times")
+	}
+
+	work := widget(t, map[string]string{
+		"cmd/widget-runner/main.go": strings.Replace(program, `case "describe":`, `case "never":`, 1),
+	})
+	run(t, filepath.Join(work, "widget"), "git", "remote", "set-url", "origin", "https://github.com/owner/widget.git")
+	renotice(t, work)
+
+	cmd := exec.CommandContext(t.Context(), releaseBin(t), "build", "widget", "v1.2.3", "out")
+	cmd.Dir = work
+
+	if out, err := cmd.CombinedOutput(); err == nil || !strings.Contains(string(out), "the plugin widget-runner didn't answer describe") {
+		t.Fatalf("build: %v\n%s", err, out)
 	}
 }

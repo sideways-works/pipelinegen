@@ -36,6 +36,13 @@ its own name:
 | a Go module whose root package is `main` | the same, NAME being the program the module path's last element names rather than the repository's, so a renamed repository changes its name in `go.mod` alone |
 | a Node package whose `build` script writes `dist/NAME.mjs` | `NAME.mjs`, one bundled file |
 
+A Go module with `./cmd/NAME` releases every other main package under
+`cmd/` beside it, each as a program of its directory's name, in the same
+release and the same `SHA256SUMS`: a runner repository holding
+`cmd/concourse-runner` and `cmd/piperun-runner` releases both. A
+directory under `cmd/` that holds no main package is left out, and a
+module with one program releases exactly what it always did.
+
 The macOS builds are cross-built on Linux, and the release builds every
 file twice and compares the bytes for them as for the others. No macOS
 machine runs them in CI: a release says nothing about how they behave on
@@ -57,17 +64,21 @@ library installs it from the tag, as a git dependency.
 A plugin also gets `plugin.json`: its own answer to `describe`, with its
 name, kind, protocol version, version and the runtime it needs
 (`"needs": ["node>=22.18"]`). `toolchains` is left out: it says which
-versions one run resolved on one machine, not what the release is. The
-build fails when the plugin reports a version other than the tag. Every
+versions one run resolved on one machine, not what the release is. Each
+other program whose name ends in a plugin kind (`-runner`, `-sbom`,
+`-correlator`, `-driver` or `-connector`) gets `NAME.plugin.json` the same
+way; one whose name doesn't is no plugin and is never asked. The build
+fails when a plugin reports a version other than the tag, and when a
+program's `version` command prints another. Every
 release, pipelinegen's and each plugin's, Go or Node, also carries the
 repository's `LICENSE` and `NOTICE`. `SHA256SUMS` lists every file, by
 their letters and digits with case aside, as every release has listed
 them.
 
 The `NOTICE` must be the one `notice` writes for the release: the
-program's name, its copyright and licence, and each piece of third-party
+programs' names, its copyright and licence, and each piece of third-party
 software its files include, with that software's licence and its own
-notices reproduced. For Go, that is every module linked into the released
+notices reproduced. For Go, that is every module linked into any of the released
 programs on any of the four platforms, and the Go standard library of the
 toolchain; the family's own modules are named in the opening sentence
 instead, under the repository that holds each now. A module that embeds
