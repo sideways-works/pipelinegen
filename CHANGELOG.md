@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-18
+
 ### Added
 
 - `run --slice <name>`, repeatable, runs only the named slices, by name or label, in every suite that has them: of the plan's selection, or of every slice with `--all`. A slice the plan didn't select runs too, and a line on stderr says so; a name no suite has exits 2 and names it
