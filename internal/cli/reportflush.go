@@ -54,7 +54,7 @@ func (fl *confirmedFlush) ready(ev report.SliceEvent) bool {
 }
 
 func (fl *confirmedFlush) round(ctx context.Context) (int, error) {
-	keys, err := piperun.ReadKeys(fl.confirmed, false)
+	keys, err := piperun.ReadList(fl.confirmed)
 	if err != nil {
 		return 0, err
 	}
@@ -70,7 +70,8 @@ func (fl *confirmedFlush) round(ctx context.Context) (int, error) {
 	)
 
 	for _, ev := range ends {
-		if ev.Suite != fl.suite || !keys[ev.Slice] || !fl.ready(ev) {
+		// a stopped slice's end is the session's end's to write
+		if c, ok := keys[ev.Slice]; ev.Suite != fl.suite || !ok || c.Outcome == piperun.Stopped || !fl.ready(ev) {
 			continue
 		}
 
@@ -113,7 +114,7 @@ func reportFlush(ctx context.Context, args []string, stdout io.Writer) (err erro
 
 	if err := s.open(ctx, flushCommand, args, func(fs *flag.FlagSet) {
 		pathVar(fs, &result, "result", "result", "the session's result directory, which holds its journal; only read", reads)
-		pathVar(fs, &confirmed, "confirmed", "", "the items whose end piperun recorded ($PIPERUN_CONFIRMED), one key a line", readsFile)
+		pathVar(fs, &confirmed, "confirmed", "", "the items whose end piperun recorded ($PIPERUN_CONFIRMED), JSON lines {\"key\", \"outcome\"}", readsFile)
 		fs.DurationVar(&every, "every", 0, "flush again every period until stopped, at the lowest priority (0: once)")
 	}); err != nil {
 		return err
@@ -176,12 +177,12 @@ type sessionFiles struct {
 func sessionEnd(ctx context.Context, s *step, f sessionFiles, stdout io.Writer) error {
 	suite := os.Getenv(envSuite)
 
-	confirmed, err := piperun.ReadKeys(f.confirmed, true)
+	confirmed, err := piperun.ReadList(f.confirmed)
 	if err != nil {
 		return err
 	}
 
-	requeued, err := piperun.ReadKeys(f.requeued, true)
+	requeued, err := piperun.ReadList(f.requeued)
 	if err != nil {
 		return err
 	}
@@ -189,7 +190,7 @@ func sessionEnd(ctx context.Context, s *step, f sessionFiles, stdout io.Writer) 
 	var open []string
 
 	for k := range requeued {
-		if !confirmed[k] {
+		if _, ok := confirmed[k]; !ok {
 			open = append(open, k)
 		}
 	}
@@ -219,7 +220,12 @@ func sessionEnd(ctx context.Context, s *step, f sessionFiles, stdout io.Writer) 
 		s.plugins.sayLeftUnrunnable(suite, evs, os.Stderr)
 	}
 
+	// what the session ended goes in first, then what a person stopped, errored and never run again
 	if _, err := s.reporter.Slices(ctx, ended); err != nil {
+		return unwritten(f.batch, evs, err)
+	}
+
+	if _, err := s.reporter.Slices(ctx, stoppedEvents(s, f, suite, confirmed)); err != nil {
 		return unwritten(f.batch, evs, err)
 	}
 
@@ -236,9 +242,10 @@ func sessionEnd(ctx context.Context, s *step, f sessionFiles, stdout io.Writer) 
 	return batchNotPassed(ctx, s, f.batch, suite, evs, states, more)
 }
 
-// confirmedEvents are the journal's ends of the confirmed slices, and all of them as their session's
-// end closes them: one the journal holds no end of ends errored, piperun having ended it.
-func confirmedEvents(s *step, f sessionFiles, suite string, confirmed map[string]bool) (ended, evs []report.SliceEvent, err error) {
+// confirmedEvents are the journal's ends of the slices piperun confirmed as ended by the session, and
+// all the confirmed slices as their session's end closes them: one the journal holds no end of ends
+// errored, piperun having ended it, and a stopped one errors saying so, whatever the journal holds.
+func confirmedEvents(s *step, f sessionFiles, suite string, confirmed map[string]piperun.Listed) (ended, evs []report.SliceEvent, err error) {
 	ends, err := report.JournalIn(f.result).Ends()
 	if err != nil {
 		return nil, nil, err
@@ -249,7 +256,7 @@ func confirmedEvents(s *step, f sessionFiles, suite string, confirmed map[string
 	seen := map[string]bool{}
 
 	for _, ev := range ends {
-		if ev.Suite == suite && confirmed[ev.Slice] {
+		if c, ok := confirmed[ev.Slice]; ev.Suite == suite && ok && c.Outcome != piperun.Stopped {
 			ended = append(ended, ev)
 			seen[ev.Slice] = true
 		}
@@ -264,8 +271,35 @@ func confirmedEvents(s *step, f sessionFiles, suite string, confirmed map[string
 
 		ev := sliceEvent(suite, batchSlice{Name: k, Label: pool[k].Label}, s.root, f.result, "")
 		ev.Stopped = "the session never reported its end, and piperun ended it"
+
+		if confirmed[k].Outcome == piperun.Stopped {
+			ev.Result, ev.Stopped = "", stoppedWhy
+		}
+
 		evs = append(evs, ev)
 	}
 
 	return ended, evs, nil
+}
+
+const stoppedWhy = "a person stopped the build while the slice was the session's; it is not run again"
+
+// stoppedEvents end the slices of a stopped build errored, from no result whatever their session wrote:
+// never not run, which a sweep would hand on again.
+func stoppedEvents(s *step, f sessionFiles, suite string, confirmed map[string]piperun.Listed) []report.SliceEvent {
+	pool, _ := readPool(f.pools, suite) //nolint:errcheck // without it a slice is named by its key
+
+	var out []report.SliceEvent
+
+	for _, k := range slices.Sorted(maps.Keys(confirmed)) {
+		if confirmed[k].Outcome != piperun.Stopped {
+			continue
+		}
+
+		ev := sliceEvent(suite, batchSlice{Name: k, Label: pool[k].Label}, s.root, f.result, "")
+		ev.Result, ev.Extras, ev.Stopped = "", "", stoppedWhy
+		out = append(out, ev)
+	}
+
+	return out
 }

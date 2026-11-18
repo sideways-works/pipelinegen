@@ -517,7 +517,7 @@ func TestAFlushWritesOnlyConfirmedSlicesAndAgainTheSame(t *testing.T) {
 	journal := mustRead(t, "result/.pipelinegen/journal.jsonl")
 
 	// piperun is still writing c's line
-	writeFile(t, "confirmed", "a\nbad\nc")
+	writeFile(t, "confirmed", confirmedLine("a", "passed")+confirmedLine("bad", "failed")+`{"key":"c","outc`)
 
 	flush := func() {
 		t.Helper()
@@ -539,7 +539,7 @@ func TestAFlushWritesOnlyConfirmedSlicesAndAgainTheSame(t *testing.T) {
 		t.Fatalf("flushed twice: %v", got)
 	}
 
-	writeFile(t, "confirmed", "a\nbad\nc\n")
+	writeFile(t, "confirmed", confirmedLine("a", "passed")+confirmedLine("bad", "failed")+confirmedLine("c", "passed"))
 	flush()
 
 	if got := stateNames(f.store()); len(got) != 3 || got["c"] != report.Passed {
@@ -554,7 +554,7 @@ func TestAFlushWritesOnlyConfirmedSlicesAndAgainTheSame(t *testing.T) {
 func TestAFlushEveryPeriodWritesWhatIsConfirmedSince(t *testing.T) {
 	f := feedFixture(t, "a", "c")
 	f.session(t, []string{"a", "c"})
-	writeFile(t, "confirmed", "a\n")
+	writeFile(t, "confirmed", confirmedLine("a", "passed"))
 
 	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan string, 1)
@@ -577,7 +577,7 @@ func TestAFlushEveryPeriodWritesWhatIsConfirmedSince(t *testing.T) {
 	}
 
 	wait(1)
-	writeFile(t, "confirmed", "a\nc\n")
+	writeFile(t, "confirmed", confirmedLine("a", "passed")+confirmedLine("c", "passed"))
 	wait(2)
 	cancel()
 
@@ -594,8 +594,8 @@ func TestASessionsEndClosesConfirmedSlicesAndLeavesRequeuedOnesOpen(t *testing.T
 	f.session(t, []string{"a", "big"}, []string{"c"})
 
 	// piperun ended lost itself, whose session never reported it
-	writeFile(t, "confirmed", "a\nc\nlost\n")
-	writeFile(t, "requeued", "big\n")
+	writeFile(t, "confirmed", confirmedLine("a", "passed")+confirmedLine("c", "passed")+confirmedLine("lost", "errored"))
+	writeFile(t, "requeued", `{"key":"big","reason":"needs ~6600 MB"}`+"\n")
 
 	stdout, stderr, code := run(t, "report", "batch-end", "--root", f.root, "--confirmed", "confirmed", "--requeued", "requeued")
 	if code != 1 || !strings.Contains(stderr, "batch 1: lost errored") || !strings.Contains(stdout, "session 1: 1 slice handed back to the pool, left open: big") {
@@ -612,9 +612,44 @@ func TestASessionsEndClosesConfirmedSlicesAndLeavesRequeuedOnesOpen(t *testing.T
 	}
 
 	writeFile(t, "confirmed", "")
-	writeFile(t, "requeued", "big\n")
+	writeFile(t, "requeued", `{"key":"big","reason":"needs ~6600 MB"}`+"\n"+`{"key":"big","reason":"again"}`+"\n")
 
 	if stdout, stderr, code := run(t, "report", "batch-end", "--root", f.root, "--confirmed", "confirmed", "--requeued", "requeued"); code != 0 || !strings.Contains(stdout, "session 1: no slice confirmed, nothing to close") {
 		t.Fatalf("a session with nothing confirmed: %d %s %s", code, stdout, stderr)
+	}
+}
+
+func confirmedLine(key, outcome string) string {
+	return fmt.Sprintf(`{"key":%q,"outcome":%q}`, key, outcome) + "\n"
+}
+
+func TestAStoppedSliceErrorsAndIsNeitherFlushedNorHandedOn(t *testing.T) {
+	f := feedFixture(t, "a", "c")
+	f.session(t, []string{"a", "c"})
+
+	// the build was stopped as c ended: piperun refused its end and confirmed it stopped
+	writeFile(t, "confirmed", confirmedLine("a", "passed")+confirmedLine("c", "stopped"))
+
+	if stdout, stderr, code := run(t, "report", "flush", "--root", f.root, "--confirmed", "confirmed"); code != 0 {
+		t.Fatalf("report flush: %d %s\n%s", code, stdout, stderr)
+	}
+
+	if got := stateNames(f.store()); len(got) != 1 || got["a"] != report.Passed {
+		t.Fatalf("flushed: %v", got)
+	}
+
+	writeFile(t, "requeued", "")
+
+	if _, stderr, code := run(t, "report", "batch-end", "--root", f.root, "--confirmed", "confirmed", "--requeued", "requeued"); code != 1 || !strings.Contains(stderr, "c errored") {
+		t.Fatalf("batch-end: %d %s", code, stderr)
+	}
+
+	c := f.store()["c"]
+	if c.State != report.Errored || len(c.Failures) != 1 || c.Failures[0].Test != "(stopped)" || !strings.Contains(c.Failures[0].Tail, "a person stopped the build") {
+		t.Fatalf("c: %+v", c)
+	}
+
+	if report.ShortOnly(report.Run{Suites: []report.Suite{{Slices: []report.Slice{{State: c.State, Failures: c.Failures}}}}}) {
+		t.Fatal("a stopped slice would be handed on")
 	}
 }

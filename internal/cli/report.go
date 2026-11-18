@@ -665,8 +665,8 @@ func reportBatchEnd(ctx context.Context, args []string, stdout io.Writer) (err e
 		pathVar(fs, &result, "result", "result", "the batch's result directory", reads)
 		pathVar(fs, &coverage, "coverage", "", "the batch's coverage directory (recording runs)", reads)
 		pathVar(fs, &begun, "started", "", "the directory an older pipeline's lock step stamped when the batch's work began", reads)
-		pathVar(fs, &confirmed, "confirmed", "", "a piperun session's end: the items whose end piperun recorded ($PIPERUN_CONFIRMED), the only slices it closes", readsFile)
-		pathVar(fs, &requeued, "requeued", "", "a piperun session's end: the items it handed back to the pool ($PIPERUN_REQUEUED), left open for another session", readsFile)
+		pathVar(fs, &confirmed, "confirmed", "", "a piperun session's end: the items whose end piperun recorded ($PIPERUN_CONFIRMED, JSON lines {\"key\", \"outcome\"}), the only slices it closes", readsFile)
+		pathVar(fs, &requeued, "requeued", "", "a piperun session's end: the items it handed back to the pool ($PIPERUN_REQUEUED, JSON lines {\"key\", \"reason\"}), left open for another session", readsFile)
 		pathVar(fs, &pools, "pools", "", "with --confirmed, the pools' slices plan --emit wrote, for the labels of slices the journal never saw (default pools)", reads)
 	}); err != nil {
 		return err

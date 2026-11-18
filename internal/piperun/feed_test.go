@@ -182,28 +182,30 @@ func TestReportedTellsWhatEachItemAlreadyHas(t *testing.T) {
 	}
 }
 
-func TestReadKeysLeavesOutALineStillBeingWritten(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "confirmed")
-	writeFile(t, p, "e2e/a\n\n{\"key\": \"e2e/b\"}\ne2e/c")
+func TestReadListLeavesOutALineStillBeingWritten(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "confirmed.jsonl")
+	writeFile(t, p, `{"key":"e2e/a","outcome":"passed","at":"later"}`+"\n\n"+`{"key":"e2e/b","outcome":"stopped"}`+"\n"+`{"key":"e2e/c","outc`)
 
-	growing, err := ReadKeys(p, false)
-	if err != nil || len(growing) != 2 || !growing["e2e/a"] || !growing["e2e/b"] {
-		t.Fatalf("growing: %v %v", growing, err)
+	got, err := ReadList(p)
+	if err != nil || len(got) != 2 || got["e2e/a"].Outcome != Passed || got["e2e/b"].Outcome != Stopped {
+		t.Fatalf("%v %v", got, err)
 	}
 
-	done, err := ReadKeys(p, true)
-	if err != nil || len(done) != 3 || !done["e2e/c"] {
-		t.Fatalf("complete: %v %v", done, err)
+	q := filepath.Join(t.TempDir(), "requeued.jsonl")
+	writeFile(t, q, `{"key":"big","reason":"one"}`+"\n"+`{"key":"big","reason":"two"}`+"\n")
+
+	if got, err := ReadList(q); err != nil || strings.Join(got["big"].Reasons, ",") != "one,two" {
+		t.Fatalf("requeued twice: %v %v", got, err)
 	}
 
-	if none, err := ReadKeys(filepath.Join(t.TempDir(), "missing"), true); err != nil || len(none) != 0 {
+	if none, err := ReadList(filepath.Join(t.TempDir(), "missing")); err != nil || len(none) != 0 {
 		t.Fatalf("missing: %v %v", none, err)
 	}
 
-	writeFile(t, p, "{\"nokey\": 1}\n")
+	writeFile(t, p, "e2e/a\n")
 
-	if _, err := ReadKeys(p, true); !errors.Is(err, errList) {
-		t.Fatalf("a line it can't read: %v", err)
+	if _, err := ReadList(p); !errors.Is(err, errList) {
+		t.Fatalf("a bare key: %v", err)
 	}
 }
 

@@ -1,21 +1,31 @@
 package piperun
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 )
 
 var errList = errors.New("item list")
 
-// ReadKeys reads a list of items piperun keeps for a session's bookkeeping ($PIPERUN_CONFIRMED,
-// $PIPERUN_REQUEUED): one item key a line, or a JSON object with its "key"; blank lines are skipped.
-// A list still growing (complete false) may end in a line being written, which is left out; a missing
-// file lists nothing.
-func ReadKeys(path string, complete bool) (map[string]bool, error) {
-	out := map[string]bool{}
+// Stopped is the outcome piperun confirms for an item of a build a person stopped.
+const Stopped = "stopped"
+
+// Listed is what a session's list says of one item: the outcome piperun confirmed, and the reasons of
+// each time the item was requeued.
+type Listed struct {
+	Outcome string
+	Reasons []string
+}
+
+// ReadList reads one of the lists piperun keeps for a session's bookkeeping, $PIPERUN_CONFIRMED
+// ({"key", "outcome"}) or $PIPERUN_REQUEUED ({"key", "reason"}, a line each time): JSON lines, each
+// complete only with its newline, so a last line still being written is left for the next read.
+// Fields it doesn't know are ignored; a missing file lists nothing.
+func ReadList(path string) (map[string]Listed, error) {
+	out := map[string]Listed{}
 
 	if path == "" {
 		return out, nil
@@ -30,30 +40,31 @@ func ReadKeys(path string, complete bool) (map[string]bool, error) {
 		return nil, fmt.Errorf("%w: %w", errList, err)
 	}
 
-	lines := strings.Split(string(data), "\n")
-	if !complete {
-		lines = lines[:len(lines)-1]
-	}
-
-	for _, l := range lines {
-		l = strings.TrimSpace(l)
-		if l == "" {
+	for _, line := range completeLines(data) {
+		if len(bytes.TrimSpace(line)) == 0 {
 			continue
 		}
 
-		if strings.HasPrefix(l, "{") {
-			var o struct {
-				Key string `json:"key"`
-			}
-
-			if err := json.Unmarshal([]byte(l), &o); err != nil || o.Key == "" {
-				return nil, fmt.Errorf("%w %s: %q is neither a key nor {\"key\": ...}", errList, path, l)
-			}
-
-			l = o.Key
+		var l struct {
+			Key     string `json:"key"`
+			Outcome string `json:"outcome"`
+			Reason  string `json:"reason"`
 		}
 
-		out[l] = true
+		if err := json.Unmarshal(line, &l); err != nil || l.Key == "" {
+			return nil, fmt.Errorf("%w %s: %q is no {\"key\": ...} line", errList, path, line)
+		}
+
+		e := out[l.Key]
+		if l.Outcome != "" {
+			e.Outcome = l.Outcome
+		}
+
+		if l.Reason != "" {
+			e.Reasons = append(e.Reasons, l.Reason)
+		}
+
+		out[l.Key] = e
 	}
 
 	return out, nil
