@@ -1,0 +1,15 @@
+{
+  "label": "internal/cli/narrowed_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-18T17:39:15.282438995Z",
+  "failures": [
+    {
+      "test": "TestNarrowedIsWhatTheOffLevelAdds",
+      "tail": "=== CONT  TestNarrowedIsWhatTheOffLevelAdds/0\n=== CONT  TestNarrowedIsWhatTheOffLevelAdds/3\n=== CONT  TestNarrowedIsWhatTheOffLevelAdds/2\n=== CONT  TestNarrowedIsWhatTheOffLevelAdds/1\n=== CONT  TestNarrowedIsWhatTheOffLevelAdds/4\n--- PASS: TestNarrowedIsWhatTheOffLevelAdds/2 (376.58s)\n    narrowed_test.go:238: everything: the base 795329b58f14 could not be hashed: prepare 795329b58f14: data of dspecs: bazel query: bazelisk query: exit status 37: $TEST_TMPDIR defined, some defaults will be overridden\n        Loading: 0 packages loaded\n        \n        Server terminated abruptly (error code: 14, error message: 'Socket closed', log file: '/tmp/pipelinegen-test-682070062/bazel/_bazel_root/544e675e860f6ae070a5d1070c59c1fa/server/jvm.out')\n--- FAIL: TestNarrowedIsWhatTheOffLevelAdds/3 (382.51s)\n--- PASS: TestNarrowedIsWhatTheOffLevelAdds/1 (385.12s)\n--- PASS: TestNarrowedIsWhatTheOffLevelAdds/0 (386.97s)\n--- PASS: TestNarrowedIsWhatTheOffLevelAdds/4 (659.93s)\n--- FAIL: TestNarrowedIsWhatTheOffLevelAdds (0.01s)"
+    }
+  ],
+  "seconds": 0.01,
+  "recorded": true,
+  "cpu_seconds": 784.415984
+}

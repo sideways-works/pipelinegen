@@ -1,0 +1,15 @@
+{
+  "label": "internal/cli/listsgone_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-18T17:39:15.281797593Z",
+  "failures": [
+    {
+      "test": "TestGoneListsSelectAtLeastAsMuch",
+      "tail": "=== RUN   TestGoneListsSelectAtLeastAsMuch\n=== PAUSE TestGoneListsSelectAtLeastAsMuch\n=== CONT  TestGoneListsSelectAtLeastAsMuch\n    listsgone_test.go:59: everything: the base d1256a7f08f4 could not be hashed: bazel-diff generate-hashes: exit status 1: [Error] bazel mod show_repo failed with exit status: 37: $TEST_TMPDIR defined, some defaults will be overridden\n        \n        Server terminated abruptly (error code: 14, error message: 'Socket closed', log file: '/tmp/pipelinegen-test-1743472473/bazel/_bazel_root/8fcaa0e818ad9f71f02e4cfe43a5f743/server/jvm.out')\n--- FAIL: TestGoneListsSelectAtLeastAsMuch (123.53s)"
+    }
+  ],
+  "seconds": 123.53,
+  "recorded": true,
+  "cpu_seconds": 96.59322399999996
+}

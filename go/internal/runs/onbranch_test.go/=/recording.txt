@@ -1,0 +1,16 @@
+# observed
+go:internal/runs#func:FromTrigger
+go:internal/runs#func:checkBranch
+go:internal/runs#func:git
+go:internal/runs#func:gitEnv
+go:internal/runs#func:onBranch
+go:internal/runs#func:triggerForm
+go:internal/runs#method:Change.Proposed
+go:internal/secret#func:GitEnv
+go:internal/secret#func:HardenGit
+go:internal/secret#func:InPipeline
+go:internal/secret#func:Redact
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
