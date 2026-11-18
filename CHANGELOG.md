@@ -25,6 +25,10 @@ minor version may change the config or the protocol.
 - The kit runs a runner's task that calls pipelinegen through a program of the runner's own instead of a script naming the calls: each task marked as the tool's step, in its job's order, offline, with the runner in `tools/plugins/<name>` and a stand-in for the tool that notes each call, so its calls face every check a script's do. The kit's fixture spec pins a runner, made the one under test, and a variant gives the planner a prepare command with a git token
 - The plugin protocol's parts that know no kind (calls and their exit codes, the connector exchange, pinned downloads, the container runner, the kit's harness) come from the module `github.com/sideways-works/plugkit`. `plugin` names its types as its own, so plugins build unchanged, and nothing a plugin reads or writes changes
 
+### Fixed
+
+- The kit's placement check renders the pipeline without the placement the same way as with it, its tools at the checksums the kit places, so a runner that writes its tools' checksums into the pipeline no longer fails it.
+
 ## [0.3.1] - 2026-11-18
 
 ### Added

@@ -39,7 +39,7 @@ func (k *kit) placement(ctx context.Context, root string, placed []byte) {
 	work := k.WorkDir()
 
 	var ans plugin.PipelineAnswer
-	if err := k.call(ctx, plugin.CallPipeline, plugin.PipelineRequest{Request: bare.NewRequest(work), Spec: Spec(), Root: root}, &ans); err != nil || len(ans.Files) != 1 {
+	if err := k.call(ctx, plugin.CallPipeline, plugin.PipelineRequest{Request: bare.NewRequest(work), Spec: k.pinned(Spec()), Root: root}, &ans); err != nil || len(ans.Files) != 1 {
 		k.Check(name, "the pipeline without the placement: %v (%d files)", err, len(ans.Files))
 
 		return

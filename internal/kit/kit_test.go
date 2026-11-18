@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 
 func fakes(kind string) map[string]plugin.Handler {
 	switch kind {
-	case "runner", "runner-more", "runner-ignores", "runner-notices":
+	case "runner", "runner-more", "runner-ignores", "runner-notices", "runner-sums":
 		return map[string]plugin.Handler{
 			plugin.CallDescribe: describe(plugin.Description{Kind: plugin.KindRunner, Capabilities: []string{plugin.CapPlacement}}),
 			plugin.CallPipeline: func(in []byte) (any, error) {
@@ -48,6 +48,17 @@ func fakes(kind string) map[string]plugin.Handler {
 				// a placement moves the one job; runner-more changes
 				// something besides, runner-ignores places nothing
 				text := "jobs: " + strconv.Itoa(len(req.Spec.Runs)) + "\n"
+				// runner-sums writes each tool's checksum, as a runner whose
+				// tasks fetch the pinned tools does
+				if kind == "runner-sums" {
+					var sums strings.Builder
+					for _, tool := range req.Spec.Tools {
+						sums.WriteString("  - " + strconv.Quote(tool.SHA256) + "\n")
+					}
+
+					text += "sums:\n" + sums.String()
+				}
+
 				if _, placed := req.Config["placement"]; placed && kind != "runner-ignores" {
 					text += "tags: [big]\n"
 					if kind == "runner-more" {
@@ -946,6 +957,7 @@ func TestAPlacementMovesStepsAndNothingElse(t *testing.T) {
 		"runner":         "",
 		"runner-more":    "differ in more than worker tags",
 		"runner-ignores": "moved no step",
+		"runner-sums":    "",
 	} {
 		o := fakeOptions(t, kind, "", false, false)
 		o.Config = map[string]any{"placement": map[string]any{"default": []any{"big"}}}
