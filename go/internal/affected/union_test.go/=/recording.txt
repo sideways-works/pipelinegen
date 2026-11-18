@@ -1,0 +1,15 @@
+# observed
+go:internal/affected#func:Union
+go:internal/affected#func:addedByConfig
+go:internal/affected#func:baseReasons
+go:internal/affected#func:causesOf
+go:internal/affected#func:joinReason
+go:internal/affected#func:keepLeftOut
+go:internal/affected#func:unionSuite
+go:internal/testenv#func:Bazel
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:defaultRoots
+go:internal/testenv#func:outputBases
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
