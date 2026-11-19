@@ -22,11 +22,11 @@ func TestTaggedReleasesTheHeadsVersionTag(t *testing.T) {
 	}{
 		"the nightly passed": {nightly: "success", tag: "v1.2.3", released: true, ok: true},
 		// released by hand already: done when the release holds this build, whatever the nightly
-		"released already as built": {nightly: "failure", tag: "v1.2.3", published: "same", ok: true, says: "released already"},
+		"released already as built":     {nightly: "failure", tag: "v1.2.3", published: "same", ok: true, says: "released already"},
 		"released already, other files": {nightly: "success", tag: "v1.2.3", published: "other", says: "SHA256SUMS"},
-		"the nightly failed": {nightly: "failure", tag: "v1.2.3", says: "no run of every test passed"},
-		"a candidate's tag":  {nightly: "success", tag: "v1.2.4-rc.1", says: "no version tag on the head"},
-		"no tag on the head": {nightly: "success", says: "no version tag on the head"},
+		"the nightly failed":            {nightly: "failure", tag: "v1.2.3", says: "no run of every test passed"},
+		"a candidate's tag":             {nightly: "success", tag: "v1.2.4-rc.1", says: "no version tag on the head"},
+		"no tag on the head":            {nightly: "success", says: "no version tag on the head"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			work := widget(t, nil)
@@ -39,6 +39,7 @@ func TestTaggedReleasesTheHeadsVersionTag(t *testing.T) {
 			}
 
 			bin, calls := filepath.Join(work, "bin"), filepath.Join(work, "calls")
+
 			view := "exit 1"
 			if tc.published != "" {
 				view = "exit 0"
