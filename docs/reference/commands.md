@@ -360,6 +360,7 @@ slice that ended.
 | `--pools` | `pools` | With `--feed`, the pools' slices `plan --emit` wrote (`<suite>-slices.json`). |
 | `--dir` | `PIPELINEGEN_MARKS` | The bundle's marks directory (`slice mark`). |
 | `--timeout` | `2m0s` | How long `slice mark` waits for the batch to take the mark. |
+| `--out` | `bookkeeping` | Where `slice bookkeeping-files` writes what a batch's end reads of the tree. |
 
 On this machine `slice run` also puts its results in a temporary
 directory unless `--result` names one, and `--tools` names a directory
@@ -404,6 +405,15 @@ boundaries in a recording run of a stack suite; it returns once the
 running `slice run` has taken the mark, and fails when the batch failed
 the mark or didn't take it in time. `slice prepare` runs the suite's
 prepare steps, in the suite's prepare task.
+
+`slice bookkeeping-files --root source --out bookkeeping` writes what a
+batch's end reads of the tree under test: the config, `pipelinegen.yaml`,
+the same bytes every time. A batch's end placed on another worker than its
+batch then takes `bookkeeping` as its root and streams no tree: the
+slices' observations are what the batch kept. A slice the batch left
+unobserved (its time ran out, or an observe failed) is marked can't tell
+there, as is every slice of a recording run of a suite whose batch is its
+own task file, which observes nothing; such a suite's ends keep the tree.
 
 It reads the environment `report` does, with `PIPELINEGEN_SUITE` and
 `PIPELINEGEN_BATCH` required. `slice list` prints the batch's slices one per line,

@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Added
+
+- `slice bookkeeping-files --root source --out bookkeeping` writes what a batch's end reads of the tree under test, the config, the same bytes every time, so a runner can give a batch's end placed on another worker `bookkeeping` instead of the whole tree. A batch's end without the tree marks can't tell a slice the batch left unobserved, saying why, instead of failing its observe; a recording run of a suite whose batch is its own task file still needs the tree at its ends, which the kit checks ([contracts](docs/contracts.md#commands-the-generated-pipeline-calls))
+
 ### Changed
 
 - A batch's correlators claim their files in the tree only when a collect or an observe first needs them, instead of at the start of every step of the batch: a batch's end whose slices the batch observed already reads no tree

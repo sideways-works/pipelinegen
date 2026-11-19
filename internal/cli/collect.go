@@ -289,6 +289,14 @@ func (b *batchPlugins) Observe(ctx context.Context, source, slice, setup string,
 			return nil, fmt.Errorf("%w: %s", errInterpreter, interpreterLine(os.Getenv(envSuite), c.name, prog, batchEndCommand))
 		}
 
+		// a batch's end placed apart from the batch has no tree: what the batch left unobserved can't be told
+		// there, which binds the slice wide, never to too little
+		if !dirExists(source) {
+			out = append(out, report.Observation{Plugin: c.name, CantTell: true, Reason: noTreeToObserve})
+
+			continue
+		}
+
 		b.ensureClaims(ctx)
 
 		obs, err := observeOne(ctx, c, source, slice, setup, parts)
@@ -303,6 +311,14 @@ func (b *batchPlugins) Observe(ctx context.Context, source, slice, setup string,
 }
 
 var errNoCollector = errors.New("no collector")
+
+const noTreeToObserve = "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch"
+
+func dirExists(p string) bool {
+	info, err := os.Stat(p)
+
+	return p != "" && err == nil && info.IsDir()
+}
 
 // needCollector refuses a recording run of a suite with a stack when no correlator collects: its slices
 // would record nothing of the stack.

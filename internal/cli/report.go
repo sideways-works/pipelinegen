@@ -875,6 +875,9 @@ func runSlice(ctx context.Context, args []string, stdout io.Writer) error {
 		{runVerb, "run the batch's slices through the suite's steps, or a suite's slices on this machine: [--suite <s>] [--slice <name>]...", func(ctx context.Context, args []string) error { return sliceRun(ctx, args, stdout) }},
 		{"mark", "mark a slice boundary of a bundle the running batch gave a driver: start <name>, stop <name>", func(ctx context.Context, args []string) error { return sliceMark(ctx, args, stdout) }},
 		{"prepare", "run the suite's prepare steps into the prepared directory", func(ctx context.Context, args []string) error { return slicePrepare(ctx, args, stdout) }},
+		{"bookkeeping-files", "write what a batch's end reads of the tree under test into a directory of its own: --root source --out bookkeeping", func(ctx context.Context, args []string) error {
+			return sliceBookkeepingFiles(ctx, args, stdout)
+		}},
 	})
 }
 

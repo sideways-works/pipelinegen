@@ -153,3 +153,36 @@ func TestAPipelineReferencesOnlyWhatTheSpecGives(t *testing.T) {
 		t.Errorf("a purpose's var: %s", p)
 	}
 }
+
+func TestATaskFilesRecordingEndMountsTheTree(t *testing.T) {
+	end := func(suite, inputs string) string {
+		return `
+- name: main-` + suite + `
+  plan:
+  - task: end
+    config:
+      inputs: [` + inputs + `]
+      params: {GITHUB_TOKEN: x, PIPELINEGEN_TRIGGER: trigger, PIPELINEGEN_RUN: main, PIPELINEGEN_SUITE: ` + suite + `}
+      run:
+        path: tools/pipelinegen
+        args: [report, batch-end, --batch, "1", --result, result, --root, bookkeeping]`
+	}
+
+	text := []byte("jobs:" +
+		end("e2e", "{name: tools}, {name: trigger}, {name: bookkeeping}, {name: batches}, {name: result}, {name: coverage}") +
+		end("backend", "{name: tools}, {name: trigger}, {name: bookkeeping}, {name: batches}, {name: result}") + "\n")
+
+	cmds := Commands{
+		"report batch-end": {Flags: map[string]toolcalls.Flag{
+			"batch": {}, "root": {Default: ".", Use: toolcalls.Reads}, "result": {Default: "result", Use: toolcalls.Reads},
+			"batches": {Default: "batches", Use: toolcalls.Reads},
+		}, Needs: toolcalls.Needs{Recording: []string{"coverage"}, TaskFileRecording: []string{"source"}, RunFromEnv: true, Token: toolcalls.TokenRequired}},
+	}
+
+	_, mounts := callChecks(cmds, Spec(), text, nil, map[string]bool{})
+
+	// e2e records and runs its batches by a task file, so its end observes them in the tree; backend records nothing
+	if want := []string{"job main-e2e, step end: pipelinegen report batch-end: reads source, which it doesn't mount and no earlier call wrote"}; !slices.Equal(mounts, want) {
+		t.Errorf("mounts %q", mounts)
+	}
+}

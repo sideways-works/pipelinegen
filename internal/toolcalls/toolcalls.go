@@ -47,6 +47,10 @@ type Needs struct {
 	Reads []string `json:"reads,omitempty"`
 	// Recording are directories it reads only in a run that records its suite.
 	Recording []string `json:"recording,omitempty"`
+	// TaskFileRecording are directories it reads only in a run that records a suite whose batch task is
+	// the repository's own task file: the batch observes none of its slices, so the end observes them
+	// all, in the tree the batch ran in.
+	TaskFileRecording []string `json:"task_file_recording,omitempty"`
 	// ConfigFrom names the flag whose directory the config is read from, whatever --root says.
 	ConfigFrom string `json:"config_from,omitempty"`
 	// RunFromEnv: it learns its run from PIPELINEGEN_CHANGE and PIPELINEGEN_COMMIT, else the file

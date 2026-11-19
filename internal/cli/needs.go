@@ -22,8 +22,13 @@ var stepNeeds = map[string]toolcalls.Command{
 	"report suite":   {Needs: reportNeeds()},
 	"report finish":  {Needs: reportNeeds()},
 	"report collect": {Needs: reportNeeds()},
-	// reportBatchEnd's journal names the tree and the coverage (report.JournalIn: paths relative to the journal).
-	"report batch-end": {Needs: toolcalls.Needs{Reads: []string{treeDir}, Recording: []string{"coverage"}, RunFromEnv: true, Token: toolcalls.TokenRequired}},
+	// reportBatchEnd reads the config from --root and the batch's journal, which names the coverage and the
+	// tree its slices ran in (report.JournalIn: paths relative to the journal). The tree is read only to
+	// observe what the batch left unobserved, which is every slice of a task file's batch
+	// (batchPlugins.Observe).
+	"report batch-end": {Needs: toolcalls.Needs{Recording: []string{"coverage"}, TaskFileRecording: []string{treeDir}, RunFromEnv: true, Token: toolcalls.TokenRequired}},
+	// sliceBookkeepingFiles reads the tree's config from --root.
+	"slice bookkeeping-files": {},
 	// Slice steps write nothing remote without a token, and say so (step.open).
 	"slice start":     {Named: true, Needs: sliceNeeds()},
 	"slice end":       {Named: true, Needs: sliceNeeds()},

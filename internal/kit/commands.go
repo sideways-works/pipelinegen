@@ -293,6 +293,10 @@ func callChecks(cmds Commands, s plugin.Spec, text []byte, runs *taskRuns, seen 
 			problems = append(problems, "runs from "+prog+", which it doesn't mount")
 		}
 
+		if records(s, sc.env) && taskFile(s, sc.env) {
+			reads = append(reads, cmds[c.Command].Needs.TaskFileRecording...)
+		}
+
 		for _, d := range reads {
 			// the plugins the bootstrap fetched beside the tool are under
 			// the tool's own rule
@@ -331,6 +335,17 @@ func records(s plugin.Spec, env map[string]string) bool {
 			if rs.Suite == env["PIPELINEGEN_SUITE"] {
 				return rs.Records
 			}
+		}
+	}
+
+	return false
+}
+
+// taskFile tells whether the step's suite runs its batches by a task file of its own, not by drivers.
+func taskFile(s plugin.Spec, env map[string]string) bool {
+	for _, suite := range s.Suites {
+		if suite.Name == env["PIPELINEGEN_SUITE"] {
+			return suite.Steps == nil
 		}
 	}
 
