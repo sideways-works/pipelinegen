@@ -32,7 +32,7 @@ const (
 `
 	checksDriver = `  - name: shell
     kind: driver
-    repository: sideways-works/pipelinegen-driver-shell
+    repository: sideways-works/shell-driver
     release: {version: v0.1.0, sha256: 0000000000000000000000000000000000000000000000000000000000000000}
 `
 )
