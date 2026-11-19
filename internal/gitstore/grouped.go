@@ -467,7 +467,7 @@ func (s *Store) groupedTry(ctx context.Context, message string, edits map[string
 
 	targets := slices.Sorted(maps.Keys(edits))
 
-	tips, err := g.fetch(ctx, targets)
+	tips, err := g.fetchSeen(ctx, targets, s)
 	if err != nil {
 		return nil, err
 	}
@@ -659,6 +659,46 @@ func (s *Store) partial(ctx context.Context) (*Store, error) {
 }
 
 const noLazyFetch = "GIT_NO_LAZY_FETCH=1"
+
+// fetchSeen is fetch without asking which refs exist first when this process has seen every one of them,
+// in this repository (an earlier try) or in the reading one (a listing): the fetch alone says, and a ref
+// gone since fails it, which then asks.
+func (s *Store) fetchSeen(ctx context.Context, refs []string, reader *Store) (map[string]string, error) {
+	for _, ref := range refs {
+		if !s.hasLocal(ctx, ref) && !reader.hasLocal(ctx, ref) {
+			return s.fetch(ctx, refs)
+		}
+	}
+
+	args := []string{gitFetch, quiet, noTags, noFetchHead, "--filter=blob:none", promisor}
+	for _, ref := range refs {
+		args = append(args, "+"+ref+":"+groups+strings.TrimPrefix(ref, "refs/"))
+	}
+
+	if _, err := s.git(ctx, nil, nil, args...); err != nil {
+		return s.fetch(ctx, refs)
+	}
+
+	tips := map[string]string{}
+
+	for _, ref := range refs {
+		out, err := s.git(ctx, nil, nil, "rev-parse", "--verify", groups+strings.TrimPrefix(ref, "refs/"))
+		if err != nil {
+			return nil, err
+		}
+
+		tips[ref] = strings.TrimSpace(out)
+	}
+
+	return tips, nil
+}
+
+// hasLocal says whether the repository holds a grouped ref of the name, fetched before.
+func (s *Store) hasLocal(ctx context.Context, ref string) bool {
+	_, err := s.git(ctx, nil, nil, "rev-parse", "--verify", "--quiet", groups+strings.TrimPrefix(ref, "refs/"))
+
+	return err == nil
+}
 
 func (s *Store) fetch(ctx context.Context, refs []string) (map[string]string, error) {
 	out, err := s.retry(ctx, append([]string{lsRemote, refsOnly, s.Remote}, refs...))
