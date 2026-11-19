@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Fixed
+
+- `release patch` pushes its tags only after the build passed its checks (changelog, NOTICE, programs), and a build that fails takes back the tags the run made: a tag pushed for a release that then failed could never be released, as a pushed tag never moves.
+
 ## [0.4.0] - 2026-11-19
 
 ### Added

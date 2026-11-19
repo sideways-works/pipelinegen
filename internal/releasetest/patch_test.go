@@ -124,3 +124,37 @@ func TestPatchTagsBuildsPublishesAndVerifies(t *testing.T) {
 		t.Errorf("a changed release: %v\n%s", err, out)
 	}
 }
+
+// A build that fails a check pushes no tag: a pushed tag never moves, so it could never be released.
+func TestAPatchWhoseBuildFailsPushesNoTag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds a program")
+	}
+
+	work := widget(t, map[string]string{"CHANGELOG.md": "# Changelog\n\n## [Unreleased]\n"})
+	repo, origin, store := filepath.Join(work, "widget"), filepath.Join(work, "remote", "widget.git"), filepath.Join(work, "store")
+
+	run(t, repo, "git", "tag", "-d", "v1.2.3")
+	run(t, work, "git", "clone", "-q", "--bare", repo, origin)
+	run(t, repo, "git", "remote", "set-url", "origin", origin)
+
+	if err := os.MkdirAll(store, 0o750); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.CommandContext(t.Context(), releaseBin(t), "patch", "widget", "owner/widget", "v1.2.3", "out")
+	cmd.Dir, cmd.Env = work, append(os.Environ(), "PATH="+releasesGH(t, work, store)+":"+os.Getenv("PATH"))
+
+	out, err := cmd.CombinedOutput()
+	if err == nil || !strings.Contains(string(out), `no entry "## [1.2.3]"`) {
+		t.Fatalf("a changelog without the release: %v\n%s", err, out)
+	}
+
+	if tags := run(t, origin, "git", "tag"); tags != "" {
+		t.Errorf("origin has tags %q after a build that failed", tags)
+	}
+
+	if tags := run(t, repo, "git", "tag", "-l", "v1.2.3"); tags != "" {
+		t.Errorf("the clone keeps the tag %q it made for a build that failed", tags)
+	}
+}

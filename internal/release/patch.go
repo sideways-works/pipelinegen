@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -36,10 +37,13 @@ func Patch(ctx context.Context, o IO, dir, repo, tag, out string) error {
 		return err
 	}
 
-	if err := tagHead(ctx, o, m); err != nil {
+	names, created, err := tagLocally(ctx, o, m)
+	if err != nil {
 		return err
 	}
 
+	// The tags reach origin only once the build passed its checks: a pushed tag never moves, so
+	// one pushed for a build that then failed could never be released.
 	if exists(filepath.Join(out, sumsFile)) {
 		_, err = fmt.Fprintf(o.Stderr, "keeping the build in %s\n", out)
 	} else {
@@ -47,6 +51,10 @@ func Patch(ctx context.Context, o IO, dir, repo, tag, out string) error {
 	}
 
 	if err != nil {
+		return errors.Join(err, untag(ctx, o, dir, created))
+	}
+
+	if err := pushTags(ctx, o, dir, names); err != nil {
 		return err
 	}
 
@@ -99,34 +107,44 @@ func atOriginMain(ctx context.Context, o IO, dir string) error {
 	return nil
 }
 
-// tagHead tags main's head with the module's tag, and each nested module released with it with its
-// own, unless the tag exists (a pushed tag never moves), and pushes those tags: again on every run, so
-// a push that failed before is made up, and a remote tag of the same name elsewhere fails it.
-func tagHead(ctx context.Context, o IO, m target) error {
+// tagLocally tags main's head with the module's tag, and each nested module released with it with
+// its own, unless the tag exists (a pushed tag never moves). It gives every tag of the release and
+// those it created.
+func tagLocally(ctx context.Context, o IO, m target) (names, created []string, err error) {
 	subs, err := releasedWith(m.dir(m.repo))
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	dir, tag := m.repo, m.tag
 
-	names := []string{tag}
+	names = []string{tag}
 	for _, sub := range subs {
 		names = append(names, m.nestedTag(sub))
 	}
 
 	if hasTag(ctx, dir, tag) {
 		if _, err := fmt.Fprintf(o.Stderr, "%s is tagged already\n", tag); err != nil {
-			return err //nolint:wrapcheck // the run's own output
+			return nil, nil, err //nolint:wrapcheck // the run's own output
 		}
-	} else {
-		for _, name := range names {
-			if err := o.run(ctx, dir, os.Environ(), "git", "tag", name); err != nil {
-				return err
-			}
-		}
+
+		return names, nil, nil
 	}
 
+	for _, name := range names {
+		if err := o.run(ctx, dir, os.Environ(), "git", "tag", name); err != nil {
+			return nil, created, errors.Join(err, untag(ctx, o, dir, created))
+		}
+
+		created = append(created, name)
+	}
+
+	return names, created, nil
+}
+
+// pushTags pushes the release's tags: again on every run, so a push that failed before is made up,
+// and a remote tag of the same name elsewhere fails it.
+func pushTags(ctx context.Context, o IO, dir string, names []string) error {
 	refs := []string{"push", "-q", "origin"}
 
 	for _, name := range names {
@@ -136,6 +154,15 @@ func tagHead(ctx context.Context, o IO, m target) error {
 	}
 
 	return o.run(ctx, dir, os.Environ(), "git", refs...)
+}
+
+// untag deletes the local tags a run created, for a build that failed before they were pushed.
+func untag(ctx context.Context, o IO, dir string, names []string) error {
+	if len(names) == 0 {
+		return nil
+	}
+
+	return o.run(ctx, dir, os.Environ(), "git", append([]string{"tag", "-d"}, names...)...)
 }
 
 // verifyDownload downloads the release into a directory of its own and checks it against its
