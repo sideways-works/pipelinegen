@@ -67,3 +67,18 @@ func TestAZipPinsChangeIsADriversChange(t *testing.T) {
 		t.Fatal("samePin doesn't tell zips apart")
 	}
 }
+
+func TestAPluginsNameTakesNoNameOfTheStoresOwn(t *testing.T) {
+	for _, name := range []string{".sources", ".git-clones", "..", "a/b"} {
+		_, err := Parse([]byte(withRuns + "plugins:\n  - {name: \"" + name + "\", kind: sbom, repository: o/x, commit: " + strings.Repeat("0", 40) + "}\n"))
+		if err == nil || !strings.Contains(err.Error(), "may not start with a dot or hold a slash") {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+
+	for _, name := range []string{"git", "sources"} {
+		if _, err := Parse([]byte(withRuns + "plugins:\n  - {name: " + name + ", kind: sbom, repository: o/x, commit: " + strings.Repeat("0", 40) + "}\n")); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+}

@@ -18,6 +18,7 @@ minor version may change the config or the protocol.
 ### Changed
 
 - A plugin pinned by `commit` that `tools/plugins` lacks is built from the `manifest.yaml` in its directory at that commit, for the platform that asks, and kept in the user cache under a key of its repository, commit, path, manifest, platform and build image, so a machine builds it once; before, the command failed with the commands to build it by hand, as it still does for a commit with no manifest or one git can't fetch. A `tools/plugins/<name>` that is there still runs instead. Release pins, and the digests every existing pin gives its plugin's unit, are as before
+- Config: a plugin's `name` may not start with a dot or hold a slash. It names the plugin's directory in a cache, beside the directories of the plugins built or unpacked there
 - `pipeline` and `plugins claims` find their plugins as planning does: the copy in `--plugins` when it is there, otherwise fetched, built or unpacked by its pin. Before, they only read `--plugins`, and a runner or sbom missing there failed
 
 ## [0.4.2] - 2026-11-19

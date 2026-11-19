@@ -1263,6 +1263,9 @@ func (c *Config) validatePlugins(bad func(string, ...any)) {
 		switch {
 		case p.Name == "" || names[p.Name]:
 			bad("plugins: every plugin needs a name of its own")
+		case strings.HasPrefix(p.Name, ".") || strings.ContainsAny(p.Name, `/\`):
+			// a plugin's directory in a cache is its name, beside the plugin store's own, which start with a dot
+			bad("plugin %q: a name may not start with a dot or hold a slash", p.Name)
 		case p.Kind != KindCorrelator && p.Kind != KindSBOM && p.Kind != KindRunner && p.Kind != KindDriver && p.Kind != KindConnector:
 			bad("plugin %s: kind must be correlator, sbom, runner, driver or connector", p.Name)
 		case p.Kind == KindConnector && p.Name != ConnectorGitHub && p.Name != ConnectorGit:
