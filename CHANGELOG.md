@@ -31,6 +31,7 @@ minor version may change the config or the protocol.
 
 ### Fixed
 
+- The pipeline's release job succeeds for a tag released already when the release's files are a fresh build's, byte for byte, instead of failing for want of a nightly on a commit released by hand.
 - The kit's placement check lets a placement add the gets a moved task needs on its worker, a copy of a get of its job under a name of its own that never triggers, named by the task's `image` and `input_mapping`, so concourse-runner's `bookkeeping` rules no longer fail it. Anything else that differs still fails it, and the check now names where the pipelines differ.
 - The command driver finds a bare command such as `bazelisk` on the step's PATH, which puts the tools first, rather than on pipelinegen's own, so a `run: command` step can name a tool the task fetched.
 - The kit's placement check renders the pipeline without the placement the same way as with it, its tools at the checksums the kit places, so a runner that writes its tools' checksums into the pipeline no longer fails it.

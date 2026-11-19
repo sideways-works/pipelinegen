@@ -17,10 +17,13 @@ func TestTaggedReleasesTheHeadsVersionTag(t *testing.T) {
 	}
 
 	for name, tc := range map[string]struct {
-		nightly, tag, says string
-		released           bool
+		nightly, tag, says, published string
+		released, ok                  bool
 	}{
-		"the nightly passed": {nightly: "success", tag: "v1.2.3", released: true},
+		"the nightly passed": {nightly: "success", tag: "v1.2.3", released: true, ok: true},
+		// released by hand already: done when the release holds this build, whatever the nightly
+		"released already as built": {nightly: "failure", tag: "v1.2.3", published: "same", ok: true, says: "released already"},
+		"released already, other files": {nightly: "success", tag: "v1.2.3", published: "other", says: "SHA256SUMS"},
 		"the nightly failed": {nightly: "failure", tag: "v1.2.3", says: "no run of every test passed"},
 		"a candidate's tag":  {nightly: "success", tag: "v1.2.4-rc.1", says: "no version tag on the head"},
 		"no tag on the head": {nightly: "success", says: "no version tag on the head"},
@@ -36,11 +39,23 @@ func TestTaggedReleasesTheHeadsVersionTag(t *testing.T) {
 			}
 
 			bin, calls := filepath.Join(work, "bin"), filepath.Join(work, "calls")
+			view := "exit 1"
+			if tc.published != "" {
+				view = "exit 0"
+			}
+
+			// a published release is the build's files, or with "other" one of them changed
+			download := `d=$(eval echo \${$#}); cp out/* "$d"`
+			if tc.published == "other" {
+				download += `; printf x >> "$d/LICENSE"`
+			}
+
 			gh := `#!/bin/sh
 echo "$*" >> '` + calls + `'
 case "$1 $2" in
 "api repos/owner/widget/commits/"*) echo "pipelinegen/nightly ` + tc.nightly + `" ;;
-"release view") exit 1 ;;
+"release view") ` + view + ` ;;
+"release download") ` + download + ` ;;
 esac
 `
 
@@ -60,11 +75,11 @@ esac
 			got, _ := os.ReadFile(calls) //nolint:errcheck // no calls is an empty file
 
 			created := strings.Contains(string(got), "release create v1.2.3 -R owner/widget")
-			if (err == nil) != tc.released || created != tc.released || !strings.Contains(string(out), tc.says) {
+			if (err == nil) != tc.ok || created != tc.released || !strings.Contains(string(out), tc.says) {
 				t.Errorf("exit %v, gh called with\n%s\n%s", err, got, out)
 			}
 
-			if _, err := os.Stat(filepath.Join(work, "out")); !tc.released && err == nil {
+			if _, err := os.Stat(filepath.Join(work, "out")); !tc.released && tc.published == "" && err == nil {
 				t.Error("built although it isn't released")
 			}
 		})
