@@ -1,10 +1,10 @@
 # Converting gavel to pipelinegen
 
-> Where the conversion stands: made with v0.2.1. gavel's config pins
-> pipelinegen v0.2.1 and the v0.2.0 release of its runner, and its plugins
-> and drivers at v0.4.0 from the plugins repository, one group by
-> directory, which a pipelinegen and a runner of v0.4.0 read; all five
-> suites name steps run by drivers, with no batch script left. Most numbers on this page were measured with the last
+> Where the conversion stands: made with v0.2.1. gavel's config now pins
+> pipelinegen v0.4.0, and its plugins, drivers and runner from the plugins
+> repository, one group by directory: the runner at v0.4.1, the rest at
+> v0.4.0. All five suites name steps run by drivers, with no batch script
+> left. Most numbers on this page were measured with the last
 > development build before v0.2.0, whose code is v0.2.1's tool without a
 > few fixes, none of which changes what a plan selects. Some were measured
 > first with an earlier development build, and the page says where. On a
@@ -257,7 +257,7 @@ bazelisk on your `PATH`. The config beside this page pins:
 
 ```
 $ pipelinegen version
-v0.2.1
+v0.4.0
 ```
 
 First make sure the project's own tests pass on your machine, so that a
@@ -1560,7 +1560,7 @@ concourse:
       tar -xzf "$f" -C /usr/local --strip-components=1 --no-same-owner "node-$v-linux-x64/bin/node" &&
       go mod download && (cd tools && go mod download)
     bootstrap:
-      release: {version: v0.2.1, sha256: 69557cdf885d5e60dcbeb6bbc402cf2ff742cce0b68618ccfd47024a3e91fb36}
+      release: {version: v0.4.0, sha256: e5f78f866acacf3d4a13d141fb86fd4981453004f14ce0e4cb301d896ef3f86b}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 ```
 
@@ -1604,13 +1604,16 @@ the resources' checks included:
 
 ```yaml
 plugins:
-  - name: concourse
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
-    config:
-      placement:
-        default: [cloud-2]
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      # ... the plugins and drivers of the earlier steps ...
+      - name: concourse
+        kind: runner
+        path: runner/concourse
+        release: {version: v0.4.1, sums: d306919d672273d2c7af51db0a579e6254ad50c208a10bf2b0614ec2afc4a837}
+        config:
+          placement:
+            default: [cloud-2]
 ```
 
 ```

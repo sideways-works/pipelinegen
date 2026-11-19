@@ -50,15 +50,14 @@ concourse:
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     prepare: go mod download
     bootstrap:
-      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
+      release: {version: v0.4.0, sha256: e5f78f866acacf3d4a13d141fb86fd4981453004f14ce0e4cb301d896ef3f86b}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 
 plugins:
-  # ... the group of steps 3 and 6, the drivers and the plugins ...
-  - name: concourse
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      # ... the drivers and plugins of steps 3 and 6 ...
+      - {name: concourse, kind: runner, path: runner/concourse, release: {version: v0.4.1, sums: d306919d672273d2c7af51db0a579e6254ad50c208a10bf2b0614ec2afc4a837}}
 
 suites:
   go:
@@ -168,13 +167,15 @@ The planner image must hold what the plugins need to run:
 
 ## Generate it
 
-Download the runner the config pins into `tools/plugins/concourse`, as in
-step 6:
+Download the runner the config pins into `tools/plugins/concourse`, with
+its release's `SHA256SUMS`, as in step 6:
 
 ```sh
 curl -fsSL -o tools/plugins/concourse \
-  https://github.com/sideways-works/pipelinegen-runner-concourse/releases/download/v0.2.0/concourse-runner-linux-amd64
-echo "e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a  tools/plugins/concourse" | sha256sum -c -
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/runner/concourse/v0.4.1/concourse-runner-linux-amd64
+curl -fsSL -o tools/plugins/concourse.SHA256SUMS \
+  https://github.com/sideways-works/pipelinegen-plugins/releases/download/runner/concourse/v0.4.1/SHA256SUMS
+echo "d306919d672273d2c7af51db0a579e6254ad50c208a10bf2b0614ec2afc4a837  tools/plugins/concourse.SHA256SUMS" | sha256sum -c -
 chmod +x tools/plugins/concourse
 ```
 

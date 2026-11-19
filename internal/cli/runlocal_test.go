@@ -192,13 +192,14 @@ func newExampleRun(t *testing.T) *exampleRun {
 		t.Fatal(err)
 	}
 
-	// the example pins its shell driver in the plugins repository's group, which holds it alone
-	shell := regexp.MustCompile(`(?m)^  - repository: \S+\n    with:\n(?:      #.*\n)*      - \{name: shell, .*\n`)
+	// the example pins its shell driver in the plugins repository's group, beside its runner
+	shell := regexp.MustCompile(`(?m)^(?:      #.*\n)*      - \{name: shell, .*\n`)
 	if !shell.Match(data) {
 		t.Fatal("the example's config has no shell driver")
 	}
 
-	cfg := shell.ReplaceAllString(string(data), "  - {name: stub, kind: driver, repository: example/stub, commit: 0123456789abcdef0123456789abcdef01234567}\n")
+	cfg := strings.Replace(shell.ReplaceAllString(string(data), ""), "\nplugins:\n",
+		"\nplugins:\n  - {name: stub, kind: driver, repository: example/stub, commit: 0123456789abcdef0123456789abcdef01234567}\n", 1)
 	cfg = strings.NewReplacer(
 		"  workspace: .\n", "  workspace: .\n  startup_flags: "+string(flags)+"\n",
 		"      - run: shell\n        with: {functions: test_}\n", "      - run: stub\n        with: {log: "+e.log+"}\n",

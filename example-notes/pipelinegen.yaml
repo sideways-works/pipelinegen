@@ -25,7 +25,7 @@ concourse:
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     prepare: go mod download
     bootstrap:
-      release: {version: v0.2.0, sha256: c5f2dce22a0b3361d66e1bc390560928652fae1f94443be9784c059f44f2e04a}
+      release: {version: v0.4.0, sha256: e5f78f866acacf3d4a13d141fb86fd4981453004f14ce0e4cb301d896ef3f86b}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
 
 plugins:
@@ -52,11 +52,8 @@ plugins:
       # the drivers that run the suites' tests
       - {name: go, kind: driver, path: driver/go, release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}}
       - {name: playwright, kind: driver, path: driver/playwright, release: {version: v0.4.0, sums: 98cec967c5d0d7823832a9c1fbad37f71d195f000a5627a9c4e3177c349fbd0b}}
-  # TODO: move to runner/concourse of the plugins repository at its v0.4.0
-  - name: concourse
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.2.0, sha256: e4295cfc26d59414586d4840b2f4f69609400248b8a00724771ada332dde5b0a}
+      # writes the Concourse pipeline from this file
+      - {name: concourse, kind: runner, path: runner/concourse, release: {version: v0.4.1, sums: d306919d672273d2c7af51db0a579e6254ad50c208a10bf2b0614ec2afc4a837}}
 
 suites:
   go:
