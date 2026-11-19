@@ -545,7 +545,7 @@ same notices as `runner-notice` warnings when the runner is at hand.
 | `--out` | stdout | Writes the pipeline to this file instead. |
 | `--runner` | `<plugins>/<name>` | The runner plugin's executable, for running it outside a pipeline. |
 | `--for` | the only runner | The name of the runner plugin whose pipeline to write, with the runs it owns. Needed when the config has several runners. |
-| `--plugins` | `tools/plugins` | The directory the bootstrap fetched the plugins into. |
+| `--plugins` | `tools/plugins` | The directory the bootstrap fetched the plugins into. A runner that isn't there is [fetched](#plugins-a-command-fetches) by its pin. |
 | `--vars` | `false` | Prints the vars the pipeline references, one per line, instead of the pipeline: the token, the declared secrets, the repository's credentials and those in `concourse.include`. Whoever sets the pipeline passes exactly those. It needs no `concourse.url`. |
 | `--gate` | none | In the pipeline's own job: writes `gate.json` into this directory, `["1"]` when the checkout's config files are the default branch's now and `[]` otherwise, and writes no pipeline when it is shut. That job's builds run side by side, so one of an older config never sets or checks its pipeline over a newer one's. It reads the branch's tip from the remote. |
 
@@ -810,7 +810,7 @@ answers kept in the cache.
 |---|---|---|
 | `--root` | `.` | The repository's root. |
 | `--config` | `<root>/pipelinegen.yaml` | The config file. |
-| `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, one executable per plugin name. |
+| `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, one executable per plugin name. A plugin that isn't there is [fetched](#plugins-a-command-fetches) by its pin, as for `affected`. |
 | `--cache` | the user's cache, a directory per repository | Where the plugins' answers are kept. |
 | `--json` | `false` | Prints the claims as JSON. |
 
@@ -1169,8 +1169,9 @@ names an image fails, saying to pass `--no-image`.
 
 ### Plugins a command fetches
 
-`affected`, `why`, `try`, `run`, `record`, `slice run` and `check` find each
-plugin they run in `--plugins` (default `<root>/tools/plugins`). One that isn't
+`affected`, `why`, `try`, `run`, `record`, `slice run`, `check`, `pipeline`
+and `plugins claims` find each plugin they run in `--plugins` (default
+`<root>/tools/plugins`, for `pipeline` `tools/plugins`). One that isn't
 there is fetched from its pinned release on GitHub, for this machine's
 platform (or the image's), into your user cache
 (`pipelinegen/releases/<sha256>/`), and checked against its pin: its
@@ -1187,8 +1188,15 @@ again.
 A driver in `--plugins` that isn't the build its pin names is passed over
 for the pinned release, with a line on stderr. An sbom or correlator there
 that isn't its pin still runs, its answers cached apart, which is how a
-change to a plugin is tried. A plugin pinned by `commit` has no release:
-the error names it and the command that builds it into `--plugins`.
+change to a plugin is tried. A plugin pinned by `commit` is built from the
+`manifest.yaml` of its directory at that commit, and one pinned by `zip` is
+downloaded, checked against its sha256 and unpacked. A command given a
+`--cache` of its own, as a pipeline's steps are, keeps those under
+`<cache>/plugins/<key>/`, where `keep.cache` counts them and trims them
+with the rest; otherwise they go into `pipelinegen/releases/<key>/` beside
+the releases. A commit with no manifest, or one git can't fetch, fails,
+naming the command that builds the plugin into `--plugins`. `check` and
+`pipeline` take no `--cache` and keep them in your user cache.
 `check` never runs a binary that isn't its pin: one there that isn't is a
 warning, as is a plugin it can't fetch, and for one pinned by `commit` the
 warning gives the commands that build it.

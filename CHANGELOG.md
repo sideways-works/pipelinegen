@@ -13,10 +13,12 @@ minor version may change the config or the protocol.
 - Config: `plugins[].zip: {url, sha256}` pins a plugin packed as a zip, beside `release` and `commit`; an entry gives exactly one of the three, and needs no `repository` with a zip. The zip is downloaded over https, checked against its sha256 before it is opened, and unpacked into the user cache under that sha256, once per machine. It must hold its `manifest.yaml` at its top level, and is refused with a path that leaves its directory, a symlink, a file that is no part of the plugin, an executable besides the program, or more than 1 GiB unpacked. The manifest's kind must be the entry's. A `tools/plugins/<name>` never stands in for a zip pin. The spec's tools carry it as `zip` ([building and hosting a plugin as a zip](docs/how-to/plugin-zip.md))
 - `pipelinegen plugin build <dir> --zip <out.zip> [--platform os/arch]...` builds a plugin from its manifest in a container (docker or podman), with the repository read-only, no network unless the manifest asks for one, and `GOFLAGS=-trimpath`, and packs every platform into one zip, `manifest.yaml` unchanged at its top level. It writes `SHA256SUMS` beside the zip and prints the zip's sha256; the same build packs to the same bytes
 - `pipelinegen plugin add --zip <url> [--sha256 <hex>]` pins a zip: it downloads and checks it, reads the name and kind from its manifest, and writes the entry
+- A command given its own `--cache`, as a pipeline's steps are, keeps the plugins it builds from a commit or unpacks from a zip under `<cache>/plugins/<key>/`, where `keep.cache` counts them and trims them with the rest; without one they stay in the user cache beside the releases
 
 ### Changed
 
 - A plugin pinned by `commit` that `tools/plugins` lacks is built from the `manifest.yaml` in its directory at that commit, for the platform that asks, and kept in the user cache under a key of its repository, commit, path, manifest, platform and build image, so a machine builds it once; before, the command failed with the commands to build it by hand, as it still does for a commit with no manifest or one git can't fetch. A `tools/plugins/<name>` that is there still runs instead. Release pins, and the digests every existing pin gives its plugin's unit, are as before
+- `pipeline` and `plugins claims` find their plugins as planning does: the copy in `--plugins` when it is there, otherwise fetched, built or unpacked by its pin. Before, they only read `--plugins`, and a runner or sbom missing there failed
 
 ## [0.4.2] - 2026-11-19
 

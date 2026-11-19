@@ -98,6 +98,9 @@ The steps of a pipeline run the plugins in `tools/plugins`, which the
 runner's bootstrap fills from the spec's `tools`, where a zip pin is a
 tool's `zip`, its url and sha256. A runner has to know that field to
 fetch a zip-pinned plugin there. On your machine, `affected`, `why`,
-`try`, `run` and `slice run` resolve a plugin that `tools/plugins` lacks
-themselves, as described above; in a pipeline only `slice run` does, for
-a suite's drivers.
+`try`, `run`, `slice run`, `pipeline` and `plugins claims` resolve a
+plugin that `tools/plugins` lacks themselves, as described above; in a
+pipeline `slice run` does, for a suite's drivers, and `pipeline`, for the
+runner. A step's `--cache` keeps what they build or unpack under
+`<cache>/plugins/`, where `keep.cache` counts it; on your machine it goes
+into the user cache.
