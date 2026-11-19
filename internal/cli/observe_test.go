@@ -60,6 +60,8 @@ func TestABatchWithoutACorrelatorsInterpreterStopsBeforeItsFirstSlice(t *testing
 
 // The correlator file's interpreter is on PATH only while bin is, as in the batch's task and not its end's.
 type observedBatch struct {
+	cfg     *config.Config
+	tools   string
 	b       *batchPlugins
 	j       *report.Journal
 	evs     []report.SliceEvent
@@ -132,7 +134,7 @@ plugins:
 		evs = append(evs, ev)
 	}
 
-	return &observedBatch{b: b, j: j, evs: evs, bin: bin, cleanup: func() { _ = b.close() }} //nolint:errcheck // the test's own scratch
+	return &observedBatch{cfg: cfg, tools: tools, b: b, j: j, evs: evs, bin: bin, cleanup: func() { _ = b.close() }} //nolint:errcheck // the test's own scratch
 }
 
 func (o *observedBatch) end(t *testing.T) map[string]string {
@@ -277,5 +279,55 @@ exec sh "$@"
 
 	if l := recordedLists(t, f.root); l["e2e/e2e/cart.spec.ts"] != "unit:e2e/cart.spec.ts" || l["e2e/e2e/pay.spec.ts"] != "unit:e2e/pay.spec.ts" {
 		t.Fatalf("lists: %v", l)
+	}
+}
+
+func TestClaimsAreWorkedOutOnlyWhenACallNeedsThem(t *testing.T) {
+	o := newObservedBatch(t, "{}")
+	defer o.cleanup()
+
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "e2e", "a.spec.ts"), "test('a')\n")
+	gitT(t, root, "init", "-q")
+	gitT(t, root, "add", "-A")
+	gitT(t, root, "-c", "user.name=t", "-c", "user.email=t@example.test", "commit", "-qm", "the tree")
+
+	kept := filepath.Join(t.TempDir(), claimedFile)
+
+	o.b.claim(root, kept)
+
+	if fileExists(kept) {
+		t.Fatal("claims were worked out before anything asked")
+	}
+
+	var log strings.Builder
+
+	o.b.observeAhead(t.Context(), o.j, "e2e", time.Now().Add(time.Hour), &log)
+
+	if !fileExists(kept) {
+		t.Fatalf("the batch observed without its claims: %s", log.String())
+	}
+
+	// the batch's end finds every slice observed and works out no claims
+	end, err := loadCorrelators(t.Context(), o.cfg, "e2e", o.tools, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer end.close() //nolint:errcheck // the test's own scratch
+
+	end.observed = o.b.observed
+	endKept := filepath.Join(t.TempDir(), claimedFile)
+	end.claim(root, endKept)
+
+	for _, ev := range o.evs {
+		setup, parts := report.ObserveInputs(ev)
+		if _, err := end.Observe(t.Context(), ev.Source, ev.Slice, setup, parts); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if fileExists(endKept) {
+		t.Error("the batch's end worked out claims it never used")
 	}
 }

@@ -237,6 +237,8 @@ func (b *batchPlugins) observeAhead(ctx context.Context, j *report.Journal, suit
 			case ctx.Err() != nil:
 				why = "the task's time ran out"
 			default:
+				b.ensureClaims(ctx)
+
 				obs, err := observeOne(ctx, c, ev.Source, ev.Slice, setup, parts)
 				if err == nil {
 					err = b.keep(ev.Slice, c.name, obs)

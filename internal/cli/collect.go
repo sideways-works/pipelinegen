@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
@@ -26,6 +27,10 @@ type batchPlugins struct {
 	dir  string
 	// observed is where the batch keeps its correlators' answers for its end (observeAhead); empty: none.
 	observed string
+
+	// claimRoot and claimPath are the tree and the kept claims claim works from, once something asks.
+	claimRoot, claimPath string
+	claimed              sync.Once
 }
 
 type correlatorSet struct {
@@ -86,13 +91,29 @@ func loadCorrelators(ctx context.Context, cfg *config.Config, suite, tools, kept
 
 const claimedFile = "claimed.json"
 
-// A batch's tree doesn't change between its steps, so the setup's end works the claims out once and the
-// slices' steps read them; claims that can't be worked out are left out.
-func (b *batchPlugins) claim(ctx context.Context, root, path string) {
-	if b == nil || root == "" {
+// claim names the tree the correlators claim their files in, and the file the claims are kept in. They
+// are worked out when a collect or an observe first needs them, so a step that calls neither reads no
+// tree: a batch's end usually has every slice observed already.
+func (b *batchPlugins) claim(root, path string) {
+	if b == nil {
 		return
 	}
 
+	b.claimRoot, b.claimPath = root, path
+}
+
+// ensureClaims works the claims out, once. A batch's tree doesn't change between its steps, so the first
+// step that needs them keeps them and later steps read them; claims that can't be worked out are left
+// out. They take no step's deadline, as they took none when every step worked them out at its start.
+func (b *batchPlugins) ensureClaims(ctx context.Context) {
+	if b == nil || b.claimRoot == "" {
+		return
+	}
+
+	b.claimed.Do(func() { b.workClaims(context.WithoutCancel(ctx), b.claimRoot, b.claimPath) })
+}
+
+func (b *batchPlugins) workClaims(ctx context.Context, root, path string) {
 	kept := map[string][]plugin.Claim{}
 
 	if path != "" {
@@ -210,7 +231,7 @@ func (b *batchPlugins) collectors(cfg *config.Config, suite string, deadline tim
 	out := make([]report.Collector, 0, len(b.sets))
 
 	for _, c := range b.sets {
-		out = append(out, setCollector{c: c, stack: cfg.Suites[suite].Stack, deadline: deadline})
+		out = append(out, setCollector{b: b, c: c, stack: cfg.Suites[suite].Stack, deadline: deadline})
 	}
 
 	return out
@@ -221,6 +242,7 @@ func (b *batchPlugins) collectors(cfg *config.Config, suite string, deadline tim
 const collectMargin = 30 * time.Second
 
 type setCollector struct {
+	b     *batchPlugins
 	c     correlatorSet
 	stack bool
 	// deadline is zero when unknown, as in a task file's own steps.
@@ -232,6 +254,8 @@ func (s setCollector) Collect(ctx context.Context, action, slice, dir string) er
 	if s.c.err != nil {
 		return fmt.Errorf("collect: %w", s.c.err)
 	}
+
+	s.b.ensureClaims(ctx)
 
 	if !s.deadline.IsZero() {
 		var cancel context.CancelFunc
@@ -264,6 +288,8 @@ func (b *batchPlugins) Observe(ctx context.Context, source, slice, setup string,
 		if prog, lacks := missing[c.name]; lacks {
 			return nil, fmt.Errorf("%w: %s", errInterpreter, interpreterLine(os.Getenv(envSuite), c.name, prog, batchEndCommand))
 		}
+
+		b.ensureClaims(ctx)
 
 		obs, err := observeOne(ctx, c, source, slice, setup, parts)
 		if err != nil {

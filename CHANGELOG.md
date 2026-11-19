@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Changed
+
+- A batch's correlators claim their files in the tree only when a collect or an observe first needs them, instead of at the start of every step of the batch: a batch's end whose slices the batch observed already reads no tree
+
 ## [0.4.1] - 2026-11-20
 
 ### Changed
