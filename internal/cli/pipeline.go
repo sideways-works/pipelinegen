@@ -65,6 +65,12 @@ func runPipeline(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
+	if runner == "" {
+		if runner, err = runnerFile(ctx, cfg, conf, plugins); err != nil {
+			return err
+		}
+	}
+
 	text, notices, err := pipelineText(ctx, cfg, c.root, conf, runner, plugins)
 	if err != nil {
 		return err
@@ -93,6 +99,17 @@ func runPipeline(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	return nil
+}
+
+// runnerFile is the runner as planning finds a plugin: the plugins directory's copy, else fetched,
+// built or unpacked by its pin.
+func runnerFile(ctx context.Context, cfg *config.Config, conf config.Plugin, plugins string) (string, error) {
+	f, err := pluginsFor(ctx, cfg, absOr(plugins), "", config.Platform(), func(p config.Plugin) bool { return p.Name == conf.Name }, false)
+	if err != nil {
+		return "", err
+	}
+
+	return f.files[conf.Name], nil
 }
 
 // varsOnlyURL is in the reserved .invalid domain, which no pipeline is ever set from.

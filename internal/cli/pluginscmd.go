@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/plugincache"
 	"github.com/sideways-works/pipelinegen/internal/plugins"
 	"github.com/sideways-works/pipelinegen/plugin"
@@ -46,10 +47,17 @@ func pluginsClaims(ctx context.Context, args []string, stdout io.Writer) (err er
 	}
 
 	root := absRoot(c.root)
+	built := pluginCache(cache)
 	cache = repoCache(ctx, cache, root)
 
 	if dir == "" {
 		dir = filepath.Join(root, "tools", "plugins")
+	}
+
+	// as planning finds them: dir's copy, else fetched, built or unpacked by its pin
+	found, err := pluginsFor(ctx, cfg, absOr(dir), built, config.Platform(), planningPlugins, false)
+	if err != nil {
+		return err
 	}
 
 	work, done, err := callsDir(cache)
@@ -59,7 +67,7 @@ func pluginsClaims(ctx context.Context, args []string, stdout io.Writer) (err er
 	defer done()
 
 	set, err := plugins.Load(ctx, plugins.Options{
-		Config: cfg, Dir: absOr(dir), Cache: cache, Work: work,
+		Config: cfg, Dir: found.dir, Cache: cache, Work: work,
 		Answers: &plugincache.Cache{Dir: filepath.Join(cache, "answers")},
 	})
 	if err != nil {

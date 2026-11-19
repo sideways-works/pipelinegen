@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/pipelinegen/internal/testrepo"
 	"github.com/sideways-works/pipelinegen/plugin"
 	"github.com/sideways-works/plugkit/container"
 )
@@ -324,5 +325,104 @@ func TestAddRefusesAZipOverPlainHTTP(t *testing.T) {
 	var stderr bytes.Buffer
 	if code := Run(t.Context(), []string{"plugin", "add", "--root", root, "--zip", "http://plugins.example/stub.zip"}, os.Stdout, &stderr); code == 0 || !strings.Contains(stderr.String(), "an https URL") {
 		t.Fatalf("%d: %s", code, stderr.String())
+	}
+}
+
+// zipOf packs program as the plugin's file for this platform, with a manifest of name and kind.
+func zipOf(t *testing.T, name, kind, program string) []byte {
+	t.Helper()
+
+	var z bytes.Buffer
+
+	zw := zip.NewWriter(&z)
+
+	files := map[string]string{
+		"manifest.yaml":                "name: " + name + "\nkind: " + kind + "\nprogram: " + name + "\nbuild: {image: \"" + shBuildImage + "\", run: [\"true\"]}\nplatforms: [" + hostPlatform + "]\n",
+		name + "-" + config.Platform(): program,
+	}
+
+	for _, f := range []string{"manifest.yaml", name + "-" + config.Platform()} {
+		h := &zip.FileHeader{Name: f, Method: zip.Deflate}
+		h.SetMode(0o644)
+
+		if f != "manifest.yaml" {
+			h.SetMode(0o755)
+		}
+
+		w, err := zw.CreateHeader(h)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, _ = w.Write([]byte(files[f])) //nolint:errcheck // a buffer
+	}
+
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	return z.Bytes()
+}
+
+// plugins claims finds an sbom pinned by a zip the plugins directory lacks as planning does, and
+// with --cache keeps it there, under plugins/, where the cache's size budget counts it.
+func TestPluginsClaimsUnpacksAZipPinnedSbomIntoTheCache(t *testing.T) {
+	r := pluginsRepo(t)
+	pdir := pluginsDirFor(t)
+
+	texts, err := os.ReadFile(filepath.Join(pdir, "texts"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.Remove(filepath.Join(pdir, "texts")); err != nil {
+		t.Fatal(err)
+	}
+
+	data := zipOf(t, "texts", "sbom", string(texts))
+	base, ca := serveZips(t, map[string][]byte{"/texts.zip": data})
+
+	conf := strings.Replace(readFile(t, filepath.Join(r.Dir, "pipelinegen.yaml")), "\nsuites:\n", `
+plugins:
+  - {name: texts, kind: sbom, zip: {url: "`+base+`/texts.zip", sha256: `+sumOf(data)+`}, include: ["texts/a.txt"]}
+suites:
+`, 1)
+	r.Write("pipelinegen.yaml", conf)
+	r.Commit("plugins")
+
+	cache, user := t.TempDir(), t.TempDir()
+	env := map[string]string{"SSL_CERT_FILE": ca, "XDG_CACHE_HOME": user}
+
+	stdout, stderr, code := runIn(t, r.Dir, env, "plugins", "claims", "-root", r.Dir, "-plugins", pdir, "-cache", cache)
+	if code != 0 || stdout != "texts\ttexts/a.txt\tincluded\n" {
+		t.Fatalf("plugins claims: %d %q\n%s", code, stdout, stderr)
+	}
+
+	if !exists(filepath.Join(cache, "plugins", sumOf(data), "manifest.yaml")) || exists(filepath.Join(user, "pipelinegen", "releases", sumOf(data))) {
+		t.Fatal("the zip isn't kept under the cache's plugins directory alone")
+	}
+}
+
+// pipeline finds a runner pinned by a zip the plugins directory lacks; with no --cache the zip is
+// kept in the user cache.
+func TestPipelineUnpacksAZipPinnedRunner(t *testing.T) {
+	r := testrepo.New(t)
+
+	data := zipOf(t, "ci", "runner", fakeRunner)
+	base, ca := serveZips(t, map[string][]byte{"/ci.zip": data})
+
+	cfg := readText(t, filepath.Join(r.Dir, "pipelinegen.yaml")) +
+		"plugins:\n  - {name: ci, kind: runner, zip: {url: \"" + base + "/ci.zip\", sha256: " + sumOf(data) + "}}\n"
+	r.Write("pipelinegen.yaml", cfg)
+
+	user := t.TempDir()
+
+	stdout, stderr, code := runIn(t, r.Dir, map[string]string{"SSL_CERT_FILE": ca, "XDG_CACHE_HOME": user}, "pipeline", "-root", r.Dir, "-plugins", t.TempDir())
+	if code != 0 || stdout != "from the runner: fixture\n" {
+		t.Fatalf("pipeline: %d %q\n%s", code, stdout, stderr)
+	}
+
+	if !exists(filepath.Join(user, "pipelinegen", "releases", sumOf(data), "ci-"+config.Platform())) {
+		t.Fatal("the zip isn't kept in the user cache")
 	}
 }
