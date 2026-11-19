@@ -94,9 +94,10 @@ with the commands to build the plugin by hand.
 
 ## In a pipeline
 
-Each step of a pipeline finds the plugins in `tools/plugins`, which the
-runner's bootstrap fills from the spec's `tools`; a zip pin is a tool's
-`zip`, its url and sha256. Where a step's `tools/plugins` lacks a plugin
-pinned by a commit or a zip, pipelinegen resolves it itself into its user
-cache, as it does on your machine, and checks it the same way. The cache
-drops what no command used in 30 days.
+The steps of a pipeline run the plugins in `tools/plugins`, which the
+runner's bootstrap fills from the spec's `tools`, where a zip pin is a
+tool's `zip`, its url and sha256. A runner has to know that field to
+fetch a zip-pinned plugin there. On your machine, `affected`, `why`,
+`try`, `run` and `slice run` resolve a plugin that `tools/plugins` lacks
+themselves, as described above; in a pipeline only `slice run` does, for
+a suite's drivers.
