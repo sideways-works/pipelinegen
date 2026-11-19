@@ -1,0 +1,12 @@
+# observed
+go:internal/config#method:Drafts.Wanted
+go:internal/connector#func:Admit
+go:internal/runs#func:Admit
+go:internal/runs#func:OpenHeads
+go:internal/runs#func:changesArgs
+go:internal/runs#func:filtered
+go:internal/runs#func:short
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
