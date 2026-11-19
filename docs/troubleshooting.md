@@ -226,6 +226,25 @@ Smaller batches (`batch_minutes`) keep each one well inside the limit. A
 step that hangs is the defect to fix: raising a limit only makes it hang
 longer.
 
+### A step is slow
+
+In a pipeline, `plan`, `tree`, `batches`, `report batch-end`, `report suite`,
+`report whole` and `report collect` end with a line on stderr that says
+where their time went:
+
+```
+pipelinegen plan: took 46.2s: plugin go-correlator 19.8s, the store 12.4s, bazel-diff generate-hashes 6.1s, Bazel query 3.9s, other 4.0s; git reached a remote 41 times in 17.9s (30 fetch, 9 ls-remote, 2 push)
+```
+
+Each stage's time is summed under its name: `the store` is reading and
+writing the records under `refs/pipelinegen/`, `plugin <name>` a plugin's
+calls, `connector <name>` the git host's, `other` what no stage names. The
+git count is every `fetch`, `ls-remote`, `push` and `clone` the step ran,
+whatever remote it reached, and the time they took, which may overlap the
+stages'. A step that waits on the network shows it there; one that waits on
+a plugin or on Bazel shows it in that stage. On your own machine the line
+is left out.
+
 ### The comment is stale
 
 Find out: the comment is rebuilt from the run's refs at every flush of a

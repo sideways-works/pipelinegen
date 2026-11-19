@@ -41,10 +41,10 @@ func commands() []command {
 		{"pipeline", "write the repository's pipeline from its config", runPipeline},
 		{"plan", "plan the change a planning job's trigger stands for", metered("plan", runPlan)},
 		{"unplanned", "list a pull request run's heads its planning job missed, and planned ones no suite took up", runUnplanned},
-		{"tree", "write a suite job's tree under test and its gates", runTree},
-		{"batches", "deal a suite's selected slices into batches", runBatches},
+		{"tree", "write a suite job's tree under test and its gates", metered("tree", runTree)},
+		{"batches", "deal a suite's selected slices into batches", metered("batches", runBatches)},
 		{"learn", "write the stub deps repository a fresh checkout needs: --stub", runLearn},
-		{"report", "keep a run's state and show it on GitHub: start, slice, batch-end, flush, suite, finish, collect", runReport},
+		{reportCommand, "keep a run's state and show it on GitHub: start, slice, batch-end, flush, suite, finish, collect", metered(reportCommand, runReport)},
 		{sliceCommand, "report a slice of the running batch: start <name>, end <name>", runSlice},
 		{"lock", lockSummary, runLock},
 		{"unlock", lockSummary, runUnlock},
@@ -526,12 +526,31 @@ func runSlices(ctx context.Context, args []string, stdout io.Writer) error {
 }
 
 // metered reports progress on stderr once a minute after the first, since a slow plan and a stuck one
-// look alike from outside.
+// look alike from outside; in a pipeline's step it ends with a line saying where the time went. A
+// command with subcommands is named with its subcommand.
 func metered(name string, run func(context.Context, []string, io.Writer) error) func(context.Context, []string, io.Writer) error {
 	return func(ctx context.Context, args []string, stdout io.Writer) error {
-		ctx, stop := progress.Start(ctx, os.Stderr, "pipelinegen "+name)
+		prefix := "pipelinegen " + name
+		if len(args) > 0 && !strings.HasPrefix(args[0], "-") && slices.Contains(subcommanded, name) {
+			prefix += " " + args[0]
+		}
+
+		ctx, stop := progress.Start(ctx, os.Stderr, prefix)
 		defer stop()
 
-		return run(ctx, args, stdout)
+		err := run(ctx, args, stdout)
+
+		if secret.InPipeline() && (name != reportCommand || slices.Contains(summed, prefix)) {
+			_, _ = io.WriteString(os.Stderr, progress.Summary(ctx)) //nolint:errcheck // a line that can't be said changes nothing
+		}
+
+		return err
 	}
 }
+
+// subcommanded are the metered commands whose first argument names a subcommand.
+var subcommanded = []string{reportCommand}
+
+// summed are the report subcommands that end with where their time went: a pipeline's steps of their
+// own, not those a batch calls once per slice.
+var summed = []string{"pipelinegen " + batchEndCommand, "pipelinegen report suite", "pipelinegen report whole", "pipelinegen report collect"}

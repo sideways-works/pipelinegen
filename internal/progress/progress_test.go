@@ -3,6 +3,8 @@ package progress
 import (
 	"bytes"
 	"context"
+	"io"
+	"maps"
 	"strings"
 	"sync"
 	"testing"
@@ -80,4 +82,92 @@ func TestAStepSaysWhereItIsOnceItRunsLong(t *testing.T) {
 func TestNoMeterNoWords(_ *testing.T) {
 	Stage(context.Background(), "x")()
 	Count(context.Background(), 1, 2, "y")
+}
+
+func TestTheSummarySaysWhereTheTimeWent(t *testing.T) {
+	ctx, stop := Start(t.Context(), io.Discard, "pipelinegen tree")
+	defer stop()
+
+	m := from(ctx)
+	base := m.start
+
+	// stages and git commands at set times: the meter's clock is moved by hand
+	at := func(d time.Duration) {
+		m.mu.Lock()
+		m.charge(base.Add(d))
+		m.mu.Unlock()
+	}
+
+	m.mu.Lock()
+	m.stage = "plugin go-sbom: units of 3 files"
+	m.mu.Unlock()
+	at(2 * time.Second)
+
+	m.mu.Lock()
+	m.stage = "plugin go-sbom: links of 3 files"
+	m.mu.Unlock()
+	at(3 * time.Second)
+
+	m.mu.Lock()
+	m.stage = "the store: reading"
+	m.mu.Unlock()
+	at(4500 * time.Millisecond)
+
+	m.mu.Lock()
+	m.stage = ""
+	m.git["fetch"] = &calls{n: 3, d: 900 * time.Millisecond}
+	m.git["push"] = &calls{n: 1, d: 600 * time.Millisecond}
+	m.mu.Unlock()
+
+	got := Summary(ctx)
+
+	for _, want := range []string{
+		"pipelinegen tree: took ",
+		": plugin go-sbom 3.0s, the store 1.5s",
+		"; git reached a remote 4 times in 1.5s (3 fetch, 1 push)\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("no %q in %q", want, got)
+		}
+	}
+}
+
+func TestOnlyGitThatReachesARemoteIsCounted(t *testing.T) {
+	ctx, stop := Start(t.Context(), io.Discard, "pipelinegen report batch-end")
+	defer stop()
+
+	for _, args := range [][]string{
+		{"fetch", "--quiet", "origin"},
+		{"-c", "protocol.version=2", "fetch", "origin", "x"},
+		{"-C", "/tmp/push", "ls-remote", "origin"},
+		{"push", "--atomic", "origin"},
+		{"-C", "/tmp/fetch", "rev-parse", "HEAD"},
+		{"cat-file", "--batch"},
+		{"hash-object", "-w", "--stdin-paths"},
+	} {
+		Git(ctx, args)()
+	}
+
+	m := from(ctx)
+	got := map[string]int{}
+
+	for v, c := range m.git {
+		got[v] = c.n
+	}
+
+	if want := map[string]int{"fetch": 2, "ls-remote": 1, "push": 1}; !maps.Equal(got, want) {
+		t.Errorf("counted %v, want %v", got, want)
+	}
+
+	if !strings.HasSuffix(Summary(ctx), "; git reached a remote 4 times in 0.0s (2 fetch, 1 ls-remote, 1 push)\n") {
+		t.Errorf("summary %q", Summary(ctx))
+	}
+}
+
+func TestNoMeterNoSummary(t *testing.T) {
+	Git(context.Background(), []string{"fetch"})()
+
+	if got := Summary(context.Background()); got != "" {
+		t.Errorf("said %q", got)
+	}
 }

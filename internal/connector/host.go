@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/sideways-works/pipelinegen/internal/progress"
 	"github.com/sideways-works/pipelinegen/plugin"
 	"github.com/sideways-works/plugkit/exchange"
 )
@@ -78,6 +79,8 @@ func Open(ctx context.Context, o Options) (*Host, error) {
 func (h *Host) Description() plugin.Description { return h.ex.Desc }
 
 func (h *Host) call(ctx context.Context, call string, args, answer any) error {
+	defer progress.Stage(ctx, "connector %s: %s", h.ex.Plugin.Name, call)()
+
 	work, err := os.MkdirTemp(h.work, "pipelinegen-connector-"+call+"-*")
 	if err != nil {
 		return fmt.Errorf("connector %s %s: %w", h.ex.Plugin.Name, call, err)

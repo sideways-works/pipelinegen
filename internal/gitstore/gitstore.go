@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/branchstore"
+	"github.com/sideways-works/pipelinegen/internal/progress"
 	"github.com/sideways-works/pipelinegen/internal/secret"
 	"github.com/sideways-works/pipelinegen/internal/tries"
 )
@@ -223,6 +224,8 @@ func (e *gitError) Error() string {
 func (e *gitError) Unwrap() error { return ErrGit }
 
 func (s *Store) git(ctx context.Context, env []string, stdin io.Reader, args ...string) (string, error) {
+	defer progress.Git(ctx, args)()
+
 	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // git with the store's own arguments
 	cmd.Dir = s.Dir
 	cmd.Env = s.env(env)
@@ -284,6 +287,8 @@ func (s *Store) pause(ctx context.Context, try int) {
 // List fetches every ref under the prefixes (each ending in "/") in one
 // round trip and returns them by name.
 func (s *Store) List(ctx context.Context, prefixes ...string) (map[string]Ref, error) {
+	defer progress.Stage(ctx, "the store: reading")()
+
 	if s.onBranch() {
 		return s.branchList(ctx, prefixes)
 	}
@@ -582,6 +587,8 @@ const firstBatch = 100
 // First returns the first of the refs, in order, that exists on the remote, fetched so its files can be
 // read: given a commit's ref and then its ancestors', the nearest one that has a record.
 func (s *Store) First(ctx context.Context, refs []string) (Ref, bool, error) {
+	defer progress.Stage(ctx, "the store: reading")()
+
 	if s.onBranch() {
 		return s.branchFirst(ctx, refs)
 	}
@@ -695,6 +702,8 @@ func (s *Store) Write(ctx context.Context, message string, updates ...Update) (m
 	if s.ReadOnly {
 		return nil, fmt.Errorf("%w: %s", ErrReadOnly, message)
 	}
+
+	defer progress.Stage(ctx, "the store: writing")()
 
 	if s.onBranch() {
 		return s.branchWrite(ctx, message, updates)

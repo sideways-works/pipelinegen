@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/sideways-works/pipelinegen/internal/progress"
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
@@ -27,6 +28,8 @@ func (r Repo) Git(ctx context.Context, args ...string) (string, error) {
 // run runs git and returns its stdout; an exit status 1 is returned as exitOne, for the commands
 // that answer yes or no with it.
 func (r Repo) run(ctx context.Context, args ...string) (string, error) {
+	defer progress.Git(ctx, args)()
+
 	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // git with pipelinegen's own arguments
 	cmd.Dir = r.Dir
 	cmd.Env = secret.HardenGit(os.Environ())

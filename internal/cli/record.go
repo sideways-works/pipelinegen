@@ -905,7 +905,7 @@ func (b *localBuild) finish(ctx context.Context) error {
 	}
 
 	for i, s := range steps {
-		s = append(append([]string{"report"}, s...), "--root", b.source())
+		s = append(append([]string{reportCommand}, s...), "--root", b.source())
 
 		cmd := exec.CommandContext(ctx, exe, s...) //nolint:gosec // pipelinegen itself
 		cmd.Dir = b.dir

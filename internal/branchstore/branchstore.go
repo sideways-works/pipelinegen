@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/sideways-works/pipelinegen/internal/progress"
 	"github.com/sideways-works/pipelinegen/internal/secret"
 	"github.com/sideways-works/pipelinegen/internal/tries"
 )
@@ -202,6 +203,8 @@ func (e *gitError) Error() string {
 func (e *gitError) Unwrap() error { return ErrGit }
 
 func (s *Store) git(ctx context.Context, env []string, stdin io.Reader, args ...string) (string, error) {
+	defer progress.Git(ctx, args)()
+
 	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // git with the store's own arguments
 	cmd.Dir = s.Dir
 	cmd.Env = s.env(env)

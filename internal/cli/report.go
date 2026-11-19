@@ -860,7 +860,8 @@ func reportFinish(ctx context.Context, args []string) (err error) {
 
 const (
 	sliceCommand    = "slice"
-	batchEndCommand = "report batch-end"
+	reportCommand   = "report"
+	batchEndCommand = reportCommand + " batch-end"
 )
 
 func runSlice(ctx context.Context, args []string, stdout io.Writer) error {

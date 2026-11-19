@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sideways-works/pipelinegen/internal/progress"
 	"github.com/sideways-works/pipelinegen/internal/tries"
 )
 
@@ -918,6 +919,8 @@ func (s *Store) Compact(ctx context.Context, runPrefix, suite string) (int, erro
 	if s.ReadOnly {
 		return 0, fmt.Errorf("%w: compact %s", ErrReadOnly, runPrefix)
 	}
+
+	defer progress.Stage(ctx, "the store: writing")()
 
 	if s.onBranch() {
 		return 0, nil

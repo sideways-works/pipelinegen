@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-
+	"github.com/sideways-works/pipelinegen/internal/progress"
 	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
@@ -243,6 +243,8 @@ var (
 )
 
 func gitEnv(ctx context.Context, dir string, env []string, args ...string) (string, error) {
+	defer progress.Git(ctx, args)()
+
 	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // git with pipelinegen's own arguments
 	cmd.Dir = dir
 
