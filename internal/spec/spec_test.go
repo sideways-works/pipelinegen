@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -331,6 +332,39 @@ func TestAnOldLockReachesNoRunner(t *testing.T) {
 			if rs.Suite == "e2e" && rs.Minutes != 90 {
 				t.Errorf("run %s: e2e's limit %d, want lock.minutes, the old spelling of minutes, 90", r.Name, rs.Minutes)
 			}
+		}
+	}
+}
+
+func TestAZipPinReachesTheRunnerAsTheToolsZip(t *testing.T) {
+	base, err := os.ReadFile("../../testdata/kit/pipelinegen.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sum := strings.Repeat("ef", 32)
+	entry := "plugins:\n  - {name: lint, kind: driver, zip: {url: \"https://plugins.example/lint.zip\", sha256: " + sum + "}}\n"
+
+	cfg, err := config.Parse([]byte(strings.Replace(string(base), "plugins:\n", entry, 1)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := From(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !slices.ContainsFunc(s.Tools, func(tool plugin.SpecTool) bool { return tool.Name == "lint" }) {
+		t.Fatalf("no tool lint: %+v", s.Tools)
+	}
+
+	for _, tool := range s.Tools {
+		switch {
+		case tool.Name == "lint" && (tool.Zip == nil || tool.Zip.URL != "https://plugins.example/lint.zip" || tool.Zip.SHA256 != sum || tool.Version != "" || tool.Commit != ""):
+			t.Fatalf("the zip's tool: %+v", tool)
+		case tool.Name != "lint" && tool.Zip != nil:
+			t.Fatalf("%s has a zip: %+v", tool.Name, tool)
 		}
 	}
 }

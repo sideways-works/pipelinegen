@@ -157,7 +157,7 @@ func (c *Config) validateConnectors(bad func(string, ...any)) {
 
 		if cn.Links != "" {
 			if u, err := url.Parse(strings.NewReplacer("{commit}", "c", "{branch}", "b", "{path}", "p").Replace(cn.Links)); err != nil ||
-				(u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+				(u.Scheme != schemeHTTPS && u.Scheme != "http") || u.Host == "" {
 				bad("%s: links must be an http(s) URL with {commit}, {branch} or {path} in it", where)
 			}
 		}

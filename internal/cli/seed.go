@@ -398,8 +398,11 @@ func seedNote(cfg *config.Config, commit string) *attached.Seed {
 
 	for _, p := range cfg.Plugins {
 		sp := attached.SeedPlugin{Name: p.Name, Version: "commit", Pin: p.Commit}
-		if p.Release != nil {
+		switch {
+		case p.Release != nil:
 			sp.Version, sp.Pin = p.Release.Version, p.Release.Pin()
+		case p.Zip != nil:
+			sp.Version, sp.Pin = "zip", p.Zip.SHA256
 		}
 
 		s.Plugins = append(s.Plugins, sp)

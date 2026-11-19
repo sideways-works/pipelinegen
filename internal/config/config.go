@@ -104,6 +104,7 @@ type Plugin struct {
 	Path           string         `json:"path,omitempty"  yaml:"path,omitempty"`
 	Release        *Release       `yaml:"release"`
 	Commit         string         `yaml:"commit"`
+	Zip            *Zip           `yaml:"zip"`
 	Include        []string       `yaml:"include"`
 	Exclude        []string       `yaml:"exclude"`
 	Config         map[string]any `yaml:"config"`
@@ -1271,10 +1272,10 @@ func (c *Config) validatePlugins(bad func(string, ...any)) {
 				"the github section and connectors say where the code lives", p.Name)
 		case p.Kind == KindDriver && p.Name == BuiltinCommand:
 			bad("plugin %s: %s is the driver built into pipelinegen; give the entry another name", p.Name, BuiltinCommand)
-		case p.Repository == "":
-			bad("plugin %s: repository is missing", p.Name)
-		case (p.Release == nil) == (p.Commit == "") || (p.Release != nil && !p.Release.valid()) || (p.Commit != "" && !commitID.MatchString(p.Commit)):
-			bad("plugin %s: needs exactly one of release (version and one of sha256 or sums) or commit (40 hex)", p.Name)
+		default:
+			if problem := p.pinProblem(); problem != "" {
+				bad("plugin %s: %s", p.Name, problem)
+			}
 		}
 
 		names[p.Name] = true

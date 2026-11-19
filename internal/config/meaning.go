@@ -384,7 +384,7 @@ func driverNames(cs ...*Config) []string {
 }
 
 func samePin(a, b Plugin) bool {
-	return a.Repository == b.Repository && a.Path == b.Path && a.Commit == b.Commit && reflect.DeepEqual(a.Release, b.Release)
+	return a.Repository == b.Repository && a.Path == b.Path && a.Commit == b.Commit && reflect.DeepEqual(a.Release, b.Release) && reflect.DeepEqual(a.Zip, b.Zip)
 }
 
 // SliceRuns says why a slice runs differently under the head's config than the base's, by the

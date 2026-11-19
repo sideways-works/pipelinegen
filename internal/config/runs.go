@@ -85,7 +85,7 @@ func (c *Config) Reports() bool {
 }
 
 // remoteSchemes are those git reaches with nothing but the token pipelinegen's steps carry.
-var remoteSchemes = map[string]bool{"https": true, "http": true, "git": true, "file": true}
+var remoteSchemes = map[string]bool{schemeHTTPS: true, "http": true, "git": true, "file": true}
 
 func validRemote(remote string) bool {
 	u, err := url.Parse(remote)

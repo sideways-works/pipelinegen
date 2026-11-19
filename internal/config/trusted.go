@@ -42,6 +42,7 @@ type TrustedPlugin struct {
 	Path       string         `json:"path,omitempty"`
 	Release    *Release       `json:"release,omitempty"`
 	Commit     string         `json:"commit,omitempty"`
+	Zip        *Zip           `json:"zip,omitempty"`
 	Config     map[string]any `json:"config,omitempty"`
 }
 
@@ -61,7 +62,7 @@ func (c *Config) Trusted() Trusted {
 	}
 
 	for _, p := range c.Plugins {
-		tp := TrustedPlugin{Name: p.Name, Repository: p.Repository, Path: p.Path, Release: p.Release, Commit: p.Commit}
+		tp := TrustedPlugin{Name: p.Name, Repository: p.Repository, Path: p.Path, Release: p.Release, Commit: p.Commit, Zip: p.Zip}
 		if p.Kind == KindDriver {
 			tp.Config = p.Config
 		}
@@ -215,7 +216,7 @@ func (c *Config) trustPlugins(trusted []TrustedPlugin) {
 			continue
 		}
 
-		p.Repository, p.Path, p.Release, p.Commit = trusted[i].Repository, trusted[i].Path, trusted[i].Release, trusted[i].Commit
+		p.Repository, p.Path, p.Release, p.Commit, p.Zip = trusted[i].Repository, trusted[i].Path, trusted[i].Release, trusted[i].Commit, trusted[i].Zip
 		if p.Kind == KindDriver {
 			p.Config = trusted[i].Config
 		}

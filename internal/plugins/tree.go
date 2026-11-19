@@ -501,6 +501,11 @@ func pinDigest(p config.Plugin) string {
 
 	h.Write([]byte("commit " + p.Commit + "\nkind " + p.Kind + "\n"))
 
+	// only a zip pin adds a line, so every other pin digests as it always has
+	if p.Zip != nil {
+		h.Write([]byte("zip " + p.Zip.URL + " " + p.Zip.SHA256 + "\n"))
+	}
+
 	// a map marshals with its keys sorted, so equal blocks digest alike
 	block, err := json.Marshal(p.Config)
 	if err != nil {

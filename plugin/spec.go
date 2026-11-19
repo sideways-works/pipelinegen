@@ -286,6 +286,15 @@ type SpecTool struct {
 	// <name>.SHA256SUMS; the platform's file (<program>-<os>-<arch> or <program>.mjs) is checked by it.
 	Sums   string `json:"sums,omitempty"`
 	Commit string `json:"commit,omitempty"`
+	// Zip is a plugin packed apart, with manifest.yaml at its top level: fetched from URL and
+	// checked by SHA256 before it is unpacked. A runner that can't fetch one leaves the plugin
+	// out of the plugins directory, and pipelinegen fetches it into its own cache.
+	Zip *SpecZip `json:"zip,omitempty"`
+}
+
+type SpecZip struct {
+	URL    string `json:"url"`
+	SHA256 string `json:"sha256"`
 }
 
 const (

@@ -197,6 +197,10 @@ func tools(cfg *config.Config) []plugin.SpecTool {
 			t.Version, t.SHA256, t.Sums = p.Release.Version, p.Release.SHA256, p.Release.Sums
 		}
 
+		if p.Zip != nil {
+			t.Zip = &plugin.SpecZip{URL: p.Zip.URL, SHA256: p.Zip.SHA256}
+		}
+
 		out = append(out, t)
 	}
 
