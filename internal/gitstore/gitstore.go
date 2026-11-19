@@ -297,7 +297,7 @@ func (s *Store) List(ctx context.Context, prefixes ...string) (map[string]Ref, e
 		return nil, err
 	}
 
-	args := []string{gitFetch, quiet, noTags, "--prune", noFetchHead, s.Remote}
+	args := []string{gitFetch, quiet, noTags, prune, noFetchHead, s.Remote}
 	patterns := make([]string, 0, len(prefixes))
 
 	for _, p := range prefixes {
@@ -310,6 +310,10 @@ func (s *Store) List(ctx context.Context, prefixes ...string) (map[string]Ref, e
 		patterns = append(patterns, local)
 	}
 
+	// the grouped refs holding the prefixes' records come in the same round trip
+	specs, locals := groupedSpecs(prefixes)
+	args = append(args, specs...)
+
 	if _, err := s.retry(ctx, args); err != nil {
 		return nil, err
 	}
@@ -319,8 +323,20 @@ func (s *Store) List(ctx context.Context, prefixes ...string) (map[string]Ref, e
 		return nil, err
 	}
 
-	if err := s.groupedList(ctx, prefixes, refs); err != nil {
+	own := make(map[string]bool, len(refs))
+	for name := range refs {
+		own[name] = true
+	}
+
+	if err := s.groupedRead(ctx, prefixes, locals, refs); err != nil {
 		return nil, err
+	}
+
+	// a plan listed tells its run's layout, which a write would ask the remote again
+	for name := range refs {
+		if r, ok := recordOf(name); ok {
+			s.learnLayout(r, own[name])
+		}
 	}
 
 	return refs, nil
@@ -604,11 +620,7 @@ func (s *Store) First(ctx context.Context, refs []string) (Ref, bool, error) {
 			return got, ok, err
 		}
 
-		if got, ok, err = s.firstRef(ctx, []string{name}); err != nil || ok {
-			return got, ok, err
-		}
-
-		if got, ok, err = s.groupedFirst(ctx, name); err != nil || ok {
+		if got, ok, err = s.firstRecord(ctx, name); err != nil || ok {
 			return got, ok, err
 		}
 

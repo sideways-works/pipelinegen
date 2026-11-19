@@ -28,6 +28,7 @@ const (
 	gitFetch    = "fetch"
 	noTags      = "--no-tags"
 	noFetchHead = "--no-write-fetch-head"
+	prune       = "--prune"
 	lsRemote    = "ls-remote"
 	refsOnly    = "--refs"
 	gitPush     = "push"
@@ -125,7 +126,20 @@ type groupRef struct {
 	ref, commit string
 }
 
-func (s *Store) groupedList(ctx context.Context, prefixes []string, refs map[string]Ref) error {
+// groupedSpecs are the refspecs that fetch the grouped refs holding the prefixes' records, and the local
+// prefixes they land under.
+func groupedSpecs(prefixes []string) (specs, locals []string) {
+	for _, p := range groupPatterns(prefixes) {
+		local := groups + strings.TrimPrefix(p, "refs/")
+		specs = append(specs, "+"+p+":"+local)
+		locals = append(locals, strings.TrimSuffix(local, "*"))
+	}
+
+	return specs, locals
+}
+
+// groupedRead adds to refs the records the fetched grouped refs under locals hold within the prefixes.
+func (s *Store) groupedRead(ctx context.Context, prefixes, locals []string, refs map[string]Ref) error {
 	// the grouped refs themselves are the store's own business
 	for name := range refs {
 		if strings.HasPrefix(name, RunPrefix) || strings.HasPrefix(name, BatchPrefix) {
@@ -133,23 +147,8 @@ func (s *Store) groupedList(ctx context.Context, prefixes []string, refs map[str
 		}
 	}
 
-	patterns := groupPatterns(prefixes)
-
-	if len(patterns) == 0 {
+	if len(locals) == 0 {
 		return nil
-	}
-
-	args := []string{gitFetch, quiet, noTags, "--prune", noFetchHead, s.Remote}
-	locals := make([]string, 0, len(patterns))
-
-	for _, p := range patterns {
-		local := groups + strings.TrimPrefix(p, "refs/")
-		args = append(args, "+"+p+":"+local)
-		locals = append(locals, strings.TrimSuffix(local, "*"))
-	}
-
-	if _, err := s.retry(ctx, args); err != nil {
-		return err
 	}
 
 	out, err := s.git(ctx, nil, nil, append([]string{"for-each-ref", "--format=%(refname) %(objectname)"}, locals...)...)
@@ -1144,18 +1143,66 @@ func moveRecords(have, batch map[string]string, info *bytes.Buffer) {
 	}
 }
 
-func (s *Store) groupedFirst(ctx context.Context, name string) (Ref, bool, error) {
+// firstRecord fetches a record in one round trip: its own ref, as the layout before the grouped refs wrote
+// it, and the grouped refs of its run, preferring its own ref as First always has.
+func (s *Store) firstRecord(ctx context.Context, name string) (Ref, bool, error) {
 	r, ok := recordOf(name)
 	if !ok {
 		return Ref{}, false, nil
 	}
 
-	refs := map[string]Ref{}
-	if err := s.groupedList(ctx, []string{runsRoot + r.run + "/", plansRoot + r.run}, refs); err != nil {
+	if err := s.init(ctx); err != nil {
+		return Ref{}, false, err
+	}
+
+	// a glob matches the ref and the names it begins, so a missing ref fails nothing; --prune drops
+	// what the remote no longer has
+	own := mirror + strings.TrimPrefix(name, "refs/")
+	prefixes := []string{runsRoot + r.run + "/", plansRoot + r.run}
+	specs, locals := groupedSpecs(prefixes)
+
+	args := append([]string{gitFetch, quiet, noTags, prune, noFetchHead, s.Remote, "+" + name + "*:" + own + "*"}, specs...)
+	if _, err := s.retry(ctx, args); err != nil {
+		return Ref{}, false, err
+	}
+
+	refs, err := s.local(ctx, []string{own})
+	if err != nil {
+		return Ref{}, false, err
+	}
+
+	if got, ok := refs[name]; ok {
+		s.learnLayout(r, true)
+
+		return got, true, nil
+	}
+
+	refs = map[string]Ref{}
+	if err := s.groupedRead(ctx, prefixes, locals, refs); err != nil {
 		return Ref{}, false, err
 	}
 
 	got, ok := refs[name]
+	if ok {
+		s.learnLayout(r, false)
+	}
 
 	return got, ok, nil
+}
+
+// learnLayout keeps which layout a run's found plan has, which oneRefEach would ask the remote again:
+// a plan is written once, in one layout, and its run is never written in the other.
+func (s *Store) learnLayout(r record, own bool) {
+	if r.dir != planDir {
+		return
+	}
+
+	s.g.mu.Lock()
+	defer s.g.mu.Unlock()
+
+	if s.g.layouts == nil {
+		s.g.layouts = map[string]bool{}
+	}
+
+	s.g.layouts[r.run] = own
 }
