@@ -7,18 +7,18 @@ resources:
   - name: golang
     type: registry-image
     icon: language-go
-    tags: [cloud-1]
+    tags: [cloud]
     source: {repository: golang, tag: 1.27.1}
   - name: busybox
     type: registry-image
     icon: console
-    tags: [cloud-1]
+    tags: [cloud]
     source: {repository: busybox, tag: 1.37.0}
   - name: version-tag
     type: git
     icon: tag
     check_every: 5m
-    tags: [cloud-1]
+    tags: [cloud]
     source:
       uri: https://github.com/sideways-works/pipelinegen.git
       username: x-access-token
@@ -28,7 +28,7 @@ resources:
   - name: release-tools
     type: git
     icon: tools
-    tags: [cloud-1]
+    tags: [cloud]
     source:
       uri: https://github.com/sideways-works/pipelinegen.git
       username: x-access-token
@@ -44,13 +44,13 @@ jobs:
       - in_parallel:
           - get: version-tag
             trigger: true
-            tags: [cloud-1]
+            tags: [cloud]
           - get: release-tools
-            tags: [cloud-1]
+            tags: [cloud]
       - task: release
         file: release-tools/ci/release.yml
         input_mapping: {source: version-tag}
         params: {GITHUB_TOKEN: ((github_token))}
-        tags: [cloud-1]
+        tags: [cloud]
         # Bazel's first fetch of the pinned tools comes before the two builds
         timeout: 20m

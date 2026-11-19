@@ -59,17 +59,13 @@ plugins:
   - name: concourse
     kind: runner
     repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.3.1, sha256: 2c73971737f97b80798390087a779364be01dbf9e42c4f05d9fd12d9eec2b346}
+    release: {version: v0.3.3, sha256: fee79593c16d9902fdc12d7f482659598e118e7e0957c02b6577388fddcf01a3}
     config:
       placement:
-        # Every suite, and the checks, on one worker's own tag. Two workers
-        # under one tag are a pool: Concourse places a task and the fetch of
-        # its image apart, and without peer-to-peer streaming every image
-        # then crosses through the web node (a golang image took 25
-        # minutes). So never a shared tag such as cloud for suites here.
-        # Every suite runs on cloud-1: the other cloud worker runs an
-        # adopter's browser stacks, which need its memory.
-        default: [cloud-1]
+        # Every suite, and the checks, on the cloud workers: they stream
+        # volumes to each other directly, so a task and the fetch of its
+        # image may land on different workers of the pool.
+        default: [cloud]
         # planning, reporting and the pipeline job run on untagged workers
         rules:
           - {for: pipeline, tags: []}
