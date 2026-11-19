@@ -464,7 +464,11 @@ func (g *guide) recorded(ctx context.Context, step func(string, string) func() e
 		},
 		func() error { return g.copyFile(filepath.Join(g.src, "ci", "root.yml"), "ci/root.yml", 0o644) },
 		func() error {
-			return g.copyFile(filepath.Join(g.plugins, "concourse"), "tools/plugins/concourse", 0o755)
+			if err := g.copyFile(filepath.Join(g.plugins, "concourse"), "tools/plugins/concourse", 0o755); err != nil {
+				return err
+			}
+
+			return g.copyFile(filepath.Join(g.plugins, "concourse"+sumsSuffix), "tools/plugins/concourse"+sumsSuffix, 0o644)
 		},
 		func() error { return g.appendTo(".gitignore", "/pipeline.yml\n") },
 		step("pipeline", "pipelinegen pipeline --out pipeline.yml && pipelinegen pipeline --vars"),
