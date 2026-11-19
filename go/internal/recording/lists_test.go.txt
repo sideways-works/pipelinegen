@@ -1,0 +1,2 @@
+go:internal/recording#func:Merge
+go:internal/recording#func:Union
