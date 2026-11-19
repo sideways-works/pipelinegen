@@ -1,0 +1,14 @@
+# observed
+go:internal/plugins#func:scanBindUnit
+go:internal/plugins#method:bindUnit.UnmarshalJSON
+go:internal/plugins#method:bindUnit.fromValues
+go:internal/plugins#method:unitScanner.byte
+go:internal/plugins#method:unitScanner.end
+go:internal/plugins#method:unitScanner.int
+go:internal/plugins#method:unitScanner.ints
+go:internal/plugins#method:unitScanner.space
+go:internal/plugins#method:unitScanner.str
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
