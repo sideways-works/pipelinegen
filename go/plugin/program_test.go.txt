@@ -1,0 +1,2 @@
+go:internal/testenv#var:cp
+go:plugin#func:Program
