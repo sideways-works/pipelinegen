@@ -1,0 +1,15 @@
+go:internal/piperun#func:EncodeEnd
+go:internal/piperun#func:ReadList
+go:internal/piperun#func:Reported
+go:internal/piperun#func:completeLines
+go:internal/piperun#func:copyIn
+go:internal/piperun#func:cutPrefix
+go:internal/piperun#func:fitText
+go:internal/piperun#method:Feed.Next
+go:internal/piperun#method:Feed.read
+go:internal/piperun#method:Files.Kept
+go:internal/piperun#method:Results.End
+go:internal/piperun#method:Results.Requeue
+go:internal/piperun#method:Results.Start
+go:internal/piperun#method:Results.append
+go:internal/piperun#method:Results.line
