@@ -452,7 +452,7 @@ type localBuild struct {
 // findPlugins puts in b.plugins the drivers and correlators the suite's batch runs, fetching those
 // the plugins directory lacks.
 func (b *localBuild) findPlugins(ctx context.Context) error {
-	f, err := pluginsFor(ctx, b.cfg, b.plugins, config.Platform(), suitePlugins(b.cfg, b.suite, b.cfg.Records(localRun, b.suite)), false)
+	f, err := pluginsFor(ctx, b.cfg, b.plugins, "", config.Platform(), suitePlugins(b.cfg, b.suite, b.cfg.Records(localRun, b.suite)), false)
 	if err != nil {
 		return err
 	}

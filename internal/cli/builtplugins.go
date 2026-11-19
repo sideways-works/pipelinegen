@@ -29,17 +29,39 @@ import (
 
 var errBuilt = errors.New("plugin")
 
-// pluginStore resolves the plugins pinned by a commit or a zip into the user cache, beside the
+// pluginStore resolves the plugins pinned by a commit or a zip: under cache's plugins directory,
+// where its size budget counts and trims them, or with no cache into the user cache, beside the
 // releases, where the same trimming keeps them.
-func pluginStore() store.Store {
+func pluginStore(cache string) store.Store {
+	client := &http.Client{Timeout: 10 * time.Minute}
+	if cache != "" {
+		return store.Store{Dir: filepath.Join(cache, "plugins"), Client: client}
+	}
+
 	f := releases()
 
-	return store.Store{Dir: filepath.Join(f.Cache, f.Under), Client: &http.Client{Timeout: 10 * time.Minute}}
+	return store.Store{Dir: filepath.Join(f.Cache, f.Under), Client: client}
+}
+
+// pluginCache is the cache a command's --cache names for the plugins it builds or unpacks: none when
+// it is the user cache or in it, as the default is, so those stay beside the releases.
+func pluginCache(cache string) string {
+	if cache == "" {
+		return ""
+	}
+
+	abs := absOr(cache)
+	if rel, err := filepath.Rel(defaultCache(), abs); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return ""
+	}
+
+	return abs
 }
 
 // resolveBuilt is the plugin p's commit or zip pins, for platform (linux-amd64): built from its
-// manifest, or unpacked from its zip, and checked to be a program of the entry's kind.
-func resolveBuilt(ctx context.Context, p config.Plugin, platform string) (store.Resolved, error) {
+// manifest, or unpacked from its zip, into cache (see pluginStore), and checked to be a program of
+// the entry's kind.
+func resolveBuilt(ctx context.Context, p config.Plugin, platform, cache string) (store.Resolved, error) {
 	sp := store.Pin{Path: p.Path, Commit: p.Commit}
 	if p.Repository != "" {
 		sp.Repository = config.CloneURL(p.Repository)
@@ -51,7 +73,7 @@ func resolveBuilt(ctx context.Context, p config.Plugin, platform string) (store.
 
 	osArch := strings.Replace(platform, "-", "/", 1)
 
-	s := pluginStore()
+	s := pluginStore(cache)
 	s.OnBuild = func(string) {
 		warnf(os.Stderr, "pipelinegen: building plugin %s for %s from its commit %s\n", p.Name, osArch, short12(p.Commit))
 	}
@@ -73,8 +95,8 @@ func resolveBuilt(ctx context.Context, p config.Plugin, platform string) (store.
 
 // builtPlugin is the program a plugin pinned by commit or zip runs: a commit whose tree holds no
 // manifest, or that can't be fetched, is refused as before, saying how to build it by hand.
-func builtPlugin(ctx context.Context, p config.Plugin, dir, platform string) (string, error) {
-	r, err := resolveBuilt(ctx, p, platform)
+func builtPlugin(ctx context.Context, p config.Plugin, dir, platform, cache string) (string, error) {
+	r, err := resolveBuilt(ctx, p, platform, cache)
 
 	switch {
 	case err == nil:

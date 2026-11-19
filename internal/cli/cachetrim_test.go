@@ -320,3 +320,27 @@ func writeZip(t *testing.T, p string, files map[string]string) {
 
 	writeFile(t, p, b.String())
 }
+
+// Plugins built or unpacked into a step's cache count toward its budget and go with the plugins'
+// scratch space when the cache is over it.
+func TestATrimCountsAndDropsTheCachesPlugins(t *testing.T) {
+	cache := t.TempDir()
+	old := time.Now().Add(-48 * time.Hour)
+
+	fill(t, cache, "plugins/"+strings.Repeat("a", 64)+"/manifest.yaml", 100, old)
+	fill(t, cache, "plugins/"+strings.Repeat("a", 64)+"/go-driver-linux-amd64", 3<<20, old)
+	fill(t, cache, "store/objects", 1<<20, old)
+
+	if _, err := trimCache(cache, 8<<20, time.Now()); err != nil || !exists(filepath.Join(cache, "plugins", strings.Repeat("a", 64), "manifest.yaml")) {
+		t.Fatalf("a cache within its budget lost its plugins: %v", err)
+	}
+
+	tr, err := trimCache(cache, 2<<20, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if exists(filepath.Join(cache, "plugins")) || !exists(filepath.Join(cache, "store", "objects")) || tr.dropped["plugins"] < 3<<20 {
+		t.Fatalf("over budget: dropped %v", tr.dropped)
+	}
+}

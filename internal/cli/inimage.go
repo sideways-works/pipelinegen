@@ -450,7 +450,7 @@ func (b *localBuild) imageTools(ctx context.Context, plat string) ([]container.M
 		return nil, err
 	}
 
-	pf, err := pluginsFor(ctx, b.cfg, b.plugins, plat, suitePlugins(b.cfg, b.suite, b.cfg.Records(localRun, b.suite)), true)
+	pf, err := pluginsFor(ctx, b.cfg, b.plugins, "", plat, suitePlugins(b.cfg, b.suite, b.cfg.Records(localRun, b.suite)), true)
 	if err != nil {
 		return nil, err
 	}

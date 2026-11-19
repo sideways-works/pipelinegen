@@ -33,7 +33,8 @@ type pluginFiles struct {
 
 // pluginsFor finds the plugins need picks as the bootstrap would: dir's copy when it is its pin, else the
 // pinned release; one off its pin runs if an sbom or correlator, never a driver. gathered: linked apart.
-func pluginsFor(ctx context.Context, cfg *config.Config, dir, platform string, need func(config.Plugin) bool, gathered bool) (*pluginFiles, error) {
+// Plugins pinned by a commit or a zip are kept under cache (see pluginStore).
+func pluginsFor(ctx context.Context, cfg *config.Config, dir, cache, platform string, need func(config.Plugin) bool, gathered bool) (*pluginFiles, error) {
 	host := platform == config.Platform()
 	out := &pluginFiles{dir: dir, files: map[string]string{}, sums: map[string]string{}}
 	fetched := map[string]fetch.Got{}
@@ -55,7 +56,7 @@ func pluginsFor(ctx context.Context, cfg *config.Config, dir, platform string, n
 		}
 
 		if p.Release == nil {
-			exe, err := builtPlugin(ctx, p, dir, platform)
+			exe, err := builtPlugin(ctx, p, dir, platform, cache)
 			if err != nil {
 				return nil, err
 			}
@@ -296,7 +297,7 @@ func claimsWithPlugins(ctx context.Context, cfg *config.Config, cache, dir, root
 		return nil, dir, nil
 	}
 
-	dir, err := planningPluginsDir(ctx, cfg, dir, root)
+	dir, err := planningPluginsDir(ctx, cfg, dir, root, pluginCache(cache))
 	if err != nil {
 		return nil, dir, err
 	}
@@ -306,8 +307,8 @@ func claimsWithPlugins(ctx context.Context, cfg *config.Config, cache, dir, root
 
 // planningPluginsDir is pluginsFor on this machine, for planning. When the plan asks no plugin but an
 // sbom's claims, which are best effort, a plugin it can't find or fetch is left out as before.
-func planningPluginsDir(ctx context.Context, cfg *config.Config, dir, root string) (string, error) {
-	f, err := pluginsFor(ctx, cfg, dir, config.Platform(), planningPlugins, false)
+func planningPluginsDir(ctx context.Context, cfg *config.Config, dir, root, cache string) (string, error) {
+	f, err := pluginsFor(ctx, cfg, dir, cache, config.Platform(), planningPlugins, false)
 
 	switch {
 	case err == nil:

@@ -422,7 +422,7 @@ func (w *whyFlags) planAgain(ctx context.Context, cfg *config.Config, store *git
 		pluginsAt = filepath.Join(root, "tools", "plugins")
 	}
 
-	pluginsAt, err = planningPluginsDir(ctx, cfg, absOr(pluginsAt), root)
+	pluginsAt, err = planningPluginsDir(ctx, cfg, absOr(pluginsAt), root, pluginCache(w.cache))
 	if err != nil {
 		return nil, "", err
 	}

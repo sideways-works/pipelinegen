@@ -720,7 +720,7 @@ func localSliceRun(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	pf, err := pluginsFor(ctx, cfg, absOr(f.plugins), config.Platform(), suitePlugins(cfg, f.suite, false), false)
+	pf, err := pluginsFor(ctx, cfg, absOr(f.plugins), pluginCache(f.cache), config.Platform(), suitePlugins(cfg, f.suite, false), false)
 	if err != nil {
 		return err
 	}

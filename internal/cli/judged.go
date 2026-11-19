@@ -174,7 +174,7 @@ func pinnedBinary(p config.Plugin, dir string) (string, error) {
 // into the user cache and checked by its pin as run and affected fetch it.
 func pinnedOrFetched(ctx context.Context, p config.Plugin, dir string) (string, error) {
 	if p.Release == nil && p.Zip != nil {
-		r, err := resolveBuilt(ctx, p, config.Platform())
+		r, err := resolveBuilt(ctx, p, config.Platform(), "")
 
 		return r.Program, err
 	}
