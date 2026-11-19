@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-19
+
 ### Added
 
 - In a pipeline, `plan`, `tree`, `batches`, `report batch-end`, `report suite`, `report whole` and `report collect` end with a line on stderr saying where their time went: the total, each stage's time (the store, each plugin, each connector, Bazel, bazel-diff, `other`), and how many git commands reached a remote and how long they took ([troubleshooting](docs/troubleshooting.md#a-step-is-slow)). On your own machine nothing changes
@@ -41,6 +43,12 @@ minor version may change the config or the protocol.
 - The command driver finds a bare command such as `bazelisk` on the step's PATH, which puts the tools first, rather than on pipelinegen's own, so a `run: command` step can name a tool the task fetched.
 - The kit's placement check renders the pipeline without the placement the same way as with it, its tools at the checksums the kit places, so a runner that writes its tools' checksums into the pipeline no longer fails it.
 - A trusted run (the default branch's own) whose config differs from its base's no longer runs what its config dropped: the base's config adds only the slices and whole-suite checks the head's config still has in each suite, and no suite the head's config removed, and the plan warns of each one left out (`<slice>: the base's configuration had it in <suite>; this commit's configuration excludes it, so it no longer runs there`). A suite whose base predated an exclude ran the excluded test until it passed, and a test that can't pass there kept it failing. A pull request keeps the whole union, so it still can't deselect its own tests
+
+## [0.3.2] - 2026-11-18
+
+### Fixed
+
+- A trusted run (the default branch's own) whose config differs from its base's no longer runs what its config dropped: the base's config adds only the slices the head's config still has in each suite, and no suite the head's config removed, and the plan warns of each one left out (`<slice>: the base's configuration had it in <suite>; this commit's configuration excludes it, so it no longer runs there`). A suite whose base predated an exclude ran the excluded test until it passed, and a test that can't pass there kept it failing. A pull request keeps the whole union, so it still can't deselect its own tests
 
 ## [0.3.1] - 2026-11-18
 
