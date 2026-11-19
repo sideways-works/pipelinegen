@@ -104,29 +104,30 @@ func TestABatchWaitsThenStartsWhenMemoryFreesAndPressureEases(t *testing.T) {
 	batches, result := t.TempDir(), t.TempDir()
 	predicted(t, batches, "1", 6600)
 
-	done := make(chan struct{})
+	// eased is when the pressure fell: the batch may start only after it
+	eased := make(chan time.Time, 1)
 
 	go func() {
-		defer close(done)
-
 		time.Sleep(80 * time.Millisecond)
 		setFree(t, root, 7000)
 		time.Sleep(80 * time.Millisecond)
+
+		at := time.Now()
+
 		setPressure(t, root, 2)
+
+		eased <- at
 	}()
 
 	var log strings.Builder
-
-	start := time.Now()
 
 	if err := awaitMemory(t.Context(), batches, "1", "e2e", 120, result, &log); err != nil {
 		t.Fatal(err)
 	}
 
-	<-done
-
-	if time.Since(start) < 160*time.Millisecond || !strings.Contains(log.String(), "memory: 7000 MB free of 6600 MB predicted after ") {
-		t.Fatalf("after %s:\n%s", time.Since(start), log.String())
+	started := time.Now()
+	if at := <-eased; started.Before(at) || !strings.Contains(log.String(), "memory: 7000 MB free of 6600 MB predicted after ") {
+		t.Fatalf("started %s before the pressure eased:\n%s", at.Sub(started), log.String())
 	}
 
 	if shortOfMemoryIn(result) != "" {
