@@ -1,0 +1,13 @@
+{
+  "label": "internal/piperun/emit_test.go",
+  "state": "errored",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-19T09:10:44.762581572Z",
+  "failures": [
+    {
+      "test": "(stopped)",
+      "tail": "batch 3 stopped while slice internal/bazel/bazel_test.go ran, 4 minutes after the suite began: not its time limit of 120 minutes (suites.go.minutes); its task died: the build log says why"
+    }
+  ],
+  "recorded": true
+}
