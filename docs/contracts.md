@@ -625,12 +625,14 @@ same until the sweep prunes it with the lists of the same commit.
 
 A run's live state is temporary refs in the code repository. Every push
 to the repository is told of every ref it has, so a run keeps few: each
-batch writes its slices into a ref of its own while the run goes, and a
-suite's end moves them into the run's one ref:
+batch writes its slices into a ref of its own while the run goes, each
+suite its start and end marks, and once every suite has ended they move
+into the run's one ref:
 
 ```
-refs/pipelinegen/run/<run>/<change>/<c12>                      the plan, the suites' end marks, and the slices once their suite ended
+refs/pipelinegen/run/<run>/<change>/<c12>                      the plan, and the suites' marks and the slices once every suite ended
 refs/pipelinegen/batch/<run>/<change>/<c12>/<suite>/<batch>    a live batch's slices
+refs/pipelinegen/batch/<run>/<change>/<c12>/<suite>/_suite     a live suite's start and end marks
 refs/pipelinegen/also-to/<run>/<change>                        more pull requests for the comment (also_to.json)
 ```
 

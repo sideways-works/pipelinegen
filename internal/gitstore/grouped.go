@@ -21,8 +21,10 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/tries"
 )
 
-// A run's records live in few refs, as every push is told of every ref: each batch writes a ref of its own,
-// moved into the run's one ref at the suite's end (Compact); each record is a directory with a marker beside.
+// A run's records live in few refs, as every push is told of every ref: each batch writes a ref of its own, and
+// each suite's start and end marks go into a ref of the suite's own (SuiteBatch), so suites starting or ending
+// together never write one ref; all of them move into the run's one ref once every suite has ended (Compact).
+// Each record is a directory with a marker beside.
 
 const (
 	gitFetch    = "fetch"
@@ -90,7 +92,24 @@ func (r record) suite() string {
 }
 
 func (r record) isState() bool {
-	return r.dir != planDir && !strings.HasPrefix(r.dir, "_end/")
+	_, marks := r.suiteMark()
+
+	return r.dir != planDir && !marks
+}
+
+// SuiteBatch is the name of a suite's own ref among its batches' refs, which holds its start and end marks; no
+// batch is named so.
+const SuiteBatch = "_suite"
+
+// suiteMark is the suite a suite's start or end mark belongs to.
+func (r record) suiteMark() (string, bool) {
+	for _, dir := range []string{"_end/", "_began/"} {
+		if suite, ok := strings.CutPrefix(r.dir, dir); ok && suite != "" && !strings.Contains(suite, "/") {
+			return suite, true
+		}
+	}
+
+	return "", false
 }
 
 func runsAsked(prefix string) (string, bool) {
@@ -323,6 +342,29 @@ func (s *Store) oneRefEach(ctx context.Context, run string) (bool, error) {
 	return old, nil
 }
 
+// targetOf is the grouped ref an update goes to: a deleted record's where it was listed, false when it wasn't
+// listed; a suite's start or end mark's the suite's own ref; a batch's slice state the batch's ref; anything
+// else the run's ref.
+func (s *Store) targetOf(u Update, r record) (string, bool) {
+	if u.Delete {
+		s.g.mu.Lock()
+		w, ok := s.g.where[u.Ref]
+		s.g.mu.Unlock()
+
+		return w.ref, ok
+	}
+
+	if suite, ok := r.suiteMark(); ok {
+		return BatchPrefix + r.run + "/" + suite + "/" + SuiteBatch, true
+	}
+
+	if s.Batch != "" && r.isState() {
+		return BatchPrefix + r.run + "/" + r.suite() + "/" + s.Batch, true
+	}
+
+	return RunPrefix + r.run, true
+}
+
 // ErrMixed is a write of a run's records together with other refs: the
 // two are written apart.
 var ErrMixed = errors.New("a write mixes a run's records with other refs")
@@ -340,23 +382,13 @@ func (s *Store) groupedWrite(ctx context.Context, message string, updates []Upda
 	for _, u := range updates {
 		r, _ := recordOf(u.Ref)
 
-		target := RunPrefix + r.run
-		if u.Delete {
-			s.g.mu.Lock()
-			w, ok := s.g.where[u.Ref]
-			s.g.mu.Unlock()
-
-			if !ok {
-				if u.Any {
-					continue
-				}
-
-				return nil, fmt.Errorf("%w: %s was not listed", ErrStale, u.Ref)
+		target, listed := s.targetOf(u, r)
+		if !listed {
+			if u.Any {
+				continue
 			}
 
-			target = w.ref
-		} else if s.Batch != "" && r.isState() {
-			target = BatchPrefix + r.run + "/" + r.suite() + "/" + s.Batch
+			return nil, fmt.Errorf("%w: %s was not listed", ErrStale, u.Ref)
 		}
 
 		tok, err := newToken(s.now())
@@ -952,8 +984,9 @@ func (s *Store) commitTree(ctx context.Context, message, tree string, parents ..
 	return strings.TrimSpace(out), nil
 }
 
-// Compact moves a suite's batches' records into the run's ref in one push deleting the batches' refs,
-// each guarded, so a batch writing meanwhile fails it and it goes again; a newer record stays.
+// Compact moves a suite's batches' records, or with no suite every batch's and suite's, into the run's ref in one
+// push deleting their refs, each guarded, so a batch writing meanwhile fails it and it goes again; a newer record
+// stays.
 func (s *Store) Compact(ctx context.Context, runPrefix, suite string) (int, error) {
 	if s.ReadOnly {
 		return 0, fmt.Errorf("%w: compact %s", ErrReadOnly, runPrefix)
@@ -996,7 +1029,12 @@ func (s *Store) compactTry(ctx context.Context, run, suite string) (int, error) 
 		return 0, err
 	}
 
-	out, err := g.retry(ctx, []string{lsRemote, refsOnly, g.Remote, BatchPrefix + run + "/" + suite + "/*"})
+	pattern := BatchPrefix + run + "/*"
+	if suite != "" {
+		pattern = BatchPrefix + run + "/" + suite + "/*"
+	}
+
+	out, err := g.retry(ctx, []string{lsRemote, refsOnly, g.Remote, pattern})
 	if err != nil {
 		return 0, fmt.Errorf("%w: %w", errTransport, err)
 	}

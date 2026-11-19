@@ -58,7 +58,9 @@ type Reporter struct {
 	attachTried bool
 	attachErr   error
 	endedTold   bool
-	Warn        io.Writer
+	// everyEnded is whether the last snapshot publish read had every suite of the plan ended.
+	everyEnded bool
+	Warn       io.Writer
 	// NoToken marks a batch's step run without a token: it writes nothing to
 	// the refs, and the batch's end writes what its journal holds.
 	NoToken bool
@@ -597,10 +599,12 @@ func (r *Reporter) Suite(ctx context.Context, suite string) (bool, error) {
 	r.markShort(ctx, run)
 	r.recordPeaks(ctx, run, suite)
 
-	// the suite's batches' refs move into the run's; one left behind is
-	// read all the same, and the sweep takes it with the run
-	if _, err := r.Store.Compact(ctx, r.ID.Prefix(), suite); err != nil {
-		r.warnf("moving %s's batches into the run's ref: %v", suite, err)
+	// once every suite has ended, the batches' and the suites' own refs move into the run's, by whichever end
+	// saw it; a ref left behind is read all the same, and the sweep takes it with the run
+	if r.everyEnded {
+		if _, err := r.Store.Compact(ctx, r.ID.Prefix(), ""); err != nil {
+			r.warnf("moving the run's batches into its ref: %v", err)
+		}
 	}
 
 	if r.attachErr != nil {
@@ -786,6 +790,8 @@ func (r *Reporter) publish(ctx context.Context, sc scope) (Run, error) {
 		if err != nil {
 			return run, err
 		}
+
+		r.everyEnded = allEnded(next)
 
 		if next.same(snap) {
 			return run, nil

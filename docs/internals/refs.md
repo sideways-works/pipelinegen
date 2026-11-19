@@ -11,8 +11,9 @@ each pointing at a commit whose tree holds records' files.
 
 ```
 refs/pipelinegen/lists/<full commit>                         what each slice touched, its marks, in _replaced.json where a run of everything last replaced each list, and under _attached/ the runs that went into them
-refs/pipelinegen/run/<run>/<change>/<c12>                    a run's plan, its suites' end marks, and its slices once their suite ended
+refs/pipelinegen/run/<run>/<change>/<c12>                    a run's plan, and its suites' marks and its slices once every suite ended
 refs/pipelinegen/batch/<run>/<change>/<c12>/<suite>/<batch>  a live batch's slices
+refs/pipelinegen/batch/<run>/<change>/<c12>/<suite>/_suite   a live suite's start and end marks
 refs/pipelinegen/also-to/<run>/<change>                      more pull requests for a comment
 refs/pipelinegen/locks/<name>/<n>                            an older pipelinegen's lock slot (lease.json), swept by the next trusted plan step
 refs/pipelinegen/superseded/<run>/<c12>                      a continuous run's build that found a newer commit and ran nothing (superseded.json), swept after 14 days
@@ -23,8 +24,8 @@ refs/pipelinegen/replaced/<plugin>/<version>-<sha12>         the keys a cold reb
 ```
 
 Every push to a repository is told of every ref it has, hidden ones
-included, so a run keeps few: one per batch while it goes, one for the
-whole run after. Readers still see each record under the name it had when
+included, so a run keeps few: one per batch and one per suite while it
+goes, one for the whole run after. Readers still see each record under the name it had when
 it was a ref of its own:
 
 ```
@@ -38,12 +39,19 @@ In a run's ref or a batch's, each record is a directory with, beside it,
 an empty marker `<dir>:<unix>.<nonce>` that says when it was written; a
 record that a batch's ref and the run's ref both hold is read from the
 newer. A batch's steps (`PIPELINEGEN_BATCH` set) write their slices into
-the batch's ref, so batches never wait on one another; everything else
-goes into the run's ref. A suite's end moves its batches' records into
-the run's ref and deletes the batches' refs, in one push guarded by what
-it read: a batch that writes meanwhile makes it read again, and one that
-writes after it starts its ref anew, which readers read and the next
-compaction or the sweep takes. Writes and the compaction read the refs'
+the batch's ref, so batches never wait on one another; a suite's start
+and end marks go into the suite's own ref, `_suite` among its batches'
+(no batch is named so), so the suites of a round that start or end
+together never wait on one another either; everything else goes into
+the run's ref. The suite's end that finds every suite of the plan ended
+moves every batch's and suite's records into the run's ref and deletes
+their refs, in one push guarded by what it read: a batch that writes
+meanwhile makes it read again, and one that writes after it starts its
+ref anew, which readers read and the next compaction or the sweep takes.
+Two ends that both find every suite ended both compact, and the second
+finds nothing left to move. A release before the suites' own refs reads
+them as it reads a batch's (any `batch/<run>/<change>/<c12>/<suite>/<name>`
+ref), and its suite's end moves its suite's `_suite` ref with its batches. Writes and the compaction read the refs'
 trees only and make each commit on the commits whose files it keeps, so
 git sends nothing the remote has and nothing is downloaded. Their pushes
 leave out every file a parent holds, at whatever path (git's sparse walk,

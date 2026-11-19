@@ -17,7 +17,7 @@ func TestAWriteToARunItHasReadAsksNothingFirst(t *testing.T) {
 	}
 
 	calls := remoteCalls(t, func(ctx context.Context) {
-		if _, err := s.Write(ctx, "end", Update{Ref: endRef(), Any: true, Files: files("end.json", "{}")}); err != nil {
+		if _, err := s.Write(ctx, "state", Update{Ref: stateRef("b.spec.ts"), Any: true, Files: files("state.json", "passed", "recording.txt", "units of b.spec.ts")}); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -26,8 +26,8 @@ func TestAWriteToARunItHasReadAsksNothingFirst(t *testing.T) {
 		t.Errorf("a write after reading its run reached the remote %v, want one fetch and one push", calls)
 	}
 
-	if got := readAll(t, remote)[endRef()]; got != "end.json={}" {
-		t.Errorf("end %q", got)
+	if got := readAll(t, remote)[stateRef("b.spec.ts")]; got != "recording.txt=units of b.spec.ts,state.json=passed" {
+		t.Errorf("state %q", got)
 	}
 }
 
@@ -54,7 +54,7 @@ func TestWritersThatLoseARaceTryAgainWithoutAsking(t *testing.T) {
 	for i, s := range stores {
 		wg.Go(func() {
 			calls := remoteCalls(t, func(ctx context.Context) {
-				if _, err := s.Write(ctx, "began", Update{Ref: runsRoot + run + "/_began/s" + strconv.Itoa(i), Any: true, Files: files("began.json", strconv.Itoa(i))}); err != nil {
+				if _, err := s.Write(ctx, "state", Update{Ref: stateRef("s" + strconv.Itoa(i)), Any: true, Files: files("state.json", strconv.Itoa(i))}); err != nil {
 					t.Error(err)
 				}
 			})
@@ -78,7 +78,7 @@ func TestWritersThatLoseARaceTryAgainWithoutAsking(t *testing.T) {
 
 	got := readAll(t, remote)
 	for i := range writers {
-		if got[runsRoot+run+"/_began/s"+strconv.Itoa(i)] != "began.json="+strconv.Itoa(i) {
+		if got[stateRef("s"+strconv.Itoa(i))] != "state.json="+strconv.Itoa(i) {
 			t.Errorf("writer %d's record: %v", i, got)
 		}
 	}

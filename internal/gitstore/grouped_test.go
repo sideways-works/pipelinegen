@@ -99,7 +99,8 @@ func TestARunsRecordsLiveInFewRefs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := []string{BatchPrefix + run + "/e2e/1", BatchPrefix + run + "/e2e/2", RunPrefix + run}
+	// the suite's end mark is in the suite's own ref
+	want := []string{BatchPrefix + run + "/e2e/1", BatchPrefix + run + "/e2e/2", BatchPrefix + run + "/e2e/" + SuiteBatch, RunPrefix + run}
 	if got := remoteRefs(t, remote); !slices.Equal(got, want) {
 		t.Fatalf("refs %v, want %v", got, want)
 	}
