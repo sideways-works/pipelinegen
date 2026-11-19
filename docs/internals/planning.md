@@ -228,7 +228,12 @@ analysis, and the snapshot cache makes a commit planned before free.
 A planning step's cache outlives the step, and Concourse pays for it in
 files: when a task that declares a cache ends, the worker copies the whole
 cache directory into a new volume, file by file. `trimCache`
-(`internal/cli/cachetrim.go`) runs when `plan` or `unplanned` ends. It
+(`internal/cli/cachetrim.go`) runs when `plan` or `unplanned` ends. Before it, in a
+pipeline, the step shuts down the Bazel server it planned with: the next
+plan runs in a container of its own and never reuses it, and the server
+would otherwise hold its memory on the worker until it idled out
+(`--max_idle_secs=600`). Without the server's pid file in the cache's output
+base nothing is started to shut it down. It
 drops what no later build uses (the work tree, the rebuild's tree, the
 claims trees, the snapshots but those used and the newest four), then the
 extracted copies of archives the cache keeps (`dropExtracted`), and only

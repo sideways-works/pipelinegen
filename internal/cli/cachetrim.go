@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
+	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
 // keptSnapshots is how many snapshots a cache keeps besides the step's own: the next plan's base is
@@ -536,10 +538,12 @@ func gb(n int64) string {
 }
 
 // The user's own cache, which every repository on the machine shares, is never trimmed here.
-func trimAfter(cfg *config.Config, cache string, start time.Time) {
+func trimAfter(ctx context.Context, cfg *config.Config, root, cache string, start time.Time) {
 	if cache == "" || cache == defaultCache() {
 		return
 	}
+
+	stopBazel(ctx, cfg, root, cache)
 
 	t, err := trimCache(cache, cfg.CacheBudget(), start)
 	if err != nil {
@@ -549,4 +553,36 @@ func trimAfter(cfg *config.Config, cache string, start time.Time) {
 	}
 
 	t.say(os.Stderr, cache)
+}
+
+// stopBazel shuts down the Bazel server a pipeline's step planned with, when one runs: the step's
+// next plan runs in a container of its own and never reuses it, and until it idled out it would hold
+// its memory on the worker. Nothing is started to shut nothing down: without the server's pid file in
+// the output base the cache gives Bazel, it does nothing.
+func stopBazel(ctx context.Context, cfg *config.Config, root, cache string) {
+	if !secret.InPipeline() {
+		return
+	}
+
+	base := ""
+
+	for _, f := range cachedStartupFlags(cfg, cache) {
+		if v, ok := strings.CutPrefix(f, "--output_base="); ok {
+			base = v
+		}
+	}
+
+	tree := filepath.Join(cache, workTree, cfg.Bazel.Workspace)
+
+	if base == "" || !fileExists(filepath.Join(base, "server", "server.pid.txt")) || !fileExists(tree) {
+		return
+	}
+
+	// the step's own time may be up: stopping the server is still worth its minute
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Minute)
+	defer cancel()
+
+	if _, err := bazelFor(cfg, root, cache)(tree).Run(ctx, "shutdown"); err != nil {
+		warnf(os.Stderr, "pipelinegen: Bazel's server is left to idle out: %v\n", err)
+	}
 }

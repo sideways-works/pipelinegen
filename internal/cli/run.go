@@ -184,7 +184,7 @@ func runPlan(ctx context.Context, args []string, stdout io.Writer) (err error) {
 	}
 
 	// after the store's scratch repository is back in the cache.
-	defer trimAfter(cfg, cache, start)
+	defer trimAfter(ctx, cfg, b.trigger, cache, start)
 
 	store := planStore(cfg, ch, cache)
 	defer closeStore(store, &err)

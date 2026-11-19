@@ -51,7 +51,7 @@ func runUnplanned(ctx context.Context, args []string, stdout io.Writer) (err err
 	}
 
 	// after the store's scratch repository is back in the cache.
-	defer trimAfter(cfg, cache, start)
+	defer trimAfter(ctx, cfg, c.root, cache, start)
 
 	r, ok := cfg.Runs[run]
 	if !ok || r.Trigger.PullRequests == nil {
