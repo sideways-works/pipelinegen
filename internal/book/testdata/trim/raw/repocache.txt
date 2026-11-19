@@ -1,0 +1,3 @@
+$ pipelinegen affected
+pipelinegen affected: filling the gomodcache cache for go-sbom: go mod download in ., into /scratch/w/xdg/pipelinegen/repos/notes-0123456789ab/caches/gomodcache
+[exit 0]

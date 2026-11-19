@@ -44,8 +44,10 @@ func splitLines(text string) []string {
 }
 
 var (
-	pluginsLine   = regexp.MustCompile(`^plugins: \d+ of \d+ files`)
-	localRun      = regexp.MustCompile(`local-\d{8}-\d{6}-\d+`)
+	pluginsLine = regexp.MustCompile(`^plugins: \d+ of \d+ files`)
+	localRun    = regexp.MustCompile(`local-\d{8}-\d{6}-\d+`)
+	// a repository's cache folder is named by a hash of its path, which differs per scratch directory.
+	repoCache     = regexp.MustCompile(`/repos/notes-[0-9a-f]{12}/`)
 	totalActions  = regexp.MustCompile(`, \d+ total actions?$`)
 	scratchRemote = regexp.MustCompile(`file://\S+/remote`)
 	// a long step's progress, which a slower machine prints more of.
@@ -95,6 +97,8 @@ func trimmed(name, raw, work string) string {
 
 		// a local recording's run is named by the time it ran
 		l = localRun.ReplaceAllString(l, "local-<time>")
+		l = repoCache.ReplaceAllString(l, "/repos/notes-<hash>/")
+
 		if strings.HasPrefix(l, "go run: ") || strings.HasPrefix(l, "playwright run: ") {
 			l = toolTime.ReplaceAllString(l, "${1}<time>")
 		}

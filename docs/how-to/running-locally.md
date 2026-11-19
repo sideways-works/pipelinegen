@@ -54,7 +54,7 @@ notes service, after a change to the backend's validation:
 ```
 $ pipelinegen affected --base HEAD~1
 pipelinegen affected: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-pipelinegen affected: filling the gomodcache cache for go-sbom, go-correlator: go mod download in ., into /home/you/.cache/pipelinegen/repos/notes-986d39b68cb0/caches/gomodcache
+pipelinegen affected: filling the gomodcache cache for go-sbom, go-correlator: go mod download in ., into /home/you/.cache/pipelinegen/repos/notes-<hash>/caches/gomodcache
 e2e: 1 selected, 1 untouched
   run e2e/create.spec.ts
 go: 1 selected, 4 untouched
