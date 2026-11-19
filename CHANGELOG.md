@@ -9,6 +9,7 @@ minor version may change the config or the protocol.
 
 ### Fixed
 
+- A record written again within the same second as the compaction that moved its older copy into the run's ref (a suite's end mark, a slice's state on a rerun) is the one the next compaction keeps. Its marker ties with the older copy's, as markers count whole seconds, and readers already took the newer copy then; the compaction kept the older one, so the record went back to what it was before. Since a suite's end mark goes into the suite's own ref, a suite ended twice in one second showed it
 - `release patch` pushes its tags only after the build passed its checks (changelog, NOTICE, programs), and a build that fails takes back the tags the run made: a tag pushed for a release that then failed could never be released, as a pushed tag never moves.
 
 ## [0.4.0] - 2026-11-19

@@ -1197,12 +1197,16 @@ func (s *Store) entriesAt(ctx context.Context, commit string) (map[string]string
 	return have, nil
 }
 
+// moveRecords puts a batch's records into the run's, each but one the run's ref holds newer. Markers count
+// whole seconds, and a copy of the same second in a batch's ref is the one readers take (they read the
+// batches' refs before the run's), so it is the one kept: the record written again after the compaction
+// that moved its older copy.
 func moveRecords(have, batch map[string]string, info *bytes.Buffer) {
 	runMarks := markersOf(have)
 
 	for dir, tok := range markersOf(batch) {
 		if old, ok := runMarks[dir]; ok {
-			if !tokenTime(tok).After(tokenTime(old)) {
+			if tok == old || tokenTime(tok).Before(tokenTime(old)) {
 				continue
 			}
 
