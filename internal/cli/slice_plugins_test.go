@@ -37,6 +37,10 @@ func TestMain(m *testing.M) {
 		os.Setenv(envReleasesURL, serveReleases()+"/%s/releases/download/%s/%s") //nolint:errcheck // for the commands the tests start
 	}
 
+	// the fixtures pin plugins by commits of repositories on GitHub that don't exist: git may not
+	// reach for them over https, the one protocol no test serves git by
+	os.Setenv("GIT_ALLOW_PROTOCOL", "file:http:ssh:git") //nolint:errcheck // for git here and in the commands the tests start
+
 	if kind := os.Getenv("FAKE_PLUGIN"); kind != "" {
 		testenv.ExitChild(m, plugin.Serve(os.Args[1:], os.Stdin, os.Stdout, os.Stderr, fakePlugin(kind)))
 	}
