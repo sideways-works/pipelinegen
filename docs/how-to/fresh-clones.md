@@ -25,8 +25,11 @@ Podman, `--no-image` runs the steps on this machine, which then needs what
 the images have. [The command reference](../reference/commands.md#in-their-images)
 says what is mounted and passed in, and
 [which plugins are fetched](../reference/commands.md#plugins-a-command-fetches).
-A plugin pinned by commit has no release: build it into `tools/plugins`
-first, as the error says.
+A plugin pinned by commit is built from the `manifest.yaml` of its
+directory at that commit, in a container, and kept in the user cache; one
+whose commit has no manifest has to be built into `tools/plugins` first,
+as the error says. A plugin pinned by a zip is downloaded and checked like
+a release.
 
 ## Lines an older setup left
 

@@ -56,6 +56,7 @@
   * [Move a suite from task files to drivers](how-to/moving-to-drivers.md)
   * [Configure plugins](how-to/plugins.md)
   * [Add a plugin](how-to/adding-a-plugin.md)
+  * [Build and host a plugin as a zip](how-to/plugin-zip.md)
   * [Estimate what you would save](how-to/estimate-savings.md)
   * [Declare runs](how-to/declaring-runs.md)
   * [Start without a full first run](how-to/starting-narrow.md)
@@ -78,6 +79,7 @@
 
 * [Config](reference/config.md)
 * [Commands](reference/commands.md)
+* [The plugin manifest](reference/manifest.md)
 * [The check](reference/check.md)
 * [Where pipelinegen keeps things on your machine](reference/your-machine.md)
 * [The plugin protocol](plugins.md)

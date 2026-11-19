@@ -23,6 +23,9 @@ The terms are in the [concepts](../concepts/README.md) and the
   and what happens when one can't tell.
 - [Add a plugin](adding-a-plugin.md): pin a plugin's release with
   `plugin add`, move pins with `plugin upgrade`, start one of your own.
+- [Build and host a plugin as a zip](plugin-zip.md): a manifest,
+  `plugin build`, and a pin by the zip's URL and sha256 or by a commit,
+  with no release at all.
 
 ## Trying it out
 

@@ -672,8 +672,9 @@ without `paths` or a known `normalize` makes the config invalid.
 
 ## plugins
 
-The plugins the repository uses, each an executable pinned by a release and
-its checksum, or by a commit before the first release. See
+The plugins the repository uses, each an executable pinned in one of three
+ways: by a release and its checksum, by a commit its `manifest.yaml` builds
+it from, or by a zip somebody built and hosts, and the zip's checksum. See
 [plugins](../plugins.md). Plugins that come from one repository may share
 it in a group:
 
@@ -684,7 +685,20 @@ plugins:
       - {name: go, kind: driver, path: driver/go, release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}}
       - {name: go-sbom, kind: sbom, path: sbom/go, release: {version: v0.4.0, sums: e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d}, config: {modules: [.]}}
   - {name: lint, kind: driver, repository: https://github.com/acme/lint-driver, release: {version: <tag>, sums: <checksum>}}
+  - {name: rules, kind: correlator, repository: https://git.example.com/acme/rules, commit: <40 hex>}
+  - {name: shell, kind: driver, zip: {url: "https://plugins.example.com/shell-driver.zip", sha256: <checksum>}}
 ```
+
+A release is fetched from GitHub's or GitLab's release files. A commit is
+fetched with git, and the `manifest.yaml` in the plugin's directory at that
+commit says how to build it: the build runs in a container (docker or
+podman), once for each platform a machine asks for, and is kept in the
+user cache. A zip is downloaded, checked against its sha256 before it is
+opened, and unpacked into the same cache; it carries its `manifest.yaml`,
+which names the plugin, its kind and its program. Neither a commit nor a
+zip needs a release, so a plugin on any git server, or on none, can be
+pinned. The [manifest reference](manifest.md) has the manifest's keys, and
+[building and hosting a plugin as a zip](../how-to/plugin-zip.md) the steps.
 
 A group reads exactly as the same entries written one by one, each with
 the group's repository. pipelinegen's own plugins are in one repository
@@ -698,16 +712,19 @@ upgrade` write the pins, each checked by downloading what it names
 | `plugins` | list | none | The plugins; see [the guide](../how-to/plugins.md). Planning and recording go through the sbom and correlator plugins; with none, every suite is bound by the Bazel graph. The pipeline needs a runner. |
 | `plugins[].name` | string | (required) | The plugin's name in this config, unique. |
 | `plugins[].kind` | `correlator`, `sbom`, `runner`, `driver` or `connector` | (required) | What the plugin is. With several runners, each run names the one whose pipeline holds it in `runs.<name>.runner`, and `pipelinegen pipeline --for <name>` writes each runner's. A driver runs a suite's slices for its `steps`; `command` is built in and needs no entry. A connector entry, named `github` or `git`, pins the release of that connector in place of pipelinegen's own pin, and takes a `release` and no `config` ([pinning a connector](#pinning-a-connector)). |
-| `plugins[].repository` | git URL or `owner/name` | (required) | Where its releases come from: the URL you would clone, `https://github.com/owner/name` or `git@github.com:owner/name.git` say, or `owner/name` as GitHub's shorthand. Releases are fetched from GitHub's and GitLab's release files; another host is read but has nothing to fetch yet. Messages and listings name it as the config writes it. Without a `path`, a repository `pipelinegen-KIND-NAME` holds the program `NAME-KIND`, which names its release files and its `./cmd/NAME-KIND`; any other holds the program of its own name. |
+| `plugins[].repository` | git URL or `owner/name` | (required, but with `zip`) | Where its releases or commits come from: the URL you would clone, `https://github.com/owner/name` or `git@github.com:owner/name.git` say, or `owner/name` as GitHub's shorthand. Releases are fetched from GitHub's and GitLab's release files; another host is read but has nothing to fetch yet. Messages and listings name it as the config writes it. Without a `path`, a repository `pipelinegen-KIND-NAME` holds the program `NAME-KIND`, which names its release files and its `./cmd/NAME-KIND`; any other holds the program of its own name. |
 | `plugins[].path` | directory | none | The plugin's directory in a repository that holds several plugins, `driver/go` say. Its releases are tagged `<path>/vX.Y.Z` and hold its files, and the path names its program: `KIND/NAME` holds `NAME-KIND` (`go-driver`), a deeper path the last directory and the one above it. Without it the repository is one plugin, tagged `vX.Y.Z`. |
 | `plugins[].with` | list | none | Makes the entry a group of plugins from one repository: the entry has only `repository` and `with`, and each entry under `with` takes that repository and sets every other key of its own (`name`, `kind`, `path`, `release`, `config` and the rest). An entry under `with` that names a repository is refused. Names stay unique across every entry and group. See [adding a plugin](../how-to/adding-a-plugin.md). |
-| `plugins[].release` | mapping | | A released version. Give either `release` or `commit`. |
+| `plugins[].release` | mapping | | A released version. Give exactly one of `release`, `commit` and `zip`. |
 | `plugins[].release.version` | string | | The release's tag, or with a `path` what follows `<path>/` in it: `v0.2.1` for the tag `driver/go/v0.2.1`. |
 | `plugins[].release.sha256` | string | | The SHA-256 of the release's `linux-amd64` file (its `.mjs` file for a Node plugin), checked before it runs. Give this or `sums`. |
 | `plugins[].release.sums` | string | | The SHA-256 of the release's `SHA256SUMS`, in place of `sha256`: one pin for every platform. The bootstrap keeps the file beside the plugin as `<name>.SHA256SUMS`, and the plugin's file for the platform it runs on (`<program>-<os>-<arch>`, or its `.mjs`, the program being the one its repository holds) is checked by its line there. A machine on another platform, a Mac say, checks its own binary by the same pin. |
 | `plugins[].include` | list of patterns | none | Files the plugin claims besides those it detects as its own. |
 | `plugins[].exclude` | list of patterns | none | Files the plugin never claims, whatever it detects. |
-| `plugins[].commit` | 40 hex | | A commit to build, before the first release. |
+| `plugins[].commit` | 40 hex | | A commit to build from the `manifest.yaml` of the plugin's directory there (the repository's root, or `path`), for the platform of the machine that runs it. The build is kept in the user cache, keyed by the repository, the commit, the path, the manifest's digest, the platform and the build image's digest, so a machine builds each once. A `tools/plugins/<name>` that is there runs instead, as before. A commit with no manifest, or one git can't fetch, fails, saying how to build the plugin by hand. |
+| `plugins[].zip` | mapping | | A plugin packed as a zip, which `pipelinegen plugin build` makes and `pipelinegen plugin add --zip` pins. `repository` and `path` are optional beside it, and only name where the plugin's source lives. The entry's `kind` must be the manifest's, and the plugin must hold a program. |
+| `plugins[].zip.url` | https URL | (required) | Where the zip is downloaded from, once per machine: it is kept in the user cache by its sha256. |
+| `plugins[].zip.sha256` | 64 hex | (required) | The zip's SHA-256, checked before the zip is opened. The zip must hold `manifest.yaml` at its top level, the program for the platform that runs it (`<program>-<os>-<arch>`, or `<program>.mjs`), and nothing else but the manifest's files and assets: no path that leaves the zip's directory, no symlink, and no executable but the program. A `tools/plugins/<name>` never stands in for a zip. |
 | `plugins[].config` | mapping | none | The plugin's own settings, passed to it in every call. A runner's holds its placement; see [Where steps run](#where-steps-run). |
 | `plugins[].collect_seconds` | integer | `10` | How long each of a correlator's `collect` calls may take before it is stopped and the slice's recording fails, saying so. In a batch run by drivers a call also stops 30 seconds before the batch's time limit, so the batch still ends. A recorded suite's correlators may take 90 seconds together: a mark waits for every one of them in turn, and the playwright driver's `marks.mjs` waits 120 seconds for a mark, so `check` refuses more, naming the suite and each correlator's seconds. A change to it is a changed file, as a time limit is. Only a correlator's entry takes it. |
 | `plugins[].fill` | boolean | `true` | Whether `affected`, `why` and `try` fill the caches this plugin reads before they plan on your machine, as its `describe` says. `false` leaves them as they are; `--no-fill` does the same for every plugin, for one command. A pipeline's steps never fill: there the planner's prepare does. |

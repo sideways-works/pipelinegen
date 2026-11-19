@@ -33,6 +33,14 @@ slower.
 | `store/` | a local copy of the records `affected` and `why` read from the repository's remote |
 | `lock` | held while a plan runs, so two plans don't share the work tree at once |
 
+Plugins themselves are kept once for every repository, in
+`pipelinegen/releases` under your user cache: a release's file under its
+sha256, a plugin pinned by a zip unpacked under the zip's sha256, and a
+plugin pinned by a commit built under a key of its source, its manifest,
+the platform and the build image. Beside them, `releases/git/` holds a bare
+copy of each repository a commit was fetched from. Whatever no command
+used for 30 days is removed by the next command that fetches a plugin.
+
 ## The work tree and your toolchain
 
 The plugins run in `tree/`, a directory outside your repository. A version

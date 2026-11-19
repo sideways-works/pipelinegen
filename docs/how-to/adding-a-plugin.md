@@ -68,6 +68,21 @@ Its entry is one of its own, at the end of `plugins`, with `repository` in
 it. `owner/name` is GitHub's shorthand for the same URL and stays as you
 write it.
 
+## A plugin without a release
+
+A plugin needs no release at all. A zip that `pipelinegen plugin build`
+made from the plugin's `manifest.yaml`, hosted anywhere that serves https,
+is pinned by its URL and sha256:
+
+```sh
+pipelinegen plugin add --zip https://plugins.example.com/shell-driver.zip --sha256 <sha256>
+```
+
+and a commit of the plugin's repository is pinned by hand, with `commit:`
+in place of `release:`, and built from the same manifest on the machine
+that runs it. [Building and hosting a plugin as a zip](plugin-zip.md) has
+both.
+
 ## Moving to newer releases
 
 ```sh
@@ -84,7 +99,7 @@ can't be listed or its newest release fails the check, is named with the
 reason and keeps its pin; the others still move, and the command exits 1
 at the end. A pin keeps its form: a pin by `sums` gets the new
 `SHA256SUMS`'s checksum, a pin by `sha256` the new `linux-amd64` file's (or
-the Node script's). A plugin pinned by commit is left to you.
+the Node script's). A plugin pinned by a commit or a zip is left to you.
 
 A pull request that changes a pin is planned with the pins the pipeline was
 made from, so the new release takes effect once it is merged; [trying a new

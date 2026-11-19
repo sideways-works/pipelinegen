@@ -853,20 +853,24 @@ commit. It takes no flags.
 
 ## `pipelinegen plugin`
 
-Checks a plugin against the protocol, pins plugins' releases in the
-config, and starts a plugin of your own.
+Checks a plugin against the protocol, pins plugins' releases and zips in
+the config, builds a plugin into a zip, and starts a plugin of your own.
 
 | Subcommand | What it does | Exits 1 when |
 |---|---|---|
 | `plugin test <executable>` | Checks a plugin against the protocol, the way the core will call it, and prints one line per check (`ok` or `FAIL` with what went wrong). Run it in the plugin's own CI. See [plugins](../plugins.md#conformance). | any check fails |
 | `plugin add <git-url> [<path>...]` | For each path, the plugin a repository of several holds in that directory, or with no path the repository's own plugin: finds its newest release that is no prerelease (tagged `<path>/vX.Y.Z`, or `vX.Y.Z`), downloads the release's `SHA256SUMS` and every file of the plugin's program it lists, checks each, reads the plugin's name and kind from its `plugin.json`, and writes its pin by `sums` into the config. A plugin at a path goes into the repository's group (`with`), made at the end of `plugins` when there is none; a repository's own plugin gets an entry of its own. The config is edited in place, keeping its comments and layout, and written only once every plugin is pinned. Prints a line per plugin. See [adding a plugin](../how-to/adding-a-plugin.md). | the config doesn't read, a release can't be listed, has no `SHA256SUMS` or a file that doesn't match it, or the name is taken |
-| `plugin upgrade [<name>...]` | Moves the named plugins' pins, or every plugin's pinned by a release, to their newest releases, each checked as `add` checks one, keeping each pin's form (`sums`, or `sha256` of the `linux-amd64` file or Node script). Prints `<name>: <old> -> <new>`, or `<name>: <version>, the newest`. A plugin it can't move (its releases can't be listed, or the newest fails its check) gets `<name>: not moved: <why>` and keeps its pin, and the others still move. | a plugin wasn't moved, or a named plugin is missing or pinned by commit |
+| `plugin add --zip <url>` | Pins the plugin zip at an https URL in place of a release: downloads it, checks it against `--sha256` when given, unpacks it as a run would (its `manifest.yaml` at the top level, no path that leaves it, no symlink, nothing executable but the program), reads the plugin's name, kind and program from the manifest, and writes an entry of its own, `{name, kind, zip: {url, sha256}}`, with the zip's sha256. See [building and hosting a plugin as a zip](../how-to/plugin-zip.md). | the URL isn't https, the download fails or isn't the `--sha256`, the zip is refused, the plugin holds no program or is of a kind pipelinegen doesn't run, or the name is taken |
+| `plugin build <dir>` | Builds the plugin whose `manifest.yaml` is in `<dir>`, in the image the manifest pins, once per platform, and packs it into the zip `--zip` names: `manifest.yaml` as it is in `<dir>`, the program for each platform (`<program>-<os>-<arch>`, or one `<program>.mjs`), the manifest's `files` and its `assets`, all at the top level. Writes `SHA256SUMS` beside the zip and prints the zip's sha256 for the pin. The same build packs to the same bytes. See the [manifest reference](manifest.md). | the manifest doesn't read, neither docker nor podman runs, the build fails, or it writes something the zip can't hold |
+| `plugin upgrade [<name>...]` | Moves the named plugins' pins, or every plugin's pinned by a release, to their newest releases, each checked as `add` checks one, keeping each pin's form (`sums`, or `sha256` of the `linux-amd64` file or Node script). Prints `<name>: <old> -> <new>`, or `<name>: <version>, the newest`. A plugin it can't move (its releases can't be listed, or the newest fails its check) gets `<name>: not moved: <why>` and keeps its pin, and the others still move. | a plugin wasn't moved, or a named plugin is missing or pinned by commit or zip |
 | `plugin new <kind> <name>` | Writes a new plugin, `<name>-<kind>`, from the template the plugins repository releases for its kind: `templates/<kind>/` at the newest tag `templates/vX.Y.Z` that is no prerelease, fetched with git. The template's module becomes the new module path, its one program under `cmd/` becomes `<name>-<kind>`, and its own directory, `templates/<kind>` (in a `BUILD.bazel` or a README, say), becomes the new one's: its path in the git work tree that holds `--into`, or `<kind>/<name>` outside one. Each is rewritten in every file's text and path. | the directory holds files, the tag or the kind's template is missing, or the template holds a link |
 
 ```sh
 pipelinegen plugin test ./bin/go-sbom --tree testdata/tree
 pipelinegen plugin add https://github.com/sideways-works/pipelinegen-plugins driver/go sbom/go
 pipelinegen plugin upgrade --pre go-sbom
+pipelinegen plugin build . --zip dist/go-driver.zip --platform linux/amd64 --platform darwin/arm64
+pipelinegen plugin add --zip https://plugins.example.com/go-driver.zip --sha256 <sha256>
 pipelinegen plugin new correlator rust --into ../rust-correlator
 ```
 
@@ -880,7 +884,11 @@ pipelinegen plugin new correlator rust --into ../rust-correlator
 | `--root` | `.` | `add`, `upgrade` | The repository's root. |
 | `--config` | `<root>/pipelinegen.yaml` | `add`, `upgrade` | The config file it edits. |
 | `--version` | the newest that is no prerelease | `add`, `new` | The release to pin, `vX.Y.Z`, the same for every path; for `new`, the templates' release. |
-| `--name` | the name in the plugin's `plugin.json` | `add` | The entry's name, with one path. |
+| `--name` | the name in the plugin's `plugin.json`, or its zip's manifest | `add` | The entry's name, with one path or a zip. |
+| `--zip` | none | `add`, `build` | For `add`, the https URL of a plugin zip to pin instead of a release; for `build`, the zip to write (required). |
+| `--sha256` | whatever the download has | `add` | With `--zip`, the sha256 the zip must have. |
+| `--platform` | every platform of the manifest | `build` | Builds for this `os/arch` only; give it again for more. A manifest whose platforms are `[any]` is built once. |
+| `--tool` | the first of docker and podman on `PATH` | `build` | The container tool the build runs in. |
 | `--pre` | `false` | `upgrade` | Moves to a prerelease too, when it is the newest. |
 | `--into` | `<name>-<kind>` in the current directory | `new` | The directory to write the plugin into, new or empty. |
 | `--from` | `https://github.com/sideways-works/pipelinegen-plugins` | `new` | The git URL of the repository whose `templates/vX.Y.Z` tags hold the templates, one directory a kind under `templates/`. |

@@ -261,9 +261,12 @@ keeping the answer by that pin. An uncovered file its `candidates` or
 ### Pinned and verified
 
 The config names each plugin by repository, with its directory in a
-repository of several, and by a release with its checksum, or by a commit
-before the first release. The bootstrap fetches
-each into `tools/plugins/<name>` and checks it like the tool itself:
+repository of several, and by a release with its checksum, by a commit
+that its `manifest.yaml` builds it from, or by a zip and the zip's
+checksum ([the manifest](reference/manifest.md),
+[building and hosting a plugin as a zip](how-to/plugin-zip.md)). The
+bootstrap fetches each into `tools/plugins/<name>` and checks it like the
+tool itself:
 
 ```yaml
 plugins:
@@ -288,7 +291,7 @@ plugins:
 `config` is the plugin's own block, passed in every request. The answer
 cache is keyed by the plugin's version, checksum and config, so a new
 release answers afresh. A plugin's
-entry (its version, checksum or commit, and its `config` block) is a unit
+entry (its version, checksum, commit or zip, and its `config` block) is a unit
 of each tree, read from that tree's own config, and every slice the plugin
 binds depends on it: for an sbom, a slice holding a unit it listed; for a
 correlator, every recorded slice of a suite it observes (the suite's
