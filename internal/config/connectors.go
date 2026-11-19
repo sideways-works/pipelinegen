@@ -55,16 +55,19 @@ type ConnectorPin struct {
 // connector by the same name pins another.
 var PinnedConnectors = map[string]ConnectorPin{
 	ConnectorGitHub: {
-		Name: ConnectorGitHub, Repository: "sideways-works/pipelinegen-connector-github", Version: "v0.1.0",
-		SHA256: Checksums{LinuxAMD64: "94d20cc9a5b3c2f342da32b0f6786d847f05b4973e7126590116ca7bf5c5a72c", LinuxARM64: "75722982d60d0d002b5675dd64362d01a8349c1a421966930ea67afa694bcedc",
-			DarwinAMD64: "5ede86132301c8b438efa0a7fc4b3ece5be5464bb928849303e1d60e2bc05cd4", DarwinARM64: "b881a86ce48243abbece72813ca149f0a14d36bc260c191df483e82132d8dbae"},
+		Name: ConnectorGitHub, Repository: pluginsRepository, Path: "connector/github", Version: "v0.4.0",
+		SHA256: Checksums{LinuxAMD64: "048f3b3c7852d8ec41f0571187ff94f0502848020a4e5582aeaf21d596622cd1", LinuxARM64: "785ca66d43e76201d759e803fba94102dde518de4d0c10bd55668c75b21da920",
+			DarwinAMD64: "3e078f649c7e26e638b8f4726c6375736bd856299242e4257c2db001c9d7f5ed", DarwinARM64: "2983e9247fe6ef94f1b79bc6ac16064a44a486444b8909510000d0f1a472c5ec"},
 	},
 	ConnectorGit: {
-		Name: ConnectorGit, Repository: "sideways-works/pipelinegen-connector-git", Version: "v0.1.0",
-		SHA256: Checksums{LinuxAMD64: "5192041fd8508f768ff0a988ebc467490e068c64b1fa64b9beb36da676065e74", LinuxARM64: "47f2def136ad1156ca83416eed2664f654efd0ed246c042b4c190677f712f959",
-			DarwinAMD64: "51c1aa9a3ad5d6d6265ce761570540a7701e564b4684461084bc7d4f8074970a", DarwinARM64: "e46908311b4052a59850e6b05950076760126722203b60ae2b59773e3610d93a"},
+		Name: ConnectorGit, Repository: pluginsRepository, Path: "connector/git", Version: "v0.4.0",
+		SHA256: Checksums{LinuxAMD64: "dae7e03d2c84877703339aee2edbbbb127de2359ad3cf514a2645ba9cb135bbf", LinuxARM64: "a87c3d07fa3806776742a1003a7039dd6fcff81f103dd815bc106a53620e5370",
+			DarwinAMD64: "56cc93776e79e310f53bc66968ea0a662153cf60658b0e189863bc5007097201", DarwinARM64: "d78d761537f19b54602f1ece2c0073ce607e78d89cb8cef58bfed403ddffdd85"},
 	},
 }
+
+// pluginsRepository holds the connectors the tool pins, each in a directory of its own.
+const pluginsRepository = "https://github.com/sideways-works/pipelinegen-plugins"
 
 // Program names the connector's release files.
 func (c ConnectorPin) Program() string { return ProgramOf(c.Repository, c.Path) }

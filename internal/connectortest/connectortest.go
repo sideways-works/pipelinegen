@@ -15,12 +15,16 @@ import (
 	"strings"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/plugin"
+	plugkitpin "github.com/sideways-works/plugkit/pin"
 )
 
 // Env names the variable that holds a built binary of the connector, served in place of its
 // pinned release.
 func Env(name string) string { return "PIPELINEGEN_TEST_" + strings.ToUpper(name) + "_CONNECTOR" }
+
+// servedPath is where a release's file is served: the repository, the release's tag and the
+// file's name fill it, as they fill a pin's URL.
+const servedPath = "/%s/releases/download/%s/%s"
 
 // pinsEnv hands the served pins to the processes a test starts.
 const pinsEnv = "PIPELINEGEN_TEST_CONNECTOR_PINS"
@@ -47,7 +51,7 @@ func Serve() (stop func(), err error) { //nolint:nonamedreturns // what it does 
 		if path == "" {
 			if sum, ok := pin.SHA256.For(config.Platform()); pin.Sums == "" && (!ok || len(sum) != sha256.Size*2) {
 				fmt.Fprintf(os.Stderr, "connectortest: the %s connector's pin has no checksum for %s: set %s to a built %s\n",
-					name, config.Platform(), Env(name), plugin.Program(pin.Repository))
+					name, config.Platform(), Env(name), pin.Program())
 			}
 
 			continue
@@ -61,7 +65,7 @@ func Serve() (stop func(), err error) { //nolint:nonamedreturns // what it does 
 		sum := sha256.Sum256(data)
 		pin.SHA256 = config.Checksums{config.Platform(): hex.EncodeToString(sum[:])}
 		pin.Sums = ""
-		files["/"+pin.Repository+"/releases/download/"+pin.Version+"/"+plugin.Program(pin.Repository)+"-"+config.Platform()] = data
+		files[fmt.Sprintf(servedPath, pin.Repository, plugkitpin.Pin{Path: pin.Path, Version: pin.Version}.Tag(), pin.Program()+"-"+config.Platform())] = data
 		pins[name] = pin
 	}
 
@@ -88,7 +92,7 @@ func Serve() (stop func(), err error) { //nolint:nonamedreturns // what it does 
 	go srv.Serve(l) //nolint:errcheck // ends with the test binary
 
 	for name, pin := range pins {
-		pin.URL = "http://" + l.Addr().String() + "/%s/releases/download/%s/%s"
+		pin.URL = "http://" + l.Addr().String() + servedPath
 		pins[name] = pin
 	}
 

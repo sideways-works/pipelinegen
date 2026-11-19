@@ -191,9 +191,10 @@
     {
       "name": "github",
       "kind": "connector",
-      "repository": "sideways-works/pipelinegen-connector-github",
-      "version": "v0.1.0",
-      "sha256": "94d20cc9a5b3c2f342da32b0f6786d847f05b4973e7126590116ca7bf5c5a72c"
+      "repository": "https://github.com/sideways-works/pipelinegen-plugins",
+      "path": "connector/github",
+      "version": "v0.4.0",
+      "sha256": "048f3b3c7852d8ec41f0571187ff94f0502848020a4e5582aeaf21d596622cd1"
     }
   ],
   "config_files": [

@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Changed
+
+- The built-in GitHub and git connectors come from the plugins repository: `connector/github` and `connector/git` of [pipelinegen-plugins](https://github.com/sideways-works/pipelinegen-plugins) at v0.4.0, in place of v0.1.0 of their own repositories. A config without a `plugins` entry of kind `connector` fetches these, and the spec's tools name them with their `path`. An entry that pins a connector itself is used as before
+
 ### Fixed
 
 - A record written again within the same second as the compaction that moved its older copy into the run's ref (a suite's end mark, a slice's state on a rerun) is the one the next compaction keeps. Its marker ties with the older copy's, as markers count whole seconds, and readers already took the newer copy then; the compaction kept the older one, so the record went back to what it was before. Since a suite's end mark goes into the suite's own ref, a suite ended twice in one second showed it
