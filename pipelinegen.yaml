@@ -27,50 +27,46 @@ concourse:
     prepare: go mod download
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     bootstrap:
-      release: {version: v0.3.1, sha256: 119fac88198818624591c11fdfc6cad908a98c8eea3643c995cfdf76f75f9b12}
+      release: {version: v0.4.0, sha256: e5f78f866acacf3d4a13d141fb86fd4981453004f14ce0e4cb301d896ef3f86b}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
   include: ci/root.yml
 
 
 plugins:
-  # the go suite is bound by what each test file ran: go-sbom lists the
-  # module's declarations, go-correlator binds the test files and reads
-  # their coverage
-  - name: go-sbom
-    kind: sbom
-    repository: sideways-works/pipelinegen-sbom-go
-    release: {version: v0.2.1, sha256: 559212b2dbb6a47da7ee56ff68c2320b0bf8afce883886477871192545f3a832}
-    config: {modules: [.]}
-  - name: go-correlator
-    kind: correlator
-    repository: sideways-works/pipelinegen-correlator-go
-    release: {version: v0.2.1, sha256: fbc892a6b25f9bc87d1b1f4eb793d57ebe372da50c108fa1a5ad7b42569d2fc8}
-    config: {modules: [.]}
-  # the drivers that run the suites' steps (the command driver comes with
-  # pipelinegen)
-  - name: go
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-go
-    release: {version: v0.2.1, sha256: bfa28f1c2b4eb3c36155d11ba7b419859c0debb53438c5e3a96719c1b4c47b5f}
-  - name: shell
-    kind: driver
-    repository: sideways-works/pipelinegen-driver-shell
-    release: {version: v0.2.1, sha256: debd5b3f2fb012e8ba3e6e07ac4f723a23ade46c6360e6cfde4cf7e82ac9178c}
-  - name: concourse
-    kind: runner
-    repository: sideways-works/pipelinegen-runner-concourse
-    release: {version: v0.3.3, sha256: fee79593c16d9902fdc12d7f482659598e118e7e0957c02b6577388fddcf01a3}
-    config:
-      placement:
-        # Every suite, and the checks, on the cloud workers: they stream
-        # volumes to each other directly, so a task and the fetch of its
-        # image may land on different workers of the pool.
-        default: [cloud]
-        # planning, reporting and the pipeline job run on untagged workers
-        rules:
-          - {for: pipeline, tags: []}
-          - {for: planning, tags: []}
-          - {for: bookkeeping, tags: []}
+  - repository: https://github.com/sideways-works/pipelinegen-plugins
+    with:
+      # the go suite is bound by what each test file ran: go-sbom lists the
+      # module's declarations, go-correlator binds the test files and reads
+      # their coverage
+      - name: go-sbom
+        kind: sbom
+        path: sbom/go
+        release: {version: v0.4.0, sums: e12cb210141dda74d52c56e9d192a67cf735c244dffb687757f3348402cda71d}
+        config: {modules: [.]}
+      - name: go-correlator
+        kind: correlator
+        path: correlator/go
+        release: {version: v0.4.0, sums: fa7fea22707363a40366dad3b6947cd8d0a427cadce9e0dbd3e4b6cda227a020}
+        config: {modules: [.]}
+      # the drivers that run the suites' steps (the command driver comes with
+      # pipelinegen)
+      - {name: go, kind: driver, path: driver/go, release: {version: v0.4.0, sums: 9a666c360d7f001477588e54823aa4b46df4117d853ec41e53c1d9b147a81887}}
+      - {name: shell, kind: driver, path: driver/shell, release: {version: v0.4.0, sums: ccba3ad11a223e3f148f05afe010831766ba776c314caf8c2d797496b58231af}}
+      - name: concourse
+        kind: runner
+        path: runner/concourse
+        release: {version: v0.4.1, sums: d306919d672273d2c7af51db0a579e6254ad50c208a10bf2b0614ec2afc4a837}
+        config:
+          placement:
+            # Every suite, and the checks, on the cloud workers: they stream
+            # volumes to each other directly, so a task and the fetch of its
+            # image may land on different workers of the pool.
+            default: [cloud]
+            # planning, reporting and the pipeline job run on untagged workers
+            rules:
+              - {for: pipeline, tags: []}
+              - {for: planning, tags: []}
+              - {for: bookkeeping, tags: []}
 
 suites:
   lint:
