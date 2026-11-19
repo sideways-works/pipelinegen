@@ -82,6 +82,9 @@ suites:
     # (every change reaches them)
     tag: slice-pipelinegen-lint
     image: golang
+    # the whole suite runs in under a minute: one batch, so one task, one
+    # set-up and one batch's end a build
+    parallel: 1
     params:
       GOFLAGS: -trimpath
       GOCACHE: "{cache}/go-build"
@@ -186,6 +189,9 @@ suites:
     tests: *killed-children
     owner: "//:code"
     image: golang
+    # the whole suite runs in under a minute: one batch, so one task, one
+    # set-up and one batch's end a build
+    parallel: 1
     params: *go-params
     steps: *go-steps
   unit:
@@ -194,6 +200,9 @@ suites:
     bind: graph
     # each file's test_ functions, each in a shell of its own
     image: busybox
+    # the whole suite runs in under a minute: one batch, so one task, one
+    # set-up and one batch's end a build
+    parallel: 1
     steps:
       - run: shell
         with: {functions: test_}
@@ -206,6 +215,9 @@ suites:
     # the words server, built once per build of the suite and started once
     # per batch; each file's test_ functions run against it
     image: busybox
+    # the whole suite runs in under a minute: one batch, so one task, one
+    # set-up and one batch's end a build
+    parallel: 1
     steps:
       - prepare: command
         image: golang
