@@ -1,0 +1,4 @@
+{
+  "ended": "2026-11-19T22:30:46.184955085Z",
+  "why": "suite go stopped 35 minutes after its work began, before these slices reported: not its time limit of 120 minutes (suites.go.minutes); its prepare or a batch failed, or the build was aborted: the build log says which"
+}
