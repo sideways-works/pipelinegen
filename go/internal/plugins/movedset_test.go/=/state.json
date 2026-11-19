@@ -1,13 +1,8 @@
 {
   "label": "internal/plugins/movedset_test.go",
-  "state": "errored",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
-  "updated": "2026-11-19T09:10:59.749659756Z",
-  "failures": [
-    {
-      "test": "(stopped)",
-      "tail": "batch 2 stopped before every slice reported, 4 minutes after the suite began: not its time limit of 120 minutes (suites.go.minutes); its task died: the build log says why"
-    }
-  ],
-  "recorded": true
+  "state": "passed",
+  "updated": "2026-11-19T09:27:59.708169814Z",
+  "seconds": 0.49,
+  "recorded": true,
+  "cpu_seconds": 0.7764569999999367
 }

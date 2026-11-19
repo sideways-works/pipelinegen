@@ -1,13 +1,8 @@
 {
   "label": "internal/graph/sample_equiv_test.go",
-  "state": "errored",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
-  "updated": "2026-11-19T09:10:44.762563111Z",
-  "failures": [
-    {
-      "test": "(stopped)",
-      "tail": "batch 3 stopped while slice internal/bazel/bazel_test.go ran, 4 minutes after the suite began: not its time limit of 120 minutes (suites.go.minutes); its task died: the build log says why"
-    }
-  ],
-  "recorded": true
+  "state": "passed",
+  "updated": "2026-11-19T09:24:43.68679012Z",
+  "seconds": 5.99,
+  "recorded": true,
+  "cpu_seconds": 7.03311900000017
 }

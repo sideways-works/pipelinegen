@@ -1,13 +1,8 @@
 {
   "label": "internal/cli/begun_test.go",
-  "state": "errored",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
-  "updated": "2026-11-19T09:10:59.518107898Z",
-  "failures": [
-    {
-      "test": "(stopped)",
-      "tail": "batch 0 stopped while slice internal/affected/snapshot_check_test.go ran, 4 minutes after the suite began: not its time limit of 120 minutes (suites.go.minutes); its task died: the build log says why"
-    }
-  ],
-  "recorded": true
+  "state": "passed",
+  "updated": "2026-11-19T09:29:55.17489424Z",
+  "seconds": 13.130000000000003,
+  "recorded": true,
+  "cpu_seconds": 5.570354000000009
 }

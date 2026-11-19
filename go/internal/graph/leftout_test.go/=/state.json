@@ -1,13 +1,8 @@
 {
   "label": "internal/graph/leftout_test.go",
-  "state": "errored",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
-  "updated": "2026-11-19T09:10:44.762560256Z",
-  "failures": [
-    {
-      "test": "(stopped)",
-      "tail": "batch 3 stopped while slice internal/bazel/bazel_test.go ran, 4 minutes after the suite began: not its time limit of 120 minutes (suites.go.minutes); its task died: the build log says why"
-    }
-  ],
-  "recorded": true
+  "state": "passed",
+  "updated": "2026-11-19T09:24:43.6867024Z",
+  "seconds": 0.69,
+  "recorded": true,
+  "cpu_seconds": 0.8682100000000901
 }

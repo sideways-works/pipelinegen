@@ -1,13 +1,8 @@
 {
   "label": "internal/docscheck/narrowings_test.go",
-  "state": "errored",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
-  "updated": "2026-11-19T09:10:59.749601764Z",
-  "failures": [
-    {
-      "test": "(stopped)",
-      "tail": "batch 2 stopped before every slice reported, 4 minutes after the suite began: not its time limit of 120 minutes (suites.go.minutes); its task died: the build log says why"
-    }
-  ],
-  "recorded": true
+  "state": "passed",
+  "updated": "2026-11-19T09:27:59.707442Z",
+  "seconds": 4.697134639,
+  "recorded": true,
+  "cpu_seconds": 14.136798999999883
 }
