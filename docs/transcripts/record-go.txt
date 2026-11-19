@@ -37,5 +37,5 @@ go run: PASS
 go run: coverage: 83.3% of statements in ./...
 go run: ok  	example.com/notes/text	<time>	coverage: 83.3% of statements in ./...
 slice text/text_test.go: passed
-lists of 26118462acef: local local-<time> 26118462acef merged into no earlier lists (none within 200 commits); 5 slices, 5 changed
-recorded 5 slices of go at 26118462acef; the lists are in the local store /home/you/notes/.git/pipelinegen/local.git, which affected and why read unless the config names a remote (then: --local)
+lists of 4c3820d1b492: local local-<time> 4c3820d1b492 merged into no earlier lists (none within 200 commits); 5 slices, 5 changed
+recorded 5 slices of go at 4c3820d1b492; the lists are in the local store /home/you/notes/.git/pipelinegen/local.git, which affected and why read unless the config names a remote (then: --local)

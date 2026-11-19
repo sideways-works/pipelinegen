@@ -1,6 +1,6 @@
 $ pipelinegen why --base HEAD~1 --slice api/create_test.go
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-go api/create_test.go was selected from 26118462acef to d4d136210ea4:
+go api/create_test.go was selected from 4c3820d1b492 to 2df3bd8da6d6:
   it executed notesapi.ServerInterfaceWrapper.CreateNote during its recording (seen by go-correlator; api/notesapi/notesapi.gen.go)
     → which leads to POST /notes (createNote) (a link from oapi-codegen-correlator), which changed in this commit
   observed by: go-correlator

@@ -1377,7 +1377,7 @@ validation, which only one browser spec reached:
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 26118462acef to 8933844527a0:
+e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 8719e9d00ab8:
   it executed api.validate during its recording (api/api.go), which changed in this commit
   observed by: go-correlator, oapi-codegen-correlator
 ```
@@ -1386,7 +1386,7 @@ e2e e2e/create.spec.ts was selected from 26118462acef to 8933844527a0:
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/search.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/search.spec.ts was left out from 26118462acef to 8933844527a0:
+e2e e2e/search.spec.ts was left out from 4c3820d1b492 to 8719e9d00ab8:
   nothing it is bound to changed
   observed by: go-correlator, oapi-codegen-correlator
 ```
@@ -1399,7 +1399,7 @@ it, up to what changed. For a change to the API contract:
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 26118462acef to d4d136210ea4:
+e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 2df3bd8da6d6:
   it requested POST /notes (createNote) during its recording, which changed in this commit
   it executed notesapi.ServerInterfaceWrapper.CreateNote during its recording (api/notesapi/notesapi.gen.go)
     → which leads to POST /notes (createNote) (a link from oapi-codegen-correlator), which changed in this commit
@@ -1412,7 +1412,7 @@ e2e e2e/create.spec.ts was selected from 26118462acef to d4d136210ea4:
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts --ids
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 26118462acef to 8933844527a0:
+e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 8719e9d00ab8:
   it executed api.validate [go:api#func:validate] during its recording (api/api.go), which changed in this commit
   observed by: go-correlator, oapi-codegen-correlator
 ```

@@ -64,7 +64,7 @@ left out.
 <!-- output: why-words-create -->
 ```
 $ pipelinegen why --base HEAD~1 --slice api/create_test.go
-go api/create_test.go was selected from a38bd0273694 to 7615acc58598:
+go api/create_test.go was selected from 5fd4def3987b to d53008f25d8a:
   the target //text:text.go changed, through //text:text → //api:api → //api:api_test
 ```
 

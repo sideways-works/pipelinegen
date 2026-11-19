@@ -59,7 +59,7 @@ flowchart RL
 ```
 $ pipelinegen affected --base HEAD~1
 pipelinegen affected: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-pipelinegen affected: filling the gomodcache cache for go-sbom, go-correlator: go mod download in ., into /home/you/.cache/pipelinegen/repos/notes-2afb52553fae/caches/gomodcache
+pipelinegen affected: filling the gomodcache cache for go-sbom, go-correlator: go mod download in ., into /home/you/.cache/pipelinegen/repos/notes-986d39b68cb0/caches/gomodcache
 e2e: 1 selected, 1 untouched
   run e2e/create.spec.ts
 go: 1 selected, 4 untouched
@@ -75,7 +75,7 @@ carries its reason, the path from the change to one of its roots, and
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 26118462acef to 8933844527a0:
+e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 8719e9d00ab8:
   it executed api.validate during its recording (api/api.go), which changed in this commit
   observed by: go-correlator, oapi-codegen-correlator
 ```
@@ -86,7 +86,7 @@ and for a slice that stays out:
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/search.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/search.spec.ts was left out from 26118462acef to 8933844527a0:
+e2e e2e/search.spec.ts was left out from 4c3820d1b492 to 8719e9d00ab8:
   nothing it is bound to changed
   observed by: go-correlator, oapi-codegen-correlator
 ```

@@ -1,5 +1,5 @@
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts --ids
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 26118462acef to 8933844527a0:
+e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 8719e9d00ab8:
   it executed api.validate [go:api#func:validate] during its recording (api/api.go), which changed in this commit
   observed by: go-correlator, oapi-codegen-correlator

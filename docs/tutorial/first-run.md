@@ -44,10 +44,10 @@ repository's remote instead of the local store):
 ```
 $ pipelinegen lists show
 pipelinegen lists show: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-lists of 26118462acef: its own lists
+lists of 4c3820d1b492: its own lists
 with the recordings of the live runs:
-  local local-<time> 26118462acef (5 slices)
-  local local-<time> 26118462acef (2 slices)
+  local local-<time> 4c3820d1b492 (5 slices)
+  local local-<time> 4c3820d1b492 (2 slices)
 e2e: 3 slices
   _setup 7
   e2e/create.spec.ts 12
@@ -73,10 +73,10 @@ and the Go code the server ran for it:
 ```
 $ pipelinegen lists show --slice e2e/search.spec.ts
 pipelinegen lists show: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-lists of 26118462acef: its own lists
+lists of 4c3820d1b492: its own lists
 with the recordings of the live runs:
-  local local-<time> 26118462acef (5 slices)
-  local local-<time> 26118462acef (2 slices)
+  local local-<time> 4c3820d1b492 (5 slices)
+  local local-<time> 4c3820d1b492 (2 slices)
 e2e e2e/search.spec.ts: 9 units
   api:listNotes
   go:api#func:writeJSON

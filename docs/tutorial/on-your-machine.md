@@ -55,8 +55,8 @@ go run: PASS
 go run: coverage: 83.3% of statements in ./...
 go run: ok  	example.com/notes/text	<time>	coverage: 83.3% of statements in ./...
 slice text/text_test.go: passed
-lists of 26118462acef: local local-<time> 26118462acef merged into no earlier lists (none within 200 commits); 5 slices, 5 changed
-recorded 5 slices of go at 26118462acef; the lists are in the local store /home/you/notes/.git/pipelinegen/local.git, which affected and why read unless the config names a remote (then: --local)
+lists of 4c3820d1b492: local local-<time> 4c3820d1b492 merged into no earlier lists (none within 200 commits); 5 slices, 5 changed
+recorded 5 slices of go at 4c3820d1b492; the lists are in the local store /home/you/notes/.git/pipelinegen/local.git, which affected and why read unless the config names a remote (then: --local)
 ```
 
 <!-- output: record-e2e -->
@@ -81,8 +81,8 @@ playwright run:
 playwright run: [1/1] [chromium] › e2e/search.spec.ts:3:5 › finds a note by a word in it
 playwright run:   1 passed (<time>)
 slice e2e/search.spec.ts: passed
-lists of 26118462acef: local local-<time> 26118462acef merged into its own lists; 8 slices, 3 changed
-recorded 2 slices of e2e at 26118462acef; the lists are in the local store /home/you/notes/.git/pipelinegen/local.git, which affected and why read unless the config names a remote (then: --local)
+lists of 4c3820d1b492: local local-<time> 4c3820d1b492 merged into its own lists; 8 slices, 3 changed
+recorded 2 slices of e2e at 4c3820d1b492; the lists are in the local store /home/you/notes/.git/pipelinegen/local.git, which affected and why read unless the config names a remote (then: --local)
 ```
 
 `--work <dir>` keeps the build directory after the recording, with what
@@ -133,7 +133,7 @@ remote configured, `affected` and `why` read the local store and say so:
 ```
 $ pipelinegen affected --base HEAD~1
 pipelinegen affected: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-pipelinegen affected: filling the gomodcache cache for go-sbom, go-correlator: go mod download in ., into /home/you/.cache/pipelinegen/repos/notes-2afb52553fae/caches/gomodcache
+pipelinegen affected: filling the gomodcache cache for go-sbom, go-correlator: go mod download in ., into /home/you/.cache/pipelinegen/repos/notes-986d39b68cb0/caches/gomodcache
 e2e: 1 selected, 1 untouched
   run e2e/create.spec.ts
 go: 1 selected, 4 untouched
@@ -144,7 +144,7 @@ go: 1 selected, 4 untouched
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 26118462acef to 8933844527a0:
+e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 8719e9d00ab8:
   it executed api.validate during its recording (api/api.go), which changed in this commit
   observed by: go-correlator, oapi-codegen-correlator
 ```
@@ -153,7 +153,7 @@ e2e e2e/create.spec.ts was selected from 26118462acef to 8933844527a0:
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/search.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/search.spec.ts was left out from 26118462acef to 8933844527a0:
+e2e e2e/search.spec.ts was left out from 4c3820d1b492 to 8719e9d00ab8:
   nothing it is bound to changed
   observed by: go-correlator, oapi-codegen-correlator
 ```
@@ -207,7 +207,7 @@ go: 1 selected, 4 untouched
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 26118462acef to d4d136210ea4:
+e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 2df3bd8da6d6:
   it requested POST /notes (createNote) during its recording, which changed in this commit
   it executed notesapi.ServerInterfaceWrapper.CreateNote during its recording (api/notesapi/notesapi.gen.go)
     → which leads to POST /notes (createNote) (a link from oapi-codegen-correlator), which changed in this commit
@@ -222,7 +222,7 @@ log says so), and it executed the generated wrapper that serves
 ```
 $ pipelinegen why --base HEAD~1 --slice api/create_test.go
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-go api/create_test.go was selected from 26118462acef to d4d136210ea4:
+go api/create_test.go was selected from 4c3820d1b492 to 2df3bd8da6d6:
   it executed notesapi.ServerInterfaceWrapper.CreateNote during its recording (seen by go-correlator; api/notesapi/notesapi.gen.go)
     → which leads to POST /notes (createNote) (a link from oapi-codegen-correlator), which changed in this commit
   observed by: go-correlator
@@ -244,7 +244,7 @@ go: 0 selected, 5 untouched
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was left out from 26118462acef to d8d21f7e7747:
+e2e e2e/create.spec.ts was left out from 4c3820d1b492 to 4e52be9ca996:
   the narrowing doc-text left it out: api:docs:createNote changed, which only the wide rule binds to these slices; it would have run at narrowing level 5 (the plan used 3)
   observed by: go-correlator, oapi-codegen-correlator
 ```

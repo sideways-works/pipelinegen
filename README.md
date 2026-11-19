@@ -22,7 +22,7 @@ the browser spec that submits the form:
 ```
 $ pipelinegen affected --base HEAD~1
 pipelinegen affected: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-pipelinegen affected: filling the gomodcache cache for go-sbom, go-correlator: go mod download in ., into /home/you/.cache/pipelinegen/repos/notes-2afb52553fae/caches/gomodcache
+pipelinegen affected: filling the gomodcache cache for go-sbom, go-correlator: go mod download in ., into /home/you/.cache/pipelinegen/repos/notes-986d39b68cb0/caches/gomodcache
 e2e: 1 selected, 1 untouched
   run e2e/create.spec.ts
 go: 1 selected, 4 untouched
@@ -36,7 +36,7 @@ changed:
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 26118462acef to 8933844527a0:
+e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 8719e9d00ab8:
   it executed api.validate during its recording (api/api.go), which changed in this commit
   observed by: go-correlator, oapi-codegen-correlator
 ```
@@ -48,7 +48,7 @@ operation, and `why` shows each hop with the plugin that knew it:
 ```
 $ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts
 pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 26118462acef to d4d136210ea4:
+e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 2df3bd8da6d6:
   it requested POST /notes (createNote) during its recording, which changed in this commit
   it executed notesapi.ServerInterfaceWrapper.CreateNote during its recording (api/notesapi/notesapi.gen.go)
     → which leads to POST /notes (createNote) (a link from oapi-codegen-correlator), which changed in this commit
