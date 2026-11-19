@@ -1,0 +1,16 @@
+# observed
+go:internal/affected#func:newQuiet
+go:internal/affected#func:sortedKeysOf
+go:internal/affected#method:quiet.impactedWithout
+go:internal/affected#method:quiet.list
+go:internal/affected#method:quiet.textRead
+go:internal/config#func:MatchGlob
+go:internal/config#func:matchParts
+go:internal/config#method:Suite.ReadsText
+go:internal/testenv#func:Bazel
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:defaultRoots
+go:internal/testenv#func:outputBases
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
