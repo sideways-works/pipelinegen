@@ -151,12 +151,30 @@ func pluginBuild(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	sums := filepath.Join(filepath.Dir(out), "SHA256SUMS")
-	if err := writeAtomically(sums, []byte(sum+"  "+filepath.Base(out)+"\n")); err != nil {
+	if err := writeAtomically(sums, listedWith(sums, filepath.Base(out), sum)); err != nil {
 		return fmt.Errorf("%w: %w", errBuilt, err)
 	}
 
 	return say(stdout, "built %s (%s) into %s, sha256 %s; %s lists it\npin it with: zip: {url: <where you host %s>, sha256: %s}\n",
 		m.Name, m.Kind, out, sum, sums, filepath.Base(out), sum)
+}
+
+// listedWith is the SHA256SUMS at file with name's line set to sum, the other zips' lines kept, so
+// several plugins built into one directory are each listed.
+func listedWith(file, name, sum string) []byte {
+	old, _ := os.ReadFile(file) //nolint:errcheck,gosec // none yet is an empty list; the list beside the zip the caller names
+
+	var b strings.Builder
+
+	for line := range strings.Lines(string(old)) {
+		if _, listed, ok := strings.Cut(strings.TrimSpace(line), "  "); ok && strings.TrimPrefix(listed, "*") != name {
+			b.WriteString(strings.TrimRight(line, "\n") + "\n")
+		}
+	}
+
+	b.WriteString(sum + "  " + name + "\n")
+
+	return []byte(b.String())
 }
 
 // repositoryOf is the git repository dir is in and dir's path in it, or dir itself when it is in

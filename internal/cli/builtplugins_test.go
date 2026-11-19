@@ -162,6 +162,8 @@ func TestABuiltZipIsPinnedAndRuns(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "LICENSE"), "license\n")
 
 	out := filepath.Join(t.TempDir(), "dist", "stub.zip")
+	other := strings.Repeat("a", 64) + "  other.zip\n"
+	writeFile(t, filepath.Join(filepath.Dir(out), "SHA256SUMS"), other+strings.Repeat("b", 64)+"  stub.zip\n")
 
 	stdout, stderr, code := runIn(t, dir, f.env, "plugin", "build", dir, "--zip", out)
 	if code != 0 {
@@ -178,7 +180,7 @@ func TestABuiltZipIsPinnedAndRuns(t *testing.T) {
 		t.Fatalf("plugin build says %q, not the zip's sha256 %s", stdout, sum)
 	}
 
-	if sums, _ := os.ReadFile(filepath.Join(filepath.Dir(out), "SHA256SUMS")); string(sums) != sum+"  stub.zip\n" { //nolint:errcheck // compared
+	if sums, _ := os.ReadFile(filepath.Join(filepath.Dir(out), "SHA256SUMS")); string(sums) != other+sum+"  stub.zip\n" { //nolint:errcheck // compared
 		t.Fatalf("SHA256SUMS: %q", sums)
 	}
 
