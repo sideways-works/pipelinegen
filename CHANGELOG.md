@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-20
+
 ### Changed
 
 - The built-in GitHub and git connectors come from the plugins repository: `connector/github` and `connector/git` of [pipelinegen-plugins](https://github.com/sideways-works/pipelinegen-plugins) at v0.4.0, in place of v0.1.0 of their own repositories. A config without a `plugins` entry of kind `connector` fetches these, and the spec's tools name them with their `path`. An entry that pins a connector itself is used as before
