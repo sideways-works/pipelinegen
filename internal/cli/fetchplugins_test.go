@@ -126,6 +126,8 @@ func TestADriverPinnedBySumsIsFetchedWithItsList(t *testing.T) {
 // A driver pinned by commit has no release to download: the error names it and how to build it.
 func TestADriverPinnedByCommitIsBuiltNotFetched(t *testing.T) {
 	f, _, _ := fetchingDriver(t, "commit: 0123456789abcdef0123456789abcdef01234567")
+	// the repository can't be fetched, so its manifest can't be read: no network in a test
+	f.env["GIT_ALLOW_PROTOCOL"] = "file"
 
 	stdout, stderr, code := f.sliceRun(t)
 	if code == 0 || !strings.Contains(stderr, "plugin stub is pinned by commit 0123456789ab, which has no release to download") ||

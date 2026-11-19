@@ -86,7 +86,8 @@ func matchAnyGlob(patterns []string, file string) bool {
 func pinnedDescribe(ctx context.Context, p config.Plugin, dir, cache string) (plugin.Description, error) {
 	var d plugin.Description
 
-	if p.Release == nil || p.Release.Pin() == "" {
+	pin := pinnedBy(p)
+	if pin == "" {
 		return d, unpinned(p, dir)
 	}
 
@@ -96,7 +97,6 @@ func pinnedDescribe(ctx context.Context, p config.Plugin, dir, cache string) (pl
 		return d, fmt.Errorf("describe: %w", err)
 	}
 
-	pin := strings.ToLower(p.Release.Pin())
 	confSum := sha256.Sum256(conf)
 	kept := filepath.Join(cache, "describe", pin+"-"+hex.EncodeToString(confSum[:8])+".json")
 
@@ -133,6 +133,19 @@ func pinnedDescribe(ctx context.Context, p config.Plugin, dir, cache string) (pl
 	return d, nil
 }
 
+// pinnedBy is the checksum a plugin's binary is known by before it runs: its release's, or its
+// zip's; empty for a commit, whose build no checksum names.
+func pinnedBy(p config.Plugin) string {
+	switch {
+	case p.Release != nil:
+		return strings.ToLower(p.Release.Pin())
+	case p.Zip != nil:
+		return strings.ToLower(p.Zip.SHA256)
+	}
+
+	return ""
+}
+
 func pinnedBinary(p config.Plugin, dir string) (string, error) {
 	if p.Release == nil || p.Release.Pin() == "" {
 		return "", errUnpinned
@@ -160,6 +173,12 @@ func pinnedBinary(p config.Plugin, dir string) (string, error) {
 // pinnedOrFetched is dir's copy when it is the pin, or, when dir has none, the pinned release, fetched
 // into the user cache and checked by its pin as run and affected fetch it.
 func pinnedOrFetched(ctx context.Context, p config.Plugin, dir string) (string, error) {
+	if p.Release == nil && p.Zip != nil {
+		r, err := resolveBuilt(ctx, p, config.Platform())
+
+		return r.Program, err
+	}
+
 	exe, err := pinnedBinary(p, dir)
 	if !errors.Is(err, errNotFetched) {
 		return exe, err

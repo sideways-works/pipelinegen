@@ -123,7 +123,8 @@ func validateSteps(ctx context.Context, cfg *config.Config, name string, steps [
 }
 
 func pinnedValidate(ctx context.Context, p config.Plugin, steps []plugin.ValidateStep, dir, cache string) ([]plugin.ValidateResult, error) {
-	if p.Release == nil || p.Release.Pin() == "" {
+	pin := pinnedBy(p)
+	if pin == "" {
 		return nil, unpinned(p, dir)
 	}
 
@@ -136,7 +137,7 @@ func pinnedValidate(ctx context.Context, p config.Plugin, steps []plugin.Validat
 	}
 
 	sum := sha256.Sum256(data)
-	kept := filepath.Join(cache, "validate", strings.ToLower(p.Release.Pin())+"-"+hex.EncodeToString(sum[:12])+".json")
+	kept := filepath.Join(cache, "validate", pin+"-"+hex.EncodeToString(sum[:12])+".json")
 
 	var results []plugin.ValidateResult
 	if data, err := os.ReadFile(kept); err == nil && json.Unmarshal(data, &results) == nil && len(results) == len(steps) { //nolint:gosec // pipelinegen's own cache

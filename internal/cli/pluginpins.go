@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -19,6 +20,12 @@ import (
 )
 
 var errPin = errors.New("can't pin")
+
+// The keys of a plugin's entry that every pin writes.
+const (
+	keyName = "name"
+	keyKind = "kind"
+)
 
 // parseMixed parses flags that may come before, between and after the positional arguments.
 func parseMixed(ctx context.Context, fs *flag.FlagSet, args []string) ([]string, error) {
@@ -115,22 +122,28 @@ type pinRelease struct {
 
 func pluginAdd(ctx context.Context, args []string, stdout io.Writer) error {
 	var (
-		c             common
-		version, name string
+		c                          common
+		version, name, zip, zipSum string
 	)
 
 	fs := flag.NewFlagSet("plugin add", flag.ContinueOnError)
 	c.register(fs)
 	textVar(fs, &version, "version", "", "the release to pin, vX.Y.Z, the same for every path (default: the newest that is no prerelease)")
-	textVar(fs, &name, "name", "", "the entry's name, with one path (default: the name the plugin's describe answer gives)")
+	textVar(fs, &name, "name", "", "the entry's name, with one path or a zip (default: the name the plugin's describe answer or manifest gives)")
+	textVar(fs, &zip, "zip", "", "pin the plugin zip at this https URL instead of a release, by its sha256, named and kinded by its manifest.yaml")
+	textVar(fs, &zipSum, "sha256", "", "with --zip: the sha256 the zip must have (default: whatever the download has)")
 
 	pos, err := parseMixed(ctx, fs, args)
 	if err != nil {
 		return err
 	}
 
+	if zip != "" || zipSum != "" {
+		return pluginAddZip(ctx, c, pos, version, zip, zipSum, name, stdout)
+	}
+
 	if len(pos) == 0 {
-		return fmt.Errorf("%w: plugin add <git-url> [<path>...]", errUsage)
+		return fmt.Errorf("%w: plugin add <git-url> [<path>...], or plugin add --zip <url>", errUsage)
 	}
 
 	repository, paths := pos[0], pos[1:]
@@ -176,6 +189,40 @@ func pluginAdd(ctx context.Context, args []string, stdout io.Writer) error {
 	return say(stdout, "%s", strings.Join(lines, ""))
 }
 
+func pluginAddZip(ctx context.Context, c common, pos []string, version, zip, zipSum, name string, stdout io.Writer) error {
+	switch {
+	case zip == "":
+		return fmt.Errorf("%w: --sha256 checks the zip --zip names", errUsage)
+	case len(pos) > 0 || version != "":
+		return fmt.Errorf("%w: plugin add --zip <url> takes no repository, path or --version: the zip's manifest names the plugin", errUsage)
+	}
+
+	if u, err := url.Parse(zip); err != nil || u.Scheme != "https" || u.Host == "" {
+		return fmt.Errorf("%w: --zip %q: an https URL", errUsage, zip)
+	}
+
+	file, data, cfg, err := pinFile(c)
+	if err != nil {
+		return err
+	}
+
+	doc, err := pinedit.Parse(data)
+	if err != nil {
+		return err
+	}
+
+	line, err := addZip(ctx, cfg, doc, zip, zipSum, name)
+	if err != nil {
+		return err
+	}
+
+	if err := writePins(file, doc.Bytes()); err != nil {
+		return err
+	}
+
+	return say(stdout, "%s", line)
+}
+
 func addOne(ctx context.Context, k forge.Checker, cfg *config.Config, doc *pinedit.Doc, repository, dir, version, name string) (string, error) {
 	if err := config.CheckSource(repository, dir); err != nil {
 		return "", fmt.Errorf("%w: %w", errUsage, err)
@@ -208,9 +255,9 @@ func addOne(ctx context.Context, k forge.Checker, cfg *config.Config, doc *pined
 	rel := pinRelease{Version: checked.Version, Sums: checked.Sums}
 
 	if dir == "" {
-		err = doc.AddFlat([]pinedit.Field{{Key: "name", Value: name}, {Key: "kind", Value: checked.Kind}, {Key: "repository", Value: repository}, {Key: "release", Value: rel}})
+		err = doc.AddFlat([]pinedit.Field{{Key: keyName, Value: name}, {Key: keyKind, Value: checked.Kind}, {Key: "repository", Value: repository}, {Key: "release", Value: rel}})
 	} else {
-		err = doc.AddToGroup(repository, []pinedit.Field{{Key: "name", Value: name}, {Key: "kind", Value: checked.Kind}, {Key: "path", Value: dir}, {Key: "release", Value: rel}})
+		err = doc.AddToGroup(repository, []pinedit.Field{{Key: keyName, Value: name}, {Key: keyKind, Value: checked.Kind}, {Key: "path", Value: dir}, {Key: "release", Value: rel}})
 	}
 
 	if err != nil {
@@ -351,6 +398,8 @@ func upgradeTargets(cfg *config.Config, names []string) ([]config.Plugin, error)
 		switch {
 		case i < 0:
 			return nil, fmt.Errorf("%w: the config has no plugin %s", errUsage, name)
+		case cfg.Plugins[i].Zip != nil:
+			return nil, fmt.Errorf("%w: plugin %s is pinned by a zip, which has no newer release to move to; give its zip pin the newer zip's url and sha256", errPin, name)
 		case cfg.Plugins[i].Release == nil:
 			return nil, fmt.Errorf("%w: plugin %s is pinned by commit; pin a release with `pipelinegen plugin add` in its place", errPin, name)
 		}

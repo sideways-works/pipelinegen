@@ -18,6 +18,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/plugkit/fetch"
 	"github.com/sideways-works/plugkit/pin"
+	"github.com/sideways-works/plugkit/store"
 )
 
 var errCommitPin = errors.New("pinned by commit")
@@ -54,7 +55,19 @@ func pluginsFor(ctx context.Context, cfg *config.Config, dir, platform string, n
 		}
 
 		if p.Release == nil {
-			return nil, commitPinned(p, dir, platform)
+			exe, err := builtPlugin(ctx, p, dir, platform)
+			if err != nil {
+				return nil, err
+			}
+
+			if sum, err := fileSHA256(local); err == nil && host && sum != fetch.FileSum(exe) {
+				warnf(os.Stderr, "pipelinegen: %s is not the build plugin %s's pin names; the pinned one runs: %s\n", local, p.Name, exe)
+			}
+
+			fetched[p.Name] = fetch.Got{Path: exe}
+			out.files[p.Name] = exe
+
+			continue
 		}
 
 		got, err := fetchPlugin(ctx, p, platform)
@@ -81,9 +94,9 @@ func pluginsFor(ctx context.Context, cfg *config.Config, dir, platform string, n
 const sumsSuffix = ".SHA256SUMS"
 
 // usableAsIs is dir's copy when it runs as before: the build the pin names, or, but for a driver, any
-// build, as a plugin under development is.
+// build, as a plugin under development is. A zip names its build, which is always the one that runs.
 func usableAsIs(p config.Plugin, dir string) bool {
-	if _, err := os.Stat(filepath.Join(dir, p.Name)); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, p.Name)); err != nil || p.Zip != nil {
 		return false
 	}
 
@@ -146,7 +159,7 @@ func releases() fetch.Fetcher {
 	trimReleasesOnce.Do(func() {
 		dir := filepath.Join(defaultCache(), releasesDir)
 
-		removed, err := fetch.Trim(dir, releasesKept, time.Now())
+		removed, err := store.Trim(dir, releasesKept, time.Now())
 		if err != nil {
 			warnf(os.Stderr, "pipelinegen: %v\n", err)
 		}
