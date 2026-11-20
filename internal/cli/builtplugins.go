@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -369,4 +370,97 @@ func download(ctx context.Context, u, file string) error {
 	}
 
 	return nil
+}
+
+// maxManifest bounds a manifest read from a zip.
+const maxManifest = 1 << 20
+
+func pluginDescribe(ctx context.Context, args []string, stdout io.Writer) error {
+	fs := flag.NewFlagSet("plugin describe", flag.ContinueOnError)
+
+	pos, err := parseMixed(ctx, fs, args)
+	if err != nil {
+		return err
+	}
+
+	if len(pos) != 1 {
+		return fmt.Errorf("%w: plugin describe <dir|zip>", errUsage)
+	}
+
+	data, err := manifestOf(pos[0])
+	if err != nil {
+		return err
+	}
+
+	m, err := manifest.Parse(data)
+	if err != nil {
+		return fmt.Errorf("%w: %s: %w", errBuilt, pos[0], err)
+	}
+
+	return say(stdout, "%s", describeManifest(m))
+}
+
+// manifestOf is the manifest.yaml of a plugin's directory, or at the top level of its zip.
+func manifestOf(p string) ([]byte, error) {
+	if info, err := os.Stat(p); err == nil && info.IsDir() {
+		data, err := os.ReadFile(filepath.Join(p, manifest.FileName)) //nolint:gosec // the plugin's manifest the caller names
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", errBuilt, err)
+		}
+
+		return data, nil
+	}
+
+	zr, err := zip.OpenReader(p)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s is neither a plugin's directory nor its zip: %w", errBuilt, p, err)
+	}
+	defer zr.Close() //nolint:errcheck // read only
+
+	f, err := zr.Open(manifest.FileName)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s has no %s at its top level", errBuilt, p, manifest.FileName)
+	}
+	defer f.Close() //nolint:errcheck // read only
+
+	data, err := io.ReadAll(io.LimitReader(f, maxManifest+1))
+	if err != nil || len(data) > maxManifest {
+		return nil, fmt.Errorf("%w: %s's %s is unreadable or over %d bytes", errBuilt, p, manifest.FileName, maxManifest)
+	}
+
+	return data, nil
+}
+
+func describeManifest(m manifest.Manifest) string {
+	var b strings.Builder
+
+	line := func(key, value string) {
+		if value != "" {
+			fmt.Fprintf(&b, "%-12s %s\n", key+":", value)
+		}
+	}
+
+	runtime := "native"
+	if m.Program == "" {
+		runtime = ""
+	}
+
+	if n, r := m.RuntimeOf(); n != "" {
+		runtime = strings.TrimSpace(n + " " + r)
+	}
+
+	line("name", m.Name)
+	line("kind", m.Kind)
+	line("program", m.Program)
+	line("runtime", runtime)
+	line("platforms", strings.Join(m.Platforms, ", "))
+	line("description", m.Description)
+	line("implements", strings.Join(m.Implements, ", "))
+	line("requires", strings.Join(m.Requires, ", "))
+
+	for _, p := range m.Permissions {
+		line("permission", fmt.Sprintf("%s (from %s): %s", p.Name, p.Default, p.Description))
+	}
+
+	return b.String()
 }

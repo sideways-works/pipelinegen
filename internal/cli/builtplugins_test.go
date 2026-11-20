@@ -476,3 +476,54 @@ platforms: [`+hostPlatform+`]
 		t.Fatalf("a version that is none: %d %s", code, stderr)
 	}
 }
+
+func TestPluginDescribeShowsTheManifest(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "manifest.yaml"), `name: board
+kind: driver
+program: board-driver
+runtime: "node >=26"
+description: Runs boards
+build:
+  image: `+shBuildImage+`
+  run: [sh, -c, "true"]
+platforms: [any]
+permissions:
+  - {name: boards:edit, description: Change a board, default: maintainer}
+`)
+
+	want := "name:        board\nkind:        driver\nprogram:     board-driver\nruntime:     node >=26\nplatforms:   any\ndescription: Runs boards\n" +
+		"permission:  boards:edit (from maintainer): Change a board\n"
+
+	if stdout, stderr, code := run(t, "plugin", "describe", dir); code != 0 || stdout != want {
+		t.Fatalf("a directory: %d %q\n%s", code, stdout, stderr)
+	}
+
+	var z bytes.Buffer
+
+	zw := zip.NewWriter(&z)
+
+	w, err := zw.Create("manifest.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, _ = w.Write([]byte(strings.Replace(stubManifest, "PLATFORM", hostPlatform, 1))) //nolint:errcheck // a buffer
+
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	zipped := filepath.Join(t.TempDir(), "stub.zip")
+	writeFile(t, zipped, z.String())
+
+	if stdout, stderr, code := run(t, "plugin", "describe", zipped); code != 0 || !strings.Contains(stdout, "runtime:     native\n") || !strings.Contains(stdout, "name:        stub\n") {
+		t.Fatalf("a zip: %d %q\n%s", code, stdout, stderr)
+	}
+
+	writeFile(t, filepath.Join(dir, "manifest.yaml"), "name: board\nkind: driver\ncolour: red\n")
+
+	if _, stderr, code := run(t, "plugin", "describe", dir); code == 0 || !strings.Contains(stderr, "field colour not found") {
+		t.Fatalf("a manifest that doesn't read: %d %s", code, stderr)
+	}
+}

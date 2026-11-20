@@ -24,6 +24,7 @@ func runPlugin(ctx context.Context, args []string, stdout io.Writer) error {
 		{"upgrade", "move the named plugins' pins, or every release pin, to their newest releases: [<name>...]", func(ctx context.Context, args []string) error { return pluginUpgrade(ctx, args, stdout) }},
 		{"new", "start a plugin from the plugins repository's template of its kind: <kind> <name>", func(ctx context.Context, args []string) error { return pluginNew(ctx, args, stdout) }},
 		{"build", "build a plugin from its manifest.yaml into a zip to pin by its sha256: <dir> --zip <out.zip>", func(ctx context.Context, args []string) error { return pluginBuild(ctx, args, stdout) }},
+		{"describe", "print what a plugin's manifest.yaml says, from its directory or its zip: <dir|zip>", func(ctx context.Context, args []string) error { return pluginDescribe(ctx, args, stdout) }},
 	})
 }
 
