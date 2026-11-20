@@ -22,7 +22,7 @@ The core declares these itself:
 | `sample-bound` | a change to what every slice reaches only through that code, or to what runs at start-up, runs a sample of the suite | 3 |
 | `plugin-entry` | a changed plugin entry (a pin, a checksum, its config block) runs a sample of each suite it reaches; what it left out is named under it | 4 |
 | `unobservable-edits` | a changed file whose sbom covers it whole, with every unit as it was, runs no slice of a recorded suite, only the checks that read its text | 4 |
-| `passed-since` | on a `last_passed` run, a slice is compared from the newer of the run's base and the commit where it last passed in that run, so a change it passed with doesn't run it again while another slice keeps the run red | 4 |
+| `passed-since` | on a `last_passed` run, a slice is compared from the newer of the run's base and the commit where it last passed in that run, so a change it passed with doesn't run it again while another slice keeps the run red; on a pull request, a slice that passed in its last build is carried over when nothing from the tree that build tested reaches it | 4 |
 | `build-files-by-targets` | a BUILD or `.bzl` file a recorded slice's filegroups hold is no data file of it: a changed rule reaches the slice through that rule, a changed member list as files added or removed | 5 |
 
 Each plugin declares its own narrowings, each with the level it is off
@@ -120,7 +120,8 @@ works that out before the sample is drawn:
   and its tests ran: a slice that ran no tests (`"tests": 0`) or was not
   run counts as no pass. A result says how many tests ran, not how many
   were skipped, so a pass in which some tests skipped still counts. Only the same run of the same branch
-  counts, never a nightly or a pull request.
+  counts, never a nightly or a pull request (a pull request carries over
+  from its own last build, [below](#a-pull-requests-later-builds)).
 - For the newest two commits at which some slice last passed, it plans
   what changed from there to the head, as it plans any change. A slice
   that passed at one of them and that this change doesn't reach is left
@@ -137,6 +138,53 @@ out. From level 4 every slice is compared from the run's base, as before,
 and the plan reads no records for it. Each of the two plans costs about
 what a plan of one commit costs, and less when that commit was planned on
 the same machine, since its hashes are cached.
+
+### A pull request's later builds
+
+A pull request's build compares the pull request merged into its target's
+tip with that tip (`compare: merged_target`), so each push runs every
+slice the whole pull request reaches, though most of them passed in the
+build before. While `passed-since` is on, a build carries over what its
+last build passed:
+
+- The last build is the newest earlier build of the same run and the same
+  pull request that has a result: a slice that ended, or one it carried
+  over. A build of another pull request, or of a branch, never counts.
+- The tree it tested is made again: its plan records the target's tip it
+  merged into (`base`), the pull request's commit (`merged`) and the
+  merge it tested (`head`), and the merge, made again the same way, must
+  be that very commit. A plan written by 0.5.0 or earlier doesn't record
+  the commit, so the first build after an upgrade carries nothing over.
+  When the commit can't be fetched (a force-push
+  dropped it and the host no longer serves it), the merge comes out
+  different, or the build's records are gone (`keep.runs`) or can't be
+  read whole, nothing is carried over, and the plan says why among its
+  warnings. A build with unreadable records is never passed over for an
+  older one.
+- The plan finds what changed from that tree to the one this build tests,
+  as it plans any change. That change holds what the pull request changed
+  since and what the target gained in between, a rebase or a force-push
+  included: the trees are compared, not the history.
+- A slice is carried over when it passed in the last build with its tests
+  run, or was carried over by it, and nothing in that change reaches it.
+  The slices that failed, errored, didn't run or weren't selected there
+  run, and so do those the change reaches. Like any narrowing, it only
+  leaves out what the pull request's own change selects.
+- A config that changed in between, a plan of everything either way, and
+  a suite whose checks of the whole suite would run carry nothing over.
+
+The plan names the narrowing and the build for each suite: "carried over
+from `<commit>`, the last build of `<change>`, where it passed: nothing
+from the tree that build tested (`<merge>`) to this one reaches it". The
+suite's and the run's statuses say "`<n>` carried over from `<commit>`",
+and `pipelinegen why` for a carried slice says the same, with how many
+slices of its suite were carried. From level 4 every build runs what the
+pull request reaches, and the plan reads no records for it; the level is
+the higher of the pull request's config and its target's, so a pull
+request that lowers `narrowing` doesn't switch the narrowing on for itself. Planning the
+change since the last build costs about what a plan of one commit costs,
+and less on the machine that planned the last build, since the hashes of
+the tree it tested are cached.
 
 ## Files that changed nothing observable
 
