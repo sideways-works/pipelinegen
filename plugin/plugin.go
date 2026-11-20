@@ -42,7 +42,7 @@ type Request = pk.Request
 
 // Description is the answer to describe.
 type Description struct {
-	ConnectorDescription
+	ForgeDescription
 	DriverDescription
 
 	Protocol     int         `json:"protocol"`
@@ -53,7 +53,7 @@ type Description struct {
 	Capabilities []string    `json:"capabilities"`
 	Narrowings   []Narrowing `json:"narrowings,omitempty"`
 	// ResourceTypes are, for a runner, the CI system's resource types its pipeline needs for a
-	// connector's run; a config that says its CI system lacks one is refused.
+	// forge's run; a config that says its CI system lacks one is refused.
 	ResourceTypes []string `json:"resource_types,omitempty"`
 	Needs         []string `json:"needs,omitempty"`
 	// Toolchains are the versions resolved for the plugin's needs ("go": "go1.27.1"), part of a

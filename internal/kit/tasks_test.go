@@ -147,7 +147,7 @@ func TestARunnersStepsShareTheirJobsArtifacts(t *testing.T) {
 		t.Errorf("calls:\n%s", strings.Join(got, "\n"))
 	}
 
-	if got := strings.Join(connectorProblems(text, runs), "; "); !strings.Contains(got, "plan --from false") {
+	if got := strings.Join(forgeProblems(text, runs), "; "); !strings.Contains(got, "plan --from false") {
 		t.Errorf("a chain without plan --from: %q", got)
 	}
 }

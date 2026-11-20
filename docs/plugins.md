@@ -22,7 +22,7 @@ store](writing-plugins/store.md)), and the other five are these:
 - a **driver** knows how a test tool runs: it runs a batch's slices and
   reports a result and a recording per slice, and a set-up driver starts
   what the tests need. It is the one kind that executes the tree's code;
-- a **connector** knows where the code lives: a git host's proposed
+- a **forge** knows where the code lives: a git host's proposed
   changes, statuses and comments. It sends no requests itself; the core
   sends them for it.
 
@@ -605,8 +605,8 @@ fixture tree of its own. It checks:
   runs the tasks for the spec
   and for its variants: an older tool's spec with a lock on every suite,
   per build and per batch, a pipeline that sets itself, a config that splits the token by purpose and, for a runner with
-  `connector_changes`, a pull request run whose changes come from a
-  connector; a planner whose prepare command has a git token of its own
+  `forge_changes`, a pull request run whose changes come from a
+  forge; a planner whose prepare command has a git token of its own
   (`git-auth`); for a runner with `steps`, suites run by drivers; and for a
   runner with `steps` and `packages`, suites with packages, one of them
   with a cached image, and planner packages, where every task the runner
@@ -630,7 +630,7 @@ fixture tree of its own. It checks:
   declares as a get of the same job already does, the same in everything
   but its name and `trigger`, under a name of its own, never triggers, and
   only a task's `image` and `input_mapping` may name it, in place of the
-  get it copies. The connector variant's pipeline sweeps the changes (`unplanned`),
+  get it copies. The forge variant's pipeline sweeps the changes (`unplanned`),
   plans them in two steps (`plan --out`, `plan --from`), and has no
   resource of the CI system's own pull request support. Each call names a command, subcommand and flags the tool
   running the kit has. Each step mounts every directory its call reads,
@@ -696,7 +696,7 @@ fixture tree of its own. It checks:
   directory, first, has another name and doesn't exist), but never answers
   an empty list for that recording against a tree it can't map it back to;
   `collect` with nothing running succeeds;
-- for a connector, every call goes through the core's own exchange, with
+- for a forge, every call goes through the core's own exchange, with
   every check of [what the core refuses](#what-the-core-refuses), against a
   fake host that serves the responses its fixture lists. `describe` names
   only known capabilities, needs no `store` token, names a header for
@@ -712,7 +712,7 @@ fixture tree of its own. It checks:
   changes it names in `same` must be reported as `same`.
   `status`, `statuses`, `subject` and `comment` answer, for the
   capabilities that need them, with statuses in the core's four states
-  and a subject on one line. Every request the connector makes must find
+  and a subject on one line. Every request the forge makes must find
   a response in the fixture.
 
 The cache checks run the plugin on copies of the fixture in the kit's work
@@ -736,12 +736,12 @@ check that never ran shows nothing: an sbom or a correlator run without
 names no recording. `plugin test` prints a line for every check it ran,
 and `skip` with the reason for one its options left out.
 
-A connector's fixture is the `connector` section of
+A forge's fixture is the `forge` section of
 `.pipelinegen-kit.json`. Wherever it says `{server}`, the kit puts the fake
 host's address:
 
 ```json
-{"connector": {
+{"forge": {
   "remote": "{server}/team/app.git",
   "config": {"api": "{server}/api"},
   "responses": [
@@ -753,9 +753,9 @@ host's address:
   "forks": ["pr-8"], "same": ["pr-7"]}}
 ```
 
-`config` goes over the plugin's config block, so a connector whose API
+`config` goes over the plugin's config block, so a forge whose API
 lives on another host (`api_hosts`) can be pointed at the fake one.
-A plain git connector's fixture has no responses: its `config` holds the
+A plain git forge's fixture has no responses: its `config` holds the
 `heads` the core would list with git, and `"no_forks"` says why no change
 comes from a fork.
 
@@ -1327,9 +1327,9 @@ the repository's own parts merged in.
   prints each once on stderr, `pipelinegen pipeline: runner <name>:
   <notice>`; `pipelinegen check` reports each as a `runner-notice`
   warning, which fails nothing; the kit checks that each is one line.
-- A run whose changes come from a connector has `connector` (its name)
+- A run whose changes come from a forge has `forge` (its name)
   and `sweep_every` on its trigger. A runner that builds the chain for it
-  says so with the capability `connector_changes`, and lists in
+  says so with the capability `forge_changes`, and lists in
   `resource_types` the CI system's own types the chain needs (Concourse's
   bundled `mock`). `pipelinegen pipeline` refuses such a run with a runner
   without the capability, and when the config's `concourse.mock` says the
@@ -1501,27 +1501,27 @@ A suite with several run steps names a `take` on each. `pipelinegen
 pipeline` refuses a suite with steps for a runner without the capability
 `steps`.
 
-## Connectors
+## Forges
 
-Not in a release yet: the core calls its connectors as plugins. The GitHub
-connector ([connector/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/github))
-serves a config's `github` section, and the git connector
-([connector/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/git))
-a plain git server under `connectors`. The core pins a release of each and
+Not in a release yet: the core calls its forges as plugins. The GitHub
+forge ([forge/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/github))
+serves a config's `github` section, and the git forge
+([forge/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/git))
+a plain git server under `forges`. The core pins a release of each and
 fetches the one a config uses, checked by its checksum.
 
-A connector tells pipelinegen where the code lives. It lists the proposed
+A forge tells pipelinegen where the code lives. It lists the proposed
 changes a run tests, reports commit statuses and keeps a comment on each
 change, and builds web links to a commit, a file or a change. A
-repository can have several connectors: one holds the code, and runs report
-to every connector that is set to report. Without a connector, only branch,
+repository can have several forges: one holds the code, and runs report
+to every forge that is set to report. Without a forge, only branch,
 timer and manual runs work.
 
-A connector talks to a host's API, but it never touches the network itself
+A forge talks to a host's API, but it never touches the network itself
 and never sees a token. It answers each call with the requests it wants
 sent, written as data. The core checks those requests, adds the token, sends
-them, and hands back the responses as files. The connector then either asks
-for more or gives its answer. A connector is third-party code, so it never
+them, and hands back the responses as files. The forge then either asks
+for more or gives its answer. A forge is third-party code, so it never
 holds a token it could send somewhere the core didn't agree to.
 
 ### Calls
@@ -1541,22 +1541,22 @@ for its number (`refs/pull/{id}/head`). When it is empty, the core fetches
 the head branch and checks that it holds the commit. A change is
 `{"id", "number", "base", "head", "head_branch", "draft", "labels",
 "from", "updated", "ready_since"}`. `id` is the change's kind and number
-on the host (`pr-7`, `mr-3`), and the core puts the connector's name in
-front of it. `filters` are the run's pull request filters. The connector
+on the host (`pr-7`, `mr-3`), and the core puts the forge's name in
+front of it. `filters` are the run's pull request filters. The forge
 may use them to list less, but the core applies them again to whatever
 comes back. One of them asks for something rather than narrowing:
 `ready_since: true` is set only for a run that tests a change once per
-ready, and only then does the connector tell each change's `ready_since`,
+ready, and only then does the forge tell each change's `ready_since`,
 since that may cost a request per change.
 
 `from` says where a change comes from: `same` (the code's own repository),
 `fork` or `unknown`. Only a change known to be `same` runs. `unknown`, and
 any other value, counts as a fork, so code nobody vouched for never gets a
-pipeline's credentials. A connector without the `forks` capability reports
+pipeline's credentials. A forge without the `forks` capability reports
 every change as `unknown`.
 
 `state` is one of the core's four: `pending`, `success`, `failure` and
-`error`. The connector maps them to its host's names. `comment` keeps one
+`error`. The forge maps them to its host's names. `comment` keeps one
 comment per change: it updates the oldest one whose body starts with
 `marker` (on a line of its own, or alone), creates it when there is none,
 and deletes the others that start with it. A comment that only quotes the
@@ -1564,7 +1564,7 @@ marker further down is someone else's and stays.
 
 ### Rounds
 
-A call goes in rounds. Each round starts the connector once, as for any
+A call goes in rounds. Each round starts the forge once, as for any
 other plugin, with this on stdin:
 
 ```json
@@ -1587,16 +1587,16 @@ and answers either with requests:
 ]}
 ```
 
-or with `{"done": <the call's answer>}`. The `config` is the connector's
+or with `{"done": <the call's answer>}`. The `config` is the forge's
 own block of the config, with the code's remote added as `remote`, so
 every call knows which repository it is about. The core fills that block
-from the trusted config and the step's environment: the GitHub connector's
+from the trusted config and the step's environment: the GitHub forge's
 `api` is `PIPELINEGEN_GITHUB_API`, or GitHub's own. A plain git server has
-no API to ask, so for the git connector the core lists the remote's
+no API to ask, so for the git forge the core lists the remote's
 branches with git and its read credential, and puts them in the block as
 `heads` (branch name to commit), beside the config's `branches` patterns
-and `links`; the git connector answers from them without a request. The
-core runs a change only at a branch git listed, at the commit git saw. A connector keeps no state between
+and `links`; the git forge answers from them without a request. The
+core runs a change only at a branch git listed, at the commit git saw. A forge keeps no state between
 rounds, so every round carries the call's arguments again, along with every
 response from every round before it, in order. A body is a file in the
 call's work directory, which every round shares, named by `body_file`. Following pages is just more
@@ -1606,16 +1606,16 @@ round, and the core refuses any request they make.
 A request without `auth` goes out without a token. With `auth`, the core
 puts the token for that purpose in the header `describe` names. The core
 also owns retries: on a server error, or on one of the host's rate limits,
-it waits and tries again, and the connector sees only the last response.
+it waits and tries again, and the forge sees only the last response.
 When a request still fails at the network level after its tries, the call
 fails.
 
 ### `describe`
 
-A connector's `describe` adds these to the common fields:
+A forge's `describe` adds these to the common fields:
 
 ```json
-{"protocol": 1, "kind": "connector", "name": "example-connector",
+{"protocol": 1, "kind": "forge", "name": "example-forge",
  "version": "v1.0.0",
  "capabilities": ["changes", "statuses", "comment", "draft", "labels",
                   "ready_since", "forks", "head_ref"],
@@ -1630,7 +1630,7 @@ A connector's `describe` adds these to the common fields:
 - `capabilities` say what the host can tell. `draft`, `labels` and
   `ready_since` are the ones a run's filters need: a config whose run
   filters on drafts, labels or `once_per_ready` fails validation when its
-  connector lacks the matching capability, because otherwise the run would
+  forge lacks the matching capability, because otherwise the run would
   test changes it means to skip.
 - `api_hosts` are hosts besides the code remote's that requests may go to.
   The config has to name each one again before any request goes there.
@@ -1638,10 +1638,10 @@ A connector's `describe` adds these to the common fields:
   `response_headers` are the ones handed back; the core drops the rest.
 - `auth` is where the token goes: `Authorization: Bearer <token>`, or
   `{"header": "PRIVATE-TOKEN"}` for a header holding the token alone.
-- `purposes` are the purposes the connector needs a token for. The config
+- `purposes` are the purposes the forge needs a token for. The config
   maps each to a CI var. `read` is for git fetching the code, never for an
   API request. The `store` purpose belongs to the store, never to a
-  connector.
+  forge.
 - `git_user` is the user name a git fetch over https sends along with the
   read token.
 - `limits` are what the host accepts: the longest status text and comment,
@@ -1691,7 +1691,7 @@ on the first one that breaks a rule:
 - the plugins' answer cache;
 - the narrowing level, the sample and the alarm;
 - plans, refs, statuses and the comment;
-- sending a connector's requests, with the tokens, retries and the checks
+- sending a forge's requests, with the tokens, retries and the checks
   on where they go;
 - the commands a pipeline's steps call;
 - the file-level check;

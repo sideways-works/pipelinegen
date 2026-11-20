@@ -1,8 +1,8 @@
 # Writing plugins
 
 These pages are for people who want to write a plugin: an sbom plugin, a
-correlator, a runner, a driver or a connector (for a git host:
-[a connector](connector.md)). Stores (for
+correlator, a runner, a driver or a forge (for a git host:
+[a forge](forge.md)). Stores (for
 where pipelinegen keeps its records) are a design ([a store](store.md)). They say how to build one and test it. The
 protocol itself, with every call and field and the rules every plugin
 keeps, is [plugins.md](../plugins.md); what plugins are and how a

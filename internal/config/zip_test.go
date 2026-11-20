@@ -30,7 +30,7 @@ func TestZipPinsAreRefused(t *testing.T) {
 		`{name: x, kind: sbom, zip: {url: "https://plugins.example/x.zip", sha256: ` + strings.ToUpper(zipSum) + `}}`: "64 lower-case hex digits",
 		`{name: x, kind: sbom, zip: {url: "https://plugins.example/x.zip"}}`:                                          "64 lower-case hex digits",
 		`{name: x, kind: sbom, zip: {url: "https://plugins.example/x.zip", sha256: ` + zipSum + `, size: 3}}`:         "field size not found",
-		`{name: github, kind: connector, zip: {url: "https://plugins.example/x.zip", sha256: ` + zipSum + `}}`:        "a connector entry needs a release",
+		`{name: github, kind: forge, zip: {url: "https://plugins.example/x.zip", sha256: ` + zipSum + `}}`:            "a forge entry needs a release",
 		"{name: x, kind: sbom, repository: o/x}":                                                                      "release (version and one of sha256 or sums), commit (40 hex) or zip (url and sha256)",
 	} {
 		_, err := Parse([]byte(withRuns + "plugins:\n  - " + bad + "\n"))

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/connector"
+	"github.com/sideways-works/pipelinegen/internal/forgeplugin"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/report"
 	"github.com/sideways-works/pipelinegen/internal/runs"
@@ -20,20 +20,20 @@ import (
 
 const defaultGitHubAPI = "https://api.github.com"
 
-// openConnector fetches and describes the connector the config pins under name, with options from the
+// openForge fetches and describes the forge the config pins under name, with options from the
 // trusted config and the step's environment alone.
-func openConnector(ctx context.Context, cfg *config.Config, name string, o connector.Options) (*connector.Host, error) {
-	path, err := connector.Fetch(ctx, &http.Client{Timeout: 5 * time.Minute}, pluginsDir(), defaultCache(), cfg.ConnectorPin(name))
+func openForge(ctx context.Context, cfg *config.Config, name string, o forgeplugin.Options) (*forgeplugin.Host, error) {
+	path, err := forgeplugin.Fetch(ctx, &http.Client{Timeout: 5 * time.Minute}, pluginsDir(), defaultCache(), cfg.ForgePin(name))
 	if err != nil {
 		return nil, err
 	}
 
 	o.Name, o.Path, o.Work = name, path, os.TempDir()
 
-	return connector.Open(ctx, o)
+	return forgeplugin.Open(ctx, o)
 }
 
-// gitHubHost is the github section's host: the GitHub connector, fetched and described on its first
+// gitHubHost is the github section's host: the GitHub forge, fetched and described on its first
 // call, so a step that never talks to GitHub never fetches it.
 type gitHubHost struct {
 	cfg    *config.Config
@@ -42,7 +42,7 @@ type gitHubHost struct {
 	tokens map[string]string
 
 	mu   sync.Mutex
-	host *connector.Host
+	host *forgeplugin.Host
 }
 
 // newGitHubHost reads the API from the step's environment, never from the
@@ -67,9 +67,9 @@ func newGitHubHost(cfg *config.Config) *gitHubHost {
 	}
 }
 
-// open keeps the connector once it opened, and tries again after a fetch
+// open keeps the forge once it opened, and tries again after a fetch
 // that failed.
-func (g *gitHubHost) open(ctx context.Context) (*connector.Host, error) {
+func (g *gitHubHost) open(ctx context.Context) (*forgeplugin.Host, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -77,7 +77,7 @@ func (g *gitHubHost) open(ctx context.Context) (*connector.Host, error) {
 		return g.host, nil
 	}
 
-	h, err := openConnector(ctx, g.cfg, config.ConnectorGitHub, connector.Options{
+	h, err := openForge(ctx, g.cfg, config.ForgeGitHub, forgeplugin.Options{
 		Config: map[string]any{"api": g.api}, Remote: g.remote, API: g.api, Tokens: g.tokens,
 	})
 	if err != nil {

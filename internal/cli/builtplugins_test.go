@@ -527,3 +527,14 @@ permissions:
 		t.Fatalf("a manifest that doesn't read: %d %s", code, stderr)
 	}
 }
+
+func TestAnotherSystemsManifestIsRefused(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "manifest.yaml"), "name: notify\nkind: notifier\nprogram: notify\nbuild:\n  image: "+shBuildImage+"\n  run: [\"true\"]\nplatforms: [any]\n")
+
+	for _, args := range [][]string{{"plugin", "describe", dir}, {"plugin", "build", dir, "--zip", filepath.Join(t.TempDir(), "x.zip")}} {
+		if _, stderr, code := run(t, args...); code == 0 || !strings.Contains(stderr, `kind "notifier" is not a pipelinegen plugin kind`) {
+			t.Errorf("%s: %d %s", args[1], code, stderr)
+		}
+	}
+}

@@ -106,4 +106,4 @@ out and what failed, with the failing tests' output.
 What a runner for another CI system must do is in [writing a
 runner](../writing-plugins/runner.md).
 
-Next: [connectors](connectors.md).
+Next: [forges](forges.md).

@@ -115,14 +115,14 @@ from, like every key that shapes the pipeline: a proposed change's own
 
 ## What a proposed change's config can't change
 
-A proposed change is a pull request, a change a connector lists, or a
+A proposed change is a pull request, a change a forge lists, or a
 branch's commit that pipelinegen can't show is on the branch. Its run
 reads the change's own `pipelinegen.yaml`, so these keys come from the
 config the pipeline was made from instead: `git.remote`, `git.ssh_key`,
 `git.known_hosts`, `github.repository`, `github.token` and
 `github.tokens`, `github.status_prefix`, `store.backend`, `store.branch`,
 `bazel_diff`, `bazel.bazelisk`, `bazel.startup_flags`, the plugins' pins,
-`concourse.planner.bootstrap`, the `connectors` except their `links`,
+`concourse.planner.bootstrap`, the `forges` except their `links`,
 `concourse.branch`, each runner's `config` block, the runner each run
 names in `runs.<name>.runner`, and the suites each run names (a change may
 add to them, never take one out). Together they say

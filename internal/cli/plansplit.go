@@ -88,7 +88,7 @@ func planOut(ctx context.Context, cfg *config.Config, ch runs.Change, store *git
 }
 
 func admitted(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, stdout io.Writer) (bool, error) {
-	if ch.Connector != "" {
+	if ch.Forge != "" {
 		return stillTheHead(ctx, cfg, ch, stdout)
 	}
 
@@ -122,7 +122,7 @@ func stillTheHead(ctx context.Context, cfg *config.Config, ch runs.Change, stdou
 	return true, nil
 }
 
-// The first step may hold the read token alone, which no connector call carries: it plans without
+// The first step may hold the read token alone, which no forge call carries: it plans without
 // asking, and the second step asks with the changes token.
 func admittedFirst(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, stdout io.Writer) (bool, error) {
 	if ch.PR == 0 || tokenFor(cfg, plugin.PurposeChanges) != "" {

@@ -24,7 +24,7 @@ type Trusted struct {
 	StartupFlags    []string        `json:"bazel_startup_flags,omitempty"`
 	Plugins         []TrustedPlugin `json:"plugins,omitempty"`
 	Bootstrap       json.RawMessage `json:"concourse_planner_bootstrap,omitempty"`
-	Connectors      []Connector     `json:"connectors,omitempty"`
+	Forges          []Forge         `json:"forges,omitempty"`
 	ConcourseBranch string          `json:"concourse_branch,omitempty"`
 	// RunSuites are the suites each run names; a change can't take a suite out of its own run.
 	RunSuites    map[string][]string `json:"run_suites,omitempty"`
@@ -74,10 +74,10 @@ func (c *Config) Trusted() Trusted {
 
 	sort.Slice(t.Plugins, func(i, j int) bool { return t.Plugins[i].Name < t.Plugins[j].Name })
 
-	for _, cn := range c.Connectors {
-		// a connector's web links move no credential and no write
+	for _, cn := range c.Forges {
+		// a forge's web links move no credential and no write
 		cn.Links = ""
-		t.Connectors = append(t.Connectors, cn)
+		t.Forges = append(t.Forges, cn)
 	}
 
 	for _, name := range c.RunNames() {
@@ -122,13 +122,13 @@ func (c *Config) WithTrusted(t Trusted) []string {
 	same("bazel.startup_flags", own.StartupFlags, t.StartupFlags)
 	same("plugins", comparedPlugins(own.Plugins), comparedPlugins(t.Plugins))
 	same("concourse.planner.bootstrap", own.Bootstrap, t.Bootstrap)
-	same("connectors", own.Connectors, t.Connectors)
+	same("forges", own.Forges, t.Forges)
 	same("concourse.branch", own.ConcourseBranch, t.ConcourseBranch)
 	same("suites.*.steps", own.Steps, t.Steps)
 
 	c.trustPlain(t)
 	c.trustPlugins(t.Plugins)
-	c.trustConnectors(t.Connectors)
+	c.trustForges(t.Forges)
 	c.trustSteps(t.Steps)
 
 	if t.RunnerConfigs != nil {
@@ -227,16 +227,16 @@ func (c *Config) trustPlugins(trusted []TrustedPlugin) {
 	c.Plugins = kept
 }
 
-func (c *Config) trustConnectors(trusted []Connector) {
+func (c *Config) trustForges(trusted []Forge) {
 	links := map[string]string{}
-	for _, cn := range c.Connectors {
+	for _, cn := range c.Forges {
 		links[cn.Name] = cn.Links
 	}
 
-	c.Connectors = nil
+	c.Forges = nil
 
 	for _, cn := range trusted {
 		cn.Links = links[cn.Name]
-		c.Connectors = append(c.Connectors, cn)
+		c.Forges = append(c.Forges, cn)
 	}
 }

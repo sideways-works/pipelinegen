@@ -1,4 +1,4 @@
-package connector
+package forgeplugin
 
 import (
 	"crypto/sha256"
@@ -49,17 +49,17 @@ func newReleases(t *testing.T, files map[string][]byte) *releases {
 	return r
 }
 
-const binaryPath = "/team/pipelinegen-connector-github/releases/download/v0.1.0/github-connector-" + runtime.GOOS + "-" + runtime.GOARCH
+const binaryPath = "/team/pipelinegen-forge-github/releases/download/v0.1.0/github-forge-" + runtime.GOOS + "-" + runtime.GOARCH
 
-func pinOf(r *releases, sum string) config.ConnectorPin {
-	return config.ConnectorPin{
-		Name: "github", Repository: "team/pipelinegen-connector-github", Version: "v0.1.0",
+func pinOf(r *releases, sum string) config.ForgePin {
+	return config.ForgePin{
+		Name: "github", Repository: "team/pipelinegen-forge-github", Version: "v0.1.0",
 		SHA256: config.Checksums{config.Platform(): sum}, URL: r.URL + "/%s/releases/download/%s/%s",
 	}
 }
 
 func TestFetchChecksAndKeepsTheBinary(t *testing.T) {
-	bin := []byte("#!/bin/sh\necho connector\n")
+	bin := []byte("#!/bin/sh\necho forge\n")
 	r := newReleases(t, map[string][]byte{binaryPath: bin})
 	cache := t.TempDir()
 
@@ -85,7 +85,7 @@ func TestFetchRefusesAnotherBinary(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 
-	if left, _ := filepath.Glob(filepath.Join(cache, "connectors", "*", "*")); len(left) != 0 { //nolint:errcheck // a valid pattern
+	if left, _ := filepath.Glob(filepath.Join(cache, "forges", "*", "*")); len(left) != 0 { //nolint:errcheck // a valid pattern
 		t.Fatalf("kept %v", left)
 	}
 }
@@ -93,7 +93,7 @@ func TestFetchRefusesAnotherBinary(t *testing.T) {
 func TestFetchRefusesAPinWithoutAChecksum(t *testing.T) {
 	r := newReleases(t, nil)
 
-	for _, pin := range []config.ConnectorPin{pinOf(r, "TODO"), pinOf(r, "")} {
+	for _, pin := range []config.ForgePin{pinOf(r, "TODO"), pinOf(r, "")} {
 		if _, err := Fetch(t.Context(), r.Client(), "", t.TempDir(), pin); !errors.Is(err, ErrPin) || r.hits.Load() != 0 {
 			t.Fatalf("%+v: %v, %d downloads", pin, err, r.hits.Load())
 		}
@@ -126,8 +126,8 @@ func TestFetchTakesTheBootstrapsCopy(t *testing.T) {
 
 func TestFetchBySums(t *testing.T) {
 	bin := []byte("pinned")
-	sums := []byte(hexSum(bin) + "  github-connector-" + runtime.GOOS + "-" + runtime.GOARCH + "\n" + hexSum([]byte("x")) + "  github-connector-plan9-mips\n")
-	r := newReleases(t, map[string][]byte{binaryPath: bin, "/team/pipelinegen-connector-github/releases/download/v0.1.0/SHA256SUMS": sums})
+	sums := []byte(hexSum(bin) + "  github-forge-" + runtime.GOOS + "-" + runtime.GOARCH + "\n" + hexSum([]byte("x")) + "  github-forge-plan9-mips\n")
+	r := newReleases(t, map[string][]byte{binaryPath: bin, "/team/pipelinegen-forge-github/releases/download/v0.1.0/SHA256SUMS": sums})
 
 	pin := pinOf(r, "")
 	pin.SHA256, pin.Sums = nil, hexSum(sums)

@@ -177,9 +177,9 @@ func TestAProposedChangesTrustedStepsAreNoDifference(t *testing.T) {
 	}
 }
 
-func TestAConnectorsPinMeansNothing(t *testing.T) {
+func TestAForgesPinMeansNothing(t *testing.T) {
 	entry := func(version string) string {
-		return "plugins:\n  - {name: github, kind: connector, repository: o/pipelinegen-connector-github, release: {version: " + version + ", sha256: " + sha + "}}\n"
+		return "plugins:\n  - {name: github, kind: forge, repository: o/pipelinegen-forge-github, release: {version: " + version + ", sha256: " + sha + "}}\n"
 	}
 
 	for _, base := range [][]string{nil, {"plugins:\n", entry("v1")}} {

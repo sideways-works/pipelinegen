@@ -19,6 +19,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/sideways-works/pipelinegen/internal/gitssh"
+	"github.com/sideways-works/pipelinegen/plugin"
 )
 
 const FileName = "pipelinegen.yaml"
@@ -75,7 +76,7 @@ type Config struct {
 	ExplainLimit *int             `yaml:"explain_limit"`
 	SampleOn     []string         `yaml:"sample_on"`
 	Plugins      []Plugin         `yaml:"plugins"`
-	Connectors   []Connector      `yaml:"connectors"`
+	Forges       []Forge          `yaml:"forges"`
 	Generated    []map[string]any `yaml:"generated"`
 
 	// groupProblems are what replacing the plugins' groups by their entries met.
@@ -646,6 +647,10 @@ func Parse(data []byte) (*Config, error) {
 		return nil, errors.Join(errs...)
 	}
 
+	if err := retiredForges(data); err != nil {
+		return nil, err
+	}
+
 	var c Config
 
 	dec := yaml.NewDecoder(bytes.NewReader(data))
@@ -878,7 +883,7 @@ func (c *Config) Validate() error {
 	c.validateUntested(bad)
 	c.validateMacros(bad)
 	c.validateRuns(bad)
-	c.validateConnectors(bad)
+	c.validateForges(bad)
 	c.validateSSH(bad)
 	c.validateSuiteSecrets(bad)
 
@@ -1266,13 +1271,13 @@ func (c *Config) validatePlugins(bad func(string, ...any)) {
 		case strings.HasPrefix(p.Name, ".") || strings.ContainsAny(p.Name, `/\`):
 			// a plugin's directory in a cache is its name, beside the plugin store's own, which start with a dot
 			bad("plugin %q: a name may not start with a dot or hold a slash", p.Name)
-		case p.Kind != KindCorrelator && p.Kind != KindSBOM && p.Kind != KindRunner && p.Kind != KindDriver && p.Kind != KindConnector:
-			bad("plugin %s: kind must be correlator, sbom, runner, driver or connector", p.Name)
-		case p.Kind == KindConnector && p.Name != ConnectorGitHub && p.Name != ConnectorGit:
-			bad("plugin %s: a connector entry pins the %s or %s connector, by that name", p.Name, ConnectorGitHub, ConnectorGit)
-		case p.Kind == KindConnector && (p.Release == nil || len(p.Config) > 0):
-			bad("plugin %s: a connector entry needs a release (version and one of sha256 or sums), and takes no config: "+
-				"the github section and connectors say where the code lives", p.Name)
+		case plugin.CheckKind(p.Kind) != nil:
+			bad("plugin %s: %v", p.Name, plugin.CheckKind(p.Kind))
+		case p.Kind == KindForge && p.Name != ForgeGitHub && p.Name != ForgeGit:
+			bad("plugin %s: a forge entry pins the %s or %s forge, by that name", p.Name, ForgeGitHub, ForgeGit)
+		case p.Kind == KindForge && (p.Release == nil || len(p.Config) > 0):
+			bad("plugin %s: a forge entry needs a release (version and one of sha256 or sums), and takes no config: "+
+				"the github section and forges say where the code lives", p.Name)
 		case p.Kind == KindDriver && p.Name == BuiltinCommand:
 			bad("plugin %s: %s is the driver built into pipelinegen; give the entry another name", p.Name, BuiltinCommand)
 		default:

@@ -36,12 +36,12 @@ both spell an ID the same way:
 | PostgreSQL | `pg-sbom` | `sql-correlator`, `gorm-correlator` |
 | OpenAPI | `openapi-sbom` | `oapi-codegen-correlator` |
 
-The other two are a connector, for a git host
-([connectors](../concepts/connectors.md)), and a store, which is a design
+The other two are a forge, for a git host
+([forges](../concepts/forges.md)), and a store, which is a design
 ([the store](../concepts/the-store.md)). pipelinegen pins the GitHub and
-git connectors itself and fetches the one a config uses; a `plugins` entry
-of kind `connector` pins another release
-([`connectors`](../reference/config.md#pinning-a-connector)).
+git forges itself and fetches the one a config uses; a `plugins` entry
+of kind `forge` pins another release
+([`forges`](../reference/config.md#pinning-a-forge)).
 
 The one runner is `concourse-runner`. The drivers are go, bazel and
 playwright, and the command driver comes with pipelinegen itself. Each plugin's own README says what it
@@ -133,7 +133,7 @@ plugins:
 ```
 
 A plugin's directory names its program kind first: `KIND/NAME`, KIND one
-of sbom, correlator, runner, driver or connector, holds the program
+of sbom, correlator, runner, driver or forge, holds the program
 `NAME-KIND`, whose release files are `NAME-KIND-linux-amd64` (or
 `NAME-KIND.mjs`). So `sbom/go` holds `go-sbom`, and
 `correlator/oapi-codegen` holds `oapi-codegen-correlator`. A plugin in a

@@ -43,20 +43,20 @@ func pushBranch(t *testing.T, remote, branch string, content ...string) string {
 	return gitIn("rev-parse", "HEAD")
 }
 
-func gitConnectorConfig(t *testing.T, root, remote string) {
+func gitForgeConfig(t *testing.T, root, remote string) {
 	t.Helper()
 
 	cfg := strings.NewReplacer(
-		"github: {repository: o/r, token: gh}", "git: {remote: \""+remote+"\"}\nconnectors:\n  - {name: git, plugin: git, changes: {branches: [\"review/*\"]}}",
+		"github: {repository: o/r, token: gh}", "git: {remote: \""+remote+"\"}\nforges:\n  - {name: git, plugin: git, changes: {branches: [\"review/*\"]}}",
 		"trigger: {pull_requests: {base: main, draft: false}}", "trigger: {changes: {base: main, head: \"review/c*\"}}",
 		"\n    report: {comment: {format: list}}", "",
 	).Replace(readFile(t, filepath.Join(root, "pipelinegen.yaml")))
 	writeFile(t, filepath.Join(root, "pipelinegen.yaml"), cfg)
 }
 
-func TestTheSweepTakesChangesFromTheConnector(t *testing.T) {
+func TestTheSweepTakesChangesFromTheForge(t *testing.T) {
 	root, _, s := runEnv(t)
-	gitConnectorConfig(t, root, s.Remote)
+	gitForgeConfig(t, root, s.Remote)
 
 	heads := map[string]string{}
 	for _, b := range []string{"main", "review/cart", "review/coupon", "review/docs", "personal/wip"} {
@@ -90,7 +90,7 @@ func TestTheSweepTakesChangesFromTheConnector(t *testing.T) {
 	ch, err := runs.ReadRunFile(filepath.Join(cart, runs.RunFile))
 	want := runs.Change{
 		Run: "pr", ID: "git/branch-review%2Fcart", Commit: heads["review/cart"], Branch: "review/cart", Base: "main",
-		Connector: "git", Remote: s.Remote,
+		Forge: "git", Remote: s.Remote,
 	}
 
 	handed := ch.Handed
@@ -118,9 +118,9 @@ func TestTheSweepTakesChangesFromTheConnector(t *testing.T) {
 	}
 }
 
-func TestTheSweepHandsAConnectorsHeadOffAgain(t *testing.T) {
+func TestTheSweepHandsAForgesHeadOffAgain(t *testing.T) {
 	root, _, s := runEnv(t)
-	gitConnectorConfig(t, root, s.Remote)
+	gitForgeConfig(t, root, s.Remote)
 	writeFile(t, filepath.Join(root, "pipelinegen.yaml"),
 		strings.Replace(readFile(t, filepath.Join(root, "pipelinegen.yaml")), `head: "review/c*"}`, `head: "review/c*", missed_after: 1h}`, 1))
 
@@ -149,7 +149,7 @@ func TestTheSweepReadsAnSSHServer(t *testing.T) {
 
 	bare := strings.TrimPrefix(s.Remote, "file://")
 	sshRemote := "ssh://git@git.example.test" + bare
-	gitConnectorConfig(t, root, sshRemote)
+	gitForgeConfig(t, root, sshRemote)
 	writeFile(t, filepath.Join(root, "pipelinegen.yaml"), strings.Replace(readFile(t, filepath.Join(root, "pipelinegen.yaml")),
 		`git: {remote: "`+sshRemote+`"}`,
 		`git: {remote: "`+sshRemote+`", ssh_key: deploy_key, known_hosts: ["git.example.test ssh-ed25519 AAAAtestkey"]}`, 1))

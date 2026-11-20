@@ -1,4 +1,4 @@
-package connector
+package forgeplugin
 
 import (
 	"strings"
@@ -25,7 +25,7 @@ func TestFilterProblems(t *testing.T) {
 	}
 
 	got := FilterProblems(d, []string{"draft", "once_per_ready", "colour"})
-	if len(got) != 3 || !strings.Contains(strings.Join(got, "\n"), `draft needs the connector's "draft" capability, which plain doesn't declare`) ||
+	if len(got) != 3 || !strings.Contains(strings.Join(got, "\n"), `draft needs the forge's "draft" capability, which plain doesn't declare`) ||
 		!strings.Contains(strings.Join(got, "\n"), `"ready_since"`) || !strings.Contains(strings.Join(got, "\n"), "colour is no pull request filter") {
 		t.Fatalf("%v", got)
 	}

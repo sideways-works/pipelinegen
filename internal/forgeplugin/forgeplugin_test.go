@@ -1,4 +1,4 @@
-package connector
+package forgeplugin
 
 import (
 	"encoding/json"
@@ -32,10 +32,10 @@ type seen struct {
 	Body    string            `json:"body"`
 }
 
-// TestMain lets the test binary act as a connector when asked, so the
+// TestMain lets the test binary act as a forge when asked, so the
 // exchange calls a real executable, round by round, keeping no state.
 func TestMain(m *testing.M) {
-	if os.Getenv("CONNECTOR_TEST_SERVE") == "" {
+	if os.Getenv("FORGE_TEST_SERVE") == "" {
 		os.Exit(m.Run())
 	}
 
@@ -95,7 +95,7 @@ func TestMain(m *testing.M) {
 	}
 
 	handlers := map[string]plugin.Handler{}
-	for _, c := range plugin.ConnectorCalls {
+	for _, c := range plugin.ForgeCalls {
 		handlers[c] = handle
 	}
 
@@ -107,7 +107,7 @@ const (
 	reportToken  = "report-token-value-77ab"
 )
 
-func fakeConnector(t *testing.T) plugin.Plugin {
+func fakeForge(t *testing.T) plugin.Plugin {
 	t.Helper()
 
 	self, err := os.Executable()
@@ -115,12 +115,12 @@ func fakeConnector(t *testing.T) plugin.Plugin {
 		t.Fatal(err)
 	}
 
-	path := filepath.Join(t.TempDir(), "fake-connector")
-	if err := testenv.WriteExecutable(t.Context(), path, []byte("#!/bin/sh\nCONNECTOR_TEST_SERVE=1 exec '"+self+"' \"$@\"\n")); err != nil {
+	path := filepath.Join(t.TempDir(), "fake-forge")
+	if err := testenv.WriteExecutable(t.Context(), path, []byte("#!/bin/sh\nFORGE_TEST_SERVE=1 exec '"+self+"' \"$@\"\n")); err != nil {
 		t.Fatal(err)
 	}
 
-	return plugin.Plugin{Name: "fake-connector", Path: path}
+	return plugin.Plugin{Name: "fake-forge", Path: path}
 }
 
 type host struct {
@@ -187,12 +187,12 @@ func newExchange(t *testing.T, h *host) *Exchange {
 	}
 
 	desc := plugin.Description{
-		Kind: plugin.KindConnector, Auth: &plugin.ConnectorAuth{Header: "Authorization", Scheme: "Bearer"},
+		Kind: plugin.KindForge, Auth: &plugin.ForgeAuth{Header: "Authorization", Scheme: "Bearer"},
 		RequestHeaders: []string{"Accept"}, ResponseHeaders: []string{"Link"},
 	}
 
 	return &Exchange{
-		Plugin: fakeConnector(t), Desc: desc, Hosts: hosts,
+		Plugin: fakeForge(t), Desc: desc, Hosts: hosts,
 		Tokens: map[string]string{plugin.PurposeChanges: changesToken, plugin.PurposeReport: reportToken},
 		pause:  time.Millisecond, maxWait: 20 * time.Millisecond,
 	}
@@ -260,7 +260,7 @@ func TestExchangeCustomAuthHeader(t *testing.T) {
 
 	h := newHost(t, nil)
 	e := newExchange(t, h)
-	e.Desc.Auth = &plugin.ConnectorAuth{Header: "PRIVATE-TOKEN"}
+	e.Desc.Auth = &plugin.ForgeAuth{Header: "PRIVATE-TOKEN"}
 
 	if _, err := run(t, e, plugin.CallStatus, script{Rounds: [][]plugin.HTTPRequest{{get("s", h.URL+"/s", plugin.PurposeReport)}}}); err != nil {
 		t.Fatal(err)
@@ -318,7 +318,7 @@ func TestAllowedAPIHosts(t *testing.T) {
 	}
 }
 
-func TestConnectorHoldsNoToken(t *testing.T) {
+func TestForgeHoldsNoToken(t *testing.T) {
 	t.Setenv("GITHUB_TOKEN", changesToken)
 
 	h := newHost(t, nil)
@@ -388,18 +388,18 @@ func TestEveryCallKnowsTheRemote(t *testing.T) {
 	}
 
 	if _, ok := e.Plugin.Config["remote"]; ok {
-		t.Error("the connector's own block was changed")
+		t.Error("the forge's own block was changed")
 	}
 }
 
-// A refusal reads as it always has, naming the connector.
-func TestARefusalNamesTheConnector(t *testing.T) {
+// A refusal reads as it always has, naming the forge.
+func TestARefusalNamesTheForge(t *testing.T) {
 	t.Parallel()
 
 	h := newHost(t, nil)
 
 	_, err := run(t, newExchange(t, h), plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{get("a", "file:///etc/passwd", "")}}})
-	if !errors.Is(err, ErrRefused) || err.Error() != `connector request refused: fake-connector changes: request "a": scheme "file"` {
+	if !errors.Is(err, ErrRefused) || err.Error() != `forge request refused: fake-forge changes: request "a": scheme "file"` {
 		t.Fatalf("%v", err)
 	}
 
@@ -410,7 +410,7 @@ func TestARefusalNamesTheConnector(t *testing.T) {
 	e.Desc.RequestHeaders = []string{"Cookie"}
 
 	_, err = run(t, e, plugin.CallChanges, script{Rounds: [][]plugin.HTTPRequest{{r}}})
-	if err == nil || err.Error() != `connector request refused: fake-connector changes: request "h": header Cookie is never set by a connector` {
+	if err == nil || err.Error() != `forge request refused: fake-forge changes: request "h": header Cookie is never set by a forge` {
 		t.Fatalf("%v", err)
 	}
 

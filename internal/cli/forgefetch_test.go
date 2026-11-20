@@ -24,9 +24,9 @@ func startedRun(t *testing.T) (string, *githubAPI) {
 	return root, api
 }
 
-// A config with a github section and no connector entry reports through the pinned GitHub connector,
+// A config with a github section and no forge entry reports through the pinned GitHub forge,
 // downloaded into pipelinegen's cache and checked by its checksum, as a step without the bootstrap's does.
-func TestAGitHubConfigReportsThroughTheFetchedConnector(t *testing.T) {
+func TestAGitHubConfigReportsThroughTheFetchedForge(t *testing.T) {
 	root, api := startedRun(t)
 
 	cache := t.TempDir()
@@ -41,29 +41,29 @@ func TestAGitHubConfigReportsThroughTheFetchedConnector(t *testing.T) {
 		t.Fatalf("status: %q", got)
 	}
 
-	pin := config.PinnedConnectors[config.ConnectorGitHub]
+	pin := config.PinnedForges[config.ForgeGitHub]
 	sum, _ := pin.SHA256.For(config.Platform())
 
-	if _, err := os.Stat(filepath.Join(cache, "pipelinegen", "connectors", sum, "github-connector")); err != nil {
-		t.Fatalf("the connector isn't in the cache: %v", err)
+	if _, err := os.Stat(filepath.Join(cache, "pipelinegen", "forges", sum, "github-forge")); err != nil {
+		t.Fatalf("the forge isn't in the cache: %v", err)
 	}
 }
 
-// A connector whose binary isn't the one its pin names never runs: the
+// A forge whose binary isn't the one its pin names never runs: the
 // step fails, and nothing reaches GitHub.
-func TestAConnectorThatIsNotItsPinNeverRuns(t *testing.T) {
+func TestAForgeThatIsNotItsPinNeverRuns(t *testing.T) {
 	root, api := startedRun(t)
 
 	t.Setenv("XDG_CACHE_HOME", t.TempDir())
 	t.Chdir(t.TempDir())
 
-	pin := config.PinnedConnectors[config.ConnectorGitHub]
+	pin := config.PinnedForges[config.ForgeGitHub]
 
-	t.Cleanup(func() { config.PinnedConnectors[config.ConnectorGitHub] = pin })
+	t.Cleanup(func() { config.PinnedForges[config.ForgeGitHub] = pin })
 
 	wrong := pin
 	wrong.SHA256 = config.Checksums{config.Platform(): strings.Repeat("0", 64)}
-	config.PinnedConnectors[config.ConnectorGitHub] = wrong
+	config.PinnedForges[config.ForgeGitHub] = wrong
 
 	if _, stderr, code := run(t, "report", "start", "-root", root); code == 0 || !strings.Contains(stderr, "checksum") {
 		t.Fatalf("start: %d %s", code, stderr)

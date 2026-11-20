@@ -269,7 +269,7 @@ and what the repository's own tasks get in
 
 The kit checks the pipeline your runner writes for its fixture spec and
 its variants (an older tool's spec with a lock on every suite, per build
-and per batch, set by itself, tokens by purpose, a connector's changes, a
+and per batch, set by itself, tokens by purpose, a forge's changes, a
 continuous run, suites run by drivers, and packages with cached images, the
 last four only when the runner declares them; with packages every task the
 runner writes that runs pipelinegen installs its packages first, every

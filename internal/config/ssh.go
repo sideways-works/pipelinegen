@@ -71,7 +71,7 @@ func (c *Config) sshRemotes() []string {
 		out = append(out, c.Git.Remote)
 	}
 
-	for _, cn := range c.Connectors {
+	for _, cn := range c.Forges {
 		if gitssh.IsSSH(cn.Remote) {
 			out = append(out, cn.Remote)
 		}

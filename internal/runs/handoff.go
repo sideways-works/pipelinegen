@@ -15,11 +15,11 @@ var ErrSuperseded = errors.New("superseded, not run")
 
 var errBadBranch = errors.New("not a branch name")
 
-// IsHandOff tells whether a trigger is a connector's hand-off: a run.json
+// IsHandOff tells whether a trigger is a forge's hand-off: a run.json
 // and no checkout.
 func IsHandOff(dir string) bool { return triggerForm(dir) == formHandOff }
 
-// CheckoutChange makes empty dir a checkout of a connector's change from the trusted sweep's remote,
+// CheckoutChange makes empty dir a checkout of a forge's change from the trusted sweep's remote,
 // its tip required to be the change's head; the credential reaches git through the environment alone.
 func CheckoutChange(ctx context.Context, dir string, ch Change, auth Auth) error {
 	if err := checkBranch(ctx, ch.Branch); err != nil {

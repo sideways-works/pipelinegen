@@ -1,4 +1,4 @@
-package connector
+package forgeplugin
 
 import (
 	"context"
@@ -17,14 +17,14 @@ var ErrChecksum = fetch.ErrChecksum
 // ErrPin is a pin no binary can be checked against.
 var ErrPin = fetch.ErrPin
 
-// Program is the name of a pinned connector's program, which names its
+// Program is the name of a pinned forge's program, which names its
 // release files.
-func Program(c config.ConnectorPin) string { return c.Program() }
+func Program(c config.ForgePin) string { return c.Program() }
 
-// Fetch returns the pinned connector's binary: dir's copy (filled by a pipeline's bootstrap) when it matches,
+// Fetch returns the pinned forge's binary: dir's copy (filled by a pipeline's bootstrap) when it matches,
 // else cacheDir's, else one downloaded there and checked; a binary that doesn't match its pin never runs.
-func Fetch(ctx context.Context, client *http.Client, dir, cacheDir string, c config.ConnectorPin) (string, error) {
-	f := fetch.Fetcher{Client: client, Cache: cacheDir, Under: "connectors"}
+func Fetch(ctx context.Context, client *http.Client, dir, cacheDir string, c config.ForgePin) (string, error) {
+	f := fetch.Fetcher{Client: client, Cache: cacheDir, Under: "forges"}
 	p := pin.Pin{
 		Name: c.Name, Repository: c.Repository, Path: c.Path, Version: c.Version, Program: Program(c),
 		SHA256: pin.Checksums(c.SHA256), Sums: c.Sums, URL: c.URL,
@@ -49,6 +49,6 @@ func Fetch(ctx context.Context, client *http.Client, dir, cacheDir string, c con
 	return got.Path, nil
 }
 
-func hint(c config.ConnectorPin, err error) error {
-	return fmt.Errorf("connector %s: %w", c.Name, err)
+func hint(c config.ForgePin, err error) error {
+	return fmt.Errorf("forge %s: %w", c.Name, err)
 }

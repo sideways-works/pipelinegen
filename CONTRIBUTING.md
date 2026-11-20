@@ -51,9 +51,9 @@ task files for a CI worker.
   checksum. `PIPELINEGEN_TEST_BAZEL_DIFF` names another binary. A test
   without them fails rather than skips; only `-short` leaves Bazel out.
 - Tests that talk to a fake GitHub or a plain git server run the GitHub
-  and git connectors as a step does: downloaded from a release and checked
-  by their pins. `PIPELINEGEN_TEST_GITHUB_CONNECTOR` and
-  `PIPELINEGEN_TEST_GIT_CONNECTOR` name binaries built from the connectors'
+  and git forges as a step does: downloaded from a release and checked
+  by their pins. `PIPELINEGEN_TEST_GITHUB_FORGE` and
+  `PIPELINEGEN_TEST_GIT_FORGE` name binaries built from the forges'
   repositories, which the tests serve in place of the pinned releases.
 - `TEST_TMPDIR` keeps Bazel's output in a directory of your own instead of
   `~/.cache/bazel`.

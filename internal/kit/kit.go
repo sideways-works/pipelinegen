@@ -118,8 +118,8 @@ func Run(ctx context.Context, o Options) []Result {
 		k.sbom(ctx)
 	case plugin.KindCorrelator:
 		k.correlator(ctx)
-	case plugin.KindConnector:
-		k.connector(ctx)
+	case plugin.KindForge:
+		k.forge(ctx)
 	case plugin.KindDriver:
 		k.driverChecks(ctx)
 	}
@@ -166,7 +166,7 @@ func (k *kit) describe(ctx context.Context) bool {
 		problems = append(problems, fmt.Sprintf("protocol %d, not %d", d.Protocol, plugin.Protocol))
 	}
 
-	if !slices.Contains([]string{plugin.KindRunner, plugin.KindSBOM, plugin.KindCorrelator, plugin.KindConnector, plugin.KindDriver}, d.Kind) {
+	if !slices.Contains([]string{plugin.KindRunner, plugin.KindSBOM, plugin.KindCorrelator, plugin.KindForge, plugin.KindDriver}, d.Kind) {
 		problems = append(problems, fmt.Sprintf("kind %q", d.Kind))
 	}
 
@@ -202,12 +202,12 @@ func (k *kit) describe(ctx context.Context) bool {
 		problems = append(problems, "only a driver renders")
 	}
 
-	if d.Kind == plugin.KindConnector {
+	if d.Kind == plugin.KindForge {
 		if len(d.Namespaces) > 0 {
-			problems = append(problems, "a connector owns no namespace")
+			problems = append(problems, "a forge owns no namespace")
 		}
 
-		problems = append(problems, describeConnector(d)...)
+		problems = append(problems, describeForge(d)...)
 	}
 
 	if d.Kind == plugin.KindDriver {
@@ -232,7 +232,7 @@ func (k *kit) refusals(ctx context.Context) {
 		plugin.KindRunner:     plugin.CallUnits,
 		plugin.KindSBOM:       plugin.CallPipeline,
 		plugin.KindCorrelator: plugin.CallPipeline,
-		plugin.KindConnector:  plugin.CallPipeline,
+		plugin.KindForge:      plugin.CallPipeline,
 		plugin.KindDriver:     plugin.CallUnits,
 	}
 
@@ -317,9 +317,9 @@ func (k *kit) steps(ctx context.Context, root string, plain []byte) {
 	seen := map[string]bool{}
 
 	for _, v := range specVariants() {
-		// a runner that builds no connector's chain is refused such a run
+		// a runner that builds no forge's chain is refused such a run
 		// by pipelinegen pipeline before it is asked
-		if v.name == connectorRun && !k.can(plugin.CapConnectorChanges) {
+		if v.name == forgeRun && !k.can(plugin.CapForgeChanges) {
 			continue
 		}
 
@@ -435,7 +435,7 @@ func specVariants() []specVariant {
 
 	return []specVariant{
 		{"", Spec()}, {olderLocksRun, olderLocksSpec("")}, {"set by itself", self}, {splitTokens, splitSpec()},
-		{connectorRun, connectorSpec()}, {continuousRun, continuousSpec()}, {olderLocksPerBatchRun, olderLocksSpec("batch")},
+		{forgeRun, forgeSpec()}, {continuousRun, continuousSpec()}, {olderLocksPerBatchRun, olderLocksSpec("batch")},
 		{stepsRun, stepsSpec()}, {packagesRun, packagesSpec()}, {preparedRun, preparedSpec()},
 	}
 }
@@ -543,15 +543,15 @@ func continuousSpec() plugin.Spec {
 
 const splitTokens = "tokens by purpose" //nolint:gosec // a variant's name, not a credential
 
-const connectorRun = "a connector's changes"
+const forgeRun = "a forge's changes"
 
-func connectorSpec() plugin.Spec {
+func forgeSpec() plugin.Spec {
 	s := splitSpec()
 	s.SSHKeys = map[string]string{plugin.PurposeRead: "ssh_read_key", plugin.PurposeStore: "ssh_store_key"}
 
 	for i, r := range s.Runs {
 		if r.Trigger.Kind == plugin.TriggerPullRequests {
-			s.Runs[i].Trigger.Connector, s.Runs[i].Trigger.SweepEvery = "git", "1m"
+			s.Runs[i].Trigger.Forge, s.Runs[i].Trigger.SweepEvery = "git", "1m"
 		}
 	}
 

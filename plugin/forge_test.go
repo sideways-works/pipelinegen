@@ -21,8 +21,8 @@ func TestOtherKindsDescribeUnchanged(t *testing.T) {
 	}
 }
 
-func TestConnectorDescribeFlat(t *testing.T) {
-	in := `{"protocol":1,"kind":"connector","name":"c","version":"v1",
+func TestForgeDescribeFlat(t *testing.T) {
+	in := `{"protocol":1,"kind":"forge","name":"c","version":"v1",
 		"capabilities":["changes","statuses"],
 		"api_hosts":["https://api.example.test"],
 		"request_headers":["Accept"],"response_headers":["Link"],
@@ -38,7 +38,7 @@ func TestConnectorDescribeFlat(t *testing.T) {
 	}
 
 	switch {
-	case d.Kind != KindConnector || d.APIHosts[0] != "https://api.example.test":
+	case d.Kind != KindForge || d.APIHosts[0] != "https://api.example.test":
 		t.Fatalf("kind or api hosts: %+v", d)
 	case d.Auth == nil || d.Auth.Scheme != "Bearer" || d.GitUser != "x-access-token":
 		t.Fatalf("auth: %+v", d.Auth)
@@ -53,13 +53,13 @@ func TestConnectorDescribeFlat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if strings.Contains(string(out), "ConnectorDescription") || !strings.Contains(string(out), `"git_user":"x-access-token"`) {
+	if strings.Contains(string(out), "ForgeDescription") || !strings.Contains(string(out), `"git_user":"x-access-token"`) {
 		t.Fatalf("not flat: %s", out)
 	}
 }
 
 func TestCallPurposes(t *testing.T) {
-	for _, call := range ConnectorCalls {
+	for _, call := range ForgeCalls {
 		p, ok := CallPurposes[call]
 
 		switch {

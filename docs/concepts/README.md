@@ -68,7 +68,7 @@ changed, yet a spec that uses the changed code can now fail.
     answers which question.
 11. [Runs and the pipeline](runs-and-the-pipeline.md): runs, the runner,
     the generated pipeline and how it reports.
-12. [Connectors](connectors.md): where the code lives.
+12. [Forges](forges.md): where the code lives.
 13. [The store](the-store.md): where pipelinegen keeps its records.
 14. [The nightly](the-nightly.md): the run that checks everything.
 

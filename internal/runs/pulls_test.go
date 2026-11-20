@@ -103,7 +103,7 @@ func TestAdmitSkipsAClosedPullRequest(t *testing.T) {
 	}
 }
 
-// A change the connector can't tell comes from the repository itself is a
+// A change the forge can't tell comes from the repository itself is a
 // fork's, whatever else it says.
 func TestAdmitNeverTakesAFork(t *testing.T) {
 	for _, from := range []string{plugin.FromFork, plugin.FromUnknown, ""} {

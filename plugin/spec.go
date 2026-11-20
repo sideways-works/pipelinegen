@@ -115,7 +115,7 @@ const (
 const LimitMarginSeconds = 120
 
 // TriggerPullRequests is the kind of a run of a repository's open pull requests (or a
-// connector's changes), each new head planned in two steps.
+// forge's changes), each new head planned in two steps.
 const TriggerPullRequests = "pull_requests"
 
 // TriggerContinuous plans every commit of the branch, side by side: a commit no longer the tip
@@ -133,9 +133,9 @@ const CapSteps = "steps"
 // CapSSHKeys is a runner's capability to hand steps the ssh keys of Spec.SSHKeys.
 const CapSSHKeys = "ssh_keys"
 
-// CapConnectorChanges is a runner's capability to build the chain of a run whose changes come from a
-// connector.
-const CapConnectorChanges = "connector_changes"
+// CapForgeChanges is a runner's capability to build the chain of a run whose changes come from a
+// forge.
+const CapForgeChanges = "forge_changes"
 
 // CapPlacement is a runner's capability to place steps on workers by a placement block of its
 // own config; the spec carries no worker tags, so a runner without it is refused.
@@ -189,9 +189,9 @@ type SpecTrigger struct {
 	LabelsWithout []string   `json:"labels_without,omitempty"`
 	Head          string     `json:"head,omitempty"`
 	Timer         *SpecTimer `json:"timer,omitempty"`
-	// Connector names the connector a run's changes come from, when not from the CI system's own
-	// pull request support; the runner builds the connector's chain for it.
-	Connector string `json:"connector,omitempty"`
+	// Forge names the forge a run's changes come from, when not from the CI system's own
+	// pull request support; the runner builds the forge's chain for it.
+	Forge string `json:"forge,omitempty"`
 	// SweepEvery is how often the run's sweep looks for changes and for heads its planning
 	// missed (such as 1m); empty, the runner's own default.
 	SweepEvery string `json:"sweep_every,omitempty"`

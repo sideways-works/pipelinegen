@@ -119,7 +119,7 @@ func TestPlanningAChangesTreeHoldsNoTokenThatWrites(t *testing.T) {
 	}
 }
 
-func TestAConnectorsChainHasItsSteps(t *testing.T) {
+func TestAForgesChainHasItsSteps(t *testing.T) {
 	chain := func(write, resource string) []byte {
 		return []byte(`resources:
 - {name: planned-pr, type: ` + resource + `}
@@ -143,7 +143,7 @@ jobs:
 		string(chain("echo nothing", "mock")):                                                          "plan --from false",
 		string(chain("if tools/pipelinegen plan --run pr --from plans/head; then :; fi", "github-pr")): "a pull request resource starts",
 	} {
-		got := strings.Join(connectorProblems([]byte(text), nil), "; ")
+		got := strings.Join(forgeProblems([]byte(text), nil), "; ")
 		if (want == "") != (got == "") || !strings.Contains(got, want) {
 			t.Errorf("want %q, got %q", want, got)
 		}
@@ -176,7 +176,7 @@ func TestACallAfterAShellKeywordIsACall(t *testing.T) {
 }
 
 func TestSSHKeysGoWhereTheirTokensGo(t *testing.T) {
-	s := connectorSpec()
+	s := forgeSpec()
 
 	for env, want := range map[string]string{ //nolint:gosec // var names, not credentials
 		"PIPELINEGEN_READ_TOKEN: ((r)), PIPELINEGEN_SSH_KEY_READ: ((ssh_read_key))":                                               "",

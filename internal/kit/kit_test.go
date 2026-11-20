@@ -377,8 +377,8 @@ func fakes(kind string) map[string]plugin.Handler {
 		}
 	}
 
-	if strings.HasPrefix(kind, "connector") {
-		return connectorFakes(kind)
+	if strings.HasPrefix(kind, "forge") {
+		return forgeFakes(kind)
 	}
 
 	if kind == "stepreader" {

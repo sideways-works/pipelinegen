@@ -8,7 +8,7 @@ func TestARepositoryNamesItsProgramKindFirst(t *testing.T) {
 		"o/pipelinegen-correlator-react":                       "react-correlator",
 		"o/pipelinegen-runner-concourse":                       "concourse-runner",
 		"o/pipelinegen-driver-go":                              "go-driver",
-		"o/pipelinegen-connector-github":                       "github-connector",
+		"o/pipelinegen-forge-github":                           "github-forge",
 		"o/pipelinegen-correlator-oapi-codegen":                "oapi-codegen-correlator",
 		"https://github.com/o/pipelinegen-sbom-go.git":         "go-sbom",
 		"git@github.com:o/pipelinegen-correlator-gorm.git":     "gorm-correlator",

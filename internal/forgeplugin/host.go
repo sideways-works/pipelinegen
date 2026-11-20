@@ -1,4 +1,4 @@
-package connector
+package forgeplugin
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/sideways-works/plugkit/exchange"
 )
 
-// Host is one connector ready to call: its binary described, the origins
+// Host is one forge ready to call: its binary described, the origins
 // its requests may go to and the tokens they may carry.
 type Host struct {
 	ex   *Exchange
@@ -29,37 +29,37 @@ type Options struct {
 	API    string
 	Tokens map[string]string
 	// Work holds each call's files, in a directory of its own only this user can open, removed when it ends:
-	// the responses in it decide what the connector answers.
+	// the responses in it decide what the forge answers.
 	Work string
 	HTTP *http.Client
 }
 
 func Open(ctx context.Context, o Options) (*Host, error) {
 	if err := os.MkdirAll(o.Work, 0o750); err != nil {
-		return nil, fmt.Errorf("connector %s: %w", o.Name, err)
+		return nil, fmt.Errorf("forge %s: %w", o.Name, err)
 	}
 
 	p := plugin.Plugin{Name: o.Name, Path: o.Path, Config: o.Config}
 
-	work, err := os.MkdirTemp(o.Work, "pipelinegen-connector-describe-*")
+	work, err := os.MkdirTemp(o.Work, "pipelinegen-forge-describe-*")
 	if err != nil {
-		return nil, fmt.Errorf("connector %s: %w", o.Name, err)
+		return nil, fmt.Errorf("forge %s: %w", o.Name, err)
 	}
 	defer os.RemoveAll(work) //nolint:errcheck // scratch
 
 	desc, err := p.Describe(ctx, work)
 	if err != nil {
-		return nil, fmt.Errorf("connector %s: %w", o.Name, err)
+		return nil, fmt.Errorf("forge %s: %w", o.Name, err)
 	}
 
-	if desc.Kind != plugin.KindConnector {
-		return nil, fmt.Errorf("%w: %s says it is a %s, not a connector", ErrRefused, o.Name, desc.Kind)
+	if desc.Kind != plugin.KindForge {
+		return nil, fmt.Errorf("%w: %s says it is a %s, not a forge", ErrRefused, o.Name, desc.Kind)
 	}
 
 	outright, confirmed := "", []string{}
 	if o.API != "" {
 		if outright, err = exchange.NormalOrigin(o.API); err != nil {
-			return nil, fmt.Errorf("connector %s: api: %w", o.Name, err)
+			return nil, fmt.Errorf("forge %s: api: %w", o.Name, err)
 		}
 
 		confirmed = append(confirmed, outright)
@@ -67,7 +67,7 @@ func Open(ctx context.Context, o Options) (*Host, error) {
 
 	hosts, err := Allowed(outright, desc.APIHosts, confirmed)
 	if err != nil {
-		return nil, fmt.Errorf("connector %s: %w", o.Name, err)
+		return nil, fmt.Errorf("forge %s: %w", o.Name, err)
 	}
 
 	return &Host{
@@ -79,11 +79,11 @@ func Open(ctx context.Context, o Options) (*Host, error) {
 func (h *Host) Description() plugin.Description { return h.ex.Desc }
 
 func (h *Host) call(ctx context.Context, call string, args, answer any) error {
-	defer progress.Stage(ctx, "connector %s: %s", h.ex.Plugin.Name, call)()
+	defer progress.Stage(ctx, "forge %s: %s", h.ex.Plugin.Name, call)()
 
-	work, err := os.MkdirTemp(h.work, "pipelinegen-connector-"+call+"-*")
+	work, err := os.MkdirTemp(h.work, "pipelinegen-forge-"+call+"-*")
 	if err != nil {
-		return fmt.Errorf("connector %s %s: %w", h.ex.Plugin.Name, call, err)
+		return fmt.Errorf("forge %s %s: %w", h.ex.Plugin.Name, call, err)
 	}
 	defer os.RemoveAll(work) //nolint:errcheck // scratch
 

@@ -291,8 +291,8 @@ func noticeLines(notices []string) []string {
 
 const mockType = "mock"
 
-func runnerBuildsConnectorRuns(cfg *config.Config, runner string, desc plugin.Description) error {
-	if !cfg.ChangesFromConnector() {
+func runnerBuildsForgeRuns(cfg *config.Config, runner string, desc plugin.Description) error {
+	if !cfg.ChangesFromForge() {
 		return nil
 	}
 
@@ -301,9 +301,9 @@ func runnerBuildsConnectorRuns(cfg *config.Config, runner string, desc plugin.De
 			continue
 		}
 
-		if !slices.Contains(desc.Capabilities, plugin.CapConnectorChanges) {
-			return fmt.Errorf("%w: run %s takes changes from the %s connector, which runner %s %s can't build a pipeline for: "+
-				"update the runner, or plan them locally with affected", errRunner, name, cfg.CodeConnector().Name, runner, desc.Version)
+		if !slices.Contains(desc.Capabilities, plugin.CapForgeChanges) {
+			return fmt.Errorf("%w: run %s takes changes from the %s forge, which runner %s %s can't build a pipeline for: "+
+				"update the runner, or plan them locally with affected", errRunner, name, cfg.CodeForge().Name, runner, desc.Version)
 		}
 
 		if slices.Contains(desc.ResourceTypes, mockType) && cfg.Concourse.Mock == config.MockMissing {
@@ -334,7 +334,7 @@ func runnerRunsContinuous(cfg *config.Config, runner string, desc plugin.Descrip
 
 func runnerCan(cfg *config.Config, name string, desc plugin.Description) error {
 	for _, can := range []func(*config.Config, string, plugin.Description) error{
-		runnerBuildsConnectorRuns, runnerHandsSSHKeys, runnerRunsContinuous, runnerWritesSteps,
+		runnerBuildsForgeRuns, runnerHandsSSHKeys, runnerRunsContinuous, runnerWritesSteps,
 	} {
 		if err := can(cfg, name, desc); err != nil {
 			return err

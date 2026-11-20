@@ -65,7 +65,7 @@ func TestAPathNamesAPluginOfAMonorepo(t *testing.T) {
 		"sbom/go":                 "go-sbom",
 		"correlator/oapi-codegen": "oapi-codegen-correlator",
 		"runner/concourse":        "concourse-runner",
-		"connector/github":        "github-connector",
+		"forge/github":            "github-forge",
 		"":                        "pipelinegen-plugins",
 	} {
 		for _, repository := range []string{"sideways-works/pipelinegen-plugins", "https://github.com/sideways-works/pipelinegen-plugins.git"} {

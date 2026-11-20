@@ -46,7 +46,7 @@ in the default branch's run once it is merged.
 | A driver entry's pin (`release`, `commit`, `repository`) | the slices its steps run, as a changed plugin entry: from level 4 all of them; below it, while `plugin-entry` is on, each suite's sample of its recorded slices, and every slice without a list |
 | An sbom's or correlator's pin or `config` block | what the entry reaches, as [plugins](../how-to/plugins.md) says |
 | What selects (`tests`, `tag`, `exclude`, `owner`, `extra_deps`, `text_inputs`, `sample`, `sample_on`, `narrowing`, `narrowings`, `follow`, `untested` and the like) | what either config selects: the change plans under both and runs the union, so it never deselects its own tests; a slice the head's config adds to a suite (a test file a pattern now matches) runs as a new slice, with the reason "the configuration adds it to the suite" |
-| Where results go, what is kept, how slices are dealt into batches and share machines (`github`, `git`, `store`, `keep`, `writes`, `connectors`, a `plugins` entry of kind `connector`, `limits`, `parallel`, `batches`, `batch_minutes`, `run_on`, `lock` but its `minutes`, the runs' triggers and reports) | nothing: no test can observe them |
+| Where results go, what is kept, how slices are dealt into batches and share machines (`github`, `git`, `store`, `keep`, `writes`, `forges`, a `plugins` entry of kind `forge`, `limits`, `parallel`, `batches`, `batch_minutes`, `run_on`, `lock` but its `minutes`, the runs' triggers and reports) | nothing: no test can observe them |
 | Anything else: a time limit (`minutes`, a correlator's `collect_seconds`), a suite's `correlators`, the runner's entry or its placement, `bazel`, `concourse.include`, the pipelinegen pin in `concourse.planner.bootstrap`, a key this pipelinegen doesn't read in the base | the config is a changed file, as below |
 
 The slices a step's change selects run at every narrowing level, and no
@@ -260,19 +260,19 @@ or unreadable, carries nothing over. The statuses and `pipelinegen why`
 say "carried over from `<commit>`". See
 [a pull request's later builds](../how-to/narrowing.md#a-pull-requests-later-builds).
 
-## connectors
+## forges
 
 Not in a release yet. `pipelinegen pipeline` builds a run that takes
-changes from a connector only with a runner that can hand them on (one
-that describes the `connector_changes` capability), and refuses it
+changes from a forge only with a runner that can hand them on (one
+that describes the `forge_changes` capability), and refuses it
 otherwise. `affected`, `why` and `try` plan with it too.
 
 Where the code and its proposed changes live, when that isn't the `github`
-section. The first connector is the code's. The one there is today is
-`git`, the [git connector](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/git),
+section. The first forge is the code's. The one there is today is
+`git`, the [git forge](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/git),
 for a plain git server with no host API: its proposed changes are the
 branches whose names match `changes.branches`. pipelinegen lists the
-remote's branches with git and the read credential, and the connector
+remote's branches with git and the read credential, and the forge
 picks the changes among them. A run takes them with a `changes`
 trigger. Plain git has no drafts, labels or ready-for-review times, and
 nowhere to post a status or a comment. So the config refuses a run that
@@ -282,18 +282,18 @@ asks for `report.comment` or `report.status`, when its changes come from
 
 | Key | Type | Default | What it does |
 |---|---|---|---|
-| `connectors` | list | none | The connectors. The `github` section and `connectors` don't go together. |
-| `connectors[].name` | string | (required) | The connector's name: lower case letters, digits and dashes, unique. Change ids carry it. |
-| `connectors[].plugin` | `git` | (required) | The connector: `git`, the plain git connector, pinned by pipelinegen or by a `plugins` entry named `git`. |
-| `connectors[].remote` | URL | `git.remote` | The repository's git URL, as `git.remote` takes it. |
-| `connectors[].changes` | mapping | | Which of the remote's branches are proposed changes. |
-| `connectors[].changes.branches` | list of patterns | (required for `git`) | The branches that are proposed changes, such as `review/*`. There is no default: every branch of a server with many personal ones would otherwise run. |
-| `connectors[].links` | URL | none | A web page for a commit, with `{commit}`, `{branch}` or `{path}` filled in: a cgit or gitweb page. |
+| `forges` | list | none | The forges. The `github` section and `forges` don't go together. |
+| `forges[].name` | string | (required) | The forge's name: lower case letters, digits and dashes, unique. Change ids carry it. |
+| `forges[].plugin` | `git` | (required) | The forge: `git`, the plain git forge, pinned by pipelinegen or by a `plugins` entry named `git`. |
+| `forges[].remote` | URL | `git.remote` | The repository's git URL, as `git.remote` takes it. |
+| `forges[].changes` | mapping | | Which of the remote's branches are proposed changes. |
+| `forges[].changes.branches` | list of patterns | (required for `git`) | The branches that are proposed changes, such as `review/*`. There is no default: every branch of a server with many personal ones would otherwise run. |
+| `forges[].links` | URL | none | A web page for a commit, with `{commit}`, `{branch}` or `{path}` filled in: a cgit or gitweb page. |
 
 ```yaml
 git:
   remote: https://git.example.com/group/example.git
-connectors:
+forges:
   - name: git
     plugin: git
     changes: {branches: ["review/*"]}
@@ -302,14 +302,14 @@ runs:
     trigger: {changes: {base: main}}
 ```
 
-### Pinning a connector
+### Pinning a forge
 
-Not in a release yet. Each connector is a plugin of its own, which
-pipelinegen runs, in the plugins repository by kind: the GitHub connector
-([connector/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/github))
-for the `github` section, and the git connector
-([connector/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/git))
-for `connectors` entries of plugin `git`. pipelinegen pins a release of
+Not in a release yet. Each forge is a plugin of its own, which
+pipelinegen runs, in the plugins repository by kind: the GitHub forge
+([forge/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/github))
+for the `github` section, and the git forge
+([forge/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/git))
+for `forges` entries of plugin `git`. pipelinegen pins a release of
 each, with its checksum for every platform, and fetches the one a config
 uses the way it fetches [bazel-diff](#bazel_diff): a config needs no line
 for it. A generated pipeline's bootstrap fetches it with the other plugins
@@ -318,14 +318,14 @@ downloads it from the repository's GitHub release into pipelinegen's cache
 the first time a command talks to the host. A binary that doesn't match
 its pin never runs.
 
-A `plugins` entry of kind `connector`, named `github` or `git`, pins
+A `plugins` entry of kind `forge`, named `github` or `git`, pins
 another release:
 
 ```yaml
 plugins:
   - repository: https://github.com/sideways-works/pipelinegen-plugins
     with:
-      - {name: github, kind: connector, path: connector/github, release: {version: <tag>, sums: <checksum>}}
+      - {name: github, kind: forge, path: forge/github, release: {version: <tag>, sums: <checksum>}}
 ```
 
 The entry takes `release` (`sha256` for one platform, or `sums`) and no
@@ -350,7 +350,7 @@ checked whole.
 | `concourse.include` | path | none | A pipeline file of your own whose `resource_types`, `resources`, `groups` and `jobs` are merged into the generated pipeline (a release job, checks of the commit message). |
 | `concourse.branch` | string | `main` | The default branch: the `pipeline` job runs when the config changes there, and checks the pipeline (or sets it, with `self_set`). |
 | `concourse.pull_requests` | mapping | the maintained fork of telia-oss/github-pr-resource | The image (`registry-image` source) of the pull request resource type the `pull_requests` triggers use. |
-| `concourse.mock` | string | `bundled` | Whether the Concourse has its bundled `mock` resource type, which a runner hands a connector's changes on with: `bundled`, or `missing`, which refuses a pipeline whose runs take a connector's changes before it is written. `fly -t <target> workers -d` lists each worker's types. |
+| `concourse.mock` | string | `bundled` | Whether the Concourse has its bundled `mock` resource type, which a runner hands a forge's changes on with: `bundled`, or `missing`, which refuses a pipeline whose runs take a forge's changes before it is written. `fly -t <target> workers -d` lists each worker's types. |
 | `concourse.self_set` | bool | false | Lets the `pipeline` job set the pipeline when the config changes. Off, the job only regenerates the pipeline and fails when it differs from the one set ("the pipeline is stale: set it"), and a person sets it. On, the job sets it with secrets kept as `((name))` references, never their values, which works only when the Concourse resolves them itself (a credential manager or `var_sources`); with plain `fly set-pipeline -v` variables, leave it off. |
 | `concourse.serial_groups` | | | No longer read: no job is in a serial group. `check` names it; remove it. |
 | `concourse.serial_groups.<name>.per_run` | | | No longer read, with `concourse.serial_groups`. |
@@ -493,7 +493,7 @@ One entry per run, by name (lower case letters, digits and dashes). See
 | `runs.<name>.trigger` | mapping | (required) | What starts the run: exactly one of `branch`, `pull_requests`, `timer` or `manual`. |
 | `runs.<name>.trigger.branch` | string | | Every new commit on this branch starts a run. With `timer` or `manual`, the branch whose tip they run on. |
 | `runs.<name>.trigger.pull_requests` | mapping | | Open pull requests that match start a run for each new head. |
-| `runs.<name>.trigger.changes` | mapping | | `pull_requests` by its host-neutral name, with the same keys and meaning: proposed changes from the code's [connector](#connectors) (a plain git server's review branches) or a host. Give one of the two. |
+| `runs.<name>.trigger.changes` | mapping | | `pull_requests` by its host-neutral name, with the same keys and meaning: proposed changes from the code's [forge](#forges) (a plain git server's review branches) or a host. Give one of the two. |
 | `runs.<name>.trigger.pull_requests.base` | string | (required) | The branch the pull requests go into. |
 | `runs.<name>.trigger.pull_requests.draft` | `true`, `false` or `any` | `false` | `false`: ready pull requests only; `true`: drafts only; `any`: both. A draft is work its author hasn't asked anyone to look at, so by default it isn't planned. Planning applies this and the other filters: a head that doesn't pass them is not planned. |
 | `runs.<name>.trigger.pull_requests.labels` | list of strings | none | Labels a pull request must all carry. |
@@ -501,7 +501,7 @@ One entry per run, by name (lower case letters, digits and dashes). See
 | `runs.<name>.trigger.pull_requests.head` | pattern | any | A pattern for the head branch's name, such as `train/*`. |
 | `runs.<name>.trigger.pull_requests.once_per_ready` | boolean | `false` | Tests a pull request once each time it becomes ready for review: a push to a ready pull request starts nothing until it goes back to draft and is marked ready again. |
 | `runs.<name>.trigger.pull_requests.missed_after` | period | `10m` | How long an open head may go without a plan, or a planned head without any of its suite builds started (its start step run, which records it), or a head whose run ended with only slices not run for want of memory, before the run's sweep plans it or hands it to the suites again (`pipelinegen unplanned`); after each time the wait doubles, and after three the sweep leaves the head and says so on its run status. A build of the planning job that finds its head planned hands it to the suites again by the same wait (`plan --from`), a head the sweep left included, and starts no suite build for a head planned more lately. A head whose planning build began (`plan --begin`) is left to it until `limits.plan` and ten minutes have passed, or until that build ends without a plan, so this can stay at minutes even where a cold plan takes most of an hour. A suite build that waits for a worker has started nothing, so set this above the longest wait for a worker you expect: a head handed on again while its first build waits gets a second build, and both run every slice. A head planned or run twice costs a second run; one left waiting costs its author the wait. |
-| `runs.<name>.trigger.pull_requests.sweep_every` | period | `1m` for a connector's changes, else the runner's | How often the run's sweep looks for changes and for heads its planning missed: a minute or more. Where no push starts the planning (a plain git server, say), it is how long a new change waits to be planned. A sweep costs one `ls-remote` of the code's remote and one read of the store. |
+| `runs.<name>.trigger.pull_requests.sweep_every` | period | `1m` for a forge's changes, else the runner's | How often the run's sweep looks for changes and for heads its planning missed: a minute or more. Where no push starts the planning (a plain git server, say), it is how long a new change waits to be planned. A sweep costs one `ls-remote` of the code's remote and one read of the store. |
 | `runs.<name>.trigger.timer` | mapping | | Starts the run once a day inside a window, on the tip of `trigger.branch`. |
 | `runs.<name>.trigger.timer.start` | `H:MM` | (required) | The window's start. |
 | `runs.<name>.trigger.timer.stop` | `H:MM` | (required) | The window's end. |
@@ -722,7 +722,7 @@ upgrade` write the pins, each checked by downloading what it names
 |---|---|---|---|
 | `plugins` | list | none | The plugins; see [the guide](../how-to/plugins.md). Planning and recording go through the sbom and correlator plugins; with none, every suite is bound by the Bazel graph. The pipeline needs a runner. |
 | `plugins[].name` | string | (required) | The plugin's name in this config, unique. It may not start with a dot or hold a slash: it names the plugin's directory in a cache, beside the directories that hold built and unpacked plugins. |
-| `plugins[].kind` | `correlator`, `sbom`, `runner`, `driver` or `connector` | (required) | What the plugin is. With several runners, each run names the one whose pipeline holds it in `runs.<name>.runner`, and `pipelinegen pipeline --for <name>` writes each runner's. A driver runs a suite's slices for its `steps`; `command` is built in and needs no entry. A connector entry, named `github` or `git`, pins the release of that connector in place of pipelinegen's own pin, and takes a `release` and no `config` ([pinning a connector](#pinning-a-connector)). |
+| `plugins[].kind` | `correlator`, `sbom`, `runner`, `driver` or `forge` | (required) | What the plugin is. With several runners, each run names the one whose pipeline holds it in `runs.<name>.runner`, and `pipelinegen pipeline --for <name>` writes each runner's. A driver runs a suite's slices for its `steps`; `command` is built in and needs no entry. A forge entry, named `github` or `git`, pins the release of that forge in place of pipelinegen's own pin, and takes a `release` and no `config` ([pinning a forge](#pinning-a-forge)). |
 | `plugins[].repository` | git URL or `owner/name` | (required, but with `zip`) | Where its releases or commits come from: the URL you would clone, `https://github.com/owner/name` or `git@github.com:owner/name.git` say, or `owner/name` as GitHub's shorthand. Releases are fetched from GitHub's and GitLab's release files; another host is read but has nothing to fetch yet. Messages and listings name it as the config writes it. Without a `path`, a repository `pipelinegen-KIND-NAME` holds the program `NAME-KIND`, which names its release files and its `./cmd/NAME-KIND`; any other holds the program of its own name. |
 | `plugins[].path` | directory | none | The plugin's directory in a repository that holds several plugins, `driver/go` say. Its releases are tagged `<path>/vX.Y.Z` and hold its files, and the path names its program: `KIND/NAME` holds `NAME-KIND` (`go-driver`), a deeper path the last directory and the one above it. Without it the repository is one plugin, tagged `vX.Y.Z`. |
 | `plugins[].with` | list | none | Makes the entry a group of plugins from one repository: the entry has only `repository` and `with`, and each entry under `with` takes that repository and sets every other key of its own (`name`, `kind`, `path`, `release`, `config` and the rest). An entry under `with` that names a repository is refused. Names stay unique across every entry and group. See [adding a plugin](../how-to/adding-a-plugin.md). |

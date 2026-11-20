@@ -22,7 +22,7 @@
   * [Narrowing](concepts/narrowing.md)
   * [Bazel and the plugins side by side](concepts/bazel-and-plugins.md)
   * [Runs and the pipeline](concepts/runs-and-the-pipeline.md)
-  * [Connectors](concepts/connectors.md)
+  * [Forges](concepts/forges.md)
   * [The store](concepts/the-store.md)
   * [Refreshing the lists](concepts/refreshing-the-lists.md)
   * [The nightly](concepts/the-nightly.md)
@@ -91,7 +91,7 @@
   * [A correlator](writing-plugins/correlator.md)
   * [A runner](writing-plugins/runner.md)
   * [A driver](writing-plugins/driver.md)
-  * [A connector](writing-plugins/connector.md)
+  * [A forge](writing-plugins/forge.md)
   * [A store (a design)](writing-plugins/store.md)
 
 ## For contributors
