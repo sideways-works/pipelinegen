@@ -54,20 +54,15 @@ type ForgePin struct {
 }
 
 // PinnedForges are the forge releases a config uses unless a plugins entry of kind
-// forge by the same name pins another.
-//
-// NOT RELEASED YET: forge/git and forge/github v0.5.0 replace these; until then the pins name the
-// connector/git and connector/github v0.4.0 files under the new paths, which hold none.
+// forge by the same name pins another, each by the checksum of its release's SHA256SUMS.
 var PinnedForges = map[string]ForgePin{
 	ForgeGitHub: {
-		Name: ForgeGitHub, Repository: pluginsRepository, Path: "forge/github", Version: "v0.4.0",
-		SHA256: Checksums{LinuxAMD64: "048f3b3c7852d8ec41f0571187ff94f0502848020a4e5582aeaf21d596622cd1", LinuxARM64: "785ca66d43e76201d759e803fba94102dde518de4d0c10bd55668c75b21da920",
-			DarwinAMD64: "3e078f649c7e26e638b8f4726c6375736bd856299242e4257c2db001c9d7f5ed", DarwinARM64: "2983e9247fe6ef94f1b79bc6ac16064a44a486444b8909510000d0f1a472c5ec"},
+		Name: ForgeGitHub, Repository: pluginsRepository, Path: "forge/github", Version: "v0.5.0",
+		Sums: "2d12c9b356de9c91a0da834c3a92c4ef826eb4ca8b9e0c7d0341f581649ecb55",
 	},
 	ForgeGit: {
-		Name: ForgeGit, Repository: pluginsRepository, Path: "forge/git", Version: "v0.4.0",
-		SHA256: Checksums{LinuxAMD64: "dae7e03d2c84877703339aee2edbbbb127de2359ad3cf514a2645ba9cb135bbf", LinuxARM64: "a87c3d07fa3806776742a1003a7039dd6fcff81f103dd815bc106a53620e5370",
-			DarwinAMD64: "56cc93776e79e310f53bc66968ea0a662153cf60658b0e189863bc5007097201", DarwinARM64: "d78d761537f19b54602f1ece2c0073ce607e78d89cb8cef58bfed403ddffdd85"},
+		Name: ForgeGit, Repository: pluginsRepository, Path: "forge/git", Version: "v0.5.0",
+		Sums: "21557470fc46f2584379dcd5489493d95d6b57a59b0cba3013b8ced739024be4",
 	},
 }
 

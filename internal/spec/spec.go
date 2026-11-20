@@ -215,7 +215,7 @@ func tools(cfg *config.Config) []plugin.SpecTool {
 		pin := cfg.ForgePin(name)
 		sum, _ := pin.SHA256.For(config.LinuxAMD64)
 
-		out = append(out, plugin.SpecTool{Name: name, Kind: config.KindForge, Repository: pin.Repository, Path: pin.Path, Version: pin.Version, SHA256: sum})
+		out = append(out, plugin.SpecTool{Name: name, Kind: config.KindForge, Repository: pin.Repository, Path: pin.Path, Version: pin.Version, SHA256: sum, Sums: pin.Sums})
 	}
 
 	return out
