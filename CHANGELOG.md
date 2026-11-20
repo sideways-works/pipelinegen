@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-20
+
 ### Added
 
 - `pipelinegen plugin describe <dir|zip>` prints what a plugin's `manifest.yaml` says, from its directory or its zip: name, kind, program, runtime, platforms, description, what it implements and requires, and its permissions
