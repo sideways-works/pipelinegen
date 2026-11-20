@@ -1,0 +1,10 @@
+go:internal/piperun#func:Emit
+go:internal/piperun#func:Encode
+go:internal/piperun#func:Longest
+go:internal/piperun#func:checkNames
+go:plugin#func:PiperunEnd
+go:plugin#func:PiperunPrepare
+go:plugin#func:PiperunSlices
+go:plugin#func:PiperunWhole
+go:plugin#method:EmitAfter.MarshalJSON
+go:plugin#method:EmitAfter.UnmarshalJSON

@@ -1,0 +1,5 @@
+go:internal/plugins#func:ToolchainsTold
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
