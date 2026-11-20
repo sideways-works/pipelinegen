@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-20
+
 ### Changed
 
 - Breaking: the plugin kind connector is now forge. A config's section `connectors` is now `forges`, a plugins entry pins a forge with `kind: forge`, and the forges are `forge/git` and `forge/github` of the plugins repository, programs `git-forge` and `github-forge`, which pipelinegen pins at v0.5.0 by their `SHA256SUMS`. A config that still says `connectors` or `kind: connector` is refused, saying the new name, and so is a plugin whose `describe` answers kind connector. For runners, the spec's run field `connector` is `forge`, and the capability `connector_changes` is `forge_changes`: concourse-runner v0.6.0 speaks both
