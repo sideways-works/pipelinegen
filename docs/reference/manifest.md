@@ -31,6 +31,7 @@ in the file.
 | `name` | string | (required) | The plugin's name, the one its `describe` answer gives: lower-case letters, digits and dashes. `pipelinegen plugin add --zip` names the entry by it unless `--name` says otherwise. |
 | `kind` | string | (required) | The plugin's kind. pipelinegen runs `sbom`, `correlator`, `runner`, `driver` and `connector`, and refuses a pin whose entry names another kind than the manifest. Other hosts may know other kinds. |
 | `program` | file name | (required, but with `platforms: [any]`) | The program the build writes into `{out}`: `{out}/<program>` for a binary, or `{out}/<program>.mjs` for a Node plugin. Without the extension. A plugin built for `[any]` may leave it out when it holds assets alone; pipelinegen refuses such a plugin, since it runs every plugin as a program. |
+| `runtime` | string | none | What runs the program besides the machine, with an optional semver range: `node`, or `"node >=26"` for a `<program>.mjs`. Without it the program is a native binary. Only a plugin with a program has one. pipelinegen runs a `.mjs` with node whatever this says, and `plugin describe` shows it. |
 | `build.image` | image | (required) | The image the build runs in, pinned by digest: `name[:tag]@sha256:<64 hex>`. An image by tag alone is refused. docker or podman pulls it when the machine lacks it. |
 | `build.run` | list | (required) | The command, as a list of arguments, run with the plugin's directory as the working directory. The image's entrypoint is not used. |
 | `build.env` | mapping | none | Variables for the build. The build gets the image's own environment, these, `HOME=/tmp` and `GOFLAGS=-trimpath`, and nothing of the machine's; a `GOFLAGS` here is added after `-trimpath`. |
@@ -44,6 +45,7 @@ in the file.
 | `requires` | list | none | What the plugin needs another plugin to offer, in the same form. |
 | `schemas` | mapping | none | Of a `meta` plugin alone: its messages by name, each `{message: <file>, answer: <file>}`, JSON Schema files of the plugin's directory, which must hold JSON. They are kept in the zip and the cache under their own paths. |
 | `ack_timeout` | duration | none | Of a `meta` plugin alone: how long a receiver has to ack or nack each message, a Go duration above zero such as `30s`. |
+| `permissions` | list | none | What the plugin lets people do, on any kind: each `{name, description, default}`. `name` is `area:action` in lower-case letters and dashes (`runs:re-run`), unique in the manifest; `description` says what it allows; `default` is the least role that holds it, one of `display`, `viewer`, `operator`, `maintainer` and `admin`. A host grants and checks them; pipelinegen reads them and checks their form. Any other key is refused. |
 
 ## Meta plugins
 
