@@ -40,17 +40,28 @@ type reached struct {
 // passed since; anything it can't tell keeps the run's base, with a note for the plan's warnings.
 func passedSinceBase(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, base, head, cache, bdPath string) (*affected.Rebase, []string) {
 	run := cfg.Runs[ch.Run]
-	offAt := plugins.CoreOffAt(plugins.NarrowPassedSince)
 
-	if run.Compare == config.CompareMergedTarget {
-		return carriedOver(ctx, cfg, ch, store, trigger, base, head, cache, bdPath)
-	}
-
-	if run.Compare != config.CompareLastPassed || run.Select == config.SelectAll || store == nil || store.Proposed ||
-		base == "" || base == head || narrowingLevel(cfg) >= offAt {
+	if run.Compare != config.CompareLastPassed && run.Compare != config.CompareMergedTarget || run.Select == config.SelectAll ||
+		store == nil || base == "" || base == head {
 		return nil, nil
 	}
 
+	offAt, on := passedSinceOn(ctx, cfg, trigger, base, head)
+
+	switch {
+	case !on:
+		return nil, nil
+	case run.Compare == config.CompareMergedTarget:
+		return carriedOver(ctx, cfg, ch, store, trigger, base, head, cache, bdPath, offAt)
+	case store.Proposed:
+		return nil, nil
+	}
+
+	return branchPassedSince(ctx, cfg, ch, store, trigger, base, head, cache, bdPath, offAt)
+}
+
+// branchPassedSince is passedSinceBase for a branch's last_passed run, the narrowing on, off from offAt.
+func branchPassedSince(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, base, head, cache, bdPath string, offAt int) (*affected.Rebase, []string) {
 	if everything, err := affected.Everything(ctx, affected.Options{Config: cfg, Repo: gitx.Repo{Dir: trigger}, Base: base, Head: head}); err != nil || everything != "" {
 		return nil, nil
 	}
@@ -109,6 +120,36 @@ func passedSinceBase(ctx context.Context, cfg *config.Config, ch runs.Change, st
 	}
 
 	return &affected.Rebase{OffAt: offAt, Since: since}, notes
+}
+
+// passedSinceOn is the level passed-since is off from and whether it is on, for a branch's run and a
+// pull request's alike: under the change's config and, when the change edits it, under the base's
+// too, as the plan unites the two.
+func passedSinceOn(ctx context.Context, cfg *config.Config, trigger, base, head string) (int, bool) {
+	offAt := passedSinceOffAt(cfg)
+	on := narrowingLevel(cfg) < offAt
+
+	byBase, changed, err := baseConfig(ctx, trigger, base, head)
+	if err != nil {
+		return offAt, false
+	}
+
+	if changed {
+		offAt = min(offAt, passedSinceOffAt(byBase))
+		on = on && narrowingLevel(byBase) < offAt
+	}
+
+	return offAt, on
+}
+
+// passedSinceOffAt is the level passed-since is off from: the config's own (narrowings.passed-since),
+// else the core's.
+func passedSinceOffAt(cfg *config.Config) int {
+	if n, ok := cfg.Narrowings[plugins.NarrowPassedSince]; ok {
+		return n.OffAt
+	}
+
+	return plugins.CoreOffAt(plugins.NarrowPassedSince)
 }
 
 // newestPassed are the newest commits, at most passedSinceBases, at which some slice last passed.

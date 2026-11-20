@@ -204,3 +204,53 @@ func TestAConfigChangedSinceTheLastBuildCarriesNothingOver(t *testing.T) {
 		t.Fatalf("a changed config: %v %v", reaches, err)
 	}
 }
+
+// TestBothPathsHonourPassedSincesSwitch plans a branch's run and a pull request's against a store no
+// read reaches: a note says the records were read, so the narrowing was on.
+func TestBothPathsHonourPassedSincesSwitch(t *testing.T) {
+	branchRun := strings.Replace(noHostConfig, "REMOTE", "file:///REMOTE", 1)
+	override := "narrowings:\n  passed-since: {off_at: 3, note: the runs' records are not to be trusted here}\n"
+
+	for _, path := range []struct {
+		name, config, read string
+		change             func(head string) runs.Change
+	}{
+		{"a branch's run", branchRun, "the runs' records", func(head string) runs.Change {
+			return runs.Change{Run: "main", ID: "main", Commit: head, Branch: "main"}
+		}},
+		{"a pull request's run", prRunConfig, "the last build of pr-7", func(head string) runs.Change {
+			return runs.Change{Run: "pr", ID: "pr-7", Commit: head, PR: 7, Base: "main"}
+		}},
+	} {
+		for _, c := range []struct {
+			name, extra string
+			on          bool
+		}{
+			{"on at the default level", "", true},
+			{"on below the config's own level", "narrowing: 2\n" + strings.Replace(override, "off_at: 3", "off_at: 4", 1), true},
+			{"off from level 4", "narrowing: 4\n", false},
+			{"off by narrowings.passed-since", override, false},
+		} {
+			t.Run(path.name+", "+c.name, func(t *testing.T) {
+				text := strings.Replace(path.config, "/REMOTE", filepath.Join(t.TempDir(), "none.git"), 1) + c.extra
+				// a commit between the base and the head, at which a branch's slice may have passed
+				repo, ids := gitRepo(t,
+					map[string]string{config.FileName: text, "a.txt": "a\n"},
+					map[string]string{"a.txt": "b\n"},
+					map[string]string{"a.txt": "c\n"})
+
+				cfg := loadConfigText(t, text)
+				store := openStore(cfg)
+
+				t.Cleanup(func() { _ = store.Close() }) //nolint:errcheck // nothing written
+
+				rebase, notes := passedSinceBase(t.Context(), cfg, path.change(ids[2]), store, repo, ids[0], ids[2], t.TempDir(), "")
+
+				read := len(notes) == 1 && strings.Contains(notes[0], path.read)
+				if rebase != nil || read != c.on {
+					t.Fatalf("on %v: %v %q", c.on, rebase != nil, notes)
+				}
+			})
+		}
+	}
+}

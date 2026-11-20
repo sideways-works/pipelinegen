@@ -11,7 +11,6 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/gitx"
-	"github.com/sideways-works/pipelinegen/internal/plugins"
 	"github.com/sideways-works/pipelinegen/internal/progress"
 	"github.com/sideways-works/pipelinegen/internal/report"
 	"github.com/sideways-works/pipelinegen/internal/runs"
@@ -21,11 +20,10 @@ var errNotTested = errors.New("the tree it tested can't be made again")
 
 // carriedOver compares a pull request's slices from the tree its last build tested: a slice that
 // passed there, or that build carried over, and that nothing from that tree to the head reaches,
-// stays passed. Anything it can't tell runs, with a note for the plan's warnings.
-func carriedOver(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, base, head, cache, bdPath string) (*affected.Rebase, []string) {
-	offAt, on := passedSinceOn(ctx, cfg, trigger, base, head)
-
-	if cfg.Runs[ch.Run].Select == config.SelectAll || store == nil || ch.ID == "" || base == "" || base == head || !on {
+// stays passed. Anything it can't tell runs, with a note for the plan's warnings. passedSinceBase found
+// the narrowing on, off from offAt.
+func carriedOver(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, base, head, cache, bdPath string, offAt int) (*affected.Rebase, []string) {
+	if ch.ID == "" {
 		return nil, nil
 	}
 
@@ -81,34 +79,6 @@ func carriedOver(ctx context.Context, cfg *config.Config, ch runs.Change, store 
 	}
 
 	return &affected.Rebase{OffAt: offAt, Since: since}, nil
-}
-
-// passedSinceOn is the level passed-since is off from and whether it is on: under the change's config
-// and, when the change edits it, under the base's too, as the plan unites the two.
-func passedSinceOn(ctx context.Context, cfg *config.Config, trigger, base, head string) (int, bool) {
-	offAt := passedSinceOffAt(cfg)
-	on := narrowingLevel(cfg) < offAt
-
-	byBase, changed, err := baseConfig(ctx, trigger, base, head)
-	if err != nil {
-		return offAt, false
-	}
-
-	if changed {
-		offAt = min(offAt, passedSinceOffAt(byBase))
-		on = on && narrowingLevel(byBase) < offAt
-	}
-
-	return offAt, on
-}
-
-// passedSinceOffAt is the level passed-since is off from: the config's own, else the core's.
-func passedSinceOffAt(cfg *config.Config) int {
-	if n, ok := cfg.Narrowings[plugins.NarrowPassedSince]; ok {
-		return n.OffAt
-	}
-
-	return plugins.CoreOffAt(plugins.NarrowPassedSince)
 }
 
 // testedTree makes again the commit the build tested, its change merged into the target's tip it
