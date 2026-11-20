@@ -24,6 +24,7 @@ import (
 	"github.com/sideways-works/plugkit/bundle"
 	"github.com/sideways-works/plugkit/manifest"
 	"github.com/sideways-works/plugkit/pin"
+	"github.com/sideways-works/plugkit/semver"
 	"github.com/sideways-works/plugkit/store"
 )
 
@@ -110,13 +111,14 @@ func builtPlugin(ctx context.Context, p config.Plugin, dir, platform, cache stri
 
 func pluginBuild(ctx context.Context, args []string, stdout io.Writer) error {
 	var (
-		out, tool string
-		platforms []string
+		out, tool, version string
+		platforms          []string
 	)
 
 	fs := flag.NewFlagSet("plugin build", flag.ContinueOnError)
 	pathVar(fs, &out, "zip", "", "the zip to write, with SHA256SUMS beside it (required)", writesFile)
 	textVar(fs, &tool, "tool", "", "the container tool the build runs in, docker or podman (default: the first on PATH)")
+	textVar(fs, &version, "version", "", "the version the build stands for, vX.Y.Z: the manifest's {version} (default none)")
 	fs.Func("platform", "build for this os/arch (repeatable; default every platform of the manifest)", func(s string) error {
 		platforms = append(platforms, s)
 
@@ -152,7 +154,15 @@ func pluginBuild(ctx context.Context, args []string, stdout io.Writer) error {
 
 	laid := filepath.Join(work, "plugin")
 
-	m, err := build.Build(ctx, build.Options{Tool: tool, Root: root, Dir: rel, Manifest: data, Platforms: platforms, Out: laid, Log: os.Stderr})
+	commit, version, err := stampOf(ctx, root, version)
+	if err != nil {
+		return err
+	}
+
+	m, err := build.Build(ctx, build.Options{
+		Tool: tool, Root: root, Dir: rel, Manifest: data, Platforms: platforms, Out: laid, Log: os.Stderr,
+		Commit: commit, Version: version,
+	})
 	if err != nil {
 		return err
 	}
@@ -162,23 +172,34 @@ func pluginBuild(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	sum := sumOfBytes(z.Bytes())
-
-	if err := os.MkdirAll(filepath.Dir(out), 0o750); err != nil {
-		return fmt.Errorf("%w: %w", errBuilt, err)
-	}
-
-	if err := writeAtomically(out, z.Bytes()); err != nil {
-		return fmt.Errorf("%w: %w", errBuilt, err)
-	}
-
-	sums := filepath.Join(filepath.Dir(out), "SHA256SUMS")
-	if err := writeAtomically(sums, listedWith(sums, filepath.Base(out), sum)); err != nil {
-		return fmt.Errorf("%w: %w", errBuilt, err)
+	sum, sums, err := writeBuiltZip(out, z.Bytes())
+	if err != nil {
+		return err
 	}
 
 	return say(stdout, "built %s (%s) into %s, sha256 %s; %s lists it\npin it with: zip: {url: <where you host %s>, sha256: %s}\n",
 		m.Name, m.Kind, out, sum, sums, filepath.Base(out), sum)
+}
+
+// writeBuiltZip writes the zip to out and lists it in the SHA256SUMS beside it, returning its sha256 and
+// the list's path.
+func writeBuiltZip(out string, data []byte) (string, string, error) {
+	sum := sumOfBytes(data)
+
+	if err := os.MkdirAll(filepath.Dir(out), 0o750); err != nil {
+		return "", "", fmt.Errorf("%w: %w", errBuilt, err)
+	}
+
+	if err := writeAtomically(out, data); err != nil {
+		return "", "", fmt.Errorf("%w: %w", errBuilt, err)
+	}
+
+	sums := filepath.Join(filepath.Dir(out), "SHA256SUMS")
+	if err := writeAtomically(sums, listedWith(sums, filepath.Base(out), sum)); err != nil {
+		return "", "", fmt.Errorf("%w: %w", errBuilt, err)
+	}
+
+	return sum, sums, nil
 }
 
 // listedWith is the SHA256SUMS at file with name's line set to sum, the other zips' lines kept, so
@@ -197,6 +218,35 @@ func listedWith(file, name, sum string) []byte {
 	b.WriteString(sum + "  " + name + "\n")
 
 	return []byte(b.String())
+}
+
+// stampOf is what a build's {commit} and {version} stand for: the commit checked out at root, and
+// --version without its v.
+func stampOf(ctx context.Context, root, version string) (string, string, error) {
+	if version != "" {
+		if _, err := semver.Parse(version); err != nil {
+			return "", "", fmt.Errorf("%w: --version %q: a version vX.Y.Z", errUsage, version)
+		}
+	}
+
+	return builtCommit(ctx, root), strings.TrimPrefix(version, "v"), nil
+}
+
+// builtCommit is the commit checked out in the repository at root, the manifest's {commit}: empty
+// outside one. A tree with changes is built as it is, and said so.
+func builtCommit(ctx context.Context, root string) string {
+	out, err := exec.CommandContext(ctx, "git", "-C", root, "rev-parse", "HEAD").Output() //nolint:gosec // git, asked about the directory the caller names
+	if err != nil {
+		return ""
+	}
+
+	commit := strings.TrimSpace(string(out))
+
+	if changed, err := exec.CommandContext(ctx, "git", "-C", root, "status", "--porcelain").Output(); err == nil && len(changed) > 0 { //nolint:gosec // as above
+		warnf(os.Stderr, "pipelinegen: %s has changes that aren't committed: the build is of the tree as it is, stamped with %s\n", root, short12(commit))
+	}
+
+	return commit
 }
 
 // repositoryOf is the git repository dir is in and dir's path in it, or dir itself when it is in

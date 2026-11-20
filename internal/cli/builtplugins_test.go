@@ -426,3 +426,53 @@ func TestPipelineUnpacksAZipPinnedRunner(t *testing.T) {
 		t.Fatal("the zip isn't kept in the user cache")
 	}
 }
+
+// plugin build stamps the build with the commit checked out and --version, as the manifest's
+// {commit} and {version}.
+func TestPluginBuildStampsTheCommitAndVersion(t *testing.T) {
+	needBuildImage(t, shBuildImage)
+
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "manifest.yaml"), `name: stamp
+kind: driver
+program: stamp-driver
+build:
+  image: `+shBuildImage+`
+  run: [sh, -c, "echo {version} {commit} > {out}/stamp-driver"]
+platforms: [`+hostPlatform+`]
+`)
+	gitT(t, dir, "init", "-q", "-b", "main")
+	gitT(t, dir, "add", "-A")
+	gitT(t, dir, "-c", "user.name=t", "-c", "user.email=t@example.test", "commit", "-q", "-m", "stamp")
+
+	head := gitT(t, dir, "rev-parse", "HEAD")
+	out := filepath.Join(t.TempDir(), "stamp.zip")
+
+	if stdout, stderr, code := runIn(t, dir, nil, "plugin", "build", dir, "--zip", out, "--version", "v1.2.3"); code != 0 {
+		t.Fatalf("plugin build: %d %q\n%s", code, stdout, stderr)
+	}
+
+	zr, err := zip.OpenReader(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer zr.Close() //nolint:errcheck // read only
+
+	rc, err := zr.Open("stamp-driver-" + config.Platform())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var b bytes.Buffer
+
+	_, _ = b.ReadFrom(rc) //nolint:errcheck // compared below
+	_ = rc.Close()        //nolint:errcheck // read only
+
+	if b.String() != "1.2.3 "+head+"\n" {
+		t.Fatalf("the program holds %q", b.String())
+	}
+
+	if _, stderr, code := runIn(t, dir, nil, "plugin", "build", dir, "--zip", out, "--version", "latest"); code == 0 || !strings.Contains(stderr, "a version vX.Y.Z") {
+		t.Fatalf("a version that is none: %d %s", code, stderr)
+	}
+}
