@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -41,11 +40,9 @@ func TestAGitHubConfigReportsThroughTheFetchedForge(t *testing.T) {
 		t.Fatalf("status: %q", got)
 	}
 
-	pin := config.PinnedForges[config.ForgeGitHub]
-	sum, _ := pin.SHA256.For(config.Platform())
-
-	if _, err := os.Stat(filepath.Join(cache, "pipelinegen", "forges", sum, "github-forge")); err != nil {
-		t.Fatalf("the forge isn't in the cache: %v", err)
+	// kept by its file's checksum, which the pin gives or its release's SHA256SUMS lists
+	if kept, _ := filepath.Glob(filepath.Join(cache, "pipelinegen", "forges", "*", "github-forge")); len(kept) != 1 { //nolint:errcheck // a valid pattern
+		t.Fatalf("the forge isn't in the cache: %v", kept)
 	}
 }
 
@@ -63,6 +60,11 @@ func TestAForgeThatIsNotItsPinNeverRuns(t *testing.T) {
 
 	wrong := pin
 	wrong.SHA256 = config.Checksums{config.Platform(): strings.Repeat("0", 64)}
+
+	if wrong.Sums != "" {
+		wrong.Sums = strings.Repeat("0", 64)
+	}
+
 	config.PinnedForges[config.ForgeGitHub] = wrong
 
 	if _, stderr, code := run(t, "report", "start", "-root", root); code == 0 || !strings.Contains(stderr, "checksum") {
