@@ -167,3 +167,26 @@ func TestASliceTheBasesConfigSelectsIsNotLeftOut(t *testing.T) {
 		t.Errorf("runs %v, left out by %+v", sliceNames(sp.Selected), sp.Narrowed)
 	}
 }
+
+func TestACarriedOverEntryNamesItsBuild(t *testing.T) {
+	all := passSlices("a", "b", "c")
+	from := "4d1c0ffee4d1c0ffee4d1c0ffee4d1c0ffee4d1c"
+	o := Options{Config: &config.Config{Suites: map[string]config.Suite{"s": {}}}, Rebase: &Rebase{OffAt: 4, Since: func(_ string, sl bazel.Slice) (Since, bool) {
+		return Since{Why: "carried over from " + from[:12], CarriedFrom: from}, sl.Name != "c"
+	}}}
+	seen := map[string]bool{all[0].Label: true, all[1].Label: true, all[2].Label: true}
+
+	sp := selectSuite("s", config.Suite{}, all, seen, false)
+
+	sp, _, since := o.rebase("s", sp, all, seen, &SampleRule{}, nil)
+	passedSince(&sp, since)
+
+	if got := sliceNames(sp.Selected); !slices.Equal(got, []string{"c"}) {
+		t.Fatalf("selected %v", got)
+	}
+
+	if len(sp.Narrowed) != 1 || sp.Narrowed[0].CarriedFrom != from || !slices.Equal(sp.Narrowed[0].Dropped, []string{"a", "b"}) ||
+		sp.Narrowed[0].Narrowing != plugins.NarrowPassedSince || sp.Narrowed[0].Reached != 3 {
+		t.Fatalf("one entry naming the build: %+v", sp.Narrowed)
+	}
+}

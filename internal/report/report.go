@@ -69,6 +69,9 @@ type Narrowed struct {
 	Reason    string   `json:"reason"`
 	Reached   int      `json:"reached"`
 	Dropped   []string `json:"dropped"`
+	// CarriedFrom is the change's commit of a pull request's last build the dropped slices were
+	// carried over from, as passed.
+	CarriedFrom string `json:"carried_from,omitempty"`
 }
 
 // NarrowingSet is a narrowing whose level a plan's config set: OffAt in
@@ -552,7 +555,14 @@ func (s Suite) status() (state, description string) {
 	}
 
 	var narrowed strings.Builder
+
 	for _, n := range s.Narrowed {
+		if n.CarriedFrom != "" {
+			fmt.Fprintf(&narrowed, ", %d carried over from %s", len(n.Dropped), short(n.CarriedFrom))
+
+			continue
+		}
+
 		fmt.Fprintf(&narrowed, ", %s left out %d", n.Narrowing, len(n.Dropped))
 	}
 
@@ -594,6 +604,10 @@ func (r Run) RunStatus() (state, description string) {
 
 	state, description = r.runStatus(n, total)
 
+	if carried, from := r.Carried(); carried > 0 {
+		description += fmt.Sprintf(", %d carried over from %s", carried, short(from))
+	}
+
 	// a cached graph that differs from its cold rebuild is a fault of a
 	// plugin or of the cache, whatever the tests did
 	if r.Rebuild.failing() && state != statusError {
@@ -620,6 +634,23 @@ func (r Run) RunStatus() (state, description string) {
 	}
 
 	return state, statusText(secret.Redact(description))
+}
+
+// Carried counts the slices a pull request's run carried over as passed from its last build, and
+// names that build's commit.
+func (r Run) Carried() (int, string) {
+	n, from := 0, ""
+
+	for _, s := range r.Suites {
+		for _, nw := range s.Narrowed {
+			if nw.CarriedFrom != "" {
+				n += len(nw.Dropped)
+				from = nw.CarriedFrom
+			}
+		}
+	}
+
+	return n, from
 }
 
 func (r Run) runStatus(n map[string]int, total int) (state, description string) {

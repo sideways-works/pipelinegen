@@ -609,7 +609,7 @@ suites:
 
 	coverageOfAPlanOfEverything(t, cfg, r.Dir, head, claims, none)
 
-	pc, err := checkPlanned(t.Context(), cfg, "", r.Dir, "", head, false, "", cache, pdir)
+	pc, err := checkPlanned(t.Context(), cfg, "", r.Dir, "", head, false, "", cache, pdir, false)
 	if err != nil || !pc.all || pc.reason != "nothing to compare with" || pc.claimed["deps/lock.txt"] != "texts" ||
 		slices.ContainsFunc(pc.warnings, func(w string) bool { return strings.Contains(w, "deps/lock.txt") }) {
 		t.Fatalf("a first run: %+v %v", pc, err)

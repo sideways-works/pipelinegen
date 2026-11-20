@@ -232,7 +232,9 @@ type alsoTo struct {
 }
 
 type planFile struct {
+	Base       string         `json:"base"`
 	Head       string         `json:"head"`
+	Merged     string         `json:"merged"`
 	All        bool           `json:"all"`
 	Narrowing  int            `json:"narrowing"`
 	Narrowings []NarrowingSet `json:"narrowings"`

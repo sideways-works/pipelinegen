@@ -282,6 +282,12 @@ func ownPlan(ctx context.Context, cfg *config.Config, ch runs.Change, store *git
 		return nil, err
 	}
 
+	// the change's commit is the trigger's, never the first step's word
+	plan.Merged = ""
+	if cfg.Runs[ch.Run].Compare == config.CompareMergedTarget {
+		plan.Merged = ch.Commit
+	}
+
 	if plan.Head == head && plan.Base == base {
 		return &plan, nil
 	}

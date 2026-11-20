@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -41,6 +42,10 @@ func passedSinceBase(ctx context.Context, cfg *config.Config, ch runs.Change, st
 	run := cfg.Runs[ch.Run]
 	offAt := plugins.CoreOffAt(plugins.NarrowPassedSince)
 
+	if run.Compare == config.CompareMergedTarget {
+		return carriedOver(ctx, cfg, ch, store, trigger, base, head, cache, bdPath)
+	}
+
 	if run.Compare != config.CompareLastPassed || run.Select == config.SelectAll || store == nil || store.Proposed ||
 		base == "" || base == head || narrowingLevel(cfg) >= offAt {
 		return nil, nil
@@ -72,9 +77,9 @@ func passedSinceBase(ctx context.Context, cfg *config.Config, ch runs.Change, st
 	reaches := map[string]map[string]reached{}
 
 	for _, c := range newestPassed(commits[:at], passes) {
-		r, note := reachFrom(ctx, cfg, store, trigger, ch.Run, base, c, head, cache, bdPath)
-		if note != "" {
-			notes = append(notes, note)
+		r, err := reachFrom(ctx, cfg, store, trigger, ch.Run, c, head, cache, bdPath, false)
+		if err != nil && !errors.Is(err, errReachesAll) {
+			notes = append(notes, fmt.Sprintf("the slices that passed at %s compare from the base %s: what changed since could not be planned: %v", short12(c), short12(base), err))
 		}
 
 		if r != nil {
@@ -124,11 +129,18 @@ func newestPassed(commits []string, passes map[string]report.Pass) []string {
 	return out
 }
 
+// errReachesAll is a change from a commit to the head that reaches every slice, or that no plan
+// compares: a changed config, a plan of everything, a plan cut short with its build.
+var errReachesAll = errors.New("the change reaches every slice")
+
 // reachFrom plans what the change from c to the head reaches, suite by suite. A change to the config in
-// between, a plan of everything or one that fails reaches everything: c's slices keep the run's base.
-func reachFrom(ctx context.Context, cfg *config.Config, store *gitstore.Store, trigger, run, base, c, head, cache, bdPath string) (map[string]reached, string) {
+// between and a plan of everything reach everything (errReachesAll); any other error says why the
+// change couldn't be planned, and reaches everything too.
+//
+// With trees, c need not be the head's ancestor: the plan compares the two trees as they are.
+func reachFrom(ctx context.Context, cfg *config.Config, store *gitstore.Store, trigger, run, c, head, cache, bdPath string, trees bool) (map[string]reached, error) {
 	if _, changed, err := baseConfig(ctx, trigger, c, head); err != nil || changed {
-		return nil, ""
+		return nil, errReachesAll
 	}
 
 	// the run's own plan keeps most of what limits.plan leaves
@@ -139,21 +151,21 @@ func reachFrom(ctx context.Context, cfg *config.Config, store *gitstore.Store, t
 
 	defer cancel()
 
-	p, err := planCommitsBy(sub, cfg, store, trigger, run, c, head, false, cache, bdPath, pluginsDir(), planExtra{reach: true})
+	p, err := planCommitsBy(sub, cfg, store, trigger, run, c, head, false, cache, bdPath, pluginsDir(), planExtra{reach: true, trees: trees})
 	if err != nil {
 		if ctx.Err() != nil {
-			return nil, ""
+			return nil, errReachesAll
 		}
 
 		if sub.Err() != nil {
 			err = fmt.Errorf("it took longer than a third of what limits.plan left: %w", err)
 		}
 
-		return nil, fmt.Sprintf("the slices that passed at %s compare from the base %s: what changed since could not be planned: %v", short12(c), short12(base), err)
+		return nil, err
 	}
 
 	if p.All {
-		return nil, ""
+		return nil, errReachesAll
 	}
 
 	out := map[string]reached{}
@@ -169,5 +181,5 @@ func reachFrom(ctx context.Context, cfg *config.Config, store *gitstore.Store, t
 		out[sp.Suite] = r
 	}
 
-	return out, ""
+	return out, nil
 }

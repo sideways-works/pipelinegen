@@ -497,6 +497,11 @@ func planChange(ctx context.Context, cfg *config.Config, ch runs.Change, store *
 	rebase, notes := passedSinceBase(ctx, cfg, ch, store, trigger, base, head, cache, bdPath)
 
 	plan, err := planCommitsBy(ctx, cfg, store, trigger, ch.Run, base, head, run.Select == config.SelectAll, cache, bdPath, pluginsDir(), planExtra{rebase: rebase})
+	if err == nil && run.Compare == config.CompareMergedTarget {
+		// a later build makes this one's merge again from it
+		plan.Merged = ch.Commit
+	}
+
 	if err == nil && note != "" {
 		plan.Warnings = append(plan.Warnings, note)
 	}
@@ -527,6 +532,9 @@ func planCommits(ctx context.Context, cfg *config.Config, store *gitstore.Store,
 type planExtra struct {
 	rebase *affected.Rebase
 	reach  bool
+	// trees compares the base's tree with the head's whatever their history: the tree a pull
+	// request's last build tested is no ancestor of the one its next build tests.
+	trees bool
 	// unread, when set, takes why the lists couldn't be read, and the plan goes on without them.
 	unread *error
 }
@@ -788,8 +796,8 @@ type planCheck struct {
 
 // A reason to run every slice known before any tree is read stays the plan's reason; the check never
 // takes its place.
-func checkPlanned(ctx context.Context, cfg *config.Config, runName, trigger, base, head string, all bool, everything, cache, pluginsAt string) (planCheck, error) {
-	before, err := affected.Everything(ctx, affected.Options{Config: cfg, Repo: gitx.Repo{Dir: trigger}, Base: base, Head: head, All: all, AllReason: everything})
+func checkPlanned(ctx context.Context, cfg *config.Config, runName, trigger, base, head string, all bool, everything, cache, pluginsAt string, trees bool) (planCheck, error) {
+	before, err := affected.Everything(ctx, affected.Options{Config: cfg, Repo: gitx.Repo{Dir: trigger}, Base: base, Head: head, All: all, AllReason: everything, Trees: trees})
 	if err != nil {
 		return planCheck{}, err
 	}
@@ -827,7 +835,7 @@ func planWith(ctx context.Context, cfg *config.Config, store *gitstore.Store, tr
 func planWithBy(ctx context.Context, cfg *config.Config, store *gitstore.Store, trigger, runName, base, head string, all bool, everything string, meaning *config.Meaning, cache, bdPath string, pluginsAt string, x planExtra) (*affected.Plan, error) {
 	pinPlanningToolchains(trigger, cache)
 
-	pc, err := checkPlanned(ctx, cfg, runName, trigger, base, head, all || everything != "", everything, cache, pluginsAt)
+	pc, err := checkPlanned(ctx, cfg, runName, trigger, base, head, all || everything != "", everything, cache, pluginsAt, x.trees)
 	if err != nil {
 		return nil, err
 	}
@@ -848,7 +856,7 @@ func planWithBy(ctx context.Context, cfg *config.Config, store *gitstore.Store, 
 
 	// a plan that runs everything for a reason known before any tree is
 	// read binds nothing: it asks no plugin and reads no lists.
-	known, err := affected.Everything(ctx, affected.Options{Config: cfg, Repo: gitx.Repo{Dir: trigger}, Base: base, Head: head, All: all, AllReason: allReason})
+	known, err := affected.Everything(ctx, affected.Options{Config: cfg, Repo: gitx.Repo{Dir: trigger}, Base: base, Head: head, All: all, AllReason: allReason, Trees: x.trees})
 	if err != nil {
 		return nil, err
 	}
@@ -897,6 +905,7 @@ func planWithBy(ctx context.Context, cfg *config.Config, store *gitstore.Store, 
 		Reasons:      p.book.reasonsHook(),
 		ExplainLimit: x.explainLimit(cfg),
 		Rebase:       x.rebase,
+		Trees:        x.trees,
 		Sample:       sampleRule(cfg, p.set),
 		Written:      writtenHook(p.book),
 		Expect:       p.book.expectHook(),
@@ -1224,6 +1233,12 @@ func narrowedText(sp affected.SuitePlan) string {
 
 	parts := make([]string, 0, len(sp.Narrowed))
 	for _, n := range sp.Narrowed {
+		if n.CarriedFrom != "" {
+			parts = append(parts, fmt.Sprintf("%s carried over %d from %s", n.Narrowing, len(n.Dropped), short12(n.CarriedFrom)))
+
+			continue
+		}
+
 		parts = append(parts, fmt.Sprintf("%s left out %d", n.Narrowing, len(n.Dropped)))
 	}
 

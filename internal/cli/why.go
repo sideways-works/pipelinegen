@@ -630,6 +630,10 @@ func leftOut(p *whyPlan, sp whySuite, name, label string) []WhyReason {
 			r.Text = fmt.Sprintf("the narrowing %s left it out: %s", n.Narrowing, n.Reason)
 		}
 
+		if n.CarriedFrom != "" {
+			r.Text += fmt.Sprintf("; %s of %s carried over from %s", plural(len(n.Dropped), "slice"), sp.Suite, short12(n.CarriedFrom))
+		}
+
 		r.Text += levelText(p.Narrowing, n.OffAt)
 
 		if lv, ok := report.SetBy(p.Narrowings, n.Narrowing, n.OffAt); ok {

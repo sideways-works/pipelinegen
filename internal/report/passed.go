@@ -14,6 +14,8 @@ type Pass struct {
 	Commit string
 	Label  string
 	At     time.Time
+	// Carried is a pull request's slice its build carried over from the build before, as passed.
+	Carried bool
 }
 
 // Passes are, by "<suite>/<slice>", each slice's newest pass among commits (newest first): passed with

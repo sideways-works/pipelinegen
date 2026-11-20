@@ -459,9 +459,12 @@ func narrowed(b *strings.Builder, s Suite, set []NarrowingSet, named bool) {
 			by = n.Kind
 		}
 
-		if n.Kind == "sampled" {
+		switch {
+		case n.Kind == "sampled":
 			fmt.Fprintf(b, "- The sample (%s) left %d for the nightly", by, len(n.Dropped))
-		} else {
+		case n.CarriedFrom != "":
+			fmt.Fprintf(b, "- %s carried over %d as passed from the last build, `%s`", by, len(n.Dropped), short(n.CarriedFrom))
+		default:
 			fmt.Fprintf(b, "- %s left out %d", by, len(n.Dropped))
 		}
 
@@ -779,8 +782,11 @@ func mermaid(r Run) (string, bool) {
 
 		for j, n := range s.Narrowed {
 			text := fmt.Sprintf("%d left out by %s", len(n.Dropped), n.Narrowing)
-			if n.Kind == "sampled" {
+			switch {
+			case n.Kind == "sampled":
 				text = fmt.Sprintf("%d left for the nightly by the sample", len(n.Dropped))
+			case n.CarriedFrom != "":
+				text = fmt.Sprintf("%d carried over from %s", len(n.Dropped), short(n.CarriedFrom))
 			}
 
 			if n.OffAt > 0 {

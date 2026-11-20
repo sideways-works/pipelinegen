@@ -43,8 +43,11 @@ type RootCause struct {
 // Plan is what a run runs: per suite, the slices it selected, why, and
 // those it left out.
 type Plan struct {
-	Base      string      `json:"base"`
-	Head      string      `json:"head"`
+	Base string `json:"base"`
+	Head string `json:"head"`
+	// Merged is, for a run that compares with merged_target, the change's own commit: Head is it
+	// merged into Base.
+	Merged    string      `json:"merged,omitempty"`
 	All       bool        `json:"all"`
 	Reason    string      `json:"reason"`
 	Suites    []SuitePlan `json:"suites"`
@@ -107,6 +110,9 @@ type Narrowed struct {
 	Reason    string   `json:"reason"`
 	Reached   int      `json:"reached"`
 	Dropped   []string `json:"dropped"`
+	// CarriedFrom, on a pull request's passed-since entry, is the change's commit of its last build:
+	// the slices it left out passed there, or were carried over into it, and stay passed.
+	CarriedFrom string `json:"carried_from,omitempty"`
 }
 
 const (
@@ -220,6 +226,9 @@ type Options struct {
 	// Rebase, when set, compares each reached slice from a later pass of
 	// its own.
 	Rebase *Rebase
+	// Trees compares the base's tree with the head's whatever their history; otherwise a base that
+	// is no ancestor of the head runs everything.
+	Trees  bool
 	quiet  *quiet
 	pinned func(repo string) (changed bool, why string)
 }
@@ -589,10 +598,12 @@ func everythingReason(ctx context.Context, o Options, head string) (reason, base
 		return fmt.Sprintf("the base %s is unknown", o.Base), "", nil
 	}
 
-	if yes, err := o.Repo.IsAncestor(ctx, base, head); err != nil {
-		return "", "", err
-	} else if !yes {
-		return fmt.Sprintf("the base %s is no ancestor of the head", short(base)), base, nil
+	if !o.Trees {
+		if yes, err := o.Repo.IsAncestor(ctx, base, head); err != nil {
+			return "", "", err
+		} else if !yes {
+			return fmt.Sprintf("the base %s is no ancestor of the head", short(base)), base, nil
+		}
 	}
 
 	changes, err := o.Repo.Diff(ctx, base, head)

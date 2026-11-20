@@ -10,7 +10,8 @@ import (
 )
 
 // Rebase compares a reached slice from where it last passed in the same run, when that is newer than
-// the plan's base: a slice the change from there to the head doesn't reach is left out.
+// the plan's base: a slice the change from there to the head doesn't reach is left out. For a pull
+// request, that is the tree its last build tested, and a slice left out is carried over from it.
 type Rebase struct {
 	OffAt int
 	// Since says where a slice of a suite last passed with nothing from there to the head reaching it;
@@ -25,6 +26,8 @@ type Since struct {
 	// Sampled tells that the change from there samples the suite: the slice is left out only when this
 	// plan samples it too.
 	Sampled bool
+	// CarriedFrom is, for a pull request, the change's commit of the last build the slice passed in.
+	CarriedFrom string
 }
 
 // passed is what the rebase left out of a suite: an entry per later base, and the slices whose change
@@ -58,7 +61,9 @@ func (o Options) rebase(suite string, sp SuitePlan, all []bazel.Slice, seen map[
 
 		i := slices.IndexFunc(out.entries, func(n Narrowed) bool { return n.Reason == s.Why })
 		if i < 0 {
-			out.entries = append(out.entries, Narrowed{Kind: NarrowedBy, Narrowing: plugins.NarrowPassedSince, OffAt: o.Rebase.OffAt, Reason: s.Why})
+			out.entries = append(out.entries, Narrowed{
+				Kind: NarrowedBy, Narrowing: plugins.NarrowPassedSince, OffAt: o.Rebase.OffAt, Reason: s.Why, CarriedFrom: s.CarriedFrom,
+			})
 			i = len(out.entries) - 1
 		}
 

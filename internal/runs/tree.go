@@ -20,9 +20,22 @@ var ErrNoMerge = errors.New("does not merge cleanly")
 // clone of it carries the commit along.
 const treeRef = "refs/pipelinegen/tree"
 
+// testedRef holds an earlier build's merge, made again, while a plan compares with it.
+const testedRef = "refs/pipelinegen/tested"
+
 // Merge makes the commit a pull request is tested as, head merged into the target's tip, with fixed
 // parents, tree, message, author and dates, so the planning job and every suite job get one id.
 func Merge(ctx context.Context, repo, head, into string) (string, error) {
+	return mergeAt(ctx, repo, head, into, treeRef)
+}
+
+// MergeAgain makes the commit an earlier build of a pull request tested, as Merge made it then, and
+// leaves the tree under test where it is.
+func MergeAgain(ctx context.Context, repo, head, into string) (string, error) {
+	return mergeAt(ctx, repo, head, into, testedRef)
+}
+
+func mergeAt(ctx context.Context, repo, head, into, ref string) (string, error) {
 	tree, err := git(ctx, repo, "merge-tree", "--write-tree", into, head)
 	if err != nil {
 		return "", fmt.Errorf("%s into %s: %w", short(head), short(into), ErrNoMerge)
@@ -44,7 +57,7 @@ func Merge(ctx context.Context, repo, head, into string) (string, error) {
 		return "", err
 	}
 
-	if _, err := git(ctx, repo, "update-ref", treeRef, merge); err != nil {
+	if _, err := git(ctx, repo, "update-ref", ref, merge); err != nil {
 		return "", err
 	}
 
