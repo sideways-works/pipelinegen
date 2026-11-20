@@ -889,6 +889,7 @@ pipelinegen plugin new correlator rust --into ../rust-correlator
 | `--sha256` | whatever the download has | `add` | With `--zip`, the sha256 the zip must have. |
 | `--platform` | every platform of the manifest | `build` | Builds for this `os/arch` only; give it again for more. A manifest whose platforms are `[any]` is built once. |
 | `--tool` | the first of docker and podman on `PATH` | `build` | The container tool the build runs in. |
+| `--version` | none | `build` | The version the build stands for, `vX.Y.Z`: the manifest's `{version}`. The build's `{commit}` is the commit checked out in the plugin's repository, with a warning when the tree has changes. |
 | `--pre` | `false` | `upgrade` | Moves to a prerelease too, when it is the newest. |
 | `--into` | `<name>-<kind>` in the current directory | `new` | The directory to write the plugin into, new or empty. |
 | `--from` | `https://github.com/sideways-works/pipelinegen-plugins` | `new` | The git URL of the repository whose `templates/vX.Y.Z` tags hold the templates, one directory a kind under `templates/`. |

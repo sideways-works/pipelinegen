@@ -38,10 +38,26 @@ in the file.
 | `platforms` | list | (required) | The platforms to build for, each `os/arch` (`linux/amd64`, `darwin/arm64`), or `[any]` alone for one build that runs everywhere: a Node script, or assets. |
 | `files` | list of paths | none | Files of the plugin's directory copied into the zip beside the program, under their base names: `LICENSE`, `NOTICE`. A path may not leave the directory, and a file that is a symlink is refused. |
 | `assets` | list of directories | none | Directories the build writes under `{out}` (`{out}/dist`), kept in the zip and the cache under the same relative paths beside `manifest.yaml`. None of their files may be executable or a symlink. |
+| `description` | string | none | One line on what the plugin does, for listings. |
+| `logo` | path | none | A file of the plugin's directory, kept in the zip and the cache under its own path, for listings. |
+| `implements` | list | none | What the plugin offers other plugins, each `"<name> <semver range>"`: `"store >=1.0 <2"`. The range is checked. |
+| `requires` | list | none | What the plugin needs another plugin to offer, in the same form. |
+| `schemas` | mapping | none | Of a `meta` plugin alone: its messages by name, each `{message: <file>, answer: <file>}`, JSON Schema files of the plugin's directory, which must hold JSON. They are kept in the zip and the cache under their own paths. |
+| `ack_timeout` | duration | none | Of a `meta` plugin alone: how long a receiver has to ack or nack each message, a Go duration above zero such as `30s`. |
+
+## Meta plugins
+
+A plugin of kind `meta` is schemas alone: it has no `build` and no
+`program`, its `platforms` are `[any]` or left out, and nothing of it is
+built or runs. It holds `manifest.yaml`, its `schemas`, its `files` and its
+`logo`, and resolves by `commit` or `zip` to that directory, as a plugin
+built for `[any]` does. pipelinegen runs no meta plugin itself, so a
+`plugins` entry refuses one; other hosts read them. Every other kind is
+refused `schemas` and `ack_timeout`.
 
 ## Placeholders
 
-`build.run` and the values of `build.env` may hold three placeholders,
+`build.run` and the values of `build.env` may hold these placeholders,
 filled in for each platform's build:
 
 | Placeholder | Value |
@@ -49,9 +65,20 @@ filled in for each platform's build:
 | `{out}` | The directory the build writes the program and assets into. |
 | `{os}` | The platform's operating system, `linux` or `darwin`. |
 | `{arch}` | The platform's architecture, `amd64` or `arm64`. |
+| `{commit}` | The full commit built: the pinned commit, or for `plugin build` the commit checked out in the plugin's repository; empty outside one. |
+| `{version}` | The version the build stands for, without a leading `v`: `plugin build --version`'s, or that of the tag a host found the commit through. Empty otherwise, which a pin by `commit` always is. |
 
 `{os}` and `{arch}` have no value for `platforms: [any]`, and a manifest
-that uses them there is refused, as is any other `{...}`.
+that uses them there is refused, as is any other `{...}`. `{commit}` and
+`{version}` stamp the program as a release is stamped; a manifest that
+wants `dev+<commit>` without a version says so in its command:
+
+```yaml
+run: [sh, -c, 'v=v{version}; [ "$v" != v ] || v=dev+$(printf %.12s {commit}); exec go build -ldflags="-X main.Version=$v" -o {out}/go-driver ./cmd/go-driver']
+```
+
+A build stamped with a version is kept in the cache apart from one of the
+same commit without.
 
 ## How a build runs
 
