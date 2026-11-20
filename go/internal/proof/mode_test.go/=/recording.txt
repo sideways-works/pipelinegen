@@ -1,0 +1,2 @@
+# observed
+go:internal/proof#method:Options.ModeFromEnv
