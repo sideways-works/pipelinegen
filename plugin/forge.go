@@ -6,11 +6,11 @@ import (
 	"github.com/sideways-works/plugkit/exchange"
 )
 
-// KindConnector is a plugin that knows where code lives: a git host's
+// KindForge is a plugin that knows where code lives: a git host's
 // API (proposed changes, commit statuses, comments) or a plain git server.
-const KindConnector = "connector"
+const KindForge = "forge"
 
-// CallLinks, shared with correlators, answers a connector's web links too.
+// CallLinks, shared with correlators, answers a forge's web links too.
 const (
 	CallIdentify = "identify"
 	CallChanges  = "changes"
@@ -20,7 +20,7 @@ const (
 	CallSubject  = "subject"
 )
 
-var ConnectorCalls = []string{CallIdentify, CallChanges, CallStatus, CallStatuses, CallComment, CallSubject, CallLinks}
+var ForgeCalls = []string{CallIdentify, CallChanges, CallStatus, CallStatuses, CallComment, CallSubject, CallLinks}
 
 // CallPurposes is the one purpose whose token each call's requests may carry. None carries the
 // read token: it is git's credential, the only one a task running a proposed change may hold.
@@ -48,7 +48,7 @@ const (
 	CapHeadRef = "head_ref"
 )
 
-// FilterCapabilities is the capability each pull request filter needs: one the connector can't
+// FilterCapabilities is the capability each pull request filter needs: one the forge can't
 // answer fails the config, since leaving it out would run changes the run means to skip.
 var FilterCapabilities = map[string]string{
 	"draft":          CapDraft,
@@ -65,7 +65,7 @@ const (
 	FromUnknown = "unknown"
 )
 
-// A connector maps the core's states of a commit status to its host's names (describe's
+// A forge maps the core's states of a commit status to its host's names (describe's
 // states).
 const (
 	StatePending = "pending"
@@ -76,20 +76,20 @@ const (
 
 var States = []string{StatePending, StateSuccess, StateFailure, StateError}
 
-type ConnectorDescription struct {
+type ForgeDescription struct {
 	// APIHosts are the hosts besides the code remote's that requests may go to, as
 	// scheme://host[:port]; the config must name each again before any request goes there.
 	APIHosts []string `json:"api_hosts,omitempty"`
 	// RequestHeaders may be set as literals; the core refuses any other, and always
 	// Authorization, Cookie, Host and Proxy-*: a credential goes only where the core puts it.
-	RequestHeaders  []string       `json:"request_headers,omitempty"`
-	ResponseHeaders []string       `json:"response_headers,omitempty"`
-	Auth            *ConnectorAuth `json:"auth,omitempty"`
-	// Purposes are those the connector needs a token for (read, changes, report); the store's
+	RequestHeaders  []string   `json:"request_headers,omitempty"`
+	ResponseHeaders []string   `json:"response_headers,omitempty"`
+	Auth            *ForgeAuth `json:"auth,omitempty"`
+	// Purposes are those the forge needs a token for (read, changes, report); the store's
 	// belongs to the store.
 	Purposes []string          `json:"purposes,omitempty"`
 	GitUser  string            `json:"git_user,omitempty"`
-	Limits   *ConnectorLimits  `json:"limits,omitempty"`
+	Limits   *ForgeLimits      `json:"limits,omitempty"`
 	States   map[string]string `json:"states,omitempty"`
 	// Accelerators name, per runner, a CI resource of the host's that notices a new change sooner
 	// than the sweep; the runner reads the settings, the core doesn't.
@@ -99,22 +99,22 @@ type ConnectorDescription struct {
 	Fallback map[string]HTTPRequest `json:"fallback,omitempty"`
 }
 
-// ConnectorAuth puts a token in Header, after Scheme and a space when there is one
+// ForgeAuth puts a token in Header, after Scheme and a space when there is one
 // (Authorization: Bearer <token>, PRIVATE-TOKEN: <token>).
-type ConnectorAuth = exchange.Auth
+type ForgeAuth = exchange.Auth
 
-type ConnectorLimits struct {
+type ForgeLimits struct {
 	StatusTextMax int  `json:"status_text_max,omitempty"`
 	CommentMax    int  `json:"comment_max,omitempty"`
 	Markdown      bool `json:"markdown,omitempty"`
 	Mermaid       bool `json:"mermaid,omitempty"`
 }
 
-// ExchangeRequest is one round of a connector call. A connector keeps no state between rounds:
+// ExchangeRequest is one round of a forge call. A forge keeps no state between rounds:
 // each carries the call's arguments again and every response of every round before it.
 type ExchangeRequest = exchange.Request
 
-// Round is a connector's answer to one round: requests for the core to send, or Done with the
+// Round is a forge's answer to one round: requests for the core to send, or Done with the
 // call's answer.
 type Round = exchange.Round
 
@@ -141,7 +141,7 @@ type Identity struct {
 	HeadRef string `json:"head_ref,omitempty"`
 }
 
-// ChangesArgs ask for the open changes onto a base branch. Filters are a hint the connector may
+// ChangesArgs ask for the open changes onto a base branch. Filters are a hint the forge may
 // narrow its listing with; the core applies them again to whatever comes back.
 type ChangesArgs struct {
 	Base    string         `json:"base"`
@@ -225,7 +225,7 @@ type LinksArgs struct {
 	Change string `json:"change,omitempty"`
 }
 
-// WebLinks is the connector's links' answer: a page per thing asked about, empty where the host
+// WebLinks is the forge's links' answer: a page per thing asked about, empty where the host
 // has none.
 type WebLinks struct {
 	Commit string `json:"commit,omitempty"`

@@ -16,7 +16,7 @@ const fakePulls = `[
  {"number": 8, "head": "2222222222222222222222222222222222222222", "base": "main", "fork": true}
 ]`
 
-func connectorFixtureFile(skip string) string {
+func forgeFixtureFile(skip string) string {
 	responses := []map[string]any{
 		{"method": "GET", "path": "/api/pulls", "query": "state=open", "status": 200, "body_file": "pulls.json"},
 		{"method": "POST", "path": "/api/statuses/1111111111111111111111111111111111111111", "status": 201, "body": "{}"},
@@ -34,7 +34,7 @@ func connectorFixtureFile(skip string) string {
 		}
 	}
 
-	data, err := json.Marshal(map[string]any{"connector": map[string]any{
+	data, err := json.Marshal(map[string]any{"forge": map[string]any{
 		"remote":    "{server}/team/app.git",
 		"config":    map[string]any{"api": "{server}/api"},
 		"responses": kept,
@@ -56,30 +56,30 @@ func connectorFixtureFile(skip string) string {
 	return string(data)
 }
 
-// connectorFakes is a connector for the fixture's API; connector-leak reports a fork's change as the
+// forgeFakes is a forge for the fixture's API; forge-leak reports a fork's change as the
 // repository's own, -sneaky asks for requests where none belong, -greedy takes the store's purpose.
-func connectorFakes(kind string) map[string]plugin.Handler {
+func forgeFakes(kind string) map[string]plugin.Handler {
 	d := plugin.Description{
-		Kind: plugin.KindConnector, Capabilities: []string{plugin.CapChanges, plugin.CapStatuses, plugin.CapComment, plugin.CapForks},
+		Kind: plugin.KindForge, Capabilities: []string{plugin.CapChanges, plugin.CapStatuses, plugin.CapComment, plugin.CapForks},
 		Purposes: []string{plugin.PurposeRead, plugin.PurposeChanges, plugin.PurposeReport},
-		Auth:     &plugin.ConnectorAuth{Header: "Authorization", Scheme: "Bearer"}, RequestHeaders: []string{"Accept"},
+		Auth:     &plugin.ForgeAuth{Header: "Authorization", Scheme: "Bearer"}, RequestHeaders: []string{"Accept"},
 	}
 
-	if kind == "connector-greedy" {
+	if kind == "forge-greedy" {
 		d.Purposes = append(d.Purposes, plugin.PurposeStore)
 		d.RequestHeaders = append(d.RequestHeaders, "Authorization")
 	}
 
 	h := map[string]plugin.Handler{plugin.CallDescribe: describe(d)}
 
-	for _, call := range plugin.ConnectorCalls {
-		h[call] = func(in []byte) (any, error) { return fakeConnectorRound(kind, call, in) }
+	for _, call := range plugin.ForgeCalls {
+		h[call] = func(in []byte) (any, error) { return fakeForgeRound(kind, call, in) }
 	}
 
 	return h
 }
 
-func fakeConnectorRound(kind, call string, in []byte) (any, error) {
+func fakeForgeRound(kind, call string, in []byte) (any, error) {
 	var req plugin.ExchangeRequest
 	if err := decode(in, &req); err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func fakeConnectorRound(kind, call string, in []byte) (any, error) {
 		return data
 	}
 
-	if kind == "connector-sneaky" && (call == plugin.CallIdentify || call == plugin.CallLinks) && len(req.Responses) == 0 {
+	if kind == "forge-sneaky" && (call == plugin.CallIdentify || call == plugin.CallLinks) && len(req.Responses) == 0 {
 		return ask("GET", "/whoami", "")
 	}
 
@@ -158,7 +158,7 @@ func fakeConnectorRound(kind, call string, in []byte) (any, error) {
 
 		for _, p := range pulls {
 			from := plugin.FromSame
-			if p.Fork && kind != "connector-leak" {
+			if p.Fork && kind != "forge-leak" {
 				from = plugin.FromFork
 			}
 
@@ -214,18 +214,18 @@ func fakeConnectorRound(kind, call string, in []byte) (any, error) {
 	return nil, fmt.Errorf("%w: %s", errUndeclared, call)
 }
 
-func runConnector(t *testing.T, kind, skip string, withTree bool) map[string]string {
+func runForge(t *testing.T, kind, skip string, withTree bool) map[string]string {
 	t.Helper()
 
 	fixture := ""
 	if withTree {
-		fixture = connectorFixtureFile(skip)
+		fixture = forgeFixtureFile(skip)
 	}
 
-	return runConnectorOn(t, kind, fixture)
+	return runForgeOn(t, kind, fixture)
 }
 
-func runConnectorOn(t *testing.T, kind, fixture string) map[string]string {
+func runForgeOn(t *testing.T, kind, fixture string) map[string]string {
 	t.Helper()
 
 	o := Options{Path: fakeExe(t, kind), Work: t.TempDir()}
@@ -251,8 +251,8 @@ func runConnectorOn(t *testing.T, kind, fixture string) map[string]string {
 	return out
 }
 
-func TestAWellBehavedConnectorPasses(t *testing.T) {
-	got := runConnector(t, "connector", "", true)
+func TestAWellBehavedForgePasses(t *testing.T) {
+	got := runForge(t, "forge", "", true)
 
 	for _, check := range []string{
 		"describe answers the protocol", "refuses no-such-call", "refuses pipeline",
@@ -274,17 +274,17 @@ func TestAWellBehavedConnectorPasses(t *testing.T) {
 	}
 }
 
-// A connector that reports a fork's change as the repository's own fails:
+// A forge that reports a fork's change as the repository's own fails:
 // that change would run with the pipeline's credentials.
-func TestAConnectorAdmittingAForkFails(t *testing.T) {
-	got := runConnector(t, "connector-leak", "", true)
+func TestAForgeAdmittingAForkFails(t *testing.T) {
+	got := runForge(t, "forge-leak", "", true)
 	if !strings.Contains(got["a change from a fork never runs"], "pr-8 comes from a fork") {
 		t.Fatalf("%q", got["a change from a fork never runs"])
 	}
 }
 
-func TestAConnectorRequestingWhereNoneBelongFails(t *testing.T) {
-	got := runConnector(t, "connector-sneaky", "", true)
+func TestAForgeRequestingWhereNoneBelongFails(t *testing.T) {
+	got := runForge(t, "forge-sneaky", "", true)
 
 	for _, check := range []string{"identify claims the fixture's remote", "identify disowns a remote elsewhere", "links answers without a request"} {
 		if !strings.Contains(got[check], "sends no requests") {
@@ -293,8 +293,8 @@ func TestAConnectorRequestingWhereNoneBelongFails(t *testing.T) {
 	}
 }
 
-func TestAGreedyConnectorFailsDescribe(t *testing.T) {
-	got := runConnector(t, "connector-greedy", "", true)
+func TestAGreedyForgeFailsDescribe(t *testing.T) {
+	got := runForge(t, "forge-greedy", "", true)
 
 	problem := got["describe answers the protocol"]
 	if !strings.Contains(problem, `purpose "store"`) || !strings.Contains(problem, "header Authorization") {
@@ -302,14 +302,14 @@ func TestAGreedyConnectorFailsDescribe(t *testing.T) {
 	}
 }
 
-func TestAConnectorFixtureMustAnswerEverything(t *testing.T) {
-	got := runConnector(t, "connector", "/api/issues/7/comments", true)
+func TestAForgeFixtureMustAnswerEverything(t *testing.T) {
+	got := runForge(t, "forge", "/api/issues/7/comments", true)
 	if !strings.Contains(got["every request finds a response in the fixture"], "GET /api/issues/7/comments") {
 		t.Fatalf("%q", got["every request finds a response in the fixture"])
 	}
 
-	got = runConnector(t, "connector", "", false)
-	if !strings.Contains(got["the fixture exercises every call the connector declares"], "no --tree") {
+	got = runForge(t, "forge", "", false)
+	if !strings.Contains(got["the fixture exercises every call the forge declares"], "no --tree") {
 		t.Fatalf("%v", got)
 	}
 }
@@ -318,11 +318,11 @@ func TestAConnectorFixtureMustAnswerEverything(t *testing.T) {
 // fork check then holds the changes it names to running.
 func TestAFixtureWithoutForksSaysWhy(t *testing.T) {
 	var f map[string]map[string]any
-	if err := json.Unmarshal([]byte(connectorFixtureFile("")), &f); err != nil {
+	if err := json.Unmarshal([]byte(forgeFixtureFile("")), &f); err != nil {
 		t.Fatal(err)
 	}
 
-	delete(f["connector"], "forks")
+	delete(f["forge"], "forks")
 
 	without := func() string {
 		data, err := json.Marshal(f)
@@ -333,19 +333,19 @@ func TestAFixtureWithoutForksSaysWhy(t *testing.T) {
 		return string(data)
 	}
 
-	if got := runConnectorOn(t, "connector", without())["a change from a fork never runs"]; !strings.Contains(got, "no_forks") {
+	if got := runForgeOn(t, "forge", without())["a change from a fork never runs"]; !strings.Contains(got, "no_forks") {
 		t.Fatalf("no forks, no reason: %q", got)
 	}
 
-	f["connector"]["no_forks"] = "a plain git server has no forks"
+	f["forge"]["no_forks"] = "a plain git server has no forks"
 
-	if got := runConnectorOn(t, "connector", without()); got["a change from a fork never runs"] != "" {
+	if got := runForgeOn(t, "forge", without()); got["a change from a fork never runs"] != "" {
 		t.Fatalf("no forks, and why: %q", got["a change from a fork never runs"])
 	}
 
-	f["connector"]["same"] = []string{"pr-8"}
+	f["forge"]["same"] = []string{"pr-8"}
 
-	if got := runConnectorOn(t, "connector", without())["a change from a fork never runs"]; !strings.Contains(got, "pr-8 comes from the same repository") {
+	if got := runForgeOn(t, "forge", without())["a change from a fork never runs"]; !strings.Contains(got, "pr-8 comes from the same repository") {
 		t.Fatalf("a same change reported a fork: %q", got)
 	}
 }

@@ -78,6 +78,10 @@ func (p Plugin) Describe(ctx context.Context, work string) (Description, error) 
 		return d, fmt.Errorf("%w: %s speaks protocol %d, not %d", ErrFailed, p.Name, d.Protocol, Protocol)
 	}
 
+	if err := CheckKind(d.Kind); err != nil {
+		return d, fmt.Errorf("%w: %s says it is: %w", ErrFailed, p.Name, err)
+	}
+
 	return d, nil
 }
 

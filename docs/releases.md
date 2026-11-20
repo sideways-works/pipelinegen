@@ -98,7 +98,7 @@ name, kind, protocol version, version and the runtime it needs
 (`"needs": ["node>=22.18"]`). `toolchains` is left out: it says which
 versions one run resolved on one machine, not what the release is. Each
 other program whose name ends in a plugin kind (`-runner`, `-sbom`,
-`-correlator`, `-driver` or `-connector`) gets `NAME.plugin.json` the same
+`-correlator`, `-driver` or `-forge`) gets `NAME.plugin.json` the same
 way; one whose name doesn't is no plugin and is never asked. The build
 fails when a plugin reports a version other than the tag, and when a
 program's `version` command prints another. Every

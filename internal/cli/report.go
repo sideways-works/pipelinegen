@@ -323,7 +323,7 @@ func (s *step) close(err *error) {
 	}
 }
 
-// When the root is a connector's hand-off, loadChange reads the config from a checkout of the change.
+// When the root is a forge's hand-off, loadChange reads the config from a checkout of the change.
 func (s *step) loadChange(ctx context.Context) (*config.Config, error) {
 	checkout, err := handOffCheckout(ctx, os.Getenv(envRun), s.root, true)
 	if err != nil {

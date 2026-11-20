@@ -145,6 +145,12 @@ func pluginBuild(ctx context.Context, args []string, stdout io.Writer) error {
 		return fmt.Errorf("%w: %w", errBuilt, err)
 	}
 
+	if m, err := manifest.Parse(data); err == nil {
+		if err := plugin.CheckKind(m.Kind); err != nil {
+			return fmt.Errorf("%w: %s: %w", errBuilt, dir, err)
+		}
+	}
+
 	root, rel := repositoryOf(ctx, dir)
 
 	work, err := os.MkdirTemp("", "pipelinegen-plugin-build-")
@@ -312,8 +318,8 @@ func addZip(ctx context.Context, cfg *config.Config, doc *pinedit.Doc, u, want, 
 	}
 
 	switch {
-	case !slices.Contains(plugin.Kinds, m.Kind):
-		return "", fmt.Errorf("%w %s: its manifest's kind is %s, which pipelinegen doesn't run: %s", errPin, u, m.Kind, strings.Join(plugin.Kinds, ", "))
+	case plugin.CheckKind(m.Kind) != nil:
+		return "", fmt.Errorf("%w %s: %w", errPin, u, plugin.CheckKind(m.Kind))
 	case m.Program == "":
 		return "", fmt.Errorf("%w %s: it holds assets alone, and pipelinegen runs a %s plugin as a program", errPin, u, m.Kind)
 	}
@@ -394,6 +400,10 @@ func pluginDescribe(ctx context.Context, args []string, stdout io.Writer) error 
 
 	m, err := manifest.Parse(data)
 	if err != nil {
+		return fmt.Errorf("%w: %s: %w", errBuilt, pos[0], err)
+	}
+
+	if err := plugin.CheckKind(m.Kind); err != nil {
 		return fmt.Errorf("%w: %s: %w", errBuilt, pos[0], err)
 	}
 

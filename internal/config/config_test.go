@@ -749,7 +749,7 @@ func TestRunsNeedNoHost(t *testing.T) {
 
 func TestWithoutAHostWhatNeedsOneIsRefused(t *testing.T) {
 	cases := map[string][3]string{
-		"pull requests":      {"trigger: {branch: main}", "trigger: {pull_requests: {base: main}}", "needs a host or a connector that lists them"},
+		"pull requests":      {"trigger: {branch: main}", "trigger: {pull_requests: {base: main}}", "needs a host or a forge that lists them"},
 		"statuses asked for": {"compare: last_passed\n", "compare: last_passed\n    report: {status: true}\n", "report.status needs a host"},
 		"a password":         {"git://example.test/r.git", "https://u:p@example.test/r.git", "without a user, password"},
 		"a user":             {"git://example.test/r.git", "https://u@example.test/r.git", "without a user, password"},

@@ -192,8 +192,8 @@ func hasFlag(args []string, name string) bool {
 }
 
 type holdings struct {
-	trusted, step, repo, planning, connector, ssh, packages []string
-	packagesBuilt                                           bool
+	trusted, step, repo, planning, forge, ssh, packages []string
+	packagesBuilt                                       bool
 }
 
 func (h *holdings) add(v specVariant, text []byte, runs *taskRuns) {
@@ -206,7 +206,7 @@ func (h *holdings) add(v specVariant, text []byte, runs *taskRuns) {
 			h.step = appendNew(h.step, v.label()+p)
 		}
 
-		if v.name == splitTokens || v.name == connectorRun {
+		if v.name == splitTokens || v.name == forgeRun {
 			for _, p := range proposedPlanProblems(steps) {
 				h.planning = appendNew(h.planning, v.label()+p)
 			}
@@ -227,8 +227,8 @@ func (h *holdings) add(v specVariant, text []byte, runs *taskRuns) {
 		}
 	}
 
-	if v.name == connectorRun {
-		h.connector = append(h.connector, connectorProblems(text, runs)...)
+	if v.name == forgeRun {
+		h.forge = append(h.forge, forgeProblems(text, runs)...)
 
 		if steps, err := stepCalls(text, runs); err == nil {
 			h.ssh = append(h.ssh, sshKeyProblems(v.spec, steps)...)
@@ -264,7 +264,7 @@ func sshKeyProblems(s plugin.Spec, steps []stepCall) []string {
 	return out
 }
 
-func connectorProblems(text []byte, runs *taskRuns) []string {
+func forgeProblems(text []byte, runs *taskRuns) []string {
 	steps, err := stepCalls(text, runs)
 	if err != nil {
 		return []string{err.Error()}
@@ -294,7 +294,7 @@ func connectorProblems(text []byte, runs *taskRuns) []string {
 	}
 
 	if strings.Contains(string(text), "type: github-pr") {
-		problems = append(problems, "a pull request resource starts a run whose changes come from a connector")
+		problems = append(problems, "a pull request resource starts a run whose changes come from a forge")
 	}
 
 	return problems
@@ -320,9 +320,9 @@ func (h *holdings) report(k *kit) {
 			"no step that runs the repository's code", "the runner installs no packages")
 	}
 
-	if k.can(plugin.CapConnectorChanges) {
-		k.Check("a connector's changes are swept, planned in two steps and handed on", strings.Join(firstFew(h.connector), "; "))
+	if k.can(plugin.CapForgeChanges) {
+		k.Check("a forge's changes are swept, planned in two steps and handed on", strings.Join(firstFew(h.forge), "; "))
 	} else {
-		k.Skip("a connector's changes are swept, planned in two steps and handed on", "the runner doesn't build a connector's chain")
+		k.Skip("a forge's changes are swept, planned in two steps and handed on", "the runner doesn't build a forge's chain")
 	}
 }

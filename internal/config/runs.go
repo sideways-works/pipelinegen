@@ -107,7 +107,7 @@ type Concourse struct {
 	// PullRequests is the image of the pull request resource type (default the maintained
 	// fork of github-pr-resource).
 	PullRequests map[string]any `yaml:"pull_requests"`
-	// Mock says whether the Concourse has its bundled mock resource type, which a connector's
+	// Mock says whether the Concourse has its bundled mock resource type, which a forge's
 	// chain of changes needs: "bundled" (the default) or "missing".
 	Mock string `yaml:"mock,omitempty"`
 	// SelfSet lets the pipeline job set the pipeline itself; off, it only fails when stale. On,
@@ -300,7 +300,7 @@ const (
 	MockMissing = "missing"
 )
 
-// DefaultSweepEvery is how often a connector's changes are swept for.
+// DefaultSweepEvery is how often a forge's changes are swept for.
 const DefaultSweepEvery = "1m"
 
 // DefaultMissedAfter is how long a head waits for its own planning build before the sweep
@@ -534,8 +534,8 @@ func (c *Config) validateNoHost(bad func(string, ...any)) {
 	for _, name := range c.RunNames() {
 		r := c.Runs[name]
 
-		if r.Trigger.PullRequests != nil && !c.ChangesFromConnector() {
-			bad("run %s: a changes (pull_requests) trigger needs a host or a connector that lists them: the github section, or connectors", name)
+		if r.Trigger.PullRequests != nil && !c.ChangesFromForge() {
+			bad("run %s: a changes (pull_requests) trigger needs a host or a forge that lists them: the github section, or forges", name)
 		}
 
 		if r.Report.Status != nil && *r.Report.Status {

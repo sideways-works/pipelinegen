@@ -20,8 +20,8 @@ decides only where results show.
 
 | Git host | Today |
 |---|---|
-| GitHub | works: branch, nightly and pull request runs, statuses, the comment, through the GitHub connector |
-| a plain git server, or any host | since v0.2.0: branch, nightly and review-branch runs with the `git` connector; results stay in the repository's records, read with `pipelinegen status` |
+| GitHub | works: branch, nightly and pull request runs, statuses, the comment, through the GitHub forge |
+| a plain git server, or any host | since v0.2.0: branch, nightly and review-branch runs with the `git` forge; results stay in the repository's records, read with `pipelinegen status` |
 | GitLab | as a plain git server; its merge requests, statuses and comments not yet |
 | Gitea, Forgejo | as a plain git server; their pull requests, statuses and comments not yet |
 
@@ -29,15 +29,15 @@ On your own machine, `pipelinegen slices`, `check`, `affected`, `why` and
 `record` work with any repository and no host.
 
 Talking to a git host belongs to one of the six kinds of plugin, the
-connector ([concepts](../concepts/connectors.md)). Each connector is a
+forge ([concepts](../concepts/forges.md)). Each forge is a
 plugin of the plugins repository, in a directory of its kind:
-[connector/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/github)
+[forge/github](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/github)
 for a config's `github:` section, and
-[connector/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/connector/git)
-for a plain git server under [`connectors`](../reference/config.md#connectors).
-Not in a release yet: pipelinegen fetches the release of the connector a
+[forge/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/git)
+for a plain git server under [`forges`](../reference/config.md#forges).
+Not in a release yet: pipelinegen fetches the release of the forge a
 config uses that it pins, checked by its checksum, so a config needs no new
-line; a `plugins` entry of kind `connector` pins another. Connectors for
+line; a `plugins` entry of kind `forge` pins another. Forges for
 GitLab and Gitea come after. This table changes as they land.
 
 ## Downloads

@@ -14,7 +14,7 @@ import (
 
 func TestTwoHandOffsOfOneHeadAreTwoVersions(t *testing.T) {
 	root, _, s := runEnv(t)
-	gitConnectorConfig(t, root, s.Remote)
+	gitForgeConfig(t, root, s.Remote)
 	cfg := loadConfig(t, root)
 
 	commit := pushBranch(t, s.Remote, "review/cart")
@@ -59,32 +59,32 @@ func TestTwoHandOffsOfOneHeadAreTwoVersions(t *testing.T) {
 	}
 }
 
-func TestAPipelineOfAConnectorsRunsNeedsARunnerThatBuildsThem(t *testing.T) {
+func TestAPipelineOfAForgesRunsNeedsARunnerThatBuildsThem(t *testing.T) {
 	root, _, s := runEnv(t)
-	gitConnectorConfig(t, root, s.Remote)
+	gitForgeConfig(t, root, s.Remote)
 	cfg := loadConfig(t, root)
 
-	able := plugin.Description{Version: "v1", Capabilities: []string{plugin.CallPipeline, plugin.CapConnectorChanges}, ResourceTypes: []string{mockType}}
+	able := plugin.Description{Version: "v1", Capabilities: []string{plugin.CallPipeline, plugin.CapForgeChanges}, ResourceTypes: []string{mockType}}
 
-	if err := runnerBuildsConnectorRuns(cfg, "ci", plugin.Description{Version: "v0", Capabilities: []string{plugin.CallPipeline}}); err == nil ||
-		!strings.Contains(err.Error(), "takes changes from the git connector, which runner ci v0 can't build a pipeline for") {
+	if err := runnerBuildsForgeRuns(cfg, "ci", plugin.Description{Version: "v0", Capabilities: []string{plugin.CallPipeline}}); err == nil ||
+		!strings.Contains(err.Error(), "takes changes from the git forge, which runner ci v0 can't build a pipeline for") {
 		t.Errorf("a runner without the chain: %v", err)
 	}
 
-	if err := runnerBuildsConnectorRuns(cfg, "ci", able); err != nil {
+	if err := runnerBuildsForgeRuns(cfg, "ci", able); err != nil {
 		t.Errorf("a runner with it: %v", err)
 	}
 
 	cfg.Concourse.Mock = "missing"
-	if err := runnerBuildsConnectorRuns(cfg, "ci", able); err == nil || !strings.Contains(err.Error(), "fly -t <target> workers -d") {
+	if err := runnerBuildsForgeRuns(cfg, "ci", able); err == nil || !strings.Contains(err.Error(), "fly -t <target> workers -d") {
 		t.Errorf("no mock: %v", err)
 	}
 
-	if err := runnerBuildsConnectorRuns(cfg, "ci", plugin.Description{Capabilities: []string{plugin.CapConnectorChanges}}); err != nil {
+	if err := runnerBuildsForgeRuns(cfg, "ci", plugin.Description{Capabilities: []string{plugin.CapForgeChanges}}); err != nil {
 		t.Errorf("a runner without mock: %v", err)
 	}
 
-	if err := runnerBuildsConnectorRuns(loadConfig(t, writeConfig(t, reportConfig)), "ci", plugin.Description{}); err != nil {
+	if err := runnerBuildsForgeRuns(loadConfig(t, writeConfig(t, reportConfig)), "ci", plugin.Description{}); err != nil {
 		t.Errorf("a GitHub run: %v", err)
 	}
 }
@@ -103,7 +103,7 @@ func writeConfig(t *testing.T, text string) string {
 func TestAPipelineReachesAnSSHRemoteOnlyThroughARunnerThatHandsTheKey(t *testing.T) {
 	root, _, s := runEnv(t)
 	remote := "ssh://git@git.example.test" + strings.TrimPrefix(s.Remote, "file://")
-	gitConnectorConfig(t, root, remote)
+	gitForgeConfig(t, root, remote)
 	writeFile(t, filepath.Join(root, "pipelinegen.yaml"), strings.Replace(readFile(t, filepath.Join(root, "pipelinegen.yaml")),
 		`git: {remote: "`+remote+`"}`,
 		`git: {remote: "`+remote+`", ssh_key: {read: read_key, store: store_key}, known_hosts: ["git.example.test ssh-ed25519 AAAAkey"]}`, 1))

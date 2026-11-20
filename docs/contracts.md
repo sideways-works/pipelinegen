@@ -106,16 +106,16 @@ or a mismatch fails the step. Every later helper step of the job takes
 `tools` and runs `tools/pipelinegen ...`. The token must be able to read the
 pipelinegen repository.
 
-Not in a release yet: the bootstrap also fetches the connector the config
+Not in a release yet: the bootstrap also fetches the forge the config
 uses into `tools/plugins/<name>`, `github` for the `github` section and
 `git` for a plain git server, as pipelinegen pins it or a `plugins` entry
-of kind `connector` does. The steps that talk to the host (`plan`, the
+of kind `forge` does. The steps that talk to the host (`plan`, the
 sweep, the reports, `baseline`) run it from there once it matches its pin.
 A step that finds no matching copy downloads the pinned release from its
 repository's GitHub release into pipelinegen's cache (the user cache
 directory, `$XDG_CACHE_HOME/pipelinegen` or `~/.cache/pipelinegen`), which
-needs github.com from the step and works only while the connector's
-repository is public. The connector runs as any plugin does: with no token
+needs github.com from the step and works only while the forge's
+repository is public. The forge runs as any plugin does: with no token
 and none of the step's secrets in its environment. The core sends its
 requests, with the token of each call's purpose, only to the host the step
 names (`PIPELINEGEN_GITHUB_API`, or GitHub's own).
@@ -1051,11 +1051,11 @@ another: part 1 is recorded in `coverage/<slice>`, part k ≥ 2 in
 ## The hand-off file
 
 Not in a release yet. A pipeline hands a change off this way only with a
-runner that builds the chain of a connector's runs (its describe has the
-capability `connector_changes`); `pipelinegen pipeline` refuses such a run
+runner that builds the chain of a forge's runs (its describe has the
+capability `forge_changes`); `pipelinegen pipeline` refuses such a run
 with any other.
 
-A change a [connector](plugins.md#connectors) listed reaches the planning
+A change a [forge](plugins.md#forges) listed reaches the planning
 job and the suite jobs as a hand-off: a directory with `run.json` at its
 root, written by the sweep for each head it plans or hands off again, and
 by the runner's hand-off resource type into its input directory. Its
@@ -1064,16 +1064,16 @@ fields are those of the run the build is about:
 | Field | What it holds |
 |---|---|
 | `run` | the run's name in the config |
-| `change` | the change's id, carrying the connector: `git/branch-review%2Fcart` |
+| `change` | the change's id, carrying the forge: `git/branch-review%2Fcart` |
 | `commit` | the head commit the run is keyed by |
 | `pr` | the pull request's number, `0` for a change that is none |
 | `branch` | the head branch |
 | `base` | the branch the change goes into |
-| `connector` | the connector that listed the change, as the trusted config names it |
+| `forge` | the forge that listed the change, as the trusted config names it |
 | `remote` | the code's remote the change is fetched from, as the trusted config names it |
 | `handed` | when the sweep handed the change on, with a random part |
 
-`run`, `change` and `commit` are required; `connector` and `remote` too
+`run`, `change` and `commit` are required; `forge` and `remote` too
 for a step that fetches the change. Nothing reads `handed`. It exists only
 so that the same head handed on again is a new version of the CI
 system's hand-off resource, which would fold an identical one into the
@@ -1110,7 +1110,7 @@ may be the proposed change's own: a checkout with a pull request
 resource's files (`.git/resource`) is a pull request's, whatever else it
 holds; a directory with a `run.json` and no checkout is a hand-off; any
 other checkout is a branch's. When the config's run takes something else
-(a branch run handed a pull request, a connector's run handed a pull
+(a branch run handed a pull request, a forge's run handed a pull
 request's checkout), the step fails with "a change may not move where its
 run reads or writes". So a proposed change can't make its own run a
 trusted one by editing its trigger, and a `run.json` a repository keeps at
@@ -1125,7 +1125,7 @@ does, context
 nothing selected is success, "nothing selected". One more status per run,
 `<status_prefix>/<run>`, sums the run's suites (pending while any is,
 failure or error when any is, success when all are), so a branch rule names
-one check. The statuses go through the code's connector (`status` and
+one check. The statuses go through the code's forge (`status` and
 `statuses`), as does the comment (`comment`). A run with `compare: last_passed` reads the run's own status to
 find the newest earlier commit whose run passed, or, with none, the newest
 whose run is still pending; the plan's `warnings` say so. The plan's

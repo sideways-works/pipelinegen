@@ -12,15 +12,15 @@ import (
 
 const handOffCommit = "0123456789abcdef0123456789abcdef01234567"
 
-func changesRun(connectors ...config.Connector) *config.Config {
+func changesRun(forges ...config.Forge) *config.Config {
 	return &config.Config{
-		Connectors: connectors,
-		Runs:       map[string]config.Run{"review": {Trigger: config.Trigger{PullRequests: &config.PullRequests{Base: "main"}}}},
+		Forges: forges,
+		Runs:   map[string]config.Run{"review": {Trigger: config.Trigger{PullRequests: &config.PullRequests{Base: "main"}}}},
 	}
 }
 
-func TestAChangeFromAConnectorComesAsAHandOff(t *testing.T) {
-	cfg := changesRun(config.Connector{Name: "git", Plugin: config.ConnectorGit})
+func TestAChangeFromAForgeComesAsAHandOff(t *testing.T) {
+	cfg := changesRun(config.Forge{Name: "git", Plugin: config.ForgeGit})
 	want := Change{Run: "review", ID: "git/branch-review%2Fcart", Commit: handOffCommit, Branch: "review/cart", Base: "main"}
 
 	dir := t.TempDir()

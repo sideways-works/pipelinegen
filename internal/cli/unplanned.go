@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/connector"
+	"github.com/sideways-works/pipelinegen/internal/forgeplugin"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/report"
 	"github.com/sideways-works/pipelinegen/internal/runs"
@@ -83,7 +83,7 @@ func runUnplanned(ctx context.Context, args []string, stdout io.Writer) (err err
 
 	sw := sweep{
 		cfg: cfg, gh: gh, refs: refs, marks: marks, out: out, stdout: stdout, now: time.Now(), wait: pr.Missed(),
-		planning: time.Duration(cfg.PlanningLength()) * time.Minute, byConnector: cfg.ChangesFromConnector(),
+		planning: time.Duration(cfg.PlanningLength()) * time.Minute, byForge: cfg.ChangesFromForge(),
 	}
 
 	for _, h := range heads {
@@ -253,9 +253,9 @@ type sweep struct {
 	// planning is how long a head whose planning began is left to that
 	// build: the plan's limit and a margin.
 	planning time.Duration
-	// byConnector heads are found through the code's connector alone, so a head with no plan is planned at
+	// byForge heads are found through the code's forge alone, so a head with no plan is planned at
 	// once, and a hand-off is a run.json.
-	byConnector bool
+	byForge bool
 }
 
 // After maxTakes the sweep says so once, on the head's run status, and leaves the head.
@@ -287,9 +287,9 @@ func (sw sweep) take(ctx context.Context, run string, h runs.Head) ([]gitstore.U
 	var err error
 
 	switch {
-	case !planned && !sw.byConnector && sw.now.Sub(h.Updated) < sw.wait:
+	case !planned && !sw.byForge && sw.now.Sub(h.Updated) < sw.wait:
 		return nil, false, say(sw.stdout, "%s %s: waits for its own plan\n", h.Label(), short12(h.Commit))
-	case !planned && sw.byConnector:
+	case !planned && sw.byForge:
 		if err = handOff(sw.cfg, id, h, filepath.Join(sw.out, sweepPlanDir, dir)); err == nil {
 			err = say(sw.stdout, "%s %s: no plan: plan it\n", h.Label(), short12(h.Commit))
 		}
@@ -306,7 +306,7 @@ func (sw sweep) take(ctx context.Context, run string, h runs.Head) ([]gitstore.U
 			return nil, false, say(sw.stdout, "%s %s: %s\n", h.Label(), short12(h.Commit), why)
 		}
 
-		if sw.byConnector {
+		if sw.byForge {
 			err = handOff(sw.cfg, id, h, filepath.Join(sw.out, sweepHandOffDir, dir))
 		} else {
 			err = h.Files(filepath.Join(sw.out, sweepHandOffDir, dir))
@@ -378,7 +378,7 @@ func (sw sweep) giveUp(ctx context.Context, run string, h runs.Head, planned boo
 	}
 
 	var gh report.GitHub = sw.gh
-	if sw.byConnector {
+	if sw.byForge {
 		// a plain git server has no status to post: the line below and
 		// `pipelinegen status` say it.
 		gh = host(sw.cfg)
@@ -398,15 +398,15 @@ func (sw sweep) marked(ref string, last swept) gitstore.Update {
 }
 
 func openHeads(ctx context.Context, cfg *config.Config, gh runs.Changes, pr *config.PullRequests) ([]runs.Head, error) {
-	if !cfg.ChangesFromConnector() {
+	if !cfg.ChangesFromForge() {
 		return runs.OpenHeads(ctx, gh, pr)
 	}
 
-	cc := cfg.CodeConnector()
-	remote := connectorRemote(cfg)
+	cc := cfg.CodeForge()
+	remote := forgeRemote(cfg)
 
 	// listing a plain git server's branches is reading it: git does, with
-	// the read credential, and the connector picks the changes among them.
+	// the read credential, and the forge picks the changes among them.
 	env := runs.AuthEnv(runs.Auth{Scope: httpsScope(remote), Token: tokenFor(cfg, plugin.PurposeRead), Env: sshEnv(cfg, plugin.PurposeRead)})
 
 	branches, err := runs.Branches(ctx, remote, env)
@@ -414,7 +414,7 @@ func openHeads(ctx context.Context, cfg *config.Config, gh runs.Changes, pr *con
 		return nil, err
 	}
 
-	host, err := openConnector(ctx, cfg, config.ConnectorGit, connector.Options{
+	host, err := openForge(ctx, cfg, config.ForgeGit, forgeplugin.Options{
 		Config: map[string]any{"branches": cc.Changes.Branches, "heads": branches, "links": cc.Links}, Remote: remote,
 	})
 	if err != nil {
@@ -430,7 +430,7 @@ func openHeads(ctx context.Context, cfg *config.Config, gh runs.Changes, pr *con
 
 	for _, c := range changes {
 		// a change runs only at a branch git listed, at the commit git saw
-		if !connector.Admit(c) || c.HeadBranch == pr.Base || branches[c.HeadBranch] != c.Head {
+		if !forgeplugin.Admit(c) || c.HeadBranch == pr.Base || branches[c.HeadBranch] != c.Head {
 			continue
 		}
 
@@ -464,7 +464,7 @@ func handOff(cfg *config.Config, id report.ID, h runs.Head, dir string) error {
 		Run: id.Run, ID: id.Change, Commit: h.Commit, Branch: h.Branch, Base: cfg.Runs[id.Run].Trigger.PullRequests.Base,
 		// where the change is fetched from, as the trusted config says:
 		// the steps after this one read the change's own config.
-		Connector: cfg.CodeConnector().Name, Remote: connectorRemote(cfg),
+		Forge: cfg.CodeForge().Name, Remote: forgeRemote(cfg),
 		Handed: handedNow(),
 	})
 }
@@ -478,8 +478,8 @@ func handedNow() string {
 	return time.Now().UTC().Format(time.RFC3339Nano) + "-" + hex.EncodeToString(nonce)
 }
 
-func connectorRemote(cfg *config.Config) string {
-	if r := cfg.CodeConnector().Remote; r != "" {
+func forgeRemote(cfg *config.Config) string {
+	if r := cfg.CodeForge().Remote; r != "" {
 		return r
 	}
 

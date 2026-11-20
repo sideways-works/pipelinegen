@@ -44,8 +44,8 @@ check](tutorial/check.md).
 without the cache, compared with the cached graph. See [the
 nightly](concepts/the-nightly.md).
 
-**Connector.** The plugin that talks to the git host: proposed changes,
-statuses, comments. See [connectors](concepts/connectors.md).
+**Forge.** The plugin that talks to the git host: proposed changes,
+statuses, comments. See [forges](concepts/forges.md).
 
 **Correlator.** A plugin that links units to each other and observes which
 units a test executed. See [links and
@@ -105,7 +105,7 @@ reasons and the untouched ones. `pipelinegen affected` prints one.
 
 **Plugin.** A separate program, pinned by version and checksum, that knows
 one language, tool, CI system or git host. There are six kinds: sbom,
-correlator, runner, driver, connector and store; the store is still a
+correlator, runner, driver, forge and store; the store is still a
 design.
 
 **Prepare task.** An optional CI task that runs once per suite job before

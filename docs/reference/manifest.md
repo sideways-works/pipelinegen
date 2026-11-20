@@ -29,7 +29,7 @@ in the file.
 | Key | Type | Default | What it does |
 |---|---|---|---|
 | `name` | string | (required) | The plugin's name, the one its `describe` answer gives: lower-case letters, digits and dashes. `pipelinegen plugin add --zip` names the entry by it unless `--name` says otherwise. |
-| `kind` | string | (required) | The plugin's kind. pipelinegen runs `sbom`, `correlator`, `runner`, `driver` and `connector`, and refuses a pin whose entry names another kind than the manifest. Other hosts may know other kinds. |
+| `kind` | string | (required) | The plugin's kind. pipelinegen runs `sbom`, `correlator`, `runner`, `driver` and `forge`, and refuses a pin whose entry names another kind than the manifest. Other hosts may know other kinds. |
 | `program` | file name | (required, but with `platforms: [any]`) | The program the build writes into `{out}`: `{out}/<program>` for a binary, or `{out}/<program>.mjs` for a Node plugin. Without the extension. A plugin built for `[any]` may leave it out when it holds assets alone; pipelinegen refuses such a plugin, since it runs every plugin as a program. |
 | `runtime` | string | none | What runs the program besides the machine, with an optional semver range: `node`, or `"node >=26"` for a `<program>.mjs`. Without it the program is a native binary. Only a plugin with a program has one. pipelinegen runs a `.mjs` with node whatever this says, and `plugin describe` shows it. |
 | `build.image` | image | (required) | The image the build runs in, pinned by digest: `name[:tag]@sha256:<64 hex>`. An image by tag alone is refused. docker or podman pulls it when the machine lacks it. |

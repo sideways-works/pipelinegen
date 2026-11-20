@@ -47,7 +47,7 @@ func TestCheckoutChange(t *testing.T) {
 	gitRuns(t, t.TempDir(), "init", "-q", "--bare", bare)
 
 	head := pushed(t, bare, "review/cart", "one")
-	ch := Change{Run: "pr", ID: "git/branch-review%2Fcart", Commit: head, Branch: "review/cart", Connector: "git", Remote: "file://" + bare}
+	ch := Change{Run: "pr", ID: "git/branch-review%2Fcart", Commit: head, Branch: "review/cart", Forge: "git", Remote: "file://" + bare}
 	auth := Auth{Scope: "file://" + bare, Token: "a-read-token-for-the-checkout"}
 
 	dir := filepath.Join(t.TempDir(), "change")
@@ -83,7 +83,7 @@ func TestCheckoutChangeRefusesHostileBranches(t *testing.T) {
 	gitRuns(t, t.TempDir(), "init", "-q", "--bare", bare)
 
 	for _, branch := range []string{"-upload-pack=touch x", "--help", "../escape", "a\nb", "review/..x", "", "HEAD@{1}", "with space"} {
-		ch := Change{Run: "pr", ID: "x", Commit: "0123456789abcdef0123456789abcdef01234567", Branch: branch, Connector: "git", Remote: "file://" + bare}
+		ch := Change{Run: "pr", ID: "x", Commit: "0123456789abcdef0123456789abcdef01234567", Branch: branch, Forge: "git", Remote: "file://" + bare}
 
 		if err := CheckoutChange(t.Context(), filepath.Join(t.TempDir(), "c"), ch, Auth{}); !errors.Is(err, errBadBranch) {
 			t.Errorf("%q: %v", branch, err)

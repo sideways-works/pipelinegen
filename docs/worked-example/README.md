@@ -1706,8 +1706,8 @@ Which pull requests run. Only those whose head branch is in the
 repository itself. A pull request from another fork never runs: no plan,
 no status. The runner's pull request resource leaves forks out
 (`disable_forks`), the run's sweep skips any pull request whose head is
-another repository's, and a change a connector lists runs only when the
-connector says it comes from the same repository. No key turns forks on.
+another repository's, and a change a forge lists runs only when the
+forge says it comes from the same repository. No key turns forks on.
 So a pull request's run executes code that someone with push rights to
 the repository pushed. The trigger's `draft`, `labels`,
 `labels_without`, `head` and `once_per_ready` narrow it further; none of

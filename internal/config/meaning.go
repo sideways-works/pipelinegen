@@ -198,7 +198,7 @@ var (
 	topSelection = append([]string{
 		"everything_on", "untested", "macros", "uncovered", "narrowing_alarm", "narrowings", "explain_limit", "rebuild_check",
 	}, sharedSelection...)
-	topNothing = []string{"pipeline", "github", "git", "store", "keep", "writes", "connectors", "generated", "learn", "limits", "bazel_diff", "images"}
+	topNothing = []string{"pipeline", "github", "git", "store", "keep", "writes", "forges", "generated", "learn", "limits", "bazel_diff", "images"}
 )
 
 func suiteRuns(key string) bool {
@@ -316,7 +316,7 @@ func (m *Meaning) pluginMeans(p []string) string {
 			// no slice in particular
 			return MeansFile
 		}
-	case KindConnector:
+	case KindForge:
 		// where results go and which changes run: no test can observe it
 		return MeansNothing
 	case KindDriver:

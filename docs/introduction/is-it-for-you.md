@@ -38,7 +38,7 @@ for you. [What works today](what-works-today.md) has the details.
 
 Any git server holds the repository and its records. On GitHub,
 pipelinegen also finds pull requests and posts statuses and a comment on
-them; on a plain git server, the `git` connector takes review
+them; on a plain git server, the `git` forge takes review
 branches as proposed changes, and `pipelinegen status` reads a run's
 result.
 

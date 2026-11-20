@@ -114,7 +114,7 @@ func TestNewRefusesWhatItCantStart(t *testing.T) {
 	writeFile(t, filepath.Join(full, "README.md"), "mine\n")
 
 	for args, says := range map[string]string{
-		"linter go":                        "kind \"linter\": one of sbom, correlator, runner, driver, connector",
+		"linter go":                        "kind \"linter\": one of sbom, correlator, runner, driver, forge",
 		"sbom go-sbom":                     "without the kind",
 		"sbom Go":                          "lower case letters",
 		"sbom go --into " + full:           "holds files already",

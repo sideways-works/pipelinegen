@@ -18,8 +18,8 @@ The `lint` suite's step runs `//tools:lint` too.
 - Tests start Bazel 9.2.0 through bazelisk and run the pinned bazel-diff,
   which they fetch once into the user's cache and check against its
   checksum. `PIPELINEGEN_TEST_BAZEL_DIFF` names another binary.
-  `PIPELINEGEN_TEST_GITHUB_CONNECTOR` and `PIPELINEGEN_TEST_GIT_CONNECTOR`
-  name connector binaries the `internal/cli` tests serve in place of the
+  `PIPELINEGEN_TEST_GITHUB_FORGE` and `PIPELINEGEN_TEST_GIT_FORGE`
+  name forge binaries the `internal/cli` tests serve in place of the
   pinned releases. Without
   them a test fails, it never skips; only `-short` leaves Bazel out.
 - `TEST_TMPDIR` keeps Bazel's output in a directory of your own instead of

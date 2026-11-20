@@ -315,9 +315,9 @@ func planOneStep(ctx context.Context, cfg *config.Config, ch runs.Change, store 
 }
 
 func planAfter(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, cache, bdPath string, stdout io.Writer, prior *roundDecision) (err error) {
-	// a connector's change runs its code while planning: never in a step
+	// a forge's change runs its code while planning: never in a step
 	// that also writes.
-	if ch.Connector != "" {
+	if ch.Forge != "" {
 		return fmt.Errorf("%w: %s %s is a proposed change: plan it in two steps, --out then --from", errUsage, ch.Run, ch.ID)
 	}
 

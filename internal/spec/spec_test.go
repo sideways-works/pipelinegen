@@ -85,7 +85,7 @@ func TestASpecNeedsWhereTheRecordsLive(t *testing.T) {
 
 	cfg.Git.Remote = "https://git.example.test/fixture.git"
 
-	if _, err := From(cfg); err == nil || !strings.Contains(err.Error(), "a changes (pull_requests) trigger needs a host or a connector") {
+	if _, err := From(cfg); err == nil || !strings.Contains(err.Error(), "a changes (pull_requests) trigger needs a host or a forge") {
 		t.Fatalf("pull requests without a host: %v", err)
 	}
 }
@@ -254,15 +254,15 @@ func TestTheRunnerLearnsTheDraftState(t *testing.T) {
 	}
 }
 
-// A config's github section runs the pinned GitHub connector, which the spec names for the
+// A config's github section runs the pinned GitHub forge, which the spec names for the
 // bootstrap to fetch; a plugins entry by its name pins another in its place.
-func TestTheSpecFetchesTheConnector(t *testing.T) {
+func TestTheSpecFetchesTheForge(t *testing.T) {
 	base, err := os.ReadFile("../../testdata/kit/pipelinegen.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	connectors := func(text string) []plugin.SpecTool {
+	forges := func(text string) []plugin.SpecTool {
 		cfg, err := config.Parse([]byte(text))
 		if err != nil {
 			t.Fatal(err)
@@ -276,7 +276,7 @@ func TestTheSpecFetchesTheConnector(t *testing.T) {
 		var out []plugin.SpecTool
 
 		for _, tool := range s.Tools {
-			if tool.Kind == config.KindConnector {
+			if tool.Kind == config.KindForge {
 				out = append(out, tool)
 			}
 		}
@@ -284,15 +284,15 @@ func TestTheSpecFetchesTheConnector(t *testing.T) {
 		return out
 	}
 
-	pin := config.PinnedConnectors[config.ConnectorGitHub]
-	if got := connectors(string(base)); len(got) != 1 || got[0].Name != "github" || got[0].Repository != pin.Repository || got[0].Version != pin.Version {
+	pin := config.PinnedForges[config.ForgeGitHub]
+	if got := forges(string(base)); len(got) != 1 || got[0].Name != "github" || got[0].Repository != pin.Repository || got[0].Version != pin.Version {
 		t.Fatalf("%+v", got)
 	}
 
 	sum := strings.Repeat("cd", 32)
-	entry := "plugins:\n  - {name: github, kind: connector, repository: team/pipelinegen-connector-github, release: {version: v9.0.0, sha256: " + sum + "}}\n"
+	entry := "plugins:\n  - {name: github, kind: forge, repository: team/pipelinegen-forge-github, release: {version: v9.0.0, sha256: " + sum + "}}\n"
 
-	if got := connectors(strings.Replace(string(base), "plugins:\n", entry, 1)); len(got) != 1 || got[0].Version != "v9.0.0" || got[0].SHA256 != sum {
+	if got := forges(strings.Replace(string(base), "plugins:\n", entry, 1)); len(got) != 1 || got[0].Version != "v9.0.0" || got[0].SHA256 != sum {
 		t.Fatalf("%+v", got)
 	}
 }

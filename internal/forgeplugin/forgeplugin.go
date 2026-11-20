@@ -1,6 +1,6 @@
-// Package connector sends the requests a connector plugin answers with, as data: each checked, given the
-// call's token, retried when it may pass. A connector never holds a token, nor can send one elsewhere.
-package connector
+// Package forgeplugin sends the requests a forge plugin answers with, as data: each checked, given the
+// call's token, retried when it may pass. A forge never holds a token, nor can send one elsewhere.
+package forgeplugin
 
 import (
 	"context"
@@ -24,7 +24,7 @@ const (
 // the call fails.
 var ErrRefused = exchange.ErrRefused
 
-const noun = plugin.KindConnector
+const noun = plugin.KindForge
 
 type Exchange struct {
 	Plugin plugin.Plugin
@@ -51,7 +51,7 @@ func Allowed(remoteOrigin string, declared, confirmed []string) ([]string, error
 // ssh or scp-form one (git@host:owner/name) is https on the default port, a file remote has none.
 func Origin(remote string) (string, error) { return exchange.Origin(remote) }
 
-// Call runs call with args in rounds in the work directory work, decoding the connector's answer into answer.
+// Call runs call with args in rounds in the work directory work, decoding the forge's answer into answer.
 func (e *Exchange) Call(ctx context.Context, call, work string, args, answer any) error {
 	x := exchange.Exchange{
 		Name: e.Plugin.Name, Noun: noun, Plugin: e.Plugin, Request: e.Plugin.NewRequest(""),

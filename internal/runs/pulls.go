@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/config"
-	"github.com/sideways-works/pipelinegen/internal/connector"
+	"github.com/sideways-works/pipelinegen/internal/forgeplugin"
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// Changes lists a host's open proposed changes: the code connector's
+// Changes lists a host's open proposed changes: the code forge's
 // changes call.
 type Changes interface {
 	Changes(ctx context.Context, a plugin.ChangesArgs) ([]plugin.Change, error)
@@ -66,7 +66,7 @@ func Admit(ctx context.Context, host Changes, cfg *config.Config, ch Change, ran
 	}
 
 	if c.ReadySince == nil {
-		return false, "", fmt.Errorf("%w: pull request #%d: the connector didn't say when it was last marked ready", errReady, c.Number)
+		return false, "", fmt.Errorf("%w: pull request #%d: the forge didn't say when it was last marked ready", errReady, c.Number)
 	}
 
 	other, err := ran(*c.ReadySince)
@@ -83,7 +83,7 @@ func Admit(ctx context.Context, host Changes, cfg *config.Config, ch Change, ran
 
 func filtered(c plugin.Change, pr *config.PullRequests, sha string) string {
 	switch {
-	case !connector.Admit(c):
+	case !forgeplugin.Admit(c):
 		return fmt.Sprintf("pull request #%d doesn't come from the repository itself (%s): a fork's code never runs", c.Number, c.From)
 	case c.Head != sha:
 		return fmt.Sprintf("pull request #%d moved on to %s", c.Number, short(c.Head))

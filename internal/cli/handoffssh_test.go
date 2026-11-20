@@ -51,7 +51,7 @@ func TestAHandOffComesOverSSHOnlyFromAKnownHost(t *testing.T) {
 	trigger := t.TempDir()
 
 	if err := runs.WriteRunFile(trigger, runs.Change{
-		Run: "pr", ID: "git/branch-review%2Fcart", Commit: commit, Branch: "review/cart", Base: "main", Connector: "git", Remote: remote,
+		Run: "pr", ID: "git/branch-review%2Fcart", Commit: commit, Branch: "review/cart", Base: "main", Forge: "git", Remote: remote,
 	}); err != nil {
 		t.Fatal(err)
 	}

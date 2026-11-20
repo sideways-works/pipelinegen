@@ -93,7 +93,7 @@ func TestStoredNamesStayAsTheyAre(t *testing.T) {
 	}
 }
 
-func TestAConnectorsChangeIsOneRefPart(t *testing.T) {
+func TestAForgesChangeIsOneRefPart(t *testing.T) {
 	h := runs.Head{Change: "git/branch-review%2Fcart", Commit: goldenCommit, Branch: "review/cart"}
 	id := headID("review", h)
 

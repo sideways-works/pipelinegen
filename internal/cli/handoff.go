@@ -45,8 +45,8 @@ func handOffCheckout(ctx context.Context, run, trigger string, needsTree bool) (
 		return "", err
 	}
 
-	if ch.Run != run || ch.Connector == "" || ch.Remote == "" {
-		return "", fmt.Errorf("%w: the hand-off is for run %q, connector %q, remote %q", runs.ErrTrigger, ch.Run, ch.Connector, ch.Remote)
+	if ch.Run != run || ch.Forge == "" || ch.Remote == "" {
+		return "", fmt.Errorf("%w: the hand-off is for run %q, forge %q, remote %q", runs.ErrTrigger, ch.Run, ch.Forge, ch.Remote)
 	}
 
 	scratchDirs.Lock()

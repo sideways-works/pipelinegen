@@ -20,13 +20,13 @@ import (
 
 // Change is what a build tests.
 type Change struct {
-	Run       string `json:"run"`
-	ID        string `json:"change"`
-	Commit    string `json:"commit"`
-	PR        int    `json:"pr"`
-	Branch    string `json:"branch"`
-	Base      string `json:"base,omitempty"`
-	Connector string `json:"connector,omitempty"`
+	Run    string `json:"run"`
+	ID     string `json:"change"`
+	Commit string `json:"commit"`
+	PR     int    `json:"pr"`
+	Branch string `json:"branch"`
+	Base   string `json:"base,omitempty"`
+	Forge  string `json:"forge,omitempty"`
 	// Remote is the code's remote the change is fetched from, written by
 	// the trusted sweep: never read from the change's own tree.
 	Remote string `json:"remote,omitempty"`
@@ -38,9 +38,9 @@ type Change struct {
 	Handed string `json:"handed,omitempty"`
 }
 
-// Proposed tells whether the change's code is not yet trusted: a pull request, a connector's change
+// Proposed tells whether the change's code is not yet trusted: a pull request, a forge's change
 // or a doubted commit. Such a change never writes what a trusted plan reads.
-func (c Change) Proposed() bool { return c.PR != 0 || c.Connector != "" || c.Doubt != "" }
+func (c Change) Proposed() bool { return c.PR != 0 || c.Forge != "" || c.Doubt != "" }
 
 var ErrTrigger = errors.New("trigger")
 
@@ -51,7 +51,7 @@ var ErrMoved = errors.New("a change may not move where its run reads or writes")
 const (
 	formCheckout    = "a branch's checkout"
 	formPullRequest = "a pull request's"
-	formHandOff     = "a connector's hand-off"
+	formHandOff     = "a forge's hand-off"
 )
 
 func triggerForm(dir string) string {
@@ -67,7 +67,7 @@ func triggerForm(dir string) string {
 	return formCheckout
 }
 
-// FromTrigger reads what a build's trigger stands for: a pull request's head, a connector's hand-off
+// FromTrigger reads what a build's trigger stands for: a pull request's head, a forge's hand-off
 // or a branch's checkout. Its form decides, never the config, which may be the proposed change's own.
 func FromTrigger(ctx context.Context, cfg *config.Config, run, dir string) (Change, error) {
 	r, ok := cfg.Runs[run]
@@ -81,7 +81,7 @@ func FromTrigger(ctx context.Context, cfg *config.Config, run, dir string) (Chan
 	want := formCheckout
 
 	switch {
-	case pr != nil && cfg.ChangesFromConnector():
+	case pr != nil && cfg.ChangesFromForge():
 		want = formHandOff
 	case pr != nil:
 		want = formPullRequest
@@ -116,7 +116,7 @@ func takes(form string) string {
 	case formPullRequest:
 		return "pull requests"
 	case formHandOff:
-		return "a connector's changes"
+		return "a forge's changes"
 	}
 
 	return "a branch's commits"

@@ -14,7 +14,7 @@ import (
 
 type Head struct {
 	PR int
-	// Change is the head's change id when a connector listed it
+	// Change is the head's change id when a forge listed it
 	// (git/branch-review%2Fcart); empty, the pull request's pr-<PR>.
 	Change  string
 	Commit  string
@@ -43,7 +43,7 @@ func OpenHeads(ctx context.Context, host Changes, pr *config.PullRequests) ([]He
 	return heads, nil
 }
 
-// ID is the head's change id: the connector's, or pr-<number> for a pull
+// ID is the head's change id: the forge's, or pr-<number> for a pull
 // request listed the way runs always listed them.
 func (h Head) ID() string {
 	if h.Change != "" {

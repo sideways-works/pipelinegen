@@ -238,7 +238,7 @@ pipelinegen plan: took 46.2s: plugin go-correlator 19.8s, the store 12.4s, bazel
 
 Each stage's time is summed under its name: `the store` is reading and
 writing the records under `refs/pipelinegen/`, `plugin <name>` a plugin's
-calls, `connector <name>` the git host's, `other` what no stage names. The
+calls, `forge <name>` the git host's, `other` what no stage names. The
 git count is every `fetch`, `ls-remote`, `push` and `clone` the step ran,
 whatever remote it reached, and the time they took, which may overlap the
 stages'. A step that waits on the network shows it there; one that waits on

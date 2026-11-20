@@ -107,7 +107,7 @@ type IssueComment struct {
 	UpdatedAt time.Time
 }
 
-// Comment keeps one comment as the GitHub connector does: the oldest that
+// Comment keeps one comment as the GitHub forge does: the oldest that
 // starts with the marker, the others removed.
 func (f *fakeGitHub) Comment(_ context.Context, pr int, marker, body string) error {
 	f.wait()

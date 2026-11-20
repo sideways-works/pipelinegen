@@ -54,11 +54,11 @@ func handOffFor(t *testing.T, ch runs.Change) string {
 
 func TestAHandOffIsCheckedOutAside(t *testing.T) {
 	root, _, s := runEnv(t)
-	gitConnectorConfig(t, root, s.Remote)
+	gitForgeConfig(t, root, s.Remote)
 
 	head := pushChange(t, root, s.Remote, "review/cart", "one")
 	handOff := handOffFor(t, runs.Change{
-		Run: "pr", ID: "git/branch-review%2Fcart", Commit: head, Branch: "review/cart", Base: "main", Connector: "git", Remote: s.Remote,
+		Run: "pr", ID: "git/branch-review%2Fcart", Commit: head, Branch: "review/cart", Base: "main", Forge: "git", Remote: s.Remote,
 	})
 
 	tmp := t.TempDir()
@@ -101,11 +101,11 @@ func TestAHandOffIsCheckedOutAside(t *testing.T) {
 
 func TestASupersededChangeRunsNothing(t *testing.T) {
 	root, _, s := runEnv(t)
-	gitConnectorConfig(t, root, s.Remote)
+	gitForgeConfig(t, root, s.Remote)
 
 	head := pushChange(t, root, s.Remote, "review/cart", "one")
 	handOff := handOffFor(t, runs.Change{
-		Run: "pr", ID: "git/branch-review%2Fcart", Commit: head, Branch: "review/cart", Base: "main", Connector: "git", Remote: s.Remote,
+		Run: "pr", ID: "git/branch-review%2Fcart", Commit: head, Branch: "review/cart", Base: "main", Forge: "git", Remote: s.Remote,
 	})
 
 	pushChange(t, root, s.Remote, "review/cart", "two")

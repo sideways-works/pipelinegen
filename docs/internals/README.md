@@ -51,7 +51,7 @@ lists, `internal/secret` masks the token in every error, and
 `internal/kit` is the conformance kit behind `pipelinegen plugin test`.
 The parts of the plugin protocol that know no kind come from the module
 `github.com/sideways-works/plugkit`: calling a plugin and serving a call,
-the exchange of a connector's requests, pinned downloads, the container
+the exchange of a forge's requests, pinned downloads, the container
 runner and the kit's harness. `plugin` keeps pipelinegen's kinds and names
 plugkit's types as its own, so a plugin built against it builds unchanged.
 `internal/testrepo` and `internal/bazeldifftest` serve tests;

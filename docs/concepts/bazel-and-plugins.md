@@ -15,7 +15,7 @@ answers. This page puts them next to each other.
 | Which slices does a change reach? | pipelinegen | walks the links back from the changed units to the slices' roots, and adds the slices whose owner's data changed in Bazel's answer |
 | Which pipeline runs them? | the runner plugin | writes the CI system's pipeline from the config |
 | How does each slice run? | the suite's drivers, or its own task files | runs the test tool on the batch's slices and writes a result per slice |
-| Where are results shown? | the connector | statuses and a comment on the git host |
+| Where are results shown? | the forge | statuses and a comment on the git host |
 
 A slice of a recorded suite runs when either side reaches it: the walk
 over units, or bazel-diff for the files of its owner that no plugin

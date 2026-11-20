@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// GitHub is the host a run reports through: its code connector's
+// GitHub is the host a run reports through: its code forge's
 // statuses, comment and subject calls.
 type GitHub interface {
 	SetStatus(ctx context.Context, sha string, st CommitStatus) error

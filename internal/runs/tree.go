@@ -118,7 +118,7 @@ func BranchTip(ctx context.Context, remote, branch string, auth Auth) (string, e
 }
 
 // Branches lists a remote's branches and their commits, with env (credential, ssh command) added:
-// what a plain git connector picks its changes from.
+// what a plain git forge picks its changes from.
 func Branches(ctx context.Context, remote string, env []string) (map[string]string, error) {
 	out, err := gitEnv(ctx, "", env, "ls-remote", "--heads", "--", remote)
 	if err != nil {

@@ -190,9 +190,9 @@
     },
     {
       "name": "github",
-      "kind": "connector",
+      "kind": "forge",
       "repository": "https://github.com/sideways-works/pipelinegen-plugins",
-      "path": "connector/github",
+      "path": "forge/github",
       "version": "v0.4.0",
       "sha256": "048f3b3c7852d8ec41f0571187ff94f0502848020a4e5582aeaf21d596622cd1"
     }

@@ -16,13 +16,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sideways-works/pipelinegen/internal/connector"
+	"github.com/sideways-works/pipelinegen/internal/forgeplugin"
 	"github.com/sideways-works/pipelinegen/plugin"
 )
 
-// connectorFixture is a fixture's connector section; every string may hold {server}, the kit's fake
+// forgeFixture is a fixture's forge section; every string may hold {server}, the kit's fake
 // host, which stands for the repository's host.
-type connectorFixture struct {
+type forgeFixture struct {
 	Remote    string                     `json:"remote"`
 	Config    map[string]any             `json:"config,omitempty"`
 	Responses []fixtureResponse          `json:"responses"`
@@ -47,25 +47,25 @@ type fixtureResponse struct {
 
 const foreignRemote = "https://elsewhere.invalid/someone/else.git"
 
-var connectorCapabilities = []string{
+var forgeCapabilities = []string{
 	plugin.CapChanges, plugin.CapStatuses, plugin.CapComment, plugin.CapDraft, plugin.CapLabels,
 	plugin.CapReadySince, plugin.CapForks, plugin.CapHeadRef,
 }
 
 var commitID = regexp.MustCompile(`^([0-9a-f]{40}|[0-9a-f]{64})$`)
 
-func describeConnector(d plugin.Description) []string {
+func describeForge(d plugin.Description) []string {
 	var problems []string
 
 	for _, c := range d.Capabilities {
-		if !slices.Contains(connectorCapabilities, c) {
+		if !slices.Contains(forgeCapabilities, c) {
 			problems = append(problems, fmt.Sprintf("capability %q", c))
 		}
 	}
 
 	for _, p := range d.Purposes {
 		if !slices.Contains([]string{plugin.PurposeRead, plugin.PurposeChanges, plugin.PurposeReport}, p) {
-			problems = append(problems, fmt.Sprintf("purpose %q: a connector needs read, changes or report; the store's is the store's", p))
+			problems = append(problems, fmt.Sprintf("purpose %q: a forge needs read, changes or report; the store's is the store's", p))
 		}
 	}
 
@@ -80,7 +80,7 @@ func describeConnector(d plugin.Description) []string {
 		}
 	}
 
-	if _, err := connector.Allowed("", d.APIHosts, d.APIHosts); err != nil {
+	if _, err := forgeplugin.Allowed("", d.APIHosts, d.APIHosts); err != nil {
 		problems = append(problems, err.Error())
 	}
 
@@ -105,7 +105,7 @@ func describeConnector(d plugin.Description) []string {
 type fakeHost struct {
 	*httptest.Server
 
-	fx    *connectorFixture
+	fx    *forgeFixture
 	tree  string
 	mu    sync.Mutex
 	used  map[int]bool
@@ -169,37 +169,37 @@ func (h *fakeHost) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *fakeHost) fill(s string) string { return strings.ReplaceAll(s, "{server}", h.URL) }
 
-func (k *kit) connectorFixture() (*connectorFixture, error) {
+func (k *kit) forgeFixture() (*forgeFixture, error) {
 	data, err := os.ReadFile(filepath.Join(k.o.Tree, kitFile))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", kitFile, err)
 	}
 
 	var f struct {
-		Connector *connectorFixture `json:"connector"`
+		Forge *forgeFixture `json:"forge"`
 	}
 
 	if err := json.Unmarshal(data, &f); err != nil {
 		return nil, fmt.Errorf("%s: %w", kitFile, err)
 	}
 
-	if f.Connector == nil {
-		return nil, fmt.Errorf("%w: %s has no \"connector\" section", errFixture, kitFile)
+	if f.Forge == nil {
+		return nil, fmt.Errorf("%w: %s has no \"forge\" section", errFixture, kitFile)
 	}
 
-	return f.Connector, nil
+	return f.Forge, nil
 }
 
-func (k *kit) connector(ctx context.Context) {
+func (k *kit) forge(ctx context.Context) {
 	if k.o.Tree == "" {
-		k.Check("the fixture exercises every call the connector declares", "no --tree, so identify, links and the calls of its capabilities never ran")
+		k.Check("the fixture exercises every call the forge declares", "no --tree, so identify, links and the calls of its capabilities never ran")
 
 		return
 	}
 
-	fx, err := k.connectorFixture()
+	fx, err := k.forgeFixture()
 	if err != nil {
-		k.Check("the fixture names the connector's host", "%v", err)
+		k.Check("the fixture names the forge's host", "%v", err)
 
 		return
 	}
@@ -234,7 +234,7 @@ func (k *kit) connector(ctx context.Context) {
 	k.Check("every request finds a response in the fixture", ifNot(len(stray) == 0, "none for "+strings.Join(firstFew(stray), ", ")))
 }
 
-func (k *kit) exchange(host *fakeHost) (*connector.Exchange, bool) {
+func (k *kit) exchange(host *fakeHost) (*forgeplugin.Exchange, bool) {
 	cfg := maps.Clone(k.o.Config)
 	if cfg == nil {
 		cfg = map[string]any{}
@@ -254,14 +254,14 @@ func (k *kit) exchange(host *fakeHost) (*connector.Exchange, bool) {
 	p := k.p
 	p.Config = cfg
 
-	hosts, err := connector.Allowed(host.URL, k.desc.APIHosts, []string{host.URL})
+	hosts, err := forgeplugin.Allowed(host.URL, k.desc.APIHosts, []string{host.URL})
 	if err != nil {
-		k.Check("the fixture names the connector's host", "%v", err)
+		k.Check("the fixture names the forge's host", "%v", err)
 
 		return nil, false
 	}
 
-	return &connector.Exchange{
+	return &forgeplugin.Exchange{
 		Plugin: p, Desc: k.desc, Hosts: hosts, HTTP: host.Client(),
 		Tokens: map[string]string{
 			plugin.PurposeChanges: Canary + "-changes",
@@ -270,7 +270,7 @@ func (k *kit) exchange(host *fakeHost) (*connector.Exchange, bool) {
 	}, true
 }
 
-func (k *kit) args(fx *connectorFixture, call string, host *fakeHost) json.RawMessage {
+func (k *kit) args(fx *forgeFixture, call string, host *fakeHost) json.RawMessage {
 	raw, ok := fx.Calls[call]
 	if !ok {
 		return json.RawMessage("{}")
@@ -279,7 +279,7 @@ func (k *kit) args(fx *connectorFixture, call string, host *fakeHost) json.RawMe
 	return json.RawMessage(host.fill(string(raw)))
 }
 
-func (k *kit) exchangeCall(ctx context.Context, e *connector.Exchange, call string, args json.RawMessage, answer any) error {
+func (k *kit) exchangeCall(ctx context.Context, e *forgeplugin.Exchange, call string, args json.RawMessage, answer any) error {
 	err := e.Call(ctx, call, k.WorkDir(), args, answer)
 	k.Saw(err, answer)
 
@@ -288,7 +288,7 @@ func (k *kit) exchangeCall(ctx context.Context, e *connector.Exchange, call stri
 
 // identify claims the fixture's remote and disowns one elsewhere, both
 // without a request.
-func (k *kit) identify(ctx context.Context, e *connector.Exchange, remote string) {
+func (k *kit) identify(ctx context.Context, e *forgeplugin.Exchange, remote string) {
 	var mine, theirs plugin.Identity
 
 	err := k.exchangeCall(ctx, e, plugin.CallIdentify, mustJSON(plugin.IdentifyArgs{Remote: remote}), &mine)
@@ -314,9 +314,9 @@ func (k *kit) identify(ctx context.Context, e *connector.Exchange, remote string
 
 // changes lists the fixture's changes: each well formed, and none the
 // fixture shows from a fork admitted to run.
-func (k *kit) changes(ctx context.Context, e *connector.Exchange, fx *connectorFixture, host *fakeHost) {
+func (k *kit) changes(ctx context.Context, e *forgeplugin.Exchange, fx *forgeFixture, host *fakeHost) {
 	if _, ok := fx.Calls[plugin.CallChanges]; !ok {
-		k.Check("the fixture exercises every call the connector declares", "it declares changes, and the fixture names no arguments for it")
+		k.Check("the fixture exercises every call the forge declares", "it declares changes, and the fixture names no arguments for it")
 
 		return
 	}
@@ -358,7 +358,7 @@ func (k *kit) changes(ctx context.Context, e *connector.Exchange, fx *connectorF
 	}
 
 	if len(fx.Forks) == 0 && (fx.NoForks == "" || len(fx.Same) == 0) {
-		k.Check("a change from a fork never runs", "the connector declares forks, and the fixture names no change from a fork (\"forks\": [ids]), "+
+		k.Check("a change from a fork never runs", "the forge declares forks, and the fixture names no change from a fork (\"forks\": [ids]), "+
 			"or says why its host has none (\"no_forks\") and names changes from the same repository (\"same\": [ids])")
 
 		return
@@ -372,13 +372,13 @@ func (k *kit) changes(ctx context.Context, e *connector.Exchange, fx *connectorF
 		switch {
 		case !ok:
 			problems = append(problems, id+" isn't listed")
-		case connector.Admit(c):
+		case forgeplugin.Admit(c):
 			problems = append(problems, fmt.Sprintf("%s comes from a fork and was reported %q", id, c.From))
 		}
 	}
 
 	for _, id := range fx.Same {
-		if c, ok := byID[id]; !ok || !connector.Admit(c) {
+		if c, ok := byID[id]; !ok || !forgeplugin.Admit(c) {
 			problems = append(problems, fmt.Sprintf("%s comes from the same repository and was reported %q", id, c.From))
 		}
 	}
@@ -386,7 +386,7 @@ func (k *kit) changes(ctx context.Context, e *connector.Exchange, fx *connectorF
 	k.Check("a change from a fork never runs", strings.Join(problems, "; "))
 }
 
-func (k *kit) reports(ctx context.Context, e *connector.Exchange, fx *connectorFixture, host *fakeHost) {
+func (k *kit) reports(ctx context.Context, e *forgeplugin.Exchange, fx *forgeFixture, host *fakeHost) {
 	type call struct {
 		name, capability string
 		answer           any
@@ -421,7 +421,7 @@ func (k *kit) reports(ctx context.Context, e *connector.Exchange, fx *connectorF
 		}
 
 		if _, ok := fx.Calls[c.name]; !ok {
-			k.Check("the fixture exercises every call the connector declares", "it declares %s, and the fixture names no arguments for %s", c.capability, c.name)
+			k.Check("the fixture exercises every call the forge declares", "it declares %s, and the fixture names no arguments for %s", c.capability, c.name)
 
 			continue
 		}
