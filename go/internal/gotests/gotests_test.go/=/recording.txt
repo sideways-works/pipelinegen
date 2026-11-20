@@ -1,0 +1,5 @@
+# observed
+go:internal/gotests#func:ByFile
+go:internal/gotests#func:FileOf
+go:internal/gotests#func:Names
+go:internal/gotests#func:isTest
