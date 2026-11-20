@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-20
+
 ### Added
 
 - A pull request's build carries over what its last build passed: while `passed-since` is on (levels 1 to 3), a slice that passed in the newest earlier build of the same run and pull request with its tests run, or that build carried over, isn't run again when nothing from the tree that build tested to the tree this one tests reaches it. That change holds what the target gained in between and what a rebase or force-push rewrote: the trees are compared, not the history. The slices that failed, errored, didn't run or weren't selected there run, and so do those the change reaches. A build whose tree can't be made again, or whose records are gone (`keep.runs`) or unreadable, carries nothing over, and the plan says why. The level is the stricter of the pull request's config and its target's. The suite's and the run's statuses say "`<n>` carried over from `<commit>`", and `pipelinegen why` names the build and how many slices of the suite it carried ([a pull request's later builds](docs/how-to/narrowing.md#a-pull-requests-later-builds))
