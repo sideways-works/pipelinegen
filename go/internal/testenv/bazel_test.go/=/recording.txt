@@ -1,0 +1,11 @@
+# observed
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:defaultRoots
+go:internal/testenv#func:leakedFrom
+go:internal/testenv#func:outputBases
+go:internal/testenv#func:removeAll
+go:internal/testenv#func:scrub
+go:internal/testenv#func:stopServers
+go:internal/testenv#func:writable
+go:internal/testenv#var:cp
