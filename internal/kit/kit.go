@@ -466,9 +466,10 @@ func (k *kit) pinned(s plugin.Spec) plugin.Spec {
 	for i, t := range s.Tools {
 		switch {
 		case t.Kind == plugin.KindRunner:
-			s.Tools[i].SHA256 = runner
+			s.Tools[i].SHA256, s.Tools[i].Sums = runner, ""
 		case t.Version != "":
-			s.Tools[i].SHA256 = hex.EncodeToString(standIn[:])
+			// a tool the spec pins by sums, as pipelinegen pins its forges, is the stand-in too
+			s.Tools[i].SHA256, s.Tools[i].Sums = hex.EncodeToString(standIn[:]), ""
 		}
 	}
 
