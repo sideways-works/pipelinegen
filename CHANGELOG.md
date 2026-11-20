@@ -7,6 +7,12 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Changed
+
+- Breaking: the plugin kind connector is now forge. A config's section `connectors` is now `forges`, a plugins entry pins a forge with `kind: forge`, and the forges are `forge/git` and `forge/github` of the plugins repository, programs `git-forge` and `github-forge`, which pipelinegen pins at v0.5.0 by their `SHA256SUMS`. A config that still says `connectors` or `kind: connector` is refused, saying the new name, and so is a plugin whose `describe` answers kind connector. For runners, the spec's run field `connector` is `forge`, and the capability `connector_changes` is `forge_changes`: concourse-runner v0.6.0 speaks both
+- pipelinegen runs no plugin whose kind isn't its own (sbom, correlator, runner, driver, forge): a config entry, a `describe` answer, a plugin's manifest and a zip naming another kind are refused, as another system's plugins share some names
+- Plugin manifests (plugkit v0.6.0): `build.run` may be a list of commands, run in order with no shell, `build.copy: true` builds in a copy of the files git tracks, and an untagged build's `{version}` is `0.0.0-dev+<commit>`, so a manifest needs no shell to stamp it ([the manifest](docs/reference/manifest.md))
+
 ## [0.6.0] - 2026-11-20
 
 ### Added

@@ -310,7 +310,8 @@ pipelinegen runs, in the plugins repository by kind: the GitHub forge
 for the `github` section, and the git forge
 ([forge/git](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/git))
 for `forges` entries of plugin `git`. pipelinegen pins a release of
-each, with its checksum for every platform, and fetches the one a config
+each (`forge/github` and `forge/git` v0.5.0), by the checksum of its
+`SHA256SUMS`, and fetches the one a config
 uses the way it fetches [bazel-diff](#bazel_diff): a config needs no line
 for it. A generated pipeline's bootstrap fetches it with the other plugins
 into `tools/plugins/<name>`, with the read token; any other machine

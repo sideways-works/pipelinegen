@@ -33,7 +33,8 @@ in the file.
 | `program` | file name | (required, but with `platforms: [any]`) | The program the build writes into `{out}`: `{out}/<program>` for a binary, or `{out}/<program>.mjs` for a Node plugin. Without the extension. A plugin built for `[any]` may leave it out when it holds assets alone; pipelinegen refuses such a plugin, since it runs every plugin as a program. |
 | `runtime` | string | none | What runs the program besides the machine, with an optional semver range: `node`, or `"node >=26"` for a `<program>.mjs`. Without it the program is a native binary. Only a plugin with a program has one. pipelinegen runs a `.mjs` with node whatever this says, and `plugin describe` shows it. |
 | `build.image` | image | (required) | The image the build runs in, pinned by digest: `name[:tag]@sha256:<64 hex>`. An image by tag alone is refused. docker or podman pulls it when the machine lacks it. |
-| `build.run` | list | (required) | The command, as a list of arguments, run with the plugin's directory as the working directory. The image's entrypoint is not used. |
+| `build.run` | list | (required) | The command, as a list of arguments, or a list of such commands, run in order. Each runs in a container of its own with the plugin's directory as the working directory and no shell around it, and the first that fails ends the build. The image's entrypoint is not used. |
+| `build.copy` | boolean | `false` | Runs the commands in a writable copy of the repository instead of the repository itself, for a build that writes beside its sources, as `npm ci` does. The copy holds the files git tracks and nothing else (of a checkout, those its index lists; of a pinned commit, its tree), so untracked and ignored files never reach the build. A tracked symlink is refused, and so is a directory that is no git checkout. |
 | `build.env` | mapping | none | Variables for the build. The build gets the image's own environment, these, `HOME=/tmp` and `GOFLAGS=-trimpath`, and nothing of the machine's; a `GOFLAGS` here is added after `-trimpath`. |
 | `build.network` | boolean | `false` | Gives the build a network. Without one, a Go plugin with dependencies needs them vendored, and a Node plugin its packages in the tree. |
 | `platforms` | list | (required) | The platforms to build for, each `os/arch` (`linux/amd64`, `darwin/arm64`), or `[any]` alone for one build that runs everywhere: a Node script, or assets. |
@@ -68,15 +69,28 @@ filled in for each platform's build:
 | `{os}` | The platform's operating system, `linux` or `darwin`. |
 | `{arch}` | The platform's architecture, `amd64` or `arm64`. |
 | `{commit}` | The full commit built: the pinned commit, or for `plugin build` the commit checked out in the plugin's repository; empty outside one. |
-| `{version}` | The version the build stands for, without a leading `v`: `plugin build --version`'s, or that of the tag a host found the commit through. Empty otherwise, which a pin by `commit` always is. |
+| `{version}` | The version the build stands for, without a leading `v`: `plugin build --version`'s, or that of the tag a host found the commit through. Otherwise, as for a pin by `commit`, `0.0.0-dev+` and the commit's first 12 characters, a version Go and npm both take. |
 
 `{os}` and `{arch}` have no value for `platforms: [any]`, and a manifest
 that uses them there is refused, as is any other `{...}`. `{commit}` and
-`{version}` stamp the program as a release is stamped; a manifest that
-wants `dev+<commit>` without a version says so in its command:
+`{version}` stamp the program as a release is stamped, with no shell:
 
 ```yaml
-run: [sh, -c, 'v=v{version}; [ "$v" != v ] || v=dev+$(printf %.12s {commit}); exec go build -ldflags="-X main.Version=$v" -o {out}/go-driver ./cmd/go-driver']
+run: [go, build, "-ldflags=-X main.Version=v{version}", -o, "{out}/go-driver", ./cmd/go-driver]
+```
+
+A Node plugin's build writes `node_modules`, so it runs in a copy, as
+several commands:
+
+```yaml
+build:
+  image: node:26.10.0@sha256:<64 hex>
+  copy: true
+  run:
+    - [npm, ci]
+    - [npm, pkg, set, "version={version}"]
+    - [npm, run, build]
+    - [cp, dist/ts-sbom.mjs, "{out}/"]
 ```
 
 A build stamped with a version is kept in the cache apart from one of the
@@ -85,8 +99,9 @@ same commit without.
 ## How a build runs
 
 Each platform is built in a container of `build.image`, with docker or
-podman, whichever is on `PATH` first. The repository is mounted read-only,
-`{out}` is the only directory the build can write, and the build runs as
+podman, whichever is on `PATH` first. The repository is mounted read-only
+(or, with `build.copy`, a copy of what git tracks of it, writable),
+`{out}` is the only other directory the build can write, and the build runs as
 your user, so what it writes is yours. It has no network unless
 `build.network` is `true`. After it ends, pipelinegen takes
 `{out}/<program>` (named `<program>-<os>-<arch>` in the zip and the cache)
