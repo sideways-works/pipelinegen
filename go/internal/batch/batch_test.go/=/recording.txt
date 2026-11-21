@@ -1,0 +1,4 @@
+# observed
+go:internal/batch#func:Count
+go:internal/batch#func:Deal
+go:internal/batch#func:withMedian
