@@ -55,7 +55,7 @@ plugins:
       - name: concourse
         kind: runner
         path: runner/concourse
-        release: {version: v0.6.0, sums: 560a1204622b18d0c9cc18cb421ba1fbe8113afba894518414d2d860c1cea419}
+        release: {version: v0.6.1, sums: c04e84b058e5bf2cdbfbb5cdad284e33fb48ed423e96350b98fcb6108b05d838}
         config:
           placement:
             # Every suite, and the checks, on the cloud workers: they stream
