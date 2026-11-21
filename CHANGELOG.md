@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-21
+
 ### Fixed
 
 - A suite whose tests passed no longer turns `error` because their recordings held nothing (tests that ran no code a correlator sees, such as a package of SQL files alone). Such slices are bound to everything and the suite passes, counting them as not recorded; a suite errors only when its correlators found no recording at all
