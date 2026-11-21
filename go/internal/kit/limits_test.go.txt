@@ -1,0 +1,7 @@
+go:internal/kit#func:stepKind
+go:internal/kit#func:unlimited
+go:internal/kit#func:unlimitedSteps
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
