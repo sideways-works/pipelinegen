@@ -78,3 +78,25 @@ func TestARunOfEverythingListsTheSlicesBoundToEverything(t *testing.T) {
 		t.Fatalf("change run:\n%s", body)
 	}
 }
+
+// Tests that ran what no correlator sees leave recordings that hold nothing: their slices are bound
+// to everything, and the suite passes saying so, since the task did record.
+func TestRecordingsThatHeldNothingLeaveThePassingSuiteGreen(t *testing.T) {
+	empty := []recording.Mark{{Plugin: recording.Empty, Reason: "4 tests ran and nothing was recorded"}}
+	s := Suite{Name: "backend", Slices: []Slice{
+		{Name: "backend/internal/migrations/migrations_test.go", State: Passed, Recorded: true, CannotTell: empty},
+		{Name: "backend/internal/migrations/touch_test.go", State: Passed, Recorded: true, CannotTell: empty},
+	}}
+
+	if state, desc := s.Status(); state != statusSuccess || !strings.Contains(desc, "2 could not be recorded") {
+		t.Fatalf("held nothing: %s %q", state, desc)
+	}
+
+	// a slice whose correlator found no recording at all still makes it an error
+	s.Slices[1].CannotTell = []recording.Mark{{Plugin: "go", Reason: "no coverage"}}
+	s.Slices[0].CannotTell = s.Slices[1].CannotTell
+
+	if state, desc := s.Status(); state != statusError || !strings.Contains(desc, "go found no evidence of a recording in coverage/<slice>/go") {
+		t.Fatalf("no recording: %s %q", state, desc)
+	}
+}

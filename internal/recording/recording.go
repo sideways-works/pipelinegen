@@ -28,6 +28,10 @@ const (
 
 var ErrRecording = errors.New("recording")
 
+// Empty is the plugin of the mark a recording gets when its tests ran and no correlator saw them
+// touch anything: none of them could tell, though each read what it records.
+const Empty = "correlators"
+
 // Mark is a correlator that couldn't tell what a slice touched.
 type Mark struct {
 	Plugin string `json:"plugin"`

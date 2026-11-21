@@ -541,7 +541,7 @@ func (r *Reporter) observe(ctx context.Context, ev SliceEvent) (recording.Record
 	// tests that touched nothing at all are far likelier a correlator that answered wrongly than a
 	// test file that runs none of the tree; an empty list would bind the slice to nothing
 	if len(touched) == 0 && len(setupLike) == 0 && r.Config.Suites[ev.Suite].EmptyRecordings != config.EmptyAllow {
-		rec.CannotTell = []recording.Mark{{Plugin: "correlators", Reason: nothingRecorded(ev.Result), Since: r.now()}}
+		rec.CannotTell = []recording.Mark{{Plugin: recording.Empty, Reason: nothingRecorded(ev.Result), Since: r.now()}}
 
 		return rec, nil
 	}

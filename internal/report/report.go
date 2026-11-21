@@ -477,20 +477,43 @@ func (s Suite) untold() (cannot, recorded int) {
 	return cannot, recorded
 }
 
+// missing is a correlator's mark on a slice that left it no recording to read, as against the mark
+// of a recording that was read and held nothing.
+func missing(sl Slice) (recording.Mark, bool) {
+	for _, m := range sl.CannotTell {
+		if m.Plugin != recording.Empty {
+			return m, true
+		}
+	}
+
+	return recording.Mark{}, false
+}
+
+// noneTold says, once a suite is over and not one of its recorded slices left a correlator its
+// recording, what was missing where: the sign of a task that doesn't record (a forgotten flag, a
+// collector missing). A recording that held nothing is no such sign: its tests ran what no
+// correlator sees, and the slice is bound to everything.
 func (s Suite) noneTold() (string, bool) {
-	cannot, recorded := s.untold()
+	_, recorded := s.untold()
 	c := s.Counts()
+
+	cannot := 0
+
+	for _, sl := range s.Slices {
+		if _, ok := missing(sl); ok {
+			cannot++
+		}
+	}
 
 	if cannot == 0 || cannot < recorded || c[Pending]+c[Running] > 0 {
 		return "", false
 	}
 
 	for _, sl := range s.Slices {
-		if len(sl.CannotTell) == 0 {
+		m, ok := missing(sl)
+		if !ok {
 			continue
 		}
-
-		m := sl.CannotTell[0]
 
 		text := fmt.Sprintf("no slice could be recorded: %s found no evidence of a recording in coverage/<slice>/%s", m.Plugin, m.Plugin)
 		if m.Reason != "" {
