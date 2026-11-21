@@ -1,0 +1,17 @@
+# observed
+go:internal/progress#func:Git
+go:internal/progress#func:from
+go:internal/progress#func:gitVerb
+go:internal/runs#func:OriginScope
+go:internal/runs#func:git
+go:internal/runs#func:gitEnv
+go:internal/runs#func:tokenEnv
+go:internal/secret#func:Add
+go:internal/secret#func:GitEnv
+go:internal/secret#func:HardenGit
+go:internal/secret#func:InPipeline
+go:internal/secret#func:Redact
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
