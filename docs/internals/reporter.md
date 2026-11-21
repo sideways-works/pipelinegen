@@ -119,8 +119,9 @@ test file's path), else by its label.
 
 The comment stays under 65,536 bytes, in this order of giving way: the
 reasons go first, then the failures' output, and last the text is cut with
-a note. Each slice keeps at most 10 failures and the last 15 lines, at most
-1,500 bytes, of each.
+a note. Each slice keeps at most 10 failures and, in the comment, the last 15
+lines, at most 1,500 bytes, of each; the run's records keep the last 400
+lines, at most 32 KiB.
 
 ## The sweep
 

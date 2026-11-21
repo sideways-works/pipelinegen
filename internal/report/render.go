@@ -26,6 +26,9 @@ const (
 	mermaidMaxEdges = 400
 	// GitHub refuses comments longer than this.
 	maxCommentBytes = 65536
+	// A comment shows each failure's last lines; the run's records and its log keep the rest.
+	commentTailLines = 15
+	commentTailBytes = 1500
 )
 
 // Marker is the hidden line that finds a run's comment again on a pull
@@ -733,7 +736,7 @@ func failures(b *strings.Builder, r Run, tails bool) {
 				fmt.Fprintf(b, "  - `%s`\n", strings.ReplaceAll(f.Test, "`", "'"))
 
 				if tails && f.Tail != "" {
-					fmt.Fprintf(b, "\n    ```\n%s\n    ```\n\n", indent(f.Tail, "    "))
+					fmt.Fprintf(b, "\n    ```\n%s\n    ```\n\n", indent(CapTail(f.Tail, commentTailLines, commentTailBytes), "    "))
 				}
 			}
 		}

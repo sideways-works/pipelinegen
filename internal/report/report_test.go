@@ -71,11 +71,11 @@ func TestReadResult(t *testing.T) {
 
 	items := make([]string, 0, 12)
 	for i := range 12 {
-		items = append(items, fmt.Sprintf(`{"test": "t%d", "tail": %q}`, i, strings.Repeat("line\n", 40)))
+		items = append(items, fmt.Sprintf(`{"test": "t%d", "tail": %q}`, i, strings.Repeat("line\n", MaxTailLines+40)))
 	}
 
 	s, f := ReadResult(write("bad.json", `{"passed": false, "failures": [`+strings.Join(items, ",")+"]}"))
-	if s != Failed || len(f) != 11 || f[10].Test != "(2 more)" || strings.Count(f[0].Tail, "\n") != 14 {
+	if s != Failed || len(f) != 11 || f[10].Test != "(2 more)" || strings.Count(f[0].Tail, "\n") != MaxTailLines-1 {
 		t.Fatalf("failed: %s %d %+v", s, len(f), f[len(f)-1])
 	}
 
@@ -138,6 +138,35 @@ func TestCommentMermaid(t *testing.T) {
 
 	if body := Comment(big, 42, Mermaid); strings.Contains(body, "```mermaid") || !strings.Contains(body, "<b>g399</b>: 1 passed") {
 		t.Fatal("no fallback to the list")
+	}
+}
+
+// A timed-out test's goroutine dump reaches the records and the log whole; the comment shows its end.
+func TestAGoroutineDumpIsKeptWholeAndTheCommentShowsItsEnd(t *testing.T) {
+	var dump []string
+	for i := range 300 {
+		dump = append(dump, fmt.Sprintf("goroutine %d [chan receive]:", i))
+	}
+
+	p := filepath.Join(t.TempDir(), "result.json")
+	data := fmt.Sprintf(`{"passed": false, "failures": [{"test": "TestHangs", "tail": %q}]}`, strings.Join(dump, "\n"))
+
+	if err := os.WriteFile(p, []byte(data), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	s, f := ReadResult(p)
+	if s != Failed || len(f) != 1 || f[0].Tail != strings.Join(dump, "\n") {
+		t.Fatalf("%s: %d failures, %d lines kept", s, len(f), strings.Count(f[0].Tail, "\n")+1)
+	}
+
+	r := Run{Name: "pr", Commit: "0123456789ab", Suites: []Suite{{
+		Name: "backend", Slices: []Slice{{Name: "api/hang_test.go", State: Failed, Failures: f}},
+	}}}
+
+	body := Comment(r, 1, List)
+	if !strings.Contains(body, "goroutine 299 ") || !strings.Contains(body, "goroutine 285 ") || strings.Contains(body, "goroutine 284 ") {
+		t.Fatalf("the comment shows other than the last %d lines:\n%s", commentTailLines, body)
 	}
 }
 

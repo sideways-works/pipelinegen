@@ -392,8 +392,9 @@ of one file before `slice start` of the next.
   the suite's status counts it ("1 ran no tests"),
   since a test file that runs nothing is a finding. A slice with tests and
   no coverage in a recording run still errors. pipelinegen keeps the
-  first 10 failures and the last 15 lines
-  (at most 1,500 bytes) of each tail. A slice whose result is missing or
+  first 10 failures and the last 400 lines
+  (at most 32 KiB) of each tail, enough for a goroutine dump; a pull
+  request comment shows each tail's last 15 lines. A slice whose result is missing or
   unreadable when the batch ends is errored: an `ensure` after each batch
   task closes every slice of the batch still without a final state. The task
   exits non-zero when a slice did not pass.

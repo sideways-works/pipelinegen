@@ -276,10 +276,14 @@ func (p *Plugins) warnings() []string {
 
 const (
 	maxFailuresPerSlice = 10
-	maxTailLines        = 15
-	maxTailBytes        = 1500
 	maxDescription      = 140
 	maxTestName         = 300
+)
+
+// A failure's output is kept up to these, its end: enough for a test process's goroutine dump.
+const (
+	MaxTailLines = 400
+	MaxTailBytes = 32 << 10
 )
 
 // ResultFile is what a repository's slice task writes.
@@ -387,7 +391,7 @@ func capFailures(fs []Failure) []Failure {
 			break
 		}
 
-		out = append(out, Failure{Test: capName(f.Test), Tail: capTail(f.Tail)})
+		out = append(out, Failure{Test: capName(f.Test), Tail: CapTail(f.Tail, MaxTailLines, MaxTailBytes)})
 	}
 
 	return out
@@ -401,15 +405,16 @@ func capName(s string) string {
 	return strings.ToValidUTF8(s[:maxTestName], "") + "..."
 }
 
-func capTail(s string) string {
+// CapTail keeps a failure's output's last lines, at most n of them and at most size bytes.
+func CapTail(s string, n, size int) string {
 	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")
-	if len(lines) > maxTailLines {
-		lines = lines[len(lines)-maxTailLines:]
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
 	}
 
 	s = strings.Join(lines, "\n")
-	if len(s) > maxTailBytes {
-		s = s[len(s)-maxTailBytes:]
+	if len(s) > size {
+		s = s[len(s)-size:]
 	}
 
 	return s

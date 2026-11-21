@@ -204,8 +204,9 @@ writes `result/e2e/editor.spec.ts.json`):
 
 `passed` is true only when every test passed; any entry in `failures`
 makes the slice failed whatever `passed` says. `tests` is optional.
-pipelinegen keeps the first 10 failures and the last 15 lines (at most
-1,500 bytes) of each tail, so the comment stays readable. A missing or
+pipelinegen keeps the first 10 failures and the last 400 lines (at most
+32 KiB) of each tail, enough for a timed-out test's goroutine dump; the
+pull request comment shows each tail's last 15 lines, so it stays readable. A missing or
 unreadable file makes the slice errored: the task never said how it went.
 
 ## Extras for whole-suite checks

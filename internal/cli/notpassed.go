@@ -15,10 +15,10 @@ import (
 
 // Caps on what a step prints of the slices that did not pass: its log is often all a person sees.
 const (
-	whyTailLines = 15
-	whyTailBytes = 1500
+	whyTailLines = report.MaxTailLines
+	whyTailBytes = report.MaxTailBytes
 	whyNames     = 8
-	whyBytes     = 6000
+	whyBytes     = 64 << 10
 )
 
 // envInFull asks for every failure the store holds and no ref to read them at, for a store that is gone

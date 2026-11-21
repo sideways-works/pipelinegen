@@ -98,7 +98,7 @@ func TestASuitesEndSaysWhyItDidNotPass(t *testing.T) {
 func TestWhyInFullSaysEveryGroup(t *testing.T) {
 	var groups []*whyGroup
 	for i := range 10 {
-		groups = append(groups, &whyGroup{State: report.Failed, Failures: []report.Failure{{Test: fmt.Sprintf("t%d", i), Tail: strings.Repeat("x", 1000)}}, slices: []string{fmt.Sprintf("s%d", i)}})
+		groups = append(groups, &whyGroup{State: report.Failed, Failures: []report.Failure{{Test: fmt.Sprintf("t%d", i), Tail: strings.Repeat("x", whyBytes/5)}}, slices: []string{fmt.Sprintf("s%d", i)}})
 	}
 
 	if text, cut := renderWhy(groups, false); !cut || strings.Contains(text, "t9\n") {
@@ -112,16 +112,16 @@ func TestWhyInFullSaysEveryGroup(t *testing.T) {
 
 func TestWhyIsCapped(t *testing.T) {
 	var long []string
-	for i := range 40 {
+	for i := range whyTailLines + 10 {
 		long = append(long, fmt.Sprintf("line %d", i))
 	}
 
 	tail, cut := capTail(strings.Join(long, "\n"))
-	if !cut || !strings.HasPrefix(tail, "line 25\n") || !strings.HasSuffix(tail, "line 39") {
+	if !cut || !strings.HasPrefix(tail, "line 10\n") || !strings.HasSuffix(tail, fmt.Sprintf("line %d", whyTailLines+9)) {
 		t.Fatalf("tail %q, cut %t", tail, cut)
 	}
 
-	if tail, cut := capTail(strings.Repeat("x", 5000)); !cut || len(tail) != whyTailBytes+3 {
+	if tail, cut := capTail(strings.Repeat("x", whyTailBytes+2000)); !cut || len(tail) != whyTailBytes+3 {
 		t.Fatalf("a long line: %d bytes, cut %t", len(tail), cut)
 	}
 

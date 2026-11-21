@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Changed
+
+- A failure's output is kept up to its last 400 lines and 32 KiB, up from 15 lines and 1,500 bytes, so a timed-out test's goroutine dump reaches the run's records and the step's log of slices that did not pass; a step's log says up to 64 KiB of them. A pull request comment still shows each failure's last 15 lines
+
 ## [0.7.1] - 2026-11-21
 
 ### Fixed
