@@ -1,0 +1,14 @@
+# observed
+go:internal/durations#func:GoFiles
+go:internal/durations#func:GoTests
+go:internal/durations#func:New
+go:internal/durations#func:Parse
+go:internal/durations#func:Playwright
+go:internal/durations#func:Read
+go:internal/durations#func:number
+go:internal/durations#func:quote
+go:internal/durations#func:round
+go:internal/durations#method:File.Marshal
+go:internal/durations#method:File.Seconds
+go:internal/durations#method:File.Update
+go:internal/durations#method:File.Write
