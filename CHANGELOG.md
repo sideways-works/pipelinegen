@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Changed
+
+- A release's NOTICE names the licence its LICENSE holds, the Apache License 2.0 or the GNU AGPL 3.0 (version 3 or any later version), and the licence of each part of the family's code it includes, read from that code's nearest LICENSE; a LICENSE that is neither is refused. A NOTICE under the Apache License reads as before
+
 ## [0.7.2] - 2026-11-21
 
 ### Changed

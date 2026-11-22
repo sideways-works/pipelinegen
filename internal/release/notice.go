@@ -67,7 +67,7 @@ func fold(line string) []string {
 	return append(out, strings.TrimSuffix(line, " "))
 }
 
-func (n *noticeText) header(name, what string, own []string) {
+func (n *noticeText) header(name, what, licence string, own []ownCode) {
 	n.b.WriteString(name + "\n" + copyright + "\n\n")
 
 	verb := "include"
@@ -77,22 +77,16 @@ func (n *noticeText) header(name, what string, own []string) {
 
 	var text string
 
-	if len(own) == 0 {
+	switch {
+	case len(own) == 0 && licence == apacheLicence:
 		text = "This product is licensed under the Apache License, Version 2.0 (see\nLICENSE). Its " + what + " " + verb +
 			" the third-party software below,\neach under its own licence, reproduced here as those licences require."
-	} else {
-		names := strings.Join(own, ", ")
-		if i := strings.LastIndex(names, ", "); i >= 0 {
-			names = names[:i] + " and " + names[i+2:]
-		}
-
-		has := "have"
-		if len(own) == 1 {
-			has = "has"
-		}
-
-		text = "This product is licensed under the Apache License, Version 2.0 (see LICENSE). Its " + what + " " + verb +
-			" code from " + names + ", which " + has + " the same copyright holder and licence, and the third-party software below, each under its own licence, reproduced here as those licences require."
+	case len(own) == 0:
+		text = "This product is licensed under " + licence + " (see LICENSE). Its " + what + " " + verb +
+			" the third-party software below, each under its own licence, reproduced here as those licences require."
+	default:
+		text = "This product is licensed under " + licence + " (see LICENSE). Its " + what + " " + verb +
+			" code from " + ownClause(licence, own) + ", and the third-party software below, each under its own licence, reproduced here as those licences require."
 	}
 
 	for line := range strings.SplitSeq(text, "\n") {
@@ -182,8 +176,10 @@ func familyRepository(name string) string {
 
 type module struct{ path, version, dir string }
 
-func goModules(ctx context.Context, dir string, mains []string) ([]module, []string, error) {
-	const tmpl = `{{with .Module}}{{if not .Main}}{{if and .Replace .Replace.Version}}{{.Replace.Path}} {{.Replace.Version}} {{.Replace.Dir}}{{else if .Replace}}{{.Path}} (local) {{.Replace.Dir}}{{else}}{{.Path}} {{.Version}} {{.Dir}}{{end}}{{end}}{{end}}`
+func goModules(ctx context.Context, dir, licence string, mains []string) ([]module, []ownCode, error) {
+	// each package's directory, then its module's: the main module's path and directory, or a
+	// dependency's path, version and directory
+	const tmpl = `{{.Dir}}{{"\t"}}{{with .Module}}{{if .Main}}main {{.Path}} {{.Dir}}{{else if and .Replace .Replace.Version}}{{.Replace.Path}} {{.Replace.Version}} {{.Replace.Dir}}{{else if .Replace}}{{.Path}} (local) {{.Replace.Dir}}{{else}}{{.Path}} {{.Version}} {{.Dir}}{{end}}{{end}}`
 
 	lines := map[string]bool{}
 
@@ -210,7 +206,8 @@ func goModules(ctx context.Context, dir string, mains []string) ([]module, []str
 
 	var (
 		mods []module
-		own  []string
+		own  []ownCode
+		seen = map[string]bool{}
 	)
 
 	for _, l := range slices.Sorted(func(yield func(string) bool) {
@@ -220,31 +217,114 @@ func goModules(ctx context.Context, dir string, mains []string) ([]module, []str
 			}
 		}
 	}) {
-		f := strings.SplitN(l, " ", 3)
+		pkgDir, mod, _ := strings.Cut(l, "\t")
+
+		f := strings.SplitN(mod, " ", 3)
 		if len(f) < 3 {
 			continue
 		}
 
-		if strings.HasPrefix(f[0], family+"/") {
-			parts := strings.SplitN(f[0], "/", 4)
+		switch {
+		case f[0] == "main":
+			// a directory of the release's own module with a licence of its own, as an SDK's
+			o, ok, err := ownDirectory(pkgDir, f[1], f[2], licence)
+			if err != nil {
+				return nil, nil, err
+			}
 
-			own = append(own, family+"/"+familyRepository(parts[2]))
+			if ok {
+				own = append(own, o)
+			}
+		case strings.HasPrefix(f[0], family+"/"):
+			l, err := licenceOf(pkgDir, f[2])
+			if err != nil {
+				return nil, nil, err
+			}
+
+			parts := strings.SplitN(f[0], "/", 4)
+			own = append(own, ownCode{name: family + "/" + familyRepository(parts[2]), licence: l})
+		case !seen[mod]:
+			seen[mod] = true
+
+			mods = append(mods, module{path: f[0], version: f[1], dir: f[2]})
+		}
+	}
+
+	return mods, compactOwn(own), nil
+}
+
+// ownDirectory is the directory of the main module, at path in dir, whose LICENSE covers pkgDir when
+// that licence is not the release's.
+func ownDirectory(pkgDir, path, dir, licence string) (ownCode, bool, error) {
+	for d := filepath.Clean(pkgDir); ; d = filepath.Dir(d) {
+		if p := filepath.Join(d, licenseFile); exists(p) {
+			l, ok := licenceText(p)
+			if !ok {
+				return ownCode{}, false, refuseNotice("%s is neither the Apache License 2.0 nor the GNU AGPL 3.0", p)
+			}
+
+			if l == licence {
+				return ownCode{}, false, nil
+			}
+
+			rel, err := filepath.Rel(dir, d)
+			if err != nil {
+				return ownCode{}, false, fmt.Errorf("notice: %w", err)
+			}
+
+			return ownCode{name: path + "/" + filepath.ToSlash(rel), licence: l}, true, nil
+		}
+
+		if d == filepath.Clean(dir) || filepath.Dir(d) == d {
+			return ownCode{}, false, nil
+		}
+	}
+}
+
+// nodeOwn splits a bundle's packages into the family's own, with their licences, and the third
+// party's paths.
+func nodeOwn(dir string, paths []string) ([]ownCode, []string, error) {
+	var (
+		own   []ownCode
+		third []string
+	)
+
+	scoped := regexp.MustCompile(`^.*node_modules/@sideways-works/`)
+
+	for _, p := range paths {
+		p = strings.TrimPrefix(strings.TrimSuffix(p, "/"), "./")
+		if !scoped.MatchString(p) {
+			third = append(third, p)
 
 			continue
 		}
 
-		mods = append(mods, module{path: f[0], version: f[1], dir: f[2]})
+		// a workspace's package is a link to its directory, whose LICENSE, or the repository's, is its
+		at, err := filepath.EvalSymlinks(filepath.Join(dir, p))
+		if err != nil {
+			return nil, nil, fmt.Errorf("notice: %s: %w", p, err)
+		}
+
+		l, err := licenceOf(at, "")
+		if err != nil {
+			return nil, nil, err
+		}
+
+		own = append(own, ownCode{name: family + "/" + familyRepository(scoped.ReplaceAllString(p, "")), licence: l})
 	}
 
-	slices.Sort(own)
-
-	return mods, slices.Compact(own), nil
+	return compactOwn(own), third, nil
 }
 
 // GoNotice is the NOTICE of a Go repository's release of the program
 // name, built from the main packages mains (./cmd/x, .).
 func GoNotice(ctx context.Context, dir, name string, mains []string) (string, error) {
-	mods, own, err := goModules(ctx, dir, mains)
+	licence, err := licenceOf(dir, "")
+	if err != nil {
+		return "", err
+	}
+
+	mods, own, err := goModules(ctx, dir, licence, mains)
 	if err != nil {
 		return "", err
 	}
@@ -260,7 +340,7 @@ func GoNotice(ctx context.Context, dir, name string, mains []string) (string, er
 	}
 
 	n := &noticeText{first: true}
-	n.header(name, "release binaries", own)
+	n.header(name, "release binaries", licence, own)
 	n.entry("The Go standard library (" + version + ")")
 
 	if err := n.texts(goroot, "the Go standard library"); err != nil {
@@ -306,21 +386,18 @@ func NodeNotice(dir, name string, paths []string) (string, error) {
 		return "", fmt.Errorf("notice: package-lock.json: %w", err)
 	}
 
-	var own, third []string
+	licence, err := licenceOf(dir, "")
+	if err != nil {
+		return "", err
+	}
 
-	scoped := regexp.MustCompile(`^.*node_modules/@sideways-works/`)
-
-	for _, p := range paths {
-		p = strings.TrimPrefix(strings.TrimSuffix(p, "/"), "./")
-		if scoped.MatchString(p) {
-			own = append(own, family+"/"+familyRepository(scoped.ReplaceAllString(p, "")))
-		} else {
-			third = append(third, p)
-		}
+	own, third, err := nodeOwn(dir, paths)
+	if err != nil {
+		return "", err
 	}
 
 	n := &noticeText{first: true}
-	n.header(name, "release files", own)
+	n.header(name, "release files", licence, own)
 
 	for _, p := range third {
 		key := p

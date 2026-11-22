@@ -65,7 +65,9 @@ func TestFold(t *testing.T) {
 
 func TestHeaderNamesTheFamilysOwnCode(t *testing.T) {
 	n := &noticeText{first: true}
-	n.header("shell-driver", "release binaries", []string{"github.com/sideways-works/pipelinegen", "github.com/sideways-works/pipelinegen-plugins"})
+	n.header("shell-driver", "release binaries", apacheLicence, []ownCode{
+		{"github.com/sideways-works/pipelinegen", apacheLicence}, {"github.com/sideways-works/pipelinegen-plugins", apacheLicence},
+	})
 
 	want := "shell-driver\n" + copyright + "\n\n" +
 		"This product is licensed under the Apache License, Version 2.0 (see\n" +
@@ -158,6 +160,7 @@ func TestARepositoryWithoutAnOriginIsNamedByItsDirectory(t *testing.T) {
 	for name, text := range map[string]string{
 		"go.mod":                    "module example.com/gadget\n\ngo 1.27\n",
 		"cmd/gadget-driver/main.go": "package main\n\nfunc main() {}\n",
+		"LICENSE":                   apacheHead,
 	} {
 		p := filepath.Join(dir, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {
@@ -184,6 +187,8 @@ func TestAWorkspacesPackageTakesItsVersionsFromTheWorkspacesLockfile(t *testing.
 		"package-lock.json":             `{"packages": {"node_modules/left-pad": {"version": "1.3.0"}}}`,
 		"node_modules/left-pad/LICENSE": "left-pad's licence\n",
 		"tools/widget/package.json":     `{"name": "@owner/widget"}`,
+		"LICENSE":                       agplHead,
+		".git/HEAD":                     "ref: refs/heads/main\n",
 	} {
 		p := filepath.Join(root, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(p), 0o750); err != nil {

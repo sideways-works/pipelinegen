@@ -113,7 +113,13 @@ software its files include, with that software's licence and its own
 notices reproduced. For Go, that is every module linked into any of the released
 programs on any of the four platforms, and the Go standard library of the
 toolchain; the family's own modules are named in the opening sentence
-instead, under the repository that holds each now. A module that embeds
+instead, under the repository that holds each now, with their licence.
+The release's licence is its `LICENSE`'s, the module's own or the
+repository's, and each part of the family's code takes the licence of
+the nearest `LICENSE` above it: the Apache License 2.0 or the GNU AGPL
+3.0, which the family licenses as version 3 or any later version;
+`notice` refuses any other. A directory of the release's own module with a `LICENSE` of
+another licence, as pipelinegen's `plugin`, is named too. A module that embeds
 code of other forms says so too: go-pgquery's PostgreSQL parser brings
 protobuf-c, xxHash and wasi-libc, whose licences `notice` takes from the
 parser's sources and, for wasi-libc, fetches once from GitHub into
