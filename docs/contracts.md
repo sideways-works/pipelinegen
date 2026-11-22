@@ -967,6 +967,12 @@ The change and its commit come from the trigger's input (`--trigger <dir>`).
 | suite job's ensure | `tools/pipelinegen report suite --root trigger --batches batches`: the suite's status and the run's aggregate; when the whole run has passed, the final report and, for a branch's recording run, `lists attach`; when the run's last suite has ended in a run that failed, `lists attach` of the slices that passed. Its root is the trigger, because the ensure runs even when the tree step never wrote `source`. The job may pass whatever else this step's failures are, but not exit 4, the suite's end that could not be recorded: that fails the job | `tools`, `trigger`, `batches` (when the start step wrote it) | none | `GITHUB_TOKEN`, `PIPELINEGEN_TRIGGER` |
 | pipeline job | `tools/pipelinegen pipeline --root repo --plugins tools/plugins --out pipeline.yml`, then a check that fails when it differs from the pipeline set (with `concourse.self_set`, `set_pipeline: self` without variables) | `tools`, `repo` | none | `PIPELINEGEN_CONCOURSE_URL` |
 
+With `plans.s3`, the steps that write a run's plan (the `plan` step of a
+branch's, a timer's or a manual run's planning job, and the `--from` step
+of a pull request run's planning job and of its sweep) also get `PIPELINEGEN_PLANS_ACCESS_KEY_ID` and
+`PIPELINEGEN_PLANS_SECRET_ACCESS_KEY`, from the vars the spec's `plans`
+names; no other step does, and `plan --out` refuses to start with them.
+
 A suite with an `image` gets one more step first: a `get` of that
 `registry-image` resource of the root pipeline file. The suite's prepare,
 batch and whole-suite tasks then run in it (`image:` on their task
@@ -1153,6 +1159,9 @@ holds to the Go types the plan is written from. Its `version` is 1; a plan
 without one was written by a release before v0.8.0 and has the same shape
 less `version` and `estimate`. A change that renames or removes a field, or
 changes what one means, raises the version; a new optional field doesn't.
+With `plans.s3`, the step that writes a run's plan also copies these bytes,
+gzipped, to a bucket, under keys and metadata that are a contract of their
+own: [keeping plans in a bucket](how-to/keeping-plans.md).
 
 Each suite that keeps a `durations` file has an `estimate`: the recorded
 seconds of the slices the plan selected (`selected_seconds`) and of every

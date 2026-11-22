@@ -8,7 +8,8 @@ import (
 )
 
 // Trusted are the keys deciding where a run reads and writes, which credential serves what, which
-// binaries run, which suites each run waits for, and the runner's config: never the change's own.
+// binaries run, which suites each run waits for, where plans are copied, and the runner's config:
+// never the change's own.
 type Trusted struct {
 	GitRemote       string          `json:"git_remote,omitempty"`
 	SSHKey          SSHKeys         `json:"ssh_key"`
@@ -26,6 +27,8 @@ type Trusted struct {
 	Bootstrap       json.RawMessage `json:"concourse_planner_bootstrap,omitempty"`
 	Forges          []Forge         `json:"forges,omitempty"`
 	ConcourseBranch string          `json:"concourse_branch,omitempty"`
+	// Plans is nil without a plans section, so an older pipeline's trusted keys compare equal.
+	Plans *Plans `json:"plans,omitempty"`
 	// RunSuites are the suites each run names; a change can't take a suite out of its own run.
 	RunSuites    map[string][]string `json:"run_suites,omitempty"`
 	Steps        map[string][]Step   `json:"suite_steps,omitempty"`
@@ -55,6 +58,16 @@ func (c *Config) Trusted() Trusted {
 		BazelDiff: c.BazelDiff, Bazelisk: c.Bazel.Bazelisk, StartupFlags: c.Bazel.StartupFlags,
 		ConcourseBranch: c.Concourse.Branch, RunnerConfig: c.runnerConfig(),
 		RunRunners: c.runRunners(), RunnerConfigs: c.runnerConfigs(),
+	}
+
+	if c.Plans != (Plans{}) {
+		p := c.Plans
+		if p.S3 != nil {
+			s3 := *p.S3
+			p.S3 = &s3
+		}
+
+		t.Plans = &p
 	}
 
 	if b, err := json.Marshal(c.Concourse.Planner.Bootstrap); err == nil {
@@ -124,6 +137,7 @@ func (c *Config) WithTrusted(t Trusted) []string {
 	same("concourse.planner.bootstrap", own.Bootstrap, t.Bootstrap)
 	same("forges", own.Forges, t.Forges)
 	same("concourse.branch", own.ConcourseBranch, t.ConcourseBranch)
+	same("plans", own.Plans, t.Plans)
 	same("suites.*.steps", own.Steps, t.Steps)
 
 	c.trustPlain(t)
@@ -148,6 +162,11 @@ func (c *Config) trustPlain(t Trusted) {
 	c.Store.Backend, c.Store.Branch = t.StoreBackend, t.StoreBranch
 	c.BazelDiff, c.Bazel.Bazelisk, c.Bazel.StartupFlags = t.BazelDiff, t.Bazelisk, t.StartupFlags
 	c.Concourse.Branch = t.ConcourseBranch
+
+	c.Plans = Plans{}
+	if t.Plans != nil {
+		c.Plans = *t.Plans
+	}
 
 	if len(t.Bootstrap) > 0 {
 		var b Bootstrap

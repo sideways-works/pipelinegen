@@ -10,7 +10,8 @@ import (
 )
 
 func TestAProposedChangesStepHoldsTheReadTokenAlone(t *testing.T) {
-	for _, name := range []string{"GITHUB_TOKEN", "GH_TOKEN", "PIPELINEGEN_READ_TOKEN", "PIPELINEGEN_STORE_TOKEN", "PIPELINEGEN_REPORT_TOKEN", "PIPELINEGEN_CHANGES_TOKEN", "PIPELINEGEN_SSH_KEY_STORE"} {
+	for _, name := range []string{"GITHUB_TOKEN", "GH_TOKEN", "PIPELINEGEN_READ_TOKEN", "PIPELINEGEN_STORE_TOKEN", "PIPELINEGEN_REPORT_TOKEN", "PIPELINEGEN_CHANGES_TOKEN", "PIPELINEGEN_SSH_KEY_STORE",
+		"PIPELINEGEN_PLANS_ACCESS_KEY_ID", "PIPELINEGEN_PLANS_SECRET_ACCESS_KEY", "PIPELINEGEN_PLANS_SESSION_TOKEN"} {
 		t.Setenv(name, "")
 	}
 
@@ -23,7 +24,10 @@ func TestAProposedChangesStepHoldsTheReadTokenAlone(t *testing.T) {
 		t.Fatalf("the read token alone: %q %v", lines, err)
 	}
 
-	for _, name := range []string{"PIPELINEGEN_STORE_TOKEN", "PIPELINEGEN_REPORT_TOKEN", "PIPELINEGEN_CHANGES_TOKEN", "GITHUB_TOKEN"} {
+	for _, name := range []string{
+		"PIPELINEGEN_STORE_TOKEN", "PIPELINEGEN_REPORT_TOKEN", "PIPELINEGEN_CHANGES_TOKEN", "GITHUB_TOKEN",
+		"PIPELINEGEN_PLANS_ACCESS_KEY_ID", "PIPELINEGEN_PLANS_SECRET_ACCESS_KEY", "PIPELINEGEN_PLANS_SESSION_TOKEN",
+	} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(name, "writes")
 

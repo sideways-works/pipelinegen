@@ -1340,6 +1340,16 @@ the repository's own parts merged in.
   purpose it gives the token of, in `PIPELINEGEN_SSH_KEY_<PURPOSE>`, and
   none to a task of the repository's. `pipelinegen pipeline` refuses a
   config with an ssh remote for a runner without the capability.
+- The spec's `plans`, with the config's `plans.s3`, names the CI vars of
+  the key that writes the plans' bucket: `access_key_id` and
+  `secret_access_key`. A runner gives them, as
+  `PIPELINEGEN_PLANS_ACCESS_KEY_ID` and
+  `PIPELINEGEN_PLANS_SECRET_ACCESS_KEY`, to the steps that write a run's
+  plan (a branch's planning step, the `--from` step of a proposed
+  change's planning and of the sweep) and to no other: `plan --out`
+  refuses to start holding them. A runner that ignores the field writes a
+  pipeline whose plans stay in the run's records alone, and each such step
+  says so once.
 - Where each step runs is the runner's to say, in its own words: the
   spec carries no worker tags, and the runner reads its placement from its
   own config block (the `config` of its entry, in every call's request).

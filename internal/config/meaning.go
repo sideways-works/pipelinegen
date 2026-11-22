@@ -198,7 +198,7 @@ var (
 	topSelection = append([]string{
 		"everything_on", "untested", "macros", "uncovered", "narrowing_alarm", "narrowings", "explain_limit", "rebuild_check",
 	}, sharedSelection...)
-	topNothing = []string{"pipeline", "github", "git", "store", "keep", "writes", "forges", "generated", "learn", "limits", "bazel_diff", "images"}
+	topNothing = []string{"pipeline", "github", "git", "store", "keep", "writes", "forges", "generated", "learn", "limits", "bazel_diff", "images", "plans"}
 )
 
 func suiteRuns(key string) bool {

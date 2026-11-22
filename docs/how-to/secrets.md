@@ -89,6 +89,16 @@ first use.
 A task of the repository's may never be given the store key as a secret:
 the config is refused for it, in any run.
 
+## The plans' bucket
+
+With `plans.s3`, `plans.s3.credentials` names the two vars of the key
+that writes the bucket, never the key. Only the steps that write a run's
+plan get it, in `PIPELINEGEN_PLANS_ACCESS_KEY_ID` and
+`PIPELINEGEN_PLANS_SECRET_ACCESS_KEY`: never the step that plans a
+proposed change's code, which refuses to start holding it, and never a
+task of the repository's, which the config is refused for. See [keeping
+plans in a bucket](keeping-plans.md).
+
 ## Registry credentials
 
 Cached images ([packages and cached images](packages-and-images.md)) live
@@ -123,12 +133,12 @@ config the pipeline was made from instead: `git.remote`, `git.ssh_key`,
 `github.tokens`, `github.status_prefix`, `store.backend`, `store.branch`,
 `bazel_diff`, `bazel.bazelisk`, `bazel.startup_flags`, the plugins' pins,
 `concourse.planner.bootstrap`, the `forges` except their `links`,
-`concourse.branch`, each runner's `config` block, the runner each run
+`concourse.branch`, `plans`, each runner's `config` block, the runner each run
 names in `runs.<name>.runner`, and the suites each run names (a change may
 add to them, never take one out). Together they say
 where a run reads and writes, which credential serves which purpose, which
-binaries a step runs, where the pipeline's steps run and which suites a
-run waits for. The pipeline hands them to every step as
+binaries a step runs, where the pipeline's steps run, which suites a
+run waits for and where plans are copied. The pipeline hands them to every step as
 `PIPELINEGEN_TRUSTED`. A change that edits one is planned with the
 repository's value, and its plan names the keys it edited.
 
@@ -201,8 +211,9 @@ plans a pull request holds the read token alone.
 pipelinegen holds the pipeline to that. A step that plans a proposed
 change refuses to run when it finds one of the tool's own variables of a
 purpose that writes (`PIPELINEGEN_STORE_TOKEN`, `..._REPORT_TOKEN`,
-`..._CHANGES_TOKEN`, the store's ssh key), naming it: the pipeline was
-generated wrong. pipelinegen can't know a token's scope, so for
+`..._CHANGES_TOKEN`, the store's ssh key, the key of the plans' bucket in
+`PIPELINEGEN_PLANS_ACCESS_KEY_ID`, `..._SECRET_ACCESS_KEY` or
+`..._SESSION_TOKEN`), naming it: the pipeline was generated wrong. pipelinegen can't know a token's scope, so for
 `GITHUB_TOKEN` and `GH_TOKEN` it goes by what the config declares. With
 tokens by purpose, one of them in such a step refuses it, unless the
 planner declares it as its git credential: then the plan says once "the

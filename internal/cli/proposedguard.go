@@ -38,10 +38,13 @@ func declaredForPlanner(cfg *config.Config, name string) bool {
 }
 
 func writingVars(cfg *config.Config) []string {
-	names := make([]string, 0, 4)
+	names := make([]string, 0, 7)
 	for _, p := range []string{plugin.PurposeChanges, plugin.PurposeReport, plugin.PurposeStore} {
 		names = append(names, toolcalls.PurposeEnv(p))
 	}
+
+	// the key that writes the plans' bucket, whatever the config says of it
+	names = append(names, plugin.EnvPlansAccessKeyID, plugin.EnvPlansSecretAccessKey, plugin.EnvPlansSessionToken)
 
 	if cfg.Git.SSHKey.Store != "" {
 		names = append(names, gitssh.KeyEnv(plugin.PurposeStore))

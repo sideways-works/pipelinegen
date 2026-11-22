@@ -431,7 +431,9 @@ func rebuildFor(ctx context.Context, cfg *config.Config, ch runs.Change, store *
 	return rb
 }
 
-// The rebuild's answers are written only once the plan holding what it found is stored.
+// The rebuild's answers are written only once the plan holding what it found is stored. Each trusted
+// step that writes a run's plan comes here: the plan step of a branch's run and the second step of a
+// proposed change's planning (--from, with or without --emit).
 func startRun(ctx context.Context, store *gitstore.Store, r *report.Reporter, plan *affected.Plan, rb *rebuild) error {
 	data, err := json.Marshal(plan)
 	if err != nil {
@@ -441,6 +443,9 @@ func startRun(ctx context.Context, store *gitstore.Store, r *report.Reporter, pl
 	if err := report.WritePlan(ctx, store, r.ID, data); err != nil {
 		return err
 	}
+
+	// the bytes just written, and only once this planner wrote them
+	keepPlan(ctx, r.Config, r.ID, data)
 
 	if err := r.Start(ctx); err != nil {
 		return err

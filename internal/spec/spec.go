@@ -73,6 +73,10 @@ func FromInclude(cfg *config.Config, include []byte) (plugin.Spec, error) {
 		}
 	}
 
+	if p := cfg.Plans.S3; p != nil {
+		s.Plans = &plugin.SpecPlans{AccessKeyID: p.Credentials.AccessKeyID, SecretAccessKey: p.Credentials.SecretAccessKey}
+	}
+
 	if cfg.Concourse.Include != "" {
 		s.ConfigFiles = append(s.ConfigFiles, cfg.Concourse.Include)
 	}

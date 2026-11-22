@@ -46,7 +46,7 @@ in the default branch's run once it is merged.
 | A driver entry's pin (`release`, `commit`, `repository`) | the slices its steps run, as a changed plugin entry: from level 4 all of them; below it, while `plugin-entry` is on, each suite's sample of its recorded slices, and every slice without a list |
 | An sbom's or correlator's pin or `config` block | what the entry reaches, as [plugins](../how-to/plugins.md) says |
 | What selects (`tests`, `tag`, `exclude`, `owner`, `extra_deps`, `text_inputs`, `sample`, `sample_on`, `narrowing`, `narrowings`, `follow`, `untested` and the like) | what either config selects: the change plans under both and runs the union, so it never deselects its own tests; a slice the head's config adds to a suite (a test file a pattern now matches) runs as a new slice, with the reason "the configuration adds it to the suite" |
-| Where results go, what is kept, how slices are dealt into batches and share machines (`github`, `git`, `store`, `keep`, `writes`, `forges`, a `plugins` entry of kind `forge`, `limits`, `parallel`, `batches`, `batch_minutes`, `run_on`, `lock` but its `minutes`, the runs' triggers and reports) | nothing: no test can observe them |
+| Where results go, what is kept, how slices are dealt into batches and share machines (`github`, `git`, `store`, `keep`, `writes`, `plans`, `forges`, a `plugins` entry of kind `forge`, `limits`, `parallel`, `batches`, `batch_minutes`, `run_on`, `lock` but its `minutes`, the runs' triggers and reports) | nothing: no test can observe them |
 | Anything else: a time limit (`minutes`, a correlator's `collect_seconds`), a suite's `correlators`, the runner's entry or its placement, `bazel`, `concourse.include`, the pipelinegen pin in `concourse.planner.bootstrap`, a key this pipelinegen doesn't read in the base | the config is a changed file, as below |
 
 The slices a step's change selects run at every narrowing level, and no
@@ -661,6 +661,43 @@ branch.
 
 ```yaml
 store: {backend: branch, branch: pipelinegen, deadline: 10m}
+```
+
+## plans
+
+Where each plan a trusted step writes is copied, beside the run's records:
+a bucket of an S3-compatible service (AWS S3, SeaweedFS, MinIO), under keys
+a tool can list by repository, date and commit. The step that writes a
+run's plan uploads it, and the step that plans a proposed change's code
+never does; a bucket that fails never fails the plan. The keys, the
+metadata and the cleanup are in [keeping plans in a
+bucket](../how-to/keeping-plans.md). The section is a trusted key: a
+proposed change's own `plans` takes effect once it is merged.
+
+| Key | Type | Default | What it does |
+|---|---|---|---|
+| `plans` | mapping | none | The section. Without it, plans stay in the run's records alone. |
+| `plans.s3` | mapping | none | The bucket. |
+| `plans.s3.bucket` | string | (required in the section) | The bucket's name: 3 to 63 lowercase letters, digits, dots and hyphens. |
+| `plans.s3.prefix` | string | none | Where in the bucket the plans go, such as `pipelinegen`: parts of letters, digits, `.`, `_` and `-`, split by single slashes, none at either end. Without it the keys start at the repository's owner. |
+| `plans.s3.region` | string | (required in the section) | The region requests are signed for, such as `eu-central-1`. |
+| `plans.s3.endpoint` | URL | `https://s3.<region>.amazonaws.com` | The service's base URL, `https://` or `http://` with a host and an optional port. |
+| `plans.s3.path_style` | boolean | `false` | Put the bucket in the path (`<endpoint>/<bucket>/<key>`) instead of the host (`<bucket>.<host>`), as SeaweedFS and MinIO usually want. |
+| `plans.s3.credentials` | mapping | (required in the section) | The names of the CI vars holding the key, never the key. The runner gives them, as `PIPELINEGEN_PLANS_ACCESS_KEY_ID` and `PIPELINEGEN_PLANS_SECRET_ACCESS_KEY`, to the steps that write a run's plan and to no other; `PIPELINEGEN_PLANS_SESSION_TOKEN`, when set, is a temporary key's session token. No task of the repository's may be given either var. |
+| `plans.s3.credentials.access_key_id` | var name | (required) | The var of the access key's id. |
+| `plans.s3.credentials.secret_access_key` | var name | (required) | The var of the access key's secret. |
+| `plans.keep` | `Nd`, `Nh` or `Nm` | none | How long a copied plan is kept: after each upload, the step deletes the day folders whose whole day ended before now less this, and the old pointers of the plan's head shard. Without it nothing is deleted; a bucket lifecycle rule can do it instead. Needs `plans.s3`. |
+
+```yaml
+plans:
+  s3:
+    bucket: ci-plans
+    prefix: pipelinegen
+    region: eu-central-1
+    endpoint: https://s3.example.com
+    path_style: true
+    credentials: {access_key_id: plans_key_id, secret_access_key: plans_secret}
+  keep: 90d
 ```
 
 ## learn

@@ -52,7 +52,28 @@ type Spec struct {
 	// Images is where cached images are kept and which to build, when the config names a
 	// registry.
 	Images *SpecImages `json:"images,omitempty"`
+	// Plans name the vars of the key that copies each plan to a bucket, when the config has a
+	// plans section.
+	Plans *SpecPlans `json:"plans,omitempty"`
 }
+
+// SpecPlans name the CI vars of the key that writes the plans' bucket. A runner gives them, as
+// EnvPlansAccessKeyID and EnvPlansSecretAccessKey, to the steps that write a run's plan and to no
+// other: the plan step of a run of a branch, a timer or by hand, and the second step of a
+// proposed change's planning (`plan --from`). The first step (`plan --out`) runs the change's
+// code and refuses to start holding them; no task of the repository's may hold them.
+type SpecPlans struct {
+	AccessKeyID     string `json:"access_key_id"`
+	SecretAccessKey string `json:"secret_access_key"`
+}
+
+// The variables the key of the plans' bucket comes in; a session token, for a temporary key, is
+// optional.
+const (
+	EnvPlansAccessKeyID     = "PIPELINEGEN_PLANS_ACCESS_KEY_ID"
+	EnvPlansSecretAccessKey = "PIPELINEGEN_PLANS_SECRET_ACCESS_KEY"
+	EnvPlansSessionToken    = "PIPELINEGEN_PLANS_SESSION_TOKEN"
+)
 
 // CapPackages is a runner's capability to install SpecSuite.Packages and Spec.PlannerPackages
 // and to build and use Spec.Images; without it the pipeline installs nothing, and is told so.

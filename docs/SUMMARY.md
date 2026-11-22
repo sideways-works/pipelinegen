@@ -71,6 +71,7 @@
   * [Look inside: lists and why](how-to/looking-inside.md)
   * [Attach lists after a merge](how-to/attaching-lists.md)
   * [Keep history](how-to/keeping-history.md)
+  * [Keep plans in a bucket](how-to/keeping-plans.md)
   * [Back up the store](how-to/backups.md)
   * [Fresh clones and old setup lines](how-to/fresh-clones.md)
 * [Troubleshooting](troubleshooting.md)

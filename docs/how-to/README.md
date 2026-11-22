@@ -60,5 +60,8 @@ The terms are in the [concepts](../concepts/README.md) and the
 - [Look inside](looking-inside.md): `lists show` and `why`.
 - [Attach lists after a merge](attaching-lists.md), for merge automation.
 - [Keep history](keeping-history.md): how long runs and lists are kept.
+- [Keep plans in a bucket](keeping-plans.md): copy every plan to S3,
+  SeaweedFS or MinIO, the keys and metadata a reader can rely on, and
+  deleting old plans.
 - [Back up the store](backups.md), and what happens if it is lost.
 - [Fresh clones and old setup lines](fresh-clones.md).

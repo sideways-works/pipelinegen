@@ -257,7 +257,8 @@ func (c *Config) StoreKeySecrets() []string {
 }
 
 // validateTaskSecrets refuses a repository task a writing credential: a writing token in a pull
-// request run, and in any run the store's ssh key or the var that pushes cached images.
+// request run, and in any run the store's ssh key, the var that pushes cached images or a var of
+// the plans' bucket.
 func (c *Config) validateTaskSecrets(bad func(string, ...any)) {
 	if c.GitHub.SplitTokens() != nil {
 		for _, line := range c.WritingSecrets("") {
@@ -270,6 +271,10 @@ func (c *Config) validateTaskSecrets(bad func(string, ...any)) {
 	}
 
 	for _, line := range c.PushSecrets() {
+		bad("%s", line)
+	}
+
+	for _, line := range c.PlansKeySecrets() {
 		bad("%s", line)
 	}
 }

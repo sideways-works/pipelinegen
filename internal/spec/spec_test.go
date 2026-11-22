@@ -368,3 +368,28 @@ func TestAZipPinReachesTheRunnerAsTheToolsZip(t *testing.T) {
 		}
 	}
 }
+
+func TestTheRunnerLearnsThePlansKeysVars(t *testing.T) {
+	cfg, err := config.Load("../../testdata/kit/pipelinegen.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if s, err := From(cfg); err != nil || s.Plans != nil {
+		t.Fatalf("without a plans section: %v %+v", err, s.Plans)
+	}
+
+	cfg.Plans.S3 = &config.PlansS3{
+		Bucket: "ci-plans", Region: "eu-central-1",
+		Credentials: config.PlansCredentials{AccessKeyID: "plans_key_id", SecretAccessKey: "plans_secret"},
+	}
+
+	s, err := From(cfg)
+	if err != nil || s.Plans == nil || *s.Plans != (plugin.SpecPlans{AccessKeyID: "plans_key_id", SecretAccessKey: "plans_secret"}) {
+		t.Fatalf("%v %+v", err, s.Plans)
+	}
+
+	if !strings.Contains(s.Trusted, `"plans":{"s3":{"bucket":"ci-plans"`) {
+		t.Errorf("the trusted keys leave plans out: %s", s.Trusted)
+	}
+}

@@ -53,6 +53,7 @@ type Config struct {
 	Keep     Keep           `yaml:"keep"`
 	Writes   Writes         `yaml:"writes"`
 	Store    Store          `yaml:"store"`
+	Plans    Plans          `yaml:"plans"`
 	Runs     map[string]Run `yaml:"runs"`
 	Untested []Untested     `yaml:"untested"`
 	// Macros declares, by "<.bzl label>%<name>", what another repository's macro reads in the
@@ -878,6 +879,7 @@ func (c *Config) Validate() error {
 	c.validateImages(bad)
 	c.validatePackages(bad)
 	c.validateWrites(bad)
+	c.validatePlans(bad)
 	c.validatePlugins(bad)
 
 	c.validateUntested(bad)
