@@ -292,8 +292,7 @@ func affectedPlanUnder(ctx context.Context, cfg *config.Config, root, base, head
 
 		setPlugins(plan, p.set)
 
-		plan.Warnings = append(plan.Warnings, warnings...)
-		plan.Warnings = append(plan.Warnings, correlatorWarnings(p, c)...)
+		plan.Warnings = append(append(plan.Warnings, warnings...), correlatorWarnings(p, c)...)
 		p.book.markUnlisted(plan)
 		plan.Narrowing = narrowingLevel(c)
 		estimate(plan, c, root)
