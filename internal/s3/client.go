@@ -25,7 +25,7 @@ type Client struct {
 	Bucket    string
 	PathStyle bool
 	Creds     Credentials
-	// HTTP sends the requests; nil is a client with a one-minute timeout.
+	// HTTP sends the requests; nil is a client with a 30-second timeout: a plan is small.
 	HTTP *http.Client
 	// Now is when a request is signed; nil is time.Now.
 	Now func() time.Time
@@ -57,17 +57,6 @@ func (e *Error) Error() string {
 }
 
 func (e *Error) Unwrap() error { return ErrStatus }
-
-// Transient tells whether the request may succeed when sent again: no answer at all, a server's
-// error, a timeout or throttling. A refusal for any other reason won't change by itself.
-func Transient(err error) bool {
-	var e *Error
-	if !errors.As(err, &e) {
-		return err != nil && !errors.Is(err, context.Canceled)
-	}
-
-	return e.Status >= 500 || e.Status == http.StatusTooManyRequests || e.Status == http.StatusRequestTimeout
-}
 
 // Put writes body under key with the given headers (Content-Type, Content-Encoding) and user
 // metadata, each sent as x-amz-meta-<name>.
@@ -169,7 +158,7 @@ func (c *Client) do(ctx context.Context, op, method, key string, query map[strin
 
 	client := c.HTTP
 	if client == nil {
-		client = &http.Client{Timeout: time.Minute}
+		client = &http.Client{Timeout: 30 * time.Second}
 	}
 
 	resp, err := client.Do(req)

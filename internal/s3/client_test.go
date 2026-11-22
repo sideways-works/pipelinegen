@@ -119,7 +119,7 @@ func TestARefusalNamesItsCodeAndNothingItEchoes(t *testing.T) {
 	err := c.Put(context.Background(), "k", []byte("x"), nil, nil)
 
 	var e *s3.Error
-	if !errors.As(err, &e) || e.Status != http.StatusForbidden || e.Code != "SignatureDoesNotMatch" || s3.Transient(err) {
+	if !errors.As(err, &e) || e.Status != http.StatusForbidden || e.Code != "SignatureDoesNotMatch" {
 		t.Fatalf("%v", err)
 	}
 
@@ -127,12 +127,5 @@ func TestARefusalNamesItsCodeAndNothingItEchoes(t *testing.T) {
 		if strings.Contains(err.Error(), leak) {
 			t.Errorf("the error carries %q: %v", leak, err)
 		}
-	}
-
-	srv.Fail = func(s3test.Request) int { return http.StatusServiceUnavailable }
-	c.Creds.SecretAccessKey = srv.Secret
-
-	if err := c.Put(context.Background(), "k", []byte("x"), nil, nil); !s3.Transient(err) {
-		t.Fatalf("a 503 is transient: %v", err)
 	}
 }

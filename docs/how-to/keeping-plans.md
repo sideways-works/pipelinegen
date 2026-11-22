@@ -206,12 +206,12 @@ Nothing a bucket does fails a plan. The plan is in the run's records
 before the upload starts, and the run goes on as it would without the
 bucket:
 
-- Each PUT is tried once and, while its failure may pass (no answer, a
-  5xx, a 408 or a 429), again after 1, 4 and 16 seconds: four tries at
-  most. A refusal that trying again would only repeat (a 403 for a wrong
-  key, a bucket that doesn't exist) is not tried again. Then the step
-  says `pipelinegen plan: plans.s3: the plan is not in the bucket: ...`
-  on stderr and goes on. The plan is not uploaded later.
+- Each PUT is tried once and, whatever failed, again after 1, 4 and 16
+  seconds: four tries at most, each given 30 seconds. S3 refuses an
+  upload that went too slowly with a 400 like any other refusal, so none
+  is taken as final. Then the step says `pipelinegen plan: plans.s3: the
+  plan is not in the bucket: ...` on stderr, with the HTTP status and the
+  service's error code, and goes on. The plan is not uploaded later.
 - A pointer that can't be put is a warning too; the plan stays listed by
   its date.
 - A cleanup runs only after the plan was uploaded. A listing or a delete

@@ -186,14 +186,14 @@ func TestAPlanTheBucketRefusesIsAWarningAndNothingIsCleaned(t *testing.T) {
 		}
 	}
 
-	// a refusal that won't pass by itself is tried once
-	srv.Fail = func(s3test.Request) int { return http.StatusForbidden }
+	// a refusal is tried as often: S3 refuses a slow upload with a 400
+	srv.Fail = func(s3test.Request) int { return http.StatusBadRequest }
 	slept = nil
 
 	b.Store(context.Background(), "main", "main", []byte(plan))
 
-	if n := len(srv.Requests()) - len(reqs); n != 1 || len(slept) != 0 {
-		t.Errorf("a 403 was sent %d times, slept %v", n, slept)
+	if n := len(srv.Requests()) - len(reqs); n != 4 || len(slept) != 3 {
+		t.Errorf("a 400 was sent %d times, slept %v", n, slept)
 	}
 }
 

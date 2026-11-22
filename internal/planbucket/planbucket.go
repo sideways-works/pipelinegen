@@ -274,12 +274,13 @@ func (b *Bucket) metadata(s summary, run, change string) map[string]string {
 	return meta
 }
 
-// put tries the PUT once, and again after each of the back-off's waits while its failure may pass.
+// put tries the PUT once, and again after each of the back-off's waits, whatever failed: a refusal
+// S3 gives for a slow upload (400 RequestTimeout) looks like any other.
 func (b *Bucket) put(ctx context.Context, key string, body []byte, header, meta map[string]string) error {
 	var err error
 
 	for try := 0; ; try++ {
-		if err = b.Client.Put(ctx, key, body, header, meta); err == nil || !s3.Transient(err) || try >= len(b.Backoff) {
+		if err = b.Client.Put(ctx, key, body, header, meta); err == nil || ctx.Err() != nil || try >= len(b.Backoff) {
 			return err
 		}
 
