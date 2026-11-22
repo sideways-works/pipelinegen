@@ -27,7 +27,7 @@ concourse:
     prepare: go mod download
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     bootstrap:
-      release: {version: v0.7.0, sha256: 0dcc58a25c69415232aeb991349a4b6b45c8061a11fbe45de6e71dec559c1714}
+      release: {version: v0.7.2, sha256: 24bdd777df4616b0caafb8eea36e9612f0dc411cda5a144f813516fdd2590531}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
   include: ci/root.yml
 
@@ -55,7 +55,7 @@ plugins:
       - name: concourse
         kind: runner
         path: runner/concourse
-        release: {version: v0.6.1, sums: c04e84b058e5bf2cdbfbb5cdad284e33fb48ed423e96350b98fcb6108b05d838}
+        release: {version: v0.7.0, sums: 797a9736ceb6bd199d86cd64762b4744c80dac51b06d2633ae79eeef2cd8dd52}
         config:
           placement:
             # Every suite, and the checks, on the cloud workers: they stream
