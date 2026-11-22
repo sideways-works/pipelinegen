@@ -135,8 +135,12 @@ github.com/sideways-works/pipelinegen/cmd/pipelinegen@latest`.
 pipelinegen is before its 1.0 release: a minor version can change the
 config. The [changelog](CHANGELOG.md) lists every release.
 
-## Contributing and licence
+## Contributing
 
 [CONTRIBUTING.md](CONTRIBUTING.md) says how to build, test and send a
 change; [SECURITY.md](SECURITY.md) how to report a vulnerability.
-pipelinegen is licensed under the [Apache License 2.0](LICENSE).
+
+## License
+
+pipelinegen is licensed under the [Apache License, Version 2.0](LICENSE),
+every folder of it. Third-party notices are in [NOTICE](NOTICE).
