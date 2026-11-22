@@ -3,6 +3,7 @@ package affected
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -40,9 +41,16 @@ type RootCause struct {
 	Path  []string
 }
 
+// Version is the version of a plan's JSON, its contract with what reads it; a plan written without one
+// is older than the first.
+const Version = 1
+
 // Plan is what a run runs: per suite, the slices it selected, why, and
 // those it left out.
 type Plan struct {
+	// Version is always written as the Version of the pipelinegen that wrote the plan.
+	Version int `json:"version"`
+
 	Base string `json:"base"`
 	Head string `json:"head"`
 	// Merged is, for a run that compares with merged_target, the change's own commit: Head is it
@@ -93,8 +101,36 @@ type SuitePlan struct {
 	// Unlisted names, in a recorded suite, the slices without a list yet,
 	// each bound to every unit the plugins list.
 	Unlisted []string `json:"unlisted,omitempty"`
+	// Estimate is the suite's recorded test time for what the plan selected and for every slice, when
+	// the suite keeps a durations file.
+	Estimate *Estimate `json:"estimate,omitempty"`
 
 	slices []bazel.Slice
+}
+
+// Estimate is a suite's recorded test time, in seconds, for the slices the plan selected and for all of
+// them, which is what running everything would take. A slice with no recorded time counts the median of
+// those that have one; Measured of Slices had one.
+type Estimate struct {
+	SelectedSeconds float64 `json:"selected_seconds"`
+	AllSeconds      float64 `json:"all_seconds"`
+	Measured        int     `json:"measured"`
+	Slices          int     `json:"slices"`
+}
+
+// MarshalJSON writes the plan with this pipelinegen's Version, whatever the plan read had.
+func (p Plan) MarshalJSON() ([]byte, error) {
+	type plain Plan
+
+	v := plain(p)
+	v.Version = Version
+
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, fmt.Errorf("plan: %w", err)
+	}
+
+	return data, nil
 }
 
 // Slices are the suite's slices at the head, selected or not. A plan that selected every

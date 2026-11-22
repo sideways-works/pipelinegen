@@ -296,6 +296,7 @@ func affectedPlanUnder(ctx context.Context, cfg *config.Config, root, base, head
 		plan.Warnings = append(plan.Warnings, correlatorWarnings(p, c)...)
 		p.book.markUnlisted(plan)
 		plan.Narrowing = narrowingLevel(c)
+		estimate(plan, c, root)
 
 		return plan, nil
 	}

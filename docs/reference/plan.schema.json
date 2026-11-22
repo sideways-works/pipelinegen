@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sideways-works/pipelinegen/blob/main/docs/reference/plan.schema.json",
+  "title": "pipelinegen plan",
+  "description": "What a run runs: per suite, the slices the plan selected, why, and those it left out. Version 1.",
+  "$ref": "#/$defs/Plan",
+  "$defs": {
+    "Plan": {
+      "type": "object",
+      "required": ["version", "base", "head", "all", "reason", "suites"],
+      "properties": {
+        "version": {"const": 1, "description": "The plan's format; a plan without it is older than version 1."},
+        "base": {"type": "string", "description": "The commit compared with, empty when there is none."},
+        "head": {"type": "string", "description": "The commit planned."},
+        "merged": {"type": "string", "description": "For a run that compares with its merge into the target: the change's own commit, which head merges into base."},
+        "all": {"type": "boolean", "description": "Every slice of every suite runs."},
+        "reason": {"type": "string", "description": "Why everything runs, when all is true."},
+        "suites": {"type": "array", "items": {"$ref": "#/$defs/SuitePlan"}},
+        "narrowing": {"type": "integer", "description": "The narrowing level the plan ran at."},
+        "narrowings": {"type": "array", "items": {"$ref": "#/$defs/Override"}, "description": "The narrowings whose level the config sets in place of their declarer's."},
+        "plugins": {"$ref": "#/$defs/Report"},
+        "lists": {"$ref": "#/$defs/Source"},
+        "warnings": {"type": "array", "items": {"type": "string"}},
+        "rebuild": {"$ref": "#/$defs/Rebuild"},
+        "unobservable": {"type": "array", "items": {"$ref": "#/$defs/Unobservable"}, "description": "Changed files a plugin says change nothing a test can observe."},
+        "label_groups": {"type": "integer"},
+        "label_hash_seconds": {"type": "array", "items": {"type": "number"}},
+        "config": {"type": "array", "items": {"$ref": "#/$defs/Part"}, "description": "Each part of the config the change edited and what it means for the tests."},
+        "config_understood": {"type": "boolean"}
+      }
+    },
+    "SuitePlan": {
+      "type": "object",
+      "required": ["suite", "all", "reason", "selected", "reasons", "untouched", "removed", "whole_suite"],
+      "properties": {
+        "suite": {"type": "string"},
+        "all": {"type": "boolean"},
+        "reason": {"type": "string"},
+        "selected": {"type": "array", "items": {"$ref": "#/$defs/Slice"}},
+        "reasons": {"type": "object", "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/Reason"}}, "description": "By selected slice's name, why it runs."},
+        "causes": {"type": "array", "items": {"$ref": "#/$defs/Cause"}},
+        "untouched": {"type": "array", "items": {"type": "string"}, "description": "The slices the plan left out."},
+        "removed": {"type": "array", "items": {"type": "string"}},
+        "whole_suite": {"type": "array", "items": {"type": "string"}},
+        "narrowed": {"type": "array", "items": {"$ref": "#/$defs/Narrowed"}},
+        "observed_by": {"type": "array", "items": {"type": "string"}, "description": "The correlators whose recordings bind the suite's slices."},
+        "unlisted": {"type": "array", "items": {"type": "string"}, "description": "Slices without a list yet, each bound to everything: the plan can't tell what they reach."},
+        "estimate": {"$ref": "#/$defs/Estimate"}
+      }
+    },
+    "Slice": {
+      "type": "object",
+      "required": ["name", "label", "sources"],
+      "properties": {
+        "name": {"type": "string"},
+        "label": {"type": "string"},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "kind": {"type": "string"},
+        "sources": {"type": "array", "items": {"type": "string"}},
+        "tests": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "Reason": {
+      "type": "object",
+      "required": ["kind", "what"],
+      "properties": {
+        "kind": {"enum": ["everything", "new-slice", "test-added", "test-removed", "test-changed", "executed", "depends", "opens", "target", "input-added", "input-removed", "input-unknown", "plugin", "text-input", "base-config"]},
+        "what": {"type": "string", "description": "What changed: a file, a test, a declaration, a target, or why everything runs."},
+        "through": {"type": "array", "items": {"type": "string"}},
+        "hops": {"type": "array", "items": {"$ref": "#/$defs/Hop"}, "description": "The chain from the unit the slice's recording holds to the changed one."}
+      }
+    },
+    "Hop": {
+      "type": "object",
+      "required": ["to", "kind"],
+      "properties": {
+        "from": {"type": "string"},
+        "to": {"type": "string"},
+        "kind": {"type": "string"},
+        "plugin": {"type": "string", "description": "The plugin that gave the link."},
+        "back": {"type": "boolean"},
+        "label": {"type": "string"},
+        "file": {"type": "string"}
+      }
+    },
+    "Cause": {
+      "type": "object",
+      "required": ["kind", "what", "slices"],
+      "properties": {
+        "kind": {"type": "string"},
+        "what": {"type": "string"},
+        "through": {"type": "array", "items": {"type": "string"}},
+        "slices": {"type": "integer"}
+      }
+    },
+    "Narrowed": {
+      "type": "object",
+      "required": ["kind", "narrowing", "off_at", "reason", "reached", "dropped"],
+      "properties": {
+        "kind": {"enum": ["sampled", "narrowed"]},
+        "narrowing": {"type": "string"},
+        "off_at": {"type": "integer"},
+        "reason": {"type": "string"},
+        "reached": {"type": "integer", "description": "How many slices the change reached before narrowing."},
+        "dropped": {"type": "array", "items": {"type": "string"}},
+        "carried_from": {"type": "string"}
+      }
+    },
+    "Estimate": {
+      "type": "object",
+      "required": ["selected_seconds", "all_seconds", "measured", "slices"],
+      "description": "The suite's recorded test time for what the plan selected and for every slice; a slice without a recorded time counts the median.",
+      "properties": {
+        "selected_seconds": {"type": "number"},
+        "all_seconds": {"type": "number"},
+        "measured": {"type": "integer"},
+        "slices": {"type": "integer"}
+      }
+    },
+    "Override": {
+      "type": "object",
+      "required": ["name", "off_at", "declared", "by", "note"],
+      "properties": {
+        "name": {"type": "string"},
+        "off_at": {"type": "integer"},
+        "declared": {"type": "integer"},
+        "by": {"type": "string"},
+        "note": {"type": "string"}
+      }
+    },
+    "Report": {
+      "type": "object",
+      "properties": {
+        "calls": {"type": "array", "items": {"$ref": "#/$defs/CallCount"}},
+        "warnings": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "CallCount": {
+      "type": "object",
+      "required": ["plugin", "call", "asked", "cached"],
+      "properties": {
+        "plugin": {"type": "string"},
+        "call": {"type": "string"},
+        "asked": {"type": "integer"},
+        "cached": {"type": "integer"},
+        "uncacheable": {"type": "integer"}
+      }
+    },
+    "Source": {
+      "type": "object",
+      "required": ["commit", "back"],
+      "description": "Which recordings the plan read.",
+      "properties": {
+        "commit": {"type": "string"},
+        "ref": {"type": "string"},
+        "from": {"type": "string"},
+        "back": {"type": "integer"},
+        "live": {"type": "array", "items": {"$ref": "#/$defs/LiveRun"}},
+        "walk": {"type": "integer"},
+        "gone": {"type": "boolean"},
+        "cannot_tell": {"type": "object", "additionalProperties": {"type": "array", "items": {"$ref": "#/$defs/Mark"}}, "description": "By slice, the correlators that couldn't tell what its last recording touched."}
+      }
+    },
+    "LiveRun": {
+      "type": "object",
+      "required": ["run", "change", "commit", "slices"],
+      "properties": {
+        "run": {"type": "string"},
+        "change": {"type": "string"},
+        "commit": {"type": "string"},
+        "slices": {"type": "integer"}
+      }
+    },
+    "Mark": {
+      "type": "object",
+      "required": ["plugin"],
+      "properties": {
+        "plugin": {"type": "string"},
+        "reason": {"type": "string"},
+        "since": {"type": "string", "format": "date-time"}
+      }
+    },
+    "Rebuild": {
+      "type": "object",
+      "required": ["check"],
+      "properties": {
+        "check": {"type": "string"},
+        "differences": {"type": "array", "items": {"$ref": "#/$defs/Difference"}},
+        "error": {"type": "string"}
+      }
+    },
+    "Difference": {
+      "type": "object",
+      "required": ["plugin", "call", "inputs", "what"],
+      "properties": {
+        "plugin": {"type": "string"},
+        "call": {"type": "string"},
+        "inputs": {"type": "array", "items": {"type": "string"}},
+        "input_units": {"type": "array", "items": {"type": "string"}},
+        "what": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "Unobservable": {
+      "type": "object",
+      "required": ["path", "plugin", "units"],
+      "properties": {
+        "path": {"type": "string"},
+        "plugin": {"type": "string"},
+        "units": {"type": "integer"}
+      }
+    },
+    "Part": {
+      "type": "object",
+      "required": ["path", "means"],
+      "properties": {
+        "path": {"type": "string"},
+        "means": {"type": "string"}
+      }
+    }
+  }
+}

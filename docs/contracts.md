@@ -1143,6 +1143,24 @@ the ref `refs/pipelinegen/also-to/<run>/pr-<n>` (`{"also_to": [8, 9]}`).
 Report reads it at every render, so it may be written before or during the
 run; `PIPELINEGEN_ALSO_TO` is the value at planning time.
 
+## The plan's JSON
+
+A plan is written as `plan.json`: in the run's refs, by `plan --out`, and
+beside piperun's emission as the build's record
+(`application/vnd.pipelinegen.plan+json`). Its format is
+[plan.schema.json](reference/plan.schema.json), a JSON Schema that a test
+holds to the Go types the plan is written from. Its `version` is 1; a plan
+without one was written by a release before v0.8.0 and has the same shape
+less `version` and `estimate`. A change that renames or removes a field, or
+changes what one means, raises the version; a new optional field doesn't.
+
+Each suite that keeps a `durations` file has an `estimate`: the recorded
+seconds of the slices the plan selected (`selected_seconds`) and of every
+slice of the suite (`all_seconds`), which is what running everything would
+take. A slice with no recorded time counts the median of those with one;
+`measured` of `slices` had one. A suite without a durations file, or
+without any recorded time, has none.
+
 ## Why a slice runs
 
 `plan.json` holds, per suite, `reasons`: per selected slice a list of
