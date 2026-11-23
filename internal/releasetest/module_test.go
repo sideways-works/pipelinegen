@@ -14,6 +14,9 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/testenv"
 )
 
+// pluginsLicence is the plugins' LICENSE: a NOTICE names the licence by its title.
+const pluginsLicence = "                                 Apache License\n\nThe plugins' licence.\n"
+
 // plugins is a repository of plugins in directories: a root module that holds no package, the root's
 // LICENSE, and the plugin driver/widget with a nested module, its own NOTICE and its tags
 // driver/widget/v1.2.3 and driver/widget/probe/v1.2.3 on the head.
@@ -27,7 +30,7 @@ func plugins(t *testing.T) (work, repo, mod string) {
 	for name, content := range map[string]string{
 		"go.mod":                               "module example.com/plugins\n\ngo 1.27\n",
 		"go.work":                              "go 1.27\n\nuse ./driver/widget\n",
-		"LICENSE":                              "The plugins' licence.\n",
+		"LICENSE":                              pluginsLicence,
 		"driver/widget/go.mod":                 "module example.com/plugins/driver/widget\n\ngo 1.27\n",
 		"driver/widget/cmd/widget-driver/x.go": program,
 		"driver/widget/probe/go.mod":           "module example.com/plugins/driver/widget/probe\n\ngo 1.23\n",
@@ -90,7 +93,7 @@ func TestAModuleInADirectoryIsReleasedByItsOwnTag(t *testing.T) {
 		}
 	}
 
-	if got := run(t, out, "cat", "LICENSE"); got != "The plugins' licence.\n" {
+	if got := run(t, out, "cat", "LICENSE"); got != pluginsLicence {
 		t.Errorf("LICENSE %q, want the repository's", got)
 	}
 

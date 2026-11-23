@@ -64,7 +64,7 @@ func widget(t *testing.T, extra map[string]string) string {
 	files := map[string]string{
 		"go.mod":             "module example.com/widget\n\ngo 1.27\n",
 		"cmd/widget/main.go": program,
-		"LICENSE":            "The widget's licence.\n",
+		"LICENSE":            "                                 Apache License\n\nThe widget's licence.\n",
 		// written once the repository is made, as the release needs it
 		"NOTICE": "widget\nThe widget's notices.\n",
 	}
@@ -94,8 +94,9 @@ func widget(t *testing.T, extra map[string]string) string {
 	run(t, repo, "git", "remote", "add", "origin", "https://github.com/owner/widget.git")
 	run(t, repo, "git", "tag", "v1.2.3")
 
-	// a NOTICE the test gives is the one it means; otherwise the one the release needs
-	if _, given := extra["NOTICE"]; !given && exists(filepath.Join(repo, "go.mod")) && exists(filepath.Join(repo, "cmd", "widget", "main.go")) {
+	// a NOTICE the test gives is the one it means; otherwise the one the release needs, which names
+	// the LICENSE's licence and so needs one
+	if _, given := extra["NOTICE"]; !given && exists(filepath.Join(repo, "go.mod")) && exists(filepath.Join(repo, "cmd", "widget", "main.go")) && exists(filepath.Join(repo, "LICENSE")) {
 		renotice(t, work)
 	}
 
