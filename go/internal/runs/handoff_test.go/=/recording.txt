@@ -1,0 +1,15 @@
+# observed
+go:internal/config#method:Config.ChangesFromForge
+go:internal/config#method:Config.CodeForge
+go:internal/runs#func:FromTrigger
+go:internal/runs#func:ReadRunFile
+go:internal/runs#func:WriteRunFile
+go:internal/runs#func:fromHandOff
+go:internal/runs#func:fromPullRequest
+go:internal/runs#func:takes
+go:internal/runs#func:triggerForm
+go:internal/runs#method:Head.Files
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
