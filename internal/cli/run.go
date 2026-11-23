@@ -444,8 +444,9 @@ func startRun(ctx context.Context, store *gitstore.Store, r *report.Reporter, pl
 		return err
 	}
 
-	// the bytes just written, and only once this planner wrote them
-	keepPlan(ctx, r.Config, r.ID, data)
+	// the bytes just written, and only once this planner wrote them; copied last, so a bucket that is
+	// slow to answer never holds back the run's statuses
+	defer keepPlan(ctx, r.Config, r.ID, data)
 
 	if err := r.Start(ctx); err != nil {
 		return err
