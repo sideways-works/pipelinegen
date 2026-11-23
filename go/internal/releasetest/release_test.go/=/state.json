@@ -1,0 +1,47 @@
+{
+  "label": "internal/releasetest/release_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-23T02:33:34.758606981Z",
+  "failures": [
+    {
+      "test": "TestACandidateBuildsWithItsTag",
+      "tail": "=== RUN   TestACandidateBuildsWithItsTag\n    release_test.go:367: notice: release: notice: /tmp/TestACandidateBuildsWithItsTag1788072894/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestACandidateBuildsWithItsTag (0.03s)"
+    },
+    {
+      "test": "TestAGoModuleNamesTheFilesItsReleaseCarries",
+      "tail": "=== RUN   TestAGoModuleNamesTheFilesItsReleaseCarries\n    release_test.go:497: notice: release: notice: /tmp/TestAGoModuleNamesTheFilesItsReleaseCarries2287362663/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestAGoModuleNamesTheFilesItsReleaseCarries (0.03s)"
+    },
+    {
+      "test": "TestANoticeThatIsNotTheReleasesIsRefused",
+      "tail": "=== RUN   TestANoticeThatIsNotTheReleasesIsRefused\n    release_test.go:480: a NOTICE of the widget's own making: exit status 1\n        release: notice: /tmp/release-773692732/src/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestANoticeThatIsNotTheReleasesIsRefused (18.72s)"
+    },
+    {
+      "test": "TestAPluginThatDoesntDescribeFailsTheBuild",
+      "tail": "=== RUN   TestAPluginThatDoesntDescribeFailsTheBuild\n    release_test.go:251: notice: release: notice: /tmp/TestAPluginThatDoesntDescribeFailsTheBuild2610117791/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestAPluginThatDoesntDescribeFailsTheBuild (0.03s)"
+    },
+    {
+      "test": "TestAReleaseNeedsItsChangelogEntry",
+      "tail": "=== RUN   TestAReleaseNeedsItsChangelogEntry\n    release_test.go:456: notice: release: notice: /tmp/TestAReleaseNeedsItsChangelogEntry2849239933/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestAReleaseNeedsItsChangelogEntry (0.03s)"
+    },
+    {
+      "test": "TestAReleaseNeedsItsLicenceAndNotice",
+      "tail": "=== RUN   TestAReleaseNeedsItsLicenceAndNotice\n    release_test.go:432: notice: release: notice: /tmp/TestAReleaseNeedsItsLicenceAndNotice3124465635/001/widget has no LICENSE in it or above it\n--- FAIL: TestAReleaseNeedsItsLicenceAndNotice (0.02s)"
+    },
+    {
+      "test": "TestARootMainIsNamedByItsModule",
+      "tail": "=== RUN   TestARootMainIsNamedByItsModule\n    release_test.go:217: notice: release: notice: /tmp/TestARootMainIsNamedByItsModule2358347541/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestARootMainIsNamedByItsModule (0.03s)"
+    },
+    {
+      "test": "TestBuildWithRelativePaths",
+      "tail": "=== RUN   TestBuildWithRelativePaths\n    release_test.go:173: notice: release: notice: /tmp/TestBuildWithRelativePaths3765183880/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestBuildWithRelativePaths (0.05s)"
+    },
+    {
+      "test": "TestNestedModuleNeedsItsTag",
+      "tail": "=== RUN   TestNestedModuleNeedsItsTag\n    release_test.go:281: notice: release: notice: /tmp/TestNestedModuleNeedsItsTag2640682847/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestNestedModuleNeedsItsTag (0.04s)"
+    }
+  ],
+  "seconds": 20.400000000000002,
+  "recorded": true,
+  "cpu_seconds": 72.1139790000002
+}
