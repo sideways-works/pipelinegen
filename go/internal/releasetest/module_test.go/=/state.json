@@ -1,0 +1,23 @@
+{
+  "label": "internal/releasetest/module_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-23T02:17:41.807429906Z",
+  "failures": [
+    {
+      "test": "TestAModuleInADirectoryIsReleasedByItsOwnTag",
+      "tail": "=== RUN   TestAModuleInADirectoryIsReleasedByItsOwnTag\n    module_test.go:75: notice: release: notice: /tmp/TestAModuleInADirectoryIsReleasedByItsOwnTag2595482453/001/plugins/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestAModuleInADirectoryIsReleasedByItsOwnTag (0.02s)"
+    },
+    {
+      "test": "TestPatchAndCheckReleaseAModuleInADirectory",
+      "tail": "=== RUN   TestPatchAndCheckReleaseAModuleInADirectory\n    module_test.go:153: notice: release: notice: /tmp/TestPatchAndCheckReleaseAModuleInADirectory976408870/001/plugins/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestPatchAndCheckReleaseAModuleInADirectory (0.01s)"
+    },
+    {
+      "test": "TestTaggedReleasesTheDirectorysTagOnTheHead",
+      "tail": "=== RUN   TestTaggedReleasesTheDirectorysTagOnTheHead\n    module_test.go:204: notice: release: notice: /tmp/TestTaggedReleasesTheDirectorysTagOnTheHead2945589890/001/plugins/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestTaggedReleasesTheDirectorysTagOnTheHead (0.01s)"
+    }
+  ],
+  "seconds": 0.04,
+  "recorded": true,
+  "cpu_seconds": 0.3609169999999722
+}
