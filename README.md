@@ -1,22 +1,68 @@
-<img src="docs/brand/banner.svg" alt="pipelinegen, by Sideways Works" width="460">
+<p align="center">
+  <img src="docs/brand/banner.svg" alt="pipelinegen, by Sideways Works" width="460">
+</p>
 
-# pipelinegen
+<p align="center">
+  A CI tool that runs only the tests a change can reach, by recording what
+  each test touches, and writes the pipeline that does it.
+</p>
 
-pipelinegen makes CI run only the tests a change can reach, including the
-ones your build can't see.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+</p>
+
+<!-- Screenshot to add here: the comment pipelinegen posts on a pull request
+     while its run goes (suites, selected and untouched slices, results), as
+     GitHub shows it, in a light and a dark version. -->
 
 Change a backend handler, and the browser tests that call it run, though
-no frontend file changed; the browser tests that never reach it don't.
-Change a button, and no backend test runs. Every other test of a large
-suite stays out of the way, so a pull request waits for a few test files
-instead of thousands.
+no frontend file changed. The browser tests that never reach it don't.
+Change a button, and no backend test runs. A pull request waits for a few
+test files instead of thousands, and a run of everything each night
+catches what a narrower run left out.
 
-## A twenty-second look
+## Why pipelinegen
 
-A notes service has a Go backend, Go tests, a web page and two browser
-specs. Someone rewords the message the backend's validation returns. Only
-two test files can see that change: the Go test of the create route, and
-the browser spec that submits the form:
+- **It sees links the build can't.** Plugins read the code and record
+  what each test executed: backend functions, the browser code a spec
+  ran, SQL statements, API operations. A browser spec is tied to the
+  handler it called over HTTP, which no build file says.
+- **Bazel covers everything else.** A file no plugin understands is bound
+  through Bazel's build graph, so any language works with the graph alone.
+- **Every choice is explained.** `pipelinegen why` says why a test runs or
+  stays out, hop by hop, with the plugin that knew each link.
+- **No full first run needed.** Record on your machine with `pipelinegen
+  record`, put the recordings into the store with `pipelinegen seed`, and
+  the first CI run starts narrow.
+- **It writes the pipeline.** A runner plugin turns `pipelinegen.yaml`
+  into the whole CI pipeline. On a CI system without a runner, its jobs
+  call pipelinegen's steps directly.
+- **It runs on your machine.** `check`, `slices`, `affected`, `why`, `run`
+  and `record` need no CI system, no git host and no token.
+- **Plugins are pinned.** Each plugin is a program fetched from its
+  release and checked against its pinned checksum before it runs.
+
+| Works with | Today |
+|---|---|
+| CI systems | [Concourse](https://concourse-ci.org), through its runner; any other [by hand](docs/how-to/any-ci-by-hand.md) |
+| Git hosts | any git repository; on GitHub also statuses and a comment on each pull request |
+| Languages | plugins for Go, TypeScript and React, npm, PostgreSQL and OpenAPI; any language through the build graph |
+
+## How it works
+
+```mermaid
+flowchart LR
+    bazel[Bazel's build graph] --> plan
+    code[sbom plugins read the code] --> plan
+    recordings[(what each test executed)] --> plan
+    change([pull request or push]) --> plan
+    plan{{which tests can this change reach?}} --> run[drivers run only those]
+    run -->|correlators record| recordings
+```
+
+On a small notes service with a Go backend and browser specs, a commit
+rewords the message the backend's validation returns. Two test files can
+see that change, and only those two run:
 
 <!-- output: affected-validate -->
 ```
@@ -29,8 +75,7 @@ go: 1 selected, 4 untouched
   run api/create_test.go
 ```
 
-And why the browser spec runs, though no file of the page or the spec
-changed:
+The browser spec runs because its recording reached the changed function:
 
 <!-- output: why-validate-create -->
 ```
@@ -41,104 +86,99 @@ e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 8719e9d00ab8:
   observed by: go-correlator, oapi-codegen-correlator
 ```
 
-A change to the API contract reaches the same spec through the
-operation, and `why` shows each hop with the plugin that knew it:
+## Quick start
 
-<!-- output: why-contract-spec -->
-```
-$ pipelinegen why --base HEAD~1 --slice e2e/create.spec.ts
-pipelinegen why: lists from the local store (recorded on this machine): /home/you/notes/.git/pipelinegen/local.git
-e2e e2e/create.spec.ts was selected from 4c3820d1b492 to 2df3bd8da6d6:
-  it requested POST /notes (createNote) during its recording, which changed in this commit
-  it executed notesapi.ServerInterfaceWrapper.CreateNote during its recording (api/notesapi/notesapi.gen.go)
-    → which leads to POST /notes (createNote) (a link from oapi-codegen-correlator), which changed in this commit
-  observed by: go-correlator, oapi-codegen-correlator
-```
+You need Go 1.27, git, [bazelisk](https://github.com/bazelbuild/bazelisk)
+on your `PATH`, and Docker or Podman. This runs the small repository in
+[`example/`](example/README.md): shell libraries with their tests, and a
+Go server with smoke tests.
 
-pipelinegen knows because plugins read the code (what exists, and what
-calls what) and record what each test executed when it ran: the backend
-functions, the browser code a spec ran, the SQL statements, the API
-operations it called. Those recordings can come from CI or from your own
-machine, so a first full CI run is not needed to start narrow. Bazel's
-build graph covers every file the plugins don't understand. A nightly run
-runs everything and catches whatever a narrower run left out.
+Install pipelinegen and copy the example into a repository of its own:
 
-```mermaid
-flowchart LR
-    bazel[Bazel's<br/>build graph] --> plan
-    code[sbom plugins<br/>read the code] --> plan
-    continuous([push to main<br/><i>optional: continuous</i>]) -.-> plan
-    pr([pull request]) --> plan
-    recordings[(recordings:<br/>what each test<br/>executed)] --> plan
-    plan{{plan: which tests<br/>can this change reach?}} --> run[drivers run<br/>only those tests]
-    nightly([every night<br/><i>optional: nightly</i>]) -.->|all tests| run
-    run -->|correlators record| recordings
-    classDef source fill:#FFF4E2,stroke:#15110D,color:#15110D
-    classDef trigger fill:#FFF4E2,stroke:#15110D,color:#15110D,stroke-width:2px
-    classDef optional fill:#FFF4E2,stroke:#15110D,color:#15110D,stroke-dasharray: 5 5
-    classDef plan fill:#FFD23F,stroke:#15110D,color:#15110D,stroke-width:2px
-    classDef run fill:#5BB8F0,stroke:#15110D,color:#15110D,stroke-width:2px
-    class bazel,code,recordings source
-    class pr trigger
-    class continuous,nightly optional
-    class plan plan
-    class run run
+```sh
+go install github.com/sideways-works/pipelinegen/cmd/pipelinegen@latest
+git clone https://github.com/sideways-works/pipelinegen.git
+cp -r pipelinegen/example demo && cd demo
+git init -q && git add -A && git commit -qm "the example"
+pipelinegen check
+pipelinegen slices
 ```
 
-## What it needs
+`check` says which files no test covers; on the example it also warns
+about the one token its CI config uses. `slices` lists the six test files
+in their two suites. Change the library under `calc/` and ask what
+that change can reach:
 
-- a [Bazel](https://bazel.build) workspace (the book walks you through
-  adding one to a Go module);
-- a git repository.
+```sh
+printf 'sub() {\n\techo $(($1 - $2))\n}\n' >> calc/lib.sh
+git commit -qam "calc: add sub"
+```
 
-That is all on your own machine: `slices`, `check`, `affected`, `why`,
-`run` and `record` work there with no CI system and no git host, and
-`seed` puts your recordings into the repository's store for CI's first
-runs. [Running it on your machine](docs/how-to/running-locally.md) shows
-how to see and run what CI would run for a change.
+```console
+$ pipelinegen affected --base HEAD~1
+smoke: 0 selected, 2 untouched
+unit: 3 selected, 1 untouched
+  run calc/add_test.sh
+  run calc/lib_test.sh
+  run calc/mul_test.sh
+$ pipelinegen why --local --base HEAD~1 --slice calc/add_test.sh
+unit calc/add_test.sh was selected from 54c3dd45d954 to 881721f4071c:
+  the target //calc:lib.sh changed, through //calc:lib → //calc:add_test
+```
 
-## What it works with today
+`--local` reads recordings from your machine, not from the GitHub
+repository the example's config names, which doesn't exist.
 
-| | Today |
+Run the three selected test files in their image, as CI would:
+
+```sh
+pipelinegen run --base HEAD~1
+```
+
+The example binds its tests through the Bazel graph alone. [Running it on
+your machine](docs/how-to/running-locally.md) shows the rest, recordings
+included, and the [step-by-step guide](docs/tutorial/README.md) sets
+pipelinegen up on your own project. Release binaries for Linux and macOS
+are on the releases page; [install](docs/tutorial/install.md) shows how to
+check them.
+
+## Documentation
+
+[The pipelinegen book](docs/README.md) has everything else. Its
+[contents](docs/SUMMARY.md) list every page.
+
+| | |
 |---|---|
-| CI systems | pipelinegen's steps are commands a CI job calls. A runner plugin writes the whole pipeline from the config; there is one, for [Concourse](https://concourse-ci.org). For another CI system, [run the steps by hand](docs/how-to/any-ci-by-hand.md) in its jobs, or [write a runner](docs/writing-plugins/runner.md). |
-| Git hosts | Any git repository. With GitHub it also reports statuses and a comment on pull requests, through the [GitHub forge](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/github); a plain git server works through the [git forge](https://github.com/sideways-works/pipelinegen-plugins/tree/main/forge/git). pipelinegen fetches the forge a config uses, pinned and checked by its checksum. |
-| Languages | Plugins for Go, TypeScript and React, npm, PostgreSQL and OpenAPI. Any other language works with the build graph alone. |
+| [Introduction](docs/introduction/what-it-is.md) | what pipelinegen is, [whether it fits](docs/introduction/is-it-for-you.md), [what works today](docs/introduction/what-works-today.md) |
+| [Concepts](docs/concepts/README.md) | every idea, built up on the notes service |
+| [Step by step](docs/tutorial/README.md) | your repository from nothing to a working pipeline |
+| [Worked example](docs/worked-example/README.md) | one real conversion of an open source Bazel monorepo, every command shown |
+| [How-to guides](docs/how-to/README.md) | the tasks of a real setup, such as [starting narrow](docs/how-to/starting-narrow.md) |
+| [Reference](docs/reference/config.md) | every [config key](docs/reference/config.md) and [command](docs/reference/commands.md) |
+| [Writing plugins](docs/writing-plugins/README.md) | sbom plugins, correlators, drivers, runners and forges |
+| [Internals](docs/internals/README.md) and the [design](docs/design.md) | for people who work on pipelinegen itself |
 
-[What works today](docs/introduction/what-works-today.md) keeps this
-current, release by release.
+The plugins live in
+[pipelinegen-plugins](https://github.com/sideways-works/pipelinegen-plugins).
+pipelinegen is before its 1.0 release, so a minor version can change the
+config; the [changelog](CHANGELOG.md) lists every release.
 
-## Start here
+## Building and contributing
 
-**[The pipelinegen book](docs/README.md)** explains the ideas on one small
-example and walks you from nothing to a working pipeline on your own
-project. The [contents](docs/SUMMARY.md) list every page. You don't need
-a first CI run of everything: record on your machine and [start
-narrow](docs/how-to/starting-narrow.md).
+You need Go (the version in `go.mod`), git, and bazelisk on your `PATH`
+as `bazel` too.
 
-**[Converting gavel to pipelinegen](docs/worked-example/README.md)** follows
-one real conversion from start to finish: an open source Bazel monorepo
-with Go tests, tests that need a database, web checks, the web app's unit
-tests and a browser suite, with every command that was run and what each
-change then selected.
+| Command | What it does |
+|---|---|
+| `cp ci/commit-msg "$(git rev-parse --git-path hooks)/commit-msg"` | once per clone: checks each commit message |
+| `go build -trimpath ./cmd/pipelinegen` | the program |
+| `GOFLAGS=-trimpath go test ./...` | every test; they start Bazel through bazelisk |
+| `bazel run //tools:lint` | the lint every commit passes: golangci-lint, then `pipelinegen check` on this repository |
+| `bazel run //ci:gate` | a branch's gate before it lands: build, vet, tests, lint and the [proof](docs/proof.md) |
 
-## Install
-
-Releases are static binaries for Linux and macOS, on amd64 and arm64,
-with a `SHA256SUMS` file, on the repository's releases page (macOS since
-v0.2.0); [install](docs/tutorial/install.md) shows how to check
-them. On other platforms, build from source with Go: `go install
-github.com/sideways-works/pipelinegen/cmd/pipelinegen@latest`.
-
-## Status
-
-pipelinegen is before its 1.0 release: a minor version can change the
-config. The [changelog](CHANGELOG.md) lists every release.
-
-## Contributing
-
-[CONTRIBUTING.md](CONTRIBUTING.md) says how to build, test and send a
-change; [SECURITY.md](SECURITY.md) how to report a vulnerability.
+Commits are one conventional subject line of at most 72 characters.
+[CONTRIBUTING.md](CONTRIBUTING.md) says how to send a change, and
+[SECURITY.md](SECURITY.md) how to report a vulnerability.
 
 ## License
 
