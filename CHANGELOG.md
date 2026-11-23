@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-23
+
 ### Added
 
 - A plan has a `version`, 1, and its format is a JSON Schema, docs/reference/plan.schema.json, held to the plan's Go types by a test
