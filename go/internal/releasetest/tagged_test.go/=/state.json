@@ -1,0 +1,15 @@
+{
+  "label": "internal/releasetest/tagged_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-23T04:59:34.550255015Z",
+  "failures": [
+    {
+      "test": "TestTaggedReleasesTheHeadsVersionTag",
+      "tail": "    tagged_test.go:32: notice: release: notice: /tmp/TestTaggedReleasesTheHeadsVersionTagreleased_already,_other_fil620905710/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestTaggedReleasesTheHeadsVersionTag/released_already,_other_files (0.03s)\n=== RUN   TestTaggedReleasesTheHeadsVersionTag/the_nightly_failed\n    tagged_test.go:32: notice: release: notice: /tmp/TestTaggedReleasesTheHeadsVersionTagthe_nightly_failed2970766120/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestTaggedReleasesTheHeadsVersionTag/the_nightly_failed (0.03s)\n=== RUN   TestTaggedReleasesTheHeadsVersionTag/a_candidate's_tag\n    tagged_test.go:32: notice: release: notice: /tmp/TestTaggedReleasesTheHeadsVersionTaga_candidates_tag3202736619/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestTaggedReleasesTheHeadsVersionTag/a_candidate's_tag (0.04s)\n=== RUN   TestTaggedReleasesTheHeadsVersionTag/no_tag_on_the_head\n    tagged_test.go:32: notice: release: notice: /tmp/TestTaggedReleasesTheHeadsVersionTagno_tag_on_the_head66449738/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestTaggedReleasesTheHeadsVersionTag/no_tag_on_the_head (0.03s)\n=== RUN   TestTaggedReleasesTheHeadsVersionTag/the_nightly_passed\n    tagged_test.go:32: notice: release: notice: /tmp/TestTaggedReleasesTheHeadsVersionTagthe_nightly_passed2273098799/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestTaggedReleasesTheHeadsVersionTag/the_nightly_passed (0.03s)\n--- FAIL: TestTaggedReleasesTheHeadsVersionTag (0.18s)"
+    }
+  ],
+  "seconds": 0.18,
+  "recorded": true,
+  "cpu_seconds": 0.5230099999998856
+}
