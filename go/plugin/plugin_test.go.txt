@@ -1,0 +1,16 @@
+go:internal/secret#func:PluginEnv
+go:internal/testenv#func:ExitChild
+go:internal/testenv#func:WriteExecutable
+go:internal/testenv#func:coverDir
+go:internal/testenv#var:cp
+go:plugin#func:CheckKind
+go:plugin#func:CoreOwned
+go:plugin#func:ReadLines
+go:plugin#func:Serve
+go:plugin#func:misspelt
+go:plugin#method:Link.Problem
+go:plugin#method:Link.Typed
+go:plugin#method:Plugin.Call
+go:plugin#method:Plugin.Describe
+go:plugin#method:Plugin.NewRequest
+go:plugin#method:Plugin.cacheEnv

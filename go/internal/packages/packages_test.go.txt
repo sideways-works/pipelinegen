@@ -1,0 +1,11 @@
+go:internal/config#method:Package.For
+go:internal/config#method:Package.String
+go:internal/config#method:Packages.Sorted
+go:internal/config#method:Packages.Strings
+go:internal/packages#func:Key
+go:internal/packages#func:Missing
+go:internal/packages#func:OnHost
+go:internal/packages#func:Script
+go:internal/packages#func:installed
+go:internal/packages#func:names
+go:internal/packages#func:spelled
