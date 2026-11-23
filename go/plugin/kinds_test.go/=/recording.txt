@@ -1,0 +1,8 @@
+# observed
+go:internal/secret#func:PluginEnv
+go:internal/testenv#var:cp
+go:plugin#func:CheckKind
+go:plugin#method:Plugin.Call
+go:plugin#method:Plugin.Describe
+go:plugin#method:Plugin.NewRequest
+go:plugin#method:Plugin.cacheEnv
