@@ -1,0 +1,12 @@
+{
+  "label": "internal/report/journal_test.go",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-23T06:03:40.478887306Z",
+  "failures": [
+    {
+      "test": "(not run)",
+      "tail": "batch 1 stopped before its first slice started; its time limit is 120 minutes (suites.go.minutes): the build log says `timeout exceeded` when that was the cause; raise suites.go.minutes if the batch needs longer"
+    }
+  ]
+}
