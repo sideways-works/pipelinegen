@@ -60,7 +60,7 @@ func TestTheStepsKeyUploadsThePlanItWrote(t *testing.T) {
 	b.Store(context.Background(), "pr", "pr-12", []byte(`{"version":1,"head":"`+head+`","suites":[]}`))
 
 	keys := srv.Keys()
-	if len(keys) != 2 || !strings.HasPrefix(keys[0], "pg/acme/shop/") || !strings.Contains(keys[0], "-pr-pr-12-"+head+"-") || warn.Len() != 0 {
+	if len(keys) != 2 || !strings.HasPrefix(keys[0], "pg/acme/shop/") || !strings.Contains(keys[0], "/pr/pr-12/") || !strings.Contains(keys[0], "Z-"+head+"-") || warn.Len() != 0 {
 		t.Errorf("keys %q, warned %q", keys, warn.String())
 	}
 }
