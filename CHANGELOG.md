@@ -13,7 +13,7 @@ minor version may change the config or the protocol.
 
 - A plan has a `version`, 1, and its format is a JSON Schema, docs/reference/plan.schema.json, held to the plan's Go types by a test
 - Each suite of a plan that keeps a durations file has an `estimate`: the recorded seconds of the slices it selected and of all of them, a slice without a recorded time at the median
-- `plans.s3` copies each plan a trusted step writes to a bucket of AWS S3 or an S3-compatible service (SeaweedFS, MinIO), gzipped, under `<prefix>/<owner>/<repo>/<yyyy>/<mm>/<dd>/` with a pointer per head commit under `heads/`, its metadata naming the run, the change, the commits and the counts; `plans.keep` deletes the copies older than it. The key comes in `PIPELINEGEN_PLANS_ACCESS_KEY_ID` and `PIPELINEGEN_PLANS_SECRET_ACCESS_KEY` to the steps that write a run's plan alone, and the runner's spec names its vars as `plans`; a bucket that fails is a warning, never a failed plan. See docs/how-to/keeping-plans.md
+- `plans.s3` copies each plan a trusted step writes to a bucket of AWS S3 or an S3-compatible service (SeaweedFS, MinIO), gzipped, under `<prefix>/<owner>/<repo>/<yyyy>/<mm>/<dd>/<run>/<change>/` with a pointer per head commit under `heads/<head[0:2]>/<head>/<run>/<change>/`, its metadata naming the run, the change, the commits and the counts; `plans.keep` deletes the copies older than it. The key comes in `PIPELINEGEN_PLANS_ACCESS_KEY_ID` and `PIPELINEGEN_PLANS_SECRET_ACCESS_KEY` to the steps that write a run's plan alone, and the runner's spec names its vars as `plans`; a bucket that fails is a warning, never a failed plan. See docs/how-to/keeping-plans.md
 
 ### Changed
 

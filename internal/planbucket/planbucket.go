@@ -44,7 +44,8 @@ const (
 	MetaSecondsAll        = "estimated-seconds-all"
 	MetaPlanKey           = "plan-key"
 	headsDir              = "heads/"
-	planTime              = "2006/01/02/150405"
+	dayFolder             = "2006/01/02/"
+	planTime              = "150405"
 	headTime              = "20060102T150405"
 	nonceBytes            = 4
 	defaultCleanupWorkers = 8
@@ -148,9 +149,10 @@ func remoteRepository(remote string) (owner, repo string, ok bool) {
 
 var unsafeRE = regexp.MustCompile(`[^A-Za-z0-9._-]`)
 
-// Safe is s with each character outside [A-Za-z0-9._-] replaced by "_", as it goes into a key.
+// Safe is s as one segment of a key: each character outside [A-Za-z0-9._-] replaced by "_", and
+// "_" for a segment that would be empty, "." or "..", which some clients read as a path's own.
 func Safe(s string) string {
-	if s == "" {
+	if s == "" || s == "." || s == ".." {
 		return "_"
 	}
 
@@ -215,8 +217,8 @@ func (b *Bucket) Upload(ctx context.Context, run, change string, plan []byte) (U
 
 	up := Uploaded{
 		Head:    s.Head,
-		PlanKey: b.Base + at.Format(planTime) + "Z-" + run + "-" + change + "-" + s.Head + "-" + nonce + ".json",
-		HeadKey: b.Base + headsDir + s.Head[:2] + "/" + s.Head + "/" + at.Format(headTime) + "Z-" + run + "-" + change + "-" + nonce,
+		PlanKey: b.Base + at.Format(dayFolder) + run + "/" + change + "/" + at.Format(planTime) + "Z-" + s.Head + "-" + nonce + ".json",
+		HeadKey: b.Base + headsDir + s.Head[:2] + "/" + s.Head + "/" + run + "/" + change + "/" + at.Format(headTime) + "Z-" + nonce,
 	}
 
 	body, err := gzipped(plan)

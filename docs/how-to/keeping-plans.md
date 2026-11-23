@@ -99,15 +99,15 @@ without a prefix.
 The plan:
 
 ```text
-<base><yyyy>/<mm>/<dd>/<hhmmss>Z-<run>-<change>-<head>-<nonce>.json
-pipelinegen/acme/shop/2026/11/23/090807Z-pr-pr-12-ab3f9c0d2e7b41a8c6d5e0f1a2b3c4d5e6f70812-0a1b2c3d.json
+<base><yyyy>/<mm>/<dd>/<run>/<change>/<hhmmss>Z-<head>-<nonce>.json
+pipelinegen/acme/shop/2026/11/23/pr/pr-12/090807Z-ab3f9c0d2e7b41a8c6d5e0f1a2b3c4d5e6f70812-0a1b2c3d.json
 ```
 
 The head's pointer to it, put after the plan:
 
 ```text
-<base>heads/<head[0:2]>/<head>/<yyyymmdd>T<hhmmss>Z-<run>-<change>-<nonce>
-pipelinegen/acme/shop/heads/ab/ab3f9c0d2e7b41a8c6d5e0f1a2b3c4d5e6f70812/20261123T090807Z-pr-pr-12-0a1b2c3d
+<base>heads/<head[0:2]>/<head>/<run>/<change>/<yyyymmdd>T<hhmmss>Z-<nonce>
+pipelinegen/acme/shop/heads/ab/ab3f9c0d2e7b41a8c6d5e0f1a2b3c4d5e6f70812/pr/pr-12/20261123T090807Z-0a1b2c3d
 ```
 
 - `<owner>/<repo>` is the repository the config names: `github.repository`;
@@ -118,7 +118,10 @@ pipelinegen/acme/shop/heads/ab/ab3f9c0d2e7b41a8c6d5e0f1a2b3c4d5e6f70812/20261123
 - `<run>` is the run's name and `<change>` the change's, as the run's
   records name it: `main` for a branch, `pr-12` for pull request 12.
 - In owner, repo, run and change, each character outside `[A-Za-z0-9._-]`
-  becomes `_`.
+  becomes `_`, and one that would be empty, `.` or `..` is `_`. Each is a
+  path segment of its own, so a name with `-` in it, such as
+  `nightly-full`, never runs into the next; the last segment of each key
+  has a fixed width.
 - `<head>` is the plan's `head`: the 40 hex digits of the commit planned.
   For a run that compares with `merged_target` that is the merge of the
   change into its target, and the change's own commit is the plan's
@@ -127,8 +130,8 @@ pipelinegen/acme/shop/heads/ab/ab3f9c0d2e7b41a8c6d5e0f1a2b3c4d5e6f70812/20261123
   head in the same second don't meet. The plan and its pointer share it.
 - The year, month and day folders sort by time, and `heads/` never looks
   like a year. To find the plans of a commit, list
-  `<base>heads/<head[0:2]>/<head>/`: each pointer is empty and names its
-  plan in its metadata.
+  `<base>heads/<head[0:2]>/<head>/` without a delimiter: each pointer is
+  empty and names its plan in its metadata.
 
 The plan's object:
 
@@ -166,7 +169,7 @@ same plan both succeed.
 - It lists `<base>` level by level (ListObjectsV2 with the delimiter `/`):
   the years, the months of each year, the days of each month. A year or
   month whose first day ended within `keep` is not listed further.
-- It deletes every object of each day folder whose whole day ended before
+- It deletes every object under each day folder whose whole day ended before
   now less `keep`. A day partly inside `keep` is kept, so a plan may stay
   up to a day longer than `keep`.
 - It prunes one shard of the head index, `<base>heads/<head[0:2]>/` of the

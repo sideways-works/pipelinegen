@@ -114,7 +114,7 @@ func TestTheSecondStepCopiesThePlanItWroteAndTheFirstHoldsNoKey(t *testing.T) {
 	}
 
 	keys := srv.Keys()
-	if len(keys) != 2 || !strings.Contains(keys[0], "Z-pr-pr-7-"+head+"-") || !strings.Contains(keys[1], "/heads/"+head[:2]+"/"+head+"/") {
+	if len(keys) != 2 || !strings.Contains(keys[0], "/pr/pr-7/") || !strings.Contains(keys[0], "Z-"+head+"-") || !strings.Contains(keys[1], "/heads/"+head[:2]+"/"+head+"/") {
 		t.Fatalf("keys %q", keys)
 	}
 

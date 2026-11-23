@@ -69,8 +69,8 @@ func TestAPlanGoesUnderItsDateAndItsHead(t *testing.T) {
 	b.Store(context.Background(), "main", "pr-12/feature ü", []byte(plan))
 
 	const (
-		planKey = "pipelinegen/owner/repo/2026/11/23/090807Z-main-pr-12_feature__-" + head + "-0a1b2c3d.json"
-		headKey = "pipelinegen/owner/repo/heads/ab/" + head + "/20261123T090807Z-main-pr-12_feature__-0a1b2c3d"
+		planKey = "pipelinegen/owner/repo/2026/11/23/main/pr-12_feature__/090807Z-" + head + "-0a1b2c3d.json"
+		headKey = "pipelinegen/owner/repo/heads/ab/" + head + "/main/pr-12_feature__/20261123T090807Z-0a1b2c3d"
 	)
 
 	if keys := srv.Keys(); !slices.Equal(keys, []string{planKey, headKey}) {
@@ -197,6 +197,34 @@ func TestAPlanTheBucketRefusesIsAWarningAndNothingIsCleaned(t *testing.T) {
 	}
 }
 
+func TestTheRunAndTheChangeAreSegmentsOfTheirOwn(t *testing.T) {
+	srv := s3test.New(t, "ci-plans", true)
+
+	var slept sleeps
+
+	b, _ := bucketOf(t, srv, "o/r/", &slept)
+
+	b.Store(context.Background(), "nightly-full", "..", []byte(plan))
+
+	want := []string{
+		"o/r/2026/11/23/nightly-full/_/090807Z-" + head + "-0a1b2c3d.json",
+		"o/r/heads/ab/" + head + "/nightly-full/_/20261123T090807Z-0a1b2c3d",
+	}
+	if keys := srv.Keys(); !slices.Equal(keys, want) {
+		t.Fatalf("keys %q, want %q", keys, want)
+	}
+}
+
+func TestSafeMakesOneSegment(t *testing.T) {
+	for in, want := range map[string]string{
+		"": "_", ".": "_", "..": "_", "...": "...", "a/b": "a_b", "pr-12": "pr-12", "v1.2_x": "v1.2_x", "ü": "_",
+	} {
+		if got := planbucket.Safe(in); got != want {
+			t.Errorf("Safe(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestCleanupDeletesTheDaysThatEndedBeforeKeep(t *testing.T) {
 	srv := s3test.New(t, "ci-plans", true)
 	srv.PageSize = 2
@@ -204,21 +232,21 @@ func TestCleanupDeletesTheDaysThatEndedBeforeKeep(t *testing.T) {
 	const base = "p/o/r/"
 
 	keep := []string{
-		base + "2026/08/25/235959Z-main-main-x-00000000.json", // partly inside keep
-		base + "2026/11/23/000000Z-main-main-x-00000000.json",
-		base + "heads/ab/" + head + "/20260825T100000Z-main-main-00000000",
-		base + "heads/cd/x/20200101T000000Z-main-main-00000000", // another shard
+		base + "2026/08/25/main/main/235959Z-x-00000000.json", // partly inside keep
+		base + "2026/11/23/main/main/000000Z-x-00000000.json",
+		base + "heads/ab/" + head + "/main/main/20260825T100000Z-00000000",
+		base + "heads/cd/x/main/main/20200101T000000Z-00000000", // another shard
 		base + "2026/xx/01/a.json",                              // no month's folder
 		base + "notes/2020.json",
 		"p/o/other/2020/01/01/a.json", // another repository
 	}
 	gone := []string{
-		base + "2025/12/31/000000Z-main-main-x-00000000.json",
-		base + "2026/01/15/000000Z-main-main-x-00000000.json",
-		base + "2026/01/15/000001Z-main-main-x-00000000.json",
-		base + "2026/08/24/235959Z-main-main-x-00000000.json",
-		base + "heads/ab/" + head + "/20260825T085959Z-main-main-00000000",
-		base + "heads/ab/ab99999999999999999999999999999999999999/20250101T000000Z-main-main-00000000",
+		base + "2025/12/31/main/main/000000Z-x-00000000.json",
+		base + "2026/01/15/main/main/000000Z-x-00000000.json",
+		base + "2026/01/15/main/main/000001Z-x-00000000.json",
+		base + "2026/08/24/main/main/235959Z-x-00000000.json",
+		base + "heads/ab/" + head + "/main/main/20260825T085959Z-00000000",
+		base + "heads/ab/ab99999999999999999999999999999999999999/main/main/20250101T000000Z-00000000",
 	}
 
 	for _, k := range append(slices.Clone(keep), gone...) {
