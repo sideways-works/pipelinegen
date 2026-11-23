@@ -7,6 +7,12 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-23
+
+### Fixed
+
+- `passed-since` and a pull request's carry-over counted no pass of a test file's slice: a batch records such a slice under its file's name, and the plan names it `@pipelinegen_deps//slices:<file>`, so the two never matched and every reached test file ran again on each commit of a red branch, though it had passed since. Only slices of Bazel targets were left out
+
 ## [0.8.0] - 2026-11-23
 
 ### Added
