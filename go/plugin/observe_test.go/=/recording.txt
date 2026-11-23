@@ -1,0 +1,4 @@
+# observed
+go:internal/testenv#var:cp
+go:plugin#func:Observable
+go:plugin#method:Description.ObserveReadsOutside
