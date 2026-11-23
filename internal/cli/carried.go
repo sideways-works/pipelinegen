@@ -66,7 +66,7 @@ func carriedOver(ctx context.Context, cfg *config.Config, ch runs.Change, store 
 
 	since := func(suite string, sl bazel.Slice) (affected.Since, bool) {
 		p, ok := b.Passes[suite+"/"+sl.Name]
-		if !ok || p.Label != "" && p.Label != sl.Label {
+		if !ok || !passedAs(p.Label, sl) {
 			return affected.Since{}, false
 		}
 

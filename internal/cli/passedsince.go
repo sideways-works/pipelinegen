@@ -104,7 +104,7 @@ func branchPassedSince(ctx context.Context, cfg *config.Config, ch runs.Change, 
 
 	since := func(suite string, sl bazel.Slice) (affected.Since, bool) {
 		p, ok := passes[suite+"/"+sl.Name]
-		if !ok || p.Label != "" && p.Label != sl.Label {
+		if !ok || !passedAs(p.Label, sl) {
 			return affected.Since{}, false
 		}
 
@@ -120,6 +120,13 @@ func branchPassedSince(ctx context.Context, cfg *config.Config, ch runs.Change, 
 	}
 
 	return &affected.Rebase{OffAt: offAt, Since: since}, notes
+}
+
+// passedAs tells whether a pass recorded under label is one of sl. A test file's slice is recorded
+// under its name, since its batch carries no label, while its plan names it by the deps repository's
+// selector; a slice of a target is recorded under the target's label.
+func passedAs(label string, sl bazel.Slice) bool {
+	return label == "" || label == sl.Label || label == sl.Name && bazel.NormalLabel(sl.Label) == bazel.SelectorLabel(sl.Name)
 }
 
 // passedSinceOn is the level passed-since is off from and whether it is on, for a branch's run and a

@@ -277,3 +277,43 @@ func TestPassedSinceIsOffFromItsLevel(t *testing.T) {
 		t.Fatalf("a run that compares with nothing: %v %q", rebase != nil, notes)
 	}
 }
+
+func TestAPassIsOfTheSliceItsBatchRecordedItAs(t *testing.T) {
+	file := bazel.Slice{Name: "backend/cmd/check_test.go", Label: bazel.SelectorLabel("backend/cmd/check_test.go")}
+	target := bazel.Slice{Name: "ci.slices.markdown", Label: "//ci/slices:markdown"}
+
+	for _, c := range []struct {
+		label string
+		sl    bazel.Slice
+		want  bool
+	}{
+		// a test file's batch records its slice under its name
+		{"backend/cmd/check_test.go", file, true},
+		{"@pipelinegen_deps//slices:backend/cmd/check_test.go", file, true},
+		{"@@+deps+pipelinegen_deps//slices:backend/cmd/check_test.go", bazel.Slice{Name: file.Name, Label: "@@+deps+pipelinegen_deps//slices:backend/cmd/check_test.go"}, true},
+		{"", file, true},
+		{"backend/cmd/other_test.go", file, false},
+		{"//ci/slices:markdown", target, true},
+		// a target's slice is its label's, never its name's
+		{"ci.slices.markdown", target, false},
+		{"//ci/slices:other", target, false},
+	} {
+		if got := passedAs(c.label, c.sl); got != c.want {
+			t.Errorf("passedAs(%q, %q) = %v, want %v", c.label, c.sl.Label, got, c.want)
+		}
+	}
+}
+
+// The label a batch's slice is recorded under, as the report writes it, is the one passedAs takes for
+// the slice the plan selected: a test file's and a target's alike.
+func TestTheLabelABatchRecordsIsThePlansSlice(t *testing.T) {
+	for _, sl := range []bazel.Slice{
+		{Name: "backend/cmd/check_test.go", Label: bazel.SelectorLabel("backend/cmd/check_test.go"), Sources: []string{"backend/cmd/check_test.go"}},
+		{Name: "ci.slices.markdown", Label: "//ci/slices:markdown", Kind: "sh_test"},
+	} {
+		ev := sliceEvent("s", fromBazel([]bazel.Slice{sl})[0], t.TempDir(), t.TempDir(), "")
+		if !passedAs(ev.Label, sl) {
+			t.Errorf("%s recorded as %q: not its pass", sl.Label, ev.Label)
+		}
+	}
+}
