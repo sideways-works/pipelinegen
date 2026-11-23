@@ -1,0 +1,15 @@
+go:internal/release#func:NodeNotice
+go:internal/release#func:compactOwn
+go:internal/release#func:exists
+go:internal/release#func:familyRepository
+go:internal/release#func:fold
+go:internal/release#func:have
+go:internal/release#func:licenceOf
+go:internal/release#func:licenceText
+go:internal/release#func:namesOf
+go:internal/release#func:nodeOwn
+go:internal/release#func:ownClause
+go:internal/release#func:ownDirectory
+go:internal/release#func:ownNames
+go:internal/release#func:refuseNotice
+go:internal/release#method:noticeText.header
