@@ -1,0 +1,23 @@
+{
+  "label": "internal/releasetest/program_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-23T02:35:33.704221971Z",
+  "failures": [
+    {
+      "test": "TestAKindFirstRepositoryReleasesItsProgram",
+      "tail": "=== RUN   TestAKindFirstRepositoryReleasesItsProgram\n    program_test.go:21: notice: release: notice: /tmp/TestAKindFirstRepositoryReleasesItsProgram1208476758/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestAKindFirstRepositoryReleasesItsProgram (0.03s)"
+    },
+    {
+      "test": "TestARepositoryReleasesEachOfItsPrograms",
+      "tail": "=== RUN   TestARepositoryReleasesEachOfItsPrograms\n    program_test.go:126: notice: release: notice: /tmp/TestARepositoryReleasesEachOfItsPrograms1745135965/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestARepositoryReleasesEachOfItsPrograms (0.03s)"
+    },
+    {
+      "test": "TestEachPluginOfARepositoryMustDescribeItself",
+      "tail": "=== RUN   TestEachPluginOfARepositoryMustDescribeItself\n    program_test.go:174: notice: release: notice: /tmp/TestEachPluginOfARepositoryMustDescribeItself2718016340/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestEachPluginOfARepositoryMustDescribeItself (0.03s)"
+    }
+  ],
+  "seconds": 1.61,
+  "recorded": true,
+  "cpu_seconds": 8.504154999999628
+}

@@ -1,0 +1,19 @@
+{
+  "label": "internal/releasetest/patch_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-23T02:36:59.502489242Z",
+  "failures": [
+    {
+      "test": "TestAPatchWhoseBuildFailsPushesNoTag",
+      "tail": "=== RUN   TestAPatchWhoseBuildFailsPushesNoTag\n    patch_test.go:134: notice: release: notice: /tmp/TestAPatchWhoseBuildFailsPushesNoTag1596596395/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestAPatchWhoseBuildFailsPushesNoTag (0.03s)"
+    },
+    {
+      "test": "TestPatchTagsBuildsPublishesAndVerifies",
+      "tail": "=== RUN   TestPatchTagsBuildsPublishesAndVerifies\n    patch_test.go:46: notice: release: notice: /tmp/TestPatchTagsBuildsPublishesAndVerifies4167200306/001/widget/LICENSE is neither the Apache License 2.0 nor the GNU AGPL 3.0\n--- FAIL: TestPatchTagsBuildsPublishesAndVerifies (0.03s)"
+    }
+  ],
+  "seconds": 0.06,
+  "recorded": true,
+  "cpu_seconds": 4.8595799999998235
+}
