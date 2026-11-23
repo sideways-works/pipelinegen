@@ -1,0 +1,9 @@
+# observed
+go:internal/sample#func:Pick
+go:internal/sample#func:groupOrder
+go:internal/sample#func:keys
+go:internal/sample#func:neediest
+go:internal/sample#func:order
+go:internal/sample#func:rank
+go:internal/sample#func:shares
+go:internal/sample#func:take
