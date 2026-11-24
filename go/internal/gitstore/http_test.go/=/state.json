@@ -1,0 +1,9 @@
+{
+  "label": "internal/gitstore/http_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T11:41:56.331414797Z",
+  "seconds": 0.19000000000000003,
+  "recorded": true,
+  "cpu_seconds": 7.358932000000095,
+  "peak_mb": 391
+}
