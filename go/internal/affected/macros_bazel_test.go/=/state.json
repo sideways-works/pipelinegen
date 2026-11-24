@@ -1,0 +1,16 @@
+{
+  "label": "internal/affected/macros_bazel_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.91126537Z",
+  "seconds": 105.56,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.911319056Z"
+    }
+  ],
+  "cpu_seconds": 33.044989,
+  "peak_mb": 613
+}

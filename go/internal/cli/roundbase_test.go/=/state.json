@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/roundbase_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.913267859Z",
+  "seconds": 1011.9699999999999,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.91330431Z"
+    }
+  ],
+  "cpu_seconds": 259.97838,
+  "peak_mb": 1081
+}

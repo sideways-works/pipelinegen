@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/forgefetch_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.912241541Z",
+  "seconds": 24.35,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.91227601Z"
+    }
+  ],
+  "cpu_seconds": 1.9763560000000098,
+  "peak_mb": 95
+}
