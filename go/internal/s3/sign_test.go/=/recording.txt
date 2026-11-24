@@ -1,0 +1,6 @@
+# observed
+go:internal/s3#func:canonicalRequest
+go:internal/s3#func:encode
+go:internal/s3#func:hashHex
+go:internal/s3#func:hmacOf
+go:internal/s3#func:sign
