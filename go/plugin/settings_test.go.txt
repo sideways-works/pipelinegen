@@ -1,0 +1,16 @@
+go:internal/testenv#var:cp
+go:plugin#func:DecodeSettings
+go:plugin#func:ServeDriver
+go:plugin#func:SettingProblems
+go:plugin#func:exitFor
+go:plugin#func:isInt
+go:plugin#func:joinPlace
+go:plugin#func:mistyped
+go:plugin#func:nounOf
+go:plugin#func:say
+go:plugin#func:serveDescribe
+go:plugin#func:serveValidate
+go:plugin#func:shownSetting
+go:plugin#func:walkSetting
+go:plugin#func:walkStruct
+go:plugin#method:SettingError.Unwrap
