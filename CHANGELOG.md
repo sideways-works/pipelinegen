@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Changed
+
+- `passed-since` leaves out a slice that passed since the base in a suite whose setup's change runs it whole, unless the suite has whole-suite checks: what changed from its pass to the head would have reached it, setup and all. Such a suite ran every slice on each commit of a red branch. The slices that still run give the setup's target as their reason
+
 ## [0.8.1] - 2026-11-23
 
 ### Fixed

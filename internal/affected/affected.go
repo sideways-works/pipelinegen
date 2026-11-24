@@ -562,6 +562,7 @@ func selectSuites(ctx context.Context, o Options, b, h *Snapshot, impacted map[s
 		// added have the sample's
 		own := sp.Selected
 		sp.Reasons = o.suiteReasons(ctx, b, h, name, unforced(own, forced), walked, changes)
+		setupReasons(&sp, since)
 
 		o.sampleConfigured(&sp, name, b, h, seen, rule, on, changes)
 

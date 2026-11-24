@@ -3,6 +3,7 @@ package affected
 import (
 	"maps"
 	"slices"
+	"sort"
 
 	"github.com/sideways-works/pipelinegen/internal/bazel"
 	"github.com/sideways-works/pipelinegen/internal/plugins"
@@ -35,12 +36,17 @@ type Since struct {
 type passed struct {
 	entries  []Narrowed
 	unsample map[string]bool
+	// setup is the suite's setup target when its change alone ran the suite whole: the slices that
+	// still run give it as their reason.
+	setup string
 }
 
 // rebase leaves out the reached slices whose own later pass covers the change, before reasons and the
-// sample; a whole-suite check and a suite its setup's change runs whole keep the plan's base.
+// sample; a suite run whole with its whole-suite checks keeps the plan's base. A slice that passed after
+// a change to the suite's setup is left out too: what changed from its pass to the head would have
+// reached it, setup and all.
 func (o Options) rebase(suite string, sp SuitePlan, all []bazel.Slice, seen map[string]bool, rule *SampleRule, on *sampleOn) (SuitePlan, map[string]bool, passed) {
-	if o.Rebase == nil || len(sp.Selected) == 0 || sp.All && (sp.Reason != ReachesEverySlice || len(sp.WholeSuite) > 0) {
+	if o.Rebase == nil || len(sp.Selected) == 0 || sp.All && len(sp.WholeSuite) > 0 {
 		return sp, seen, passed{}
 	}
 
@@ -74,7 +80,50 @@ func (o Options) rebase(suite string, sp SuitePlan, all []bazel.Slice, seen map[
 		return sp, seen, passed{}
 	}
 
-	return selectSuite(suite, o.Config.Suites[suite], all, kept, rule.On), kept, out
+	next := selectSuite(suite, o.Config.Suites[suite], all, kept, rule.On)
+	if next.All && next.Reason != ReachesEverySlice {
+		next = leaveOut(next, out.unsample)
+		out.setup = bazel.SelectorLabel(recording.SetupTarget(suite))
+	}
+
+	return next, kept, out
+}
+
+// leaveOut takes the slices that passed out of a suite its setup's change ran whole.
+func leaveOut(sp SuitePlan, left map[string]bool) SuitePlan {
+	var keep []bazel.Slice
+
+	for _, sl := range sp.Selected {
+		if _, ok := left[sl.Name]; ok {
+			sp.Untouched = append(sp.Untouched, sl.Label)
+
+			continue
+		}
+
+		keep = append(keep, sl)
+	}
+
+	sort.Strings(sp.Untouched)
+
+	sp.Selected, sp.All, sp.Reason = append([]bazel.Slice{}, keep...), false, ""
+
+	return sp
+}
+
+// setupReasons gives each slice that still runs the setup's change as its reason, the suite no longer
+// running whole for it.
+func setupReasons(sp *SuitePlan, p passed) {
+	if p.setup == "" {
+		return
+	}
+
+	if sp.Reasons == nil {
+		sp.Reasons = map[string][]Reason{}
+	}
+
+	for _, sl := range sp.Selected {
+		sp.Reasons[sl.Label] = append(sp.Reasons[sl.Label], Reason{Kind: KindTarget, What: p.setup})
+	}
 }
 
 // passedSince keeps of the rebase's entries the slices the plan still left out. A slice whose change

@@ -129,9 +129,12 @@ works that out before the sample is drawn:
   run `<run>`: nothing from there to the head reaches it".
 - A slice with no such pass, or whose pass is older than those two
   commits, keeps the run's base. So do a suite whose checks of the whole
-  suite would run, one whose setup's change runs it whole, the sample's
-  own targets, a plan of everything, and a commit after which the config
-  changed.
+  suite would run, the sample's own targets, a plan of everything, and a
+  commit after which the config changed.
+- A suite whose setup's change runs it whole, with no checks of the whole
+  suite, leaves out the slices that passed since too: a change to the
+  setup from their pass to the head would have reached them. The slices
+  that still run give the setup's target as their reason.
 
 `pipelinegen why` names the narrowing and that commit for a slice it left
 out. From level 4 every slice is compared from the run's base, as before,

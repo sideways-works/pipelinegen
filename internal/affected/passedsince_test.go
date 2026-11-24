@@ -1,6 +1,7 @@
 package affected
 
 import (
+	"context"
 	"slices"
 	"testing"
 
@@ -127,7 +128,7 @@ func TestTheSampleIsDrawnAfterTheLaterPasses(t *testing.T) {
 	}
 }
 
-func TestAWholeSuiteKeepsTheRunsBase(t *testing.T) {
+func TestAWholeSuiteCheckKeepsTheRunsBase(t *testing.T) {
 	all := passSlices("a", "b")
 	o := Options{Config: &config.Config{Suites: map[string]config.Suite{"s": {}}}, Rebase: passedAt(false, map[string]string{"a": "c1"})}
 
@@ -139,7 +140,8 @@ func TestAWholeSuiteKeepsTheRunsBase(t *testing.T) {
 	}{
 		{"a check of the whole suite", config.Suite{WholeSuite: []config.WholeSuiteCheck{{Name: "coverage"}}},
 			map[string]bool{all[0].Label: true, all[1].Label: true}, false},
-		{"the setup's change", config.Suite{}, map[string]bool{bazel.SelectorLabel(recording.SetupTarget("s")): true}, false},
+		// what changed from a's pass to the head would have reached it, setup and all
+		{"the setup's change", config.Suite{}, map[string]bool{bazel.SelectorLabel(recording.SetupTarget("s")): true}, true},
 		{"every slice reached", config.Suite{}, map[string]bool{all[0].Label: true, all[1].Label: true}, true},
 	} {
 		o.Config.Suites["s"] = c.suite
@@ -188,5 +190,40 @@ func TestACarriedOverEntryNamesItsBuild(t *testing.T) {
 	if len(sp.Narrowed) != 1 || sp.Narrowed[0].CarriedFrom != from || !slices.Equal(sp.Narrowed[0].Dropped, []string{"a", "b"}) ||
 		sp.Narrowed[0].Narrowing != plugins.NarrowPassedSince || sp.Narrowed[0].Reached != 3 {
 		t.Fatalf("one entry naming the build: %+v", sp.Narrowed)
+	}
+}
+
+func TestASetupChangeLeavesOutWhatPassedSince(t *testing.T) {
+	all := []bazel.Slice{walkSlice("s/a_test.go"), walkSlice("s/b_test.go")}
+	cfg := &config.Config{Suites: map[string]config.Suite{"s": {Tests: []string{"s/*_test.go"}}}}
+	o := Options{
+		Config:  cfg,
+		Reasons: func(_, _, target string) ([]Reason, bool) { return []Reason{{Kind: KindTarget, What: target}}, true },
+		Prepare: func(context.Context, string, string, map[string][]bazel.Slice) (string, error) { return "", nil },
+		Rebase:  passedAt(false, map[string]string{"s/a_test.go": "c1"}),
+	}
+	b := &Snapshot{Commit: commitBase, Slices: map[string][]bazel.Slice{"s": all}}
+	h := &Snapshot{Commit: commitHead, Slices: map[string][]bazel.Slice{"s": all}}
+	impacted := map[string]bool{bazel.SelectorLabel(recording.SetupTarget("s")): true}
+
+	sps, err := selectSuites(t.Context(), o, b, h, impacted, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sp := suitePlan(t, sps, "s")
+	if sp.All || names(sp) != "s/b_test.go" || !slices.Equal(sp.Untouched, []string{all[0].Label}) {
+		t.Fatalf("all %v, runs %s, leaves out %v", sp.All, names(sp), sp.Untouched)
+	}
+
+	byTheSetup := func(r Reason) bool {
+		return r.Kind == KindTarget && r.What == bazel.SelectorLabel(recording.SetupTarget("s"))
+	}
+	if !slices.ContainsFunc(sp.Reasons[all[1].Label], byTheSetup) {
+		t.Errorf("b runs for %+v, not the setup's change", sp.Reasons[all[1].Label])
+	}
+
+	if left := passedOut(sp); !left["s/a_test.go"] || len(left) != 1 {
+		t.Errorf("passed-since leaves out %v", left)
 	}
 }
