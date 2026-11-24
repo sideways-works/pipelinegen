@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/entry_equiv_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.448827029Z",
+  "seconds": 3.81,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.448846567Z"
+    }
+  ],
+  "cpu_seconds": 1.8415129999999635,
+  "peak_mb": 75
+}

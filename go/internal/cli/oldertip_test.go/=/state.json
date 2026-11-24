@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/oldertip_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.449137547Z",
+  "seconds": 9.92,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.449157492Z"
+    }
+  ],
+  "cpu_seconds": 2.0095879999998942,
+  "peak_mb": 109
+}

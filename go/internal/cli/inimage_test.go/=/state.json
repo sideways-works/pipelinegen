@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/inimage_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.448987254Z",
+  "seconds": 2.29,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.449002677Z"
+    }
+  ],
+  "cpu_seconds": 0.8662970000000314,
+  "peak_mb": 77
+}

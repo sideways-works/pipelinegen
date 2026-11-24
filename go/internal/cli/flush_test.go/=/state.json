@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/flush_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.448888079Z",
+  "seconds": 30.28,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.44891547Z"
+    }
+  ],
+  "cpu_seconds": 3.507220000000075,
+  "peak_mb": 72
+}

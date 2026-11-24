@@ -1,0 +1,16 @@
+{
+  "label": "internal/affected/guarantee_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.44838012Z",
+  "seconds": 532.79,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.448406626Z"
+    }
+  ],
+  "cpu_seconds": 110.98718699999998,
+  "peak_mb": 1113
+}
