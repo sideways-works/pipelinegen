@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/inimage_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T12:41:30.820672066Z",
+  "seconds": 0.15,
+  "recorded": true,
+  "cpu_seconds": 0.586180000000013,
+  "peak_mb": 227
+}

@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/mainline_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T12:46:28.164123438Z",
+  "seconds": 0.19,
+  "recorded": true,
+  "cpu_seconds": 0.5788340000001426,
+  "peak_mb": 125
+}

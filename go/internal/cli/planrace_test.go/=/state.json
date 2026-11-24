@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/planrace_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T12:41:30.821928887Z",
+  "seconds": 0.8400000000000001,
+  "recorded": true,
+  "cpu_seconds": 1.464198000000124,
+  "peak_mb": 249
+}
