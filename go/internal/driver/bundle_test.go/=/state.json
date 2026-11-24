@@ -1,0 +1,9 @@
+{
+  "label": "internal/driver/bundle_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T02:49:07.265659661Z",
+  "seconds": 0.8500000000000001,
+  "recorded": true,
+  "cpu_seconds": 0.37154199999986304,
+  "peak_mb": 367
+}
