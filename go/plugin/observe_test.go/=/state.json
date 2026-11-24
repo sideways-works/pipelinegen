@@ -1,0 +1,9 @@
+{
+  "label": "plugin/observe_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T02:41:15.043940139Z",
+  "seconds": 0.156594497,
+  "recorded": true,
+  "cpu_seconds": 0.3031510000000708,
+  "peak_mb": 40
+}
