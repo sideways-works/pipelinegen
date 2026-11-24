@@ -1,0 +1,21 @@
+# observed
+go:internal/driver#func:MarkAndWait
+go:internal/driver#func:Names
+go:internal/driver#func:answerMark
+go:internal/driver#func:because
+go:internal/driver#func:freshDir
+go:internal/driver#func:noResult
+go:internal/driver#func:pendingMarks
+go:internal/driver#func:ranUnmarked
+go:internal/driver#func:sayf
+go:internal/driver#func:serveMarks
+go:internal/driver#method:Runner.Run
+go:internal/driver#method:Runner.alone
+go:internal/driver#method:Runner.bundle
+go:internal/driver#method:Runner.hook
+go:internal/driver#method:Runner.mode
+go:internal/driver#method:Runner.oneByOne
+go:internal/driver#method:bundleRun.closeOpen
+go:internal/driver#method:bundleRun.event
+go:internal/driver#method:bundleRun.mark
+go:internal/driver#method:bundleRun.serve

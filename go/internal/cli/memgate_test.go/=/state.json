@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/memgate_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T02:24:54.578909478Z",
+  "seconds": 1.32,
+  "recorded": true,
+  "cpu_seconds": 1.601493000000005,
+  "peak_mb": 287
+}

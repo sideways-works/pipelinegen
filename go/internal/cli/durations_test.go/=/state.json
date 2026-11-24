@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/durations_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T02:24:54.577150207Z",
+  "seconds": 1.19,
+  "recorded": true,
+  "cpu_seconds": 1.2975920000000087,
+  "peak_mb": 288
+}

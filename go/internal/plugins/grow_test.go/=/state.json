@@ -1,0 +1,9 @@
+{
+  "label": "internal/plugins/grow_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T02:41:15.041633961Z",
+  "seconds": 1.48,
+  "recorded": true,
+  "cpu_seconds": 2.1848660000000564,
+  "peak_mb": 83
+}

@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/guarantee_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T02:49:07.259012032Z",
+  "seconds": 45.97,
+  "recorded": true,
+  "cpu_seconds": 76.69991099999999,
+  "peak_mb": 957
+}

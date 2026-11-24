@@ -1,0 +1,9 @@
+{
+  "label": "internal/testenv/executable_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T02:49:07.269039594Z",
+  "seconds": 1.11,
+  "recorded": true,
+  "cpu_seconds": 5.40004399999998,
+  "peak_mb": 453
+}
