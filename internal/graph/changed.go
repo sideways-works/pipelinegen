@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
@@ -31,10 +32,15 @@ type changes struct {
 	how                map[int32]string
 	correlators        []string
 	entryUnits, pinned map[int32]string
+	// imports are, while linked-imports is on, the groups whose links changed only by the groups they
+	// import, and imported what those groups bring where they are linked: the walk compares a slice's
+	// reach of each tree by tree.
+	imports  map[int32][]int32
+	imported []int32
 }
 
 func changesOf(l *loaded, o Options, width string) changes {
-	c := changes{how: map[int32]string{}, entryUnits: map[int32]string{}, pinned: map[int32]string{}}
+	c := changes{how: map[int32]string{}, entryUnits: map[int32]string{}, pinned: map[int32]string{}, imports: map[int32][]int32{}}
 
 	var sboms []string
 
@@ -84,21 +90,88 @@ func changesOf(l *loaded, o Options, width string) changes {
 		set(i, HowCannotTell)
 	}
 
-	for from, out := range l.out {
-		for _, e := range out {
-			if e.trees != 1<<base|1<<head && movedCounts(l, e, width) {
-				set(int32(from), HowLinks)
-
-				break
-			}
-		}
-	}
+	c.linkChanges(l, o, width, set)
 
 	c.entries(l, sboms, on(o, narrowPluginEntry))
 
 	sort.Strings(c.correlators)
 
 	return c
+}
+
+// linkChanges marks the nodes one of whose links only one tree has, and, while linked-imports is on,
+// keeps a group whose only such links are imports for the walk to compare what they bring.
+func (c *changes) linkChanges(l *loaded, o Options, width string, set func(int32, string)) {
+	byImports := on(o, narrowLinkedImports)
+
+	for from, out := range l.out {
+		var gained []int32
+
+		wide := false
+
+		for _, e := range out {
+			if e.trees == 1<<base|1<<head || !movedCounts(l, e, width) {
+				continue
+			}
+
+			if byImports && importLink(l, int32(from), e) {
+				gained = append(gained, e.other)
+
+				continue
+			}
+
+			wide = true
+
+			break
+		}
+
+		switch {
+		case wide:
+			set(int32(from), HowLinks)
+		case len(gained) > 0:
+			c.imports[int32(from)] = gained
+		}
+	}
+
+	c.importsReach(l, width, set)
+}
+
+// importLink tells a group's link to a group it imports: linking the one links the other.
+func importLink(l *loaded, from int32, e edge) bool {
+	return e.kind == follow && strings.HasPrefix(l.ids[from], GroupPrefix) && strings.HasPrefix(l.ids[e.other], GroupPrefix)
+}
+
+// importsReach works out what the imported groups bring where they are linked; past movedCap ends the
+// importing groups change whole, as they do with linked-imports off.
+func (c *changes) importsReach(l *loaded, width string, set func(int32, string)) {
+	if len(c.imports) == 0 {
+		return
+	}
+
+	var targets []int32
+
+	for _, to := range c.imports {
+		targets = append(targets, to...)
+	}
+
+	slices.Sort(targets)
+	targets = slices.Compact(targets)
+
+	if width != Dependents {
+		targets = movedClosure(l, targets)
+	}
+
+	if len(targets) > movedCap {
+		for from := range c.imports {
+			set(from, HowLinks)
+		}
+
+		c.imports = map[int32][]int32{}
+
+		return
+	}
+
+	c.imported = targets
 }
 
 // movedCounts tells whether a link in one tree only changes its from end in a width; a link to a unit

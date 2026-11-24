@@ -22,6 +22,7 @@ The core declares these itself:
 | `sample-bound` | a change to what every slice reaches only through that code, or to what runs at start-up, runs a sample of the suite | 3 |
 | `plugin-entry` | a changed plugin entry (a pin, a checksum, its config block) runs a sample of each suite it reaches; what it left out is named under it | 4 |
 | `unobservable-edits` | a changed file whose sbom covers it whole, with every unit as it was, runs no slice of a recorded suite, only the checks that read its text | 4 |
+| `linked-imports` | an import a package gains or loses runs only the slices that, tree by tree, link what the imported packages run at start-up (their inits, variables whose initialisers may act, the modules they bring) in one tree only, not every slice that links the importing package; past 64 such things the package changes whole | 4 |
 | `passed-since` | on a `last_passed` run, a slice is compared from the newer of the run's base and the commit where it last passed in that run, so a change it passed with doesn't run it again while another slice keeps the run red; on a pull request, a slice that passed in its last build is carried over when nothing from the tree that build tested reaches it | 4 |
 | `build-files-by-targets` | a BUILD or `.bzl` file a recorded slice's filegroups hold is no data file of it: a changed rule reaches the slice through that rule, a changed member list as files added or removed | 5 |
 

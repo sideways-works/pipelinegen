@@ -73,6 +73,7 @@ func (p *planner) width(width string) {
 	}
 
 	bySuite, moved := suiteWalks(l, sources, p.samples, width)
+	imported := importedWalks(l, ch, dependents)
 
 	e := entries{paths: map[string][]Path{}}
 	entryChanged := len(ch.entryUnits) > 0 || len(ch.correlators) > 0
@@ -81,11 +82,7 @@ func (p *planner) width(width string) {
 		e.walk = walkFrom(l, dependents, append(sourcesOf(l, changes{how: entryHow(ch)}), entrySources...))
 	}
 
-	for _, suite := range sortedKeys(p.samples) {
-		for name, paths := range sampleTargets(l, suite, p.samples[suite]) {
-			p.sel.Selected[Key{Suite: suite, Name: name, Width: width}] = paths
-		}
-	}
+	p.selectSampleTargets(width)
 
 	for i, sl := range ss {
 		k := Key{Suite: sl.Suite, Name: sl.Name, Width: width}
@@ -107,6 +104,8 @@ func (p *planner) width(width string) {
 		if paths, ok := selectOne(l, sw, untold, sl, p.roots[i], dependents, observed, everything, p.split, p.n, p.undescribed); ok {
 			p.sel.Selected[k] = paths
 		} else if paths, ok := mw.selects(sl, p.roots[i], dependents); ok {
+			p.sel.Selected[k] = paths
+		} else if paths, ok := imported.selects(sl, p.roots[i], dependents); ok {
 			p.sel.Selected[k] = paths
 		} else {
 			selected = false
@@ -223,6 +222,24 @@ func (p *planner) entry(e *entries, k Key, sl plugins.BindSlice, roots []int32, 
 
 		p.sel.LeftOut[narrowPluginEntry][k] = paths
 	}
+}
+
+// selectSampleTargets selects each suite's sample targets with their paths.
+func (p *planner) selectSampleTargets(width string) {
+	for _, suite := range sortedKeys(p.samples) {
+		for name, paths := range sampleTargets(p.l, suite, p.samples[suite]) {
+			p.sel.Selected[Key{Suite: suite, Name: name, Width: width}] = paths
+		}
+	}
+}
+
+// importedWalks compare, tree by tree, a slice's reach of what the imports a group gained or lost bring.
+func importedWalks(l *loaded, ch changes, dependents bool) *movedWalks {
+	if len(ch.imported) == 0 {
+		return nil
+	}
+
+	return newMovedWalks(l, ch.imported, dependents)
 }
 
 func suiteWalks(l *loaded, sources []source, samples map[string]sampled, width string) (map[string]*walk, map[string]*movedWalks) {

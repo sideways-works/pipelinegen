@@ -36,6 +36,46 @@ func leftOut(l *loaded, ss []plugins.BindSlice, widths []string, o Options, sel 
 			namesLeftOut(l, ss, widths, o, n, add)
 		}
 	}
+
+	if on(o, narrowLinkedImports) {
+		importsLeftOut(l, ss, widths, o, add)
+	}
+}
+
+// importsLeftOut names the slices linked-imports left out: those that link a group whose imports
+// changed, which would have changed whole with it off.
+func importsLeftOut(l *loaded, ss []plugins.BindSlice, widths []string, o Options, add func(string, Key, []Path)) {
+	for _, width := range widths {
+		ch := changesOf(l, o, width)
+
+		froms := make([]int32, 0, len(ch.imports))
+		for from := range ch.imports {
+			froms = append(froms, from)
+		}
+
+		if len(froms) == 0 {
+			continue
+		}
+
+		slices.Sort(froms)
+
+		sources := make([]source, 0, len(froms))
+		for _, from := range froms {
+			sources = append(sources, source{at: from, node: from})
+		}
+
+		w := walkFrom(l, width == Dependents, sources)
+
+		for _, sl := range ss {
+			for _, r := range rootsOf(l, sl) {
+				if c, at := w.reached(r); c >= 0 && (width != Dependents || sl.Depth == 0 || int(c) <= sl.Depth) {
+					add(narrowLinkedImports, Key{Suite: sl.Suite, Name: sl.Name, Width: width}, []Path{w.path(r, at)})
+
+					break
+				}
+			}
+		}
+	}
 }
 
 func namesLeftOut(l *loaded, ss []plugins.BindSlice, widths []string, o Options, n string, add func(string, Key, []Path)) {

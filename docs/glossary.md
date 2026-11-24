@@ -187,6 +187,7 @@ level, so "would have run at level 5" means only with every narrowing off.
 | `sample` | pipelinegen | 3 | a change to code every slice ran the same way runs a sample of the suite |
 | `sample-bound` | pipelinegen | 3 | the same for what every slice reaches only through that code, or what runs at start-up |
 | `plugin-entry` | pipelinegen | 4 | a changed plugin entry (a pin, a checksum, its config block) runs a sample of each suite it reaches, not every slice it reaches |
+| `linked-imports` | pipelinegen | 4 | an import a package gains or loses selects only the slices that link what the imported packages run at start-up in one tree only |
 | `passed-since` | pipelinegen | 4 | on a `last_passed` run, a slice is compared from where it last passed in that run, when that is newer than the run's base |
 | `build-files-by-targets` | pipelinegen | 5 | a BUILD or `.bzl` file in a recorded slice's filegroups selects it only through the rules it declares and the members it lists |
 | `rows-to-readers` | pg-sbom | 2 | a slice that only wrote a table binds the table's definition alone, not the rows other code reads |

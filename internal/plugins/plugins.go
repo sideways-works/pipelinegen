@@ -213,6 +213,9 @@ const (
 	// run, when that is newer than the run's base, and a pull request's slice from the tree its last
 	// build tested, carrying over the slices that passed there.
 	NarrowPassedSince = "passed-since"
+	// NarrowLinkedImports takes an import a package gains or loses for a change to what the imported
+	// packages run where they are linked, tree by tree, instead of to the importing package.
+	NarrowLinkedImports = "linked-imports"
 
 	// NarrowBuildFiles leaves BUILD and .bzl files out of a recorded slice's data: a change to a
 	// rule reaches it through that rule.
@@ -231,6 +234,10 @@ var CoreNarrowings = []plugin.Narrowing{
 		"changed still selects on its own, and the nightly runs and records the rest; off, what the entry reaches runs, beside any sample_on sample"},
 	{Name: NarrowUnobservable, OffAt: 4, Note: "a file whose sbom covers it whole and whose units are as they were " +
 		"runs as it did; it rests on the sbom's parse being complete and on the tests that read the file's text being declared (text_inputs)"},
+	{Name: NarrowLinkedImports, OffAt: 4, Note: "an import a package gains or loses changes, for a slice that links the package, only what " +
+		"the imported packages run once linked, and what the slice now reaches through them: their inits, the variables whose " +
+		"initialisers may act, the modules they bring; a slice that already linked all of it in both trees runs as it did, " +
+		"and code that calls into them changed itself; it rests on the correlator's links naming what runs at start-up"},
 	{Name: NarrowPassedSince, OffAt: 4, Note: "a slice that passed at a later commit than the run's base, or in a pull request's last build, " +
 		"was tested on everything up to it; it rests on that one pass, so a flaky pass moves its base too; the nightly runs it"},
 	{Name: NarrowBuildFiles, OffAt: 5, Note: "a BUILD or .bzl file a recorded slice's filegroups hold reaches it through the rules it declares, " +

@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Added
+
+- The core narrowing `linked-imports` (off from 4): an import a package gains or loses no longer changes the package whole. A slice that links the package runs only when, tree by tree, it links in one tree only what the imported packages run at start-up: their inits, variables whose initialisers may act, the modules they bring. A slice the change selects through a changed declaration still runs. An import of a package that runs nothing at start-up ran every slice linking the importer; past 64 such things the package changes whole, as before. `pipelinegen why` names the slices it left out
+
 ### Changed
 
 - A continuous run's round whose plan fails records it, so the next commit's build plans at once instead of waiting for the round to count as dead (`limits.plan` and its margin, 2h10m by default). A build of the same commit that starts again is waited for as before

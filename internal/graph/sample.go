@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	narrowSample      = plugins.NarrowSample
-	narrowSampleBound = plugins.NarrowSampleBound
-	narrowPluginEntry = plugins.NarrowPluginEntry
+	narrowSample        = plugins.NarrowSample
+	narrowSampleBound   = plugins.NarrowSampleBound
+	narrowPluginEntry   = plugins.NarrowPluginEntry
+	narrowLinkedImports = plugins.NarrowLinkedImports
 )
 
 // SampleTarget and SampleBoundTarget are a suite's sample targets, as the
