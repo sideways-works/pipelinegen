@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -298,6 +299,52 @@ func TestAStorePluginKeepsAStoresPromises(t *testing.T) {
 			}
 
 			s := &gitstore.Store{Records: r}
+
+			t.Cleanup(func() {
+				if err := s.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+
+			return s
+		}
+	})
+}
+
+// TestAnExternalStorePluginKeepsAStoresPromises holds a store plugin built elsewhere to the same
+// promises: PIPELINEGEN_TEST_STORE_PLUGIN is its program and PIPELINEGEN_TEST_STORE_CONFIG its
+// config, whose prefix each backend extends with one of its own; its credentials come as the core
+// hands them, in PIPELINEGEN_STORE_*.
+func TestAnExternalStorePluginKeepsAStoresPromises(t *testing.T) {
+	path, raw := os.Getenv("PIPELINEGEN_TEST_STORE_PLUGIN"), os.Getenv("PIPELINEGEN_TEST_STORE_CONFIG")
+	if path == "" {
+		t.Skip("PIPELINEGEN_TEST_STORE_PLUGIN names no store plugin")
+	}
+
+	var base map[string]any
+	if err := json.Unmarshal([]byte(raw), &base); err != nil {
+		t.Fatalf("PIPELINEGEN_TEST_STORE_CONFIG: %v", err)
+	}
+
+	storetest.Conform(t, func(t *testing.T) func(*testing.T) *gitstore.Store {
+		t.Helper()
+
+		v, err := version()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		config := maps.Clone(base)
+
+		prefix, _ := base["prefix"].(string) //nolint:errcheck // none is the bucket's root
+		config["prefix"] = prefix + v[:12] + "/"
+
+		return func(t *testing.T) *gitstore.Store {
+			t.Helper()
+
+			s := &gitstore.Store{Records: &pluginstore.Records{
+				Plugin: plugin.Plugin{Name: "external", Path: path, Config: config, Cache: t.TempDir(), Timeout: time.Minute},
+			}}
 
 			t.Cleanup(func() {
 				if err := s.Close(); err != nil {

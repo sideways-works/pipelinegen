@@ -1,67 +1,89 @@
 # Writing a store
 
-> **A design, not yet a protocol.** Store plugins are being designed.
-> Today pipelinegen keeps its records itself, as hidden refs of the
-> repository or on a branch of their own (`store.backend`), and you can't
-> plug in a store of your own. This page describes the design so that
-> someone planning, say, a database store knows what it will be asked; the
-> calls and fields can still change.
-
 A store keeps what pipelinegen learns between runs: plans, the state of
-each run's slices, recordings and the lists made from them, the plugins'
-cached answers. Today's hidden refs become the first store plugin, git-ref-store. A team
-that wants its records in a database, or in a store built for many teams
-writing at once, writes a store plugin instead of changing pipelinegen.
+each run's slices, rounds, recordings and the lists made from them, the
+plugins' cached answers. By default pipelinegen keeps them itself, as
+hidden refs of the repository or on a branch of their own. A store plugin
+keeps them anywhere else: s3-store keeps them in an S3 bucket.
+
+```yaml
+plugins:
+  - name: s3
+    kind: store
+    repository: https://github.com/sideways-works/pipelinegen-plugins
+    path: store/s3
+    release: {version: <tag>, sums: <the checksum of its SHA256SUMS>}
+    config: {endpoint: "https://s3.eu-central-1.amazonaws.com", region: eu-central-1, bucket: ci-records, prefix: shop/}
+store: {backend: plugin, plugin: s3}
+```
 
 ## Records
 
 The core speaks of records, never of refs, branches or tables. A record
-has a name (a path such as `runs/<run>/<change>/<commit>/<suite>/<slice>`),
-files by path with their bytes, a version (an opaque token for exactly
-that content: a name never has the same version twice, and a version's
-files never change), and the time it was written. Lists, plans, slice
-states and recordings, a suite's end, a suite build's start, a continuous run's round started
-and planning (written create-only, read by listing the run's rounds),
-the plugins' answers are all records, under names of their own
-kind.
+has a name (a path such as `refs/pipelinegen/plans/<run>/<change>/<c12>`),
+files by path with their bytes, a version and the time it was written, by
+the writer's clock. A version is an opaque token for exactly that content
+of that record: a name never has the same version twice, a version's files
+never change, and a read finds a version without its record's name. Lists,
+plans, slice states and recordings, a suite's end, a round's records and
+the plugins' answers are all records, under names of their own kind.
 
 ## The calls
 
-A store plugin is one long-lived process per pipelinegen step, speaking
-JSON lines on stdin and stdout, so a database store connects once per
-step rather than once per call.
+Each call is one process, as for every plugin: the request on stdin, the
+answer on stdout. The plugin's config block arrives in every request, and
+its cache directory (`cache`) keeps what it learns between calls.
 
-| Call | What it does |
-|---|---|
-| `describe` | the kind, the environment variable of its `store` credential, its limits (largest record, largest batch), and its consistency in words an adopter can read |
-| `open` / `close` | a session, with a cache directory of its own |
-| `get {names}` | the records present among the names, with version, time and files, in one round trip |
-| `list {prefixes}` | the name, version and time of every record under the prefixes, and on request some of their files |
-| `read {name, version}` | one version's files |
-| `write {batch}` | each entry a name, what it expects (a version, absent, or any) and its files or a delete; all of the batch applies or none, and a mismatch answers which names were stale |
-| `settle {prefix}` | a hint that a suite has ended; a store may ignore it, and no reader's result may depend on it |
-| `answers.get`, `answers.use`, `answers.put`, `answers.replace`, `answers.drop` | the plugins' answers by key: written once, a hit counts as a use, the nightly's cold rebuild may replace them, and answers unused since a time may go |
+| Call | Request | Answer |
+|---|---|---|
+| `describe` | | `kind: store` |
+| `store.list` | `prefixes` | `records`: the name, version and time of every record under any prefix |
+| `store.get` | `names` | `record`: the first of the names that exists, or none |
+| `store.read` | `versions`, and `paths` when only some files are wanted | `files`: each version's files by path; a version the store lacks is left out |
+| `store.write` | `message`, `updates`, `time` | `versions`: each written record's new version; `stale`: the record whose expectation failed |
 
-Versions never change, so the core caches records by name and version and
-reads only the versions it lacks.
+An update is a record's `name`, its new `files` or `delete`, and what it
+expects: `expect`, the version the record must have, empty for a record
+that must not exist; or `any`, whatever it holds. The store applies the
+updates in order and stops at the first whose record holds something else:
+it answers that name in `stale`, and the updates before it stand. The core
+reads only versions its own calls listed or found, so a store may answer a
+read of any other version as missing.
 
 ## What a store promises
 
-The core relies on six promises, and the conformance kit tests each:
+`storetest.Conform` tests each of these on a store, and every store
+pipelinegen knows passes it: the refs, a branch, and s3-store against an
+S3 service (`go test ./internal/pluginstore -run External` with
+`PIPELINEGEN_TEST_STORE_PLUGIN` naming the plugin's program and
+`PIPELINEGEN_TEST_STORE_CONFIG` its config).
 
-1. A write that answered ok is durable, and every later read sees it,
-   from any process on any machine. An eventually consistent store is not
-   a store.
-2. A guarded write is a compare-and-swap on each record it names.
-3. A batch is atomic.
-4. Many writers of different records lose none of them; two writes of one
-   record keep the last.
-5. A listing is consistent for each record, not across records.
-6. Answers are written once per key, and a missing answer is always safe:
-   the core computes it again.
+1. A write that answered is durable, and every later listing and read
+   sees it, from any process on any machine. An eventually consistent
+   store is not a store.
+2. A guarded update is a compare-and-swap on its record: of two writers
+   expecting the same version, or creating the same record, one wins and
+   the other is stale.
+3. Many writers of different records lose none of them.
+4. A version's files never change, so a reader that found a version reads
+   it whole after newer ones are written.
+5. A listing names every record under its prefixes.
 
-git-ref-store keeps them with guarded atomic pushes. A database keeps
-them with transactions and row locks.
+A write of several records is not atomic across them. The core writes
+several at once only where a part that stands is safe: a batch's slices,
+each written by its own steps alone, and sweeps of guarded deletes.
+
+## Credentials
+
+A store plugin reads its credentials from `PIPELINEGEN_STORE_ACCESS_KEY_ID`,
+`PIPELINEGEN_STORE_SECRET_ACCESS_KEY` and, for a temporary key,
+`PIPELINEGEN_STORE_SESSION_TOKEN`. They reach the plugin's calls and
+nothing else pipelinegen runs, with the proxy and certificate settings
+(`HTTPS_PROXY`, `SSL_CERT_FILE` and their kin) it needs to reach its
+service. A runner gives a step that only reads records, such as a proposed
+change's first planning step, a key that only reads, and pipelinegen's own
+bookkeeping steps a key that writes; a step that runs the change's code
+gets none.
 
 ## Trusted and proposed records
 
@@ -77,13 +99,13 @@ store:
   proposed: {plugin: git-ref-store, config: {...}, tokens: {store: <ci var>}}
 ```
 
-With one store, both roles are that store and the core applies the rules
-itself; with two, a stolen credential of a proposed change can't touch
-what later plans bind with.
+That split is to come: today one store keeps both, and the core applies
+the rules itself. With two, a stolen credential of a proposed change
+can't touch what later plans bind with.
 
-## Purge
+## Purge (to come)
 
-A store can purge at every grain: everything, one proposed change's
+A store will purge at every grain: everything, one proposed change's
 runs, one run, everything older than a duration, the lists or the answer
 cache, with a dry run that prints what would go. Purging
 only ever makes later plans select more: a purged answer is computed

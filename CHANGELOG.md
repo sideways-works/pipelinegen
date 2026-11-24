@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Added
+
+- Store plugins: with `store.backend: plugin` and `store.plugin` naming a plugin entry of the new kind `store`, a plugin keeps the records (plans, run and slice states, rounds, recordings and lists, the plugins' answers) instead of the repository's refs, through the calls `store.list`, `store.get`, `store.read` and `store.write`, its credentials in `PIPELINEGEN_STORE_*`. Every store, the refs and a branch included, is held to one conformance suite of the promises the core relies on (docs/writing-plugins/store.md)
+
 ## [0.10.0] - 2026-11-24
 
 ### Added
