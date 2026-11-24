@@ -1,0 +1,9 @@
+# observed
+go:internal/config#func:Platform
+go:internal/config#func:ProgramOf
+go:internal/config#method:ForgePin.Program
+go:internal/forgeplugin#func:Fetch
+go:internal/forgeplugin#func:Program
+go:internal/forgeplugin#func:hint
+go:internal/testenv#var:cp
+go:plugin#func:Program
