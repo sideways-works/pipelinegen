@@ -1,0 +1,16 @@
+{
+  "label": "internal/buildfile/buildfile_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:39.709485332Z",
+  "seconds": 7.20852962,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:39.709510183Z"
+    }
+  ],
+  "cpu_seconds": 3.982562999999999,
+  "peak_mb": 182
+}
