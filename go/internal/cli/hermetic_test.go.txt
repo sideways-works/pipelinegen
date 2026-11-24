@@ -1,0 +1,13 @@
+go:internal/cli#func:reportNeeds
+go:internal/cli#func:sliceNeeds
+go:internal/config#func:Platform
+go:internal/config#method:Checksums.For
+go:internal/forgeplugintest#func:Env
+go:internal/forgeplugintest#func:Serve
+go:internal/testenv#func:Bazel
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:defaultRoots
+go:internal/testenv#func:outputBases
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
