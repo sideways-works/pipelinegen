@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-24
+
 ### Added
 
 - The core narrowing `linked-imports` (off from 4): an import a package gains or loses no longer changes the package whole. A slice that links the package runs only when, tree by tree, it links in one tree only what the imported packages run at start-up: their inits, variables whose initialisers may act, the modules they bring. A slice the change selects through a changed declaration still runs. An import of a package that runs nothing at start-up ran every slice linking the importer; past 64 such things the package changes whole, as before. `pipelinegen why` names the slices it left out
