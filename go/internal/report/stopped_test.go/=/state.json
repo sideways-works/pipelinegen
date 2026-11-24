@@ -1,0 +1,9 @@
+{
+  "label": "internal/report/stopped_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T13:41:46.511584095Z",
+  "seconds": 6.8100000000000005,
+  "recorded": true,
+  "cpu_seconds": 3.7342389999998886,
+  "peak_mb": 127
+}

@@ -1,0 +1,9 @@
+{
+  "label": "internal/report/rerun_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T13:59:40.745872622Z",
+  "seconds": 11.04,
+  "recorded": true,
+  "cpu_seconds": 12.360102000000097,
+  "peak_mb": 258
+}
