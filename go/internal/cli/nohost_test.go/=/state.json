@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/nohost_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T00:55:15.606998332Z",
+  "seconds": 19.5,
+  "recorded": true,
+  "cpu_seconds": 28.20440099999996,
+  "peak_mb": 436
+}
