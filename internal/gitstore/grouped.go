@@ -994,7 +994,7 @@ func (s *Store) Compact(ctx context.Context, runPrefix, suite string) (int, erro
 
 	defer progress.Stage(ctx, "the store: writing")()
 
-	if s.onBranch() {
+	if s.onBranch() || s.onRecords() {
 		return 0, nil
 	}
 

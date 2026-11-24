@@ -53,6 +53,9 @@ type Store struct {
 
 	Branch *branchstore.Store
 
+	// Records, when set, keeps the records instead of git: a store plugin's.
+	Records Records
+
 	// Proposed marks a store of a run that isn't trusted: its caller writes the run's own records and
 	// nothing later plans bind with (answers, lists, the sweep's deletes); the callers enforce it.
 	Proposed bool
@@ -68,9 +71,14 @@ type Store struct {
 	g       grouped
 	retried atomic.Int64
 	b       branched
+	r       recorded
 }
 
 func (s *Store) Retried() int {
+	if s.onRecords() {
+		return 0
+	}
+
 	if s.onBranch() {
 		return s.Branch.Retried()
 	}
@@ -114,6 +122,10 @@ type Update struct {
 }
 
 func (s *Store) Close() error {
+	if s.onRecords() {
+		return s.Records.Close()
+	}
+
 	if s.onBranch() {
 		return s.Branch.Close()
 	}
@@ -289,6 +301,10 @@ func (s *Store) pause(ctx context.Context, try int) {
 func (s *Store) List(ctx context.Context, prefixes ...string) (map[string]Ref, error) {
 	defer progress.Stage(ctx, "the store: reading")()
 
+	if s.onRecords() {
+		return s.Records.List(ctx, prefixes)
+	}
+
 	if s.onBranch() {
 		return s.branchList(ctx, prefixes)
 	}
@@ -377,6 +393,10 @@ func (s *Store) Files(ctx context.Context, commit string) (map[string][]byte, er
 func (s *Store) FilesBut(ctx context.Context, commit, dir string) (map[string][]byte, error) {
 	dir = strings.Trim(dir, "/")
 
+	if s.onRecords() {
+		return s.recordFiles(ctx, commit, func(p string) bool { return !under(p, dir) })
+	}
+
 	if s.onBranch() {
 		if dir == "" {
 			return s.branchRead(ctx, commit, nil)
@@ -427,6 +447,10 @@ func (s *Store) Under(ctx context.Context, commit, dir string) (map[string][]byt
 
 	var names []string
 
+	if s.onRecords() {
+		return s.recordFiles(ctx, commit, func(p string) bool { return dir == "" || under(p, dir) })
+	}
+
 	if s.onBranch() {
 		p, v, err := s.record(commit)
 		if err != nil {
@@ -465,6 +489,13 @@ func (s *Store) Under(ctx context.Context, commit, dir string) (map[string][]byt
 }
 
 func (s *Store) File(ctx context.Context, commit, path string) ([]byte, bool, error) {
+	if s.onRecords() {
+		got, err := s.recordFiles(ctx, commit, func(p string) bool { return p == path })
+		data, ok := got[path]
+
+		return data, ok, err
+	}
+
 	read := s.read
 	if s.onBranch() {
 		read = s.branchRead
@@ -483,6 +514,10 @@ func (s *Store) File(ctx context.Context, commit, path string) ([]byte, bool, er
 // FileEach reads the file at path in each of the commits, in one git
 // process; commits without it are left out.
 func (s *Store) FileEach(ctx context.Context, commits []string, path string) (map[string][]byte, error) {
+	if s.onRecords() {
+		return s.recordsFileEach(ctx, commits, path)
+	}
+
 	if s.onBranch() {
 		out := make(map[string][]byte, len(commits))
 
@@ -605,6 +640,10 @@ const firstBatch = 100
 func (s *Store) First(ctx context.Context, refs []string) (Ref, bool, error) {
 	defer progress.Stage(ctx, "the store: reading")()
 
+	if s.onRecords() {
+		return s.Records.First(ctx, refs)
+	}
+
 	if s.onBranch() {
 		return s.branchFirst(ctx, refs)
 	}
@@ -716,6 +755,10 @@ func (s *Store) Write(ctx context.Context, message string, updates ...Update) (m
 	}
 
 	defer progress.Stage(ctx, "the store: writing")()
+
+	if s.onRecords() {
+		return s.Records.Write(ctx, message, updates)
+	}
 
 	if s.onBranch() {
 		return s.branchWrite(ctx, message, updates)
