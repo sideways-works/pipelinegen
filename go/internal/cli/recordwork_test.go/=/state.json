@@ -1,0 +1,23 @@
+{
+  "label": "internal/cli/recordwork_test.go",
+  "state": "errored",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-24T20:02:00.449282657Z",
+  "failures": [
+    {
+      "test": "(no result)",
+      "tail": "go gave no result for it (driver failed: go run: exit status 1); its last lines:\ngo-driver: the step's time is nearly gone: the caches are not trimmed this time\ngo: context deadline exceeded"
+    }
+  ],
+  "seconds": 0.63235923,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.449294491Z"
+    }
+  ],
+  "cpu_seconds": 0.03413000000000466,
+  "peak_mb": 89
+}

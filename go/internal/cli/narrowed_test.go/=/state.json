@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/narrowed_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.449072984Z",
+  "seconds": 1936.256755795,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.449087811Z"
+    }
+  ],
+  "cpu_seconds": 764.270195,
+  "peak_mb": 5180
+}

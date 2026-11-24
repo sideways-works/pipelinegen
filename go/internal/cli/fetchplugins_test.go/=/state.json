@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/fetchplugins_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.912192868Z",
+  "seconds": 6.65,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.912228431Z"
+    }
+  ],
+  "cpu_seconds": 1.8654610000000957,
+  "peak_mb": 162
+}

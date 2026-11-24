@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/notpinned_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.912812885Z",
+  "seconds": 5.4,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.912850095Z"
+    }
+  ],
+  "cpu_seconds": 1.0398210000000745,
+  "peak_mb": 123
+}

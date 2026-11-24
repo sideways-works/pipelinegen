@@ -1,0 +1,16 @@
+{
+  "label": "internal/runs/pulls_test.go",
+  "state": "errored",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-24T20:03:13.197274295Z",
+  "failures": [
+    {
+      "test": "(no result)",
+      "tail": "go gave no result for it (driver failed: go run: exit status 1); its last lines:\ngo-driver: the step's time is nearly gone: the caches are not trimmed this time\ngo: context deadline exceeded"
+    }
+  ],
+  "seconds": 0.698419478,
+  "recorded": true,
+  "cpu_seconds": 0.10911999999962063,
+  "peak_mb": 358
+}

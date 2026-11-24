@@ -1,0 +1,23 @@
+{
+  "label": "internal/cli/batchend_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-24T20:02:00.448635087Z",
+  "failures": [
+    {
+      "test": "TestABatchEndsInAnotherStepWithOnlyItsOutputs",
+      "tail": "=== RUN   TestABatchEndsInAnotherStepWithOnlyItsOutputs/no_token\n=== PAUSE TestABatchEndsInAnotherStepWithOnlyItsOutputs/no_token\n=== RUN   TestABatchEndsInAnotherStepWithOnlyItsOutputs/token\n=== PAUSE TestABatchEndsInAnotherStepWithOnlyItsOutputs/token\n=== CONT  TestABatchEndsInAnotherStepWithOnlyItsOutputs/no_token\n=== CONT  TestABatchEndsInAnotherStepWithOnlyItsOutputs/token\n    batchend_test.go:56: batch-end: 1 pipelinegen report batch-end: took 18.7s: the store 11.3s, other 5.9s, forge github 1.5s; git reached a remote 7 times in 4.0s (4 fetch, 2 ls-remote, 1 push)\n        pipelinegen report: batch 1: e2e.a errored: did not pass\n          errored, 1 slice: e2e.a\n            (recording)\n              no recording: collect: plugin failed: go collect (slice-end of e2e.a): stopped after 10s, the limit for a collect call; a collect that needs longer can be given more with collect_seconds on the go entry of plugins in pipelinegen.yaml, up to 90s across a suite's correlators, or a release of go that collects faster\n          the full text of each: its state.json in the store, refs/pipelinegen/runs/pr/pr-7/0123456789ab/e2e/\u003cslice\u003e/=\n--- FAIL: TestABatchEndsInAnotherStepWithOnlyItsOutputs/token (95.45s)\n--- PASS: TestABatchEndsInAnotherStepWithOnlyItsOutputs/no_token (100.36s)\n--- FAIL: TestABatchEndsInAnotherStepWithOnlyItsOutputs (0.00s)"
+    }
+  ],
+  "seconds": 105.506396053,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.448670045Z"
+    }
+  ],
+  "cpu_seconds": 6.784334999999999,
+  "peak_mb": 163
+}

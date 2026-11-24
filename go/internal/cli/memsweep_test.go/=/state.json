@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/memsweep_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.449050885Z",
+  "seconds": 149.75,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.449065421Z"
+    }
+  ],
+  "cpu_seconds": 12.881925000000024,
+  "peak_mb": 85
+}

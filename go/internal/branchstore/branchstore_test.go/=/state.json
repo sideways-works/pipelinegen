@@ -1,0 +1,16 @@
+{
+  "label": "internal/branchstore/branchstore_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.911608263Z",
+  "seconds": 168.5,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.911650339Z"
+    }
+  ],
+  "cpu_seconds": 3.999241000000012,
+  "peak_mb": 237
+}

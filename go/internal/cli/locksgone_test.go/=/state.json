@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/locksgone_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:00.449029168Z",
+  "seconds": 5.89,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:00.449044519Z"
+    }
+  ],
+  "cpu_seconds": 1.4791420000000244,
+  "peak_mb": 82
+}

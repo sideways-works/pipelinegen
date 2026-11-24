@@ -1,0 +1,2 @@
+# observed
+# cannot tell: go-correlator (since 2026-11-24T20:02:00Z): the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch

@@ -1,0 +1,16 @@
+{
+  "label": "internal/bazel/groups_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:39.70943283Z",
+  "seconds": 80.7,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:39.70946194Z"
+    }
+  ],
+  "cpu_seconds": 33.636098000000004,
+  "peak_mb": 451
+}

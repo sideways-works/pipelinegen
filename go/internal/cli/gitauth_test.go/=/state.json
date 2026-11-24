@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/gitauth_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:39.709879091Z",
+  "seconds": 0.11,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:39.709902466Z"
+    }
+  ],
+  "cpu_seconds": 0.8140069999999469,
+  "peak_mb": 44
+}
