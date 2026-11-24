@@ -1361,6 +1361,12 @@ the repository's own parts merged in.
   it can't follow (an unknown kind of step, a run or suite the spec lacks,
   a rule an earlier one makes unreachable) when asked for the pipeline,
   and `pipelinegen check` asks it when it is at hand.
+- A runner for a CI system other than Concourse takes that system's
+  settings from its own config block and reports the capability
+  `own-settings`: a config whose runner has it needs no `concourse`
+  section, and the spec's `ci` is empty unless the config has one.
+  Without it, the `concourse` section and its url are required as
+  before.
 - The spec's `planner_packages`, `images` and each suite's `packages` say
   what the steps need installed and which cached images to build and run
   in, with the keys the core worked out. A runner that installs them, and

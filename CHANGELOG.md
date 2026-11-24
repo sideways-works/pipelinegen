@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Added
+
+- A runner capability `own-settings`: a runner for a CI system other than Concourse takes its settings from its own config block, and a config whose runner reports it needs no `concourse` section; the spec's `ci` is then empty
+
 ## [0.9.0] - 2026-11-24
 
 ### Added

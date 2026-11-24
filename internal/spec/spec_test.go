@@ -63,6 +63,28 @@ func TestASpecNeedsTheConcourseURL(t *testing.T) {
 	}
 }
 
+func TestARunnerWithItsOwnSettingsNeedsNoConcourse(t *testing.T) {
+	cfg, err := config.Load("../../testdata/kit/pipelinegen.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg.Concourse = config.Concourse{}
+
+	if _, err := ForRunner(cfg, nil, false); !errors.Is(err, ErrSpec) {
+		t.Fatalf("a Concourse runner without a concourse section: %v", err)
+	}
+
+	s, err := ForRunner(cfg, nil, true)
+	if err != nil {
+		t.Fatalf("a runner with its own settings: %v", err)
+	}
+
+	if s.CI != nil || len(s.Runs) == 0 {
+		t.Fatalf("ci %v, runs %d", s.CI, len(s.Runs))
+	}
+}
+
 func TestASpecNeedsWhereTheRecordsLive(t *testing.T) {
 	base, err := os.ReadFile("../../testdata/kit/pipelinegen.yaml")
 	if err != nil {

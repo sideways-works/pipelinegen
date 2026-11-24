@@ -162,6 +162,11 @@ const CapForgeChanges = "forge_changes"
 // own config; the spec carries no worker tags, so a runner without it is refused.
 const CapPlacement = "placement"
 
+// CapOwnSettings is a runner's capability to take everything it needs of its CI system from its own
+// plugin entry's config: a config whose runner has it needs no concourse section, and the spec's CI
+// is then empty.
+const CapOwnSettings = "own-settings"
+
 const EnvTrusted = "PIPELINEGEN_TRUSTED"
 
 // EnvPipelineStep, set to 1, marks a step that runs the tool: Bazel's output in the step's

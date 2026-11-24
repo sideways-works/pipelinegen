@@ -26,21 +26,36 @@ func From(cfg *config.Config) (plugin.Spec, error) { return FromInclude(cfg, nil
 // FromInclude makes the spec of a config; include is the root pipeline file's text, whose
 // registry-image resources are the cached images' bases.
 func FromInclude(cfg *config.Config, include []byte) (plugin.Spec, error) {
+	return ForRunner(cfg, include, false)
+}
+
+// ForRunner makes the spec of a config for its runner; ownSettings, the runner's CapOwnSettings,
+// spares a config without a concourse section the Concourse checks, and leaves the spec's CI empty.
+func ForRunner(cfg *config.Config, include []byte, ownSettings bool) (plugin.Spec, error) {
+	concourse := !ownSettings || cfg.HasConcourse()
+
 	// only a pipeline links to Concourse: no other command needs its address, so a missing one
 	// fails here and nowhere else
-	if len(cfg.Runs) > 0 && cfg.Concourse.URL == "" {
+	if concourse && len(cfg.Runs) > 0 && cfg.Concourse.URL == "" {
 		return plugin.Spec{}, fmt.Errorf("%w: concourse needs its url: concourse.url, or %s in the environment", ErrSpec, config.EnvConcourseURL)
 	}
 
 	// a config may declare runs before it names their remote and CI system; only a pipeline needs
 	// them
-	if err := cfg.ValidatePipeline(); err != nil {
+	if err := cfg.ValidatePipelineFor(ownSettings); err != nil {
 		return plugin.Spec{}, fmt.Errorf("%w: %w", ErrSpec, err)
 	}
 
-	ci, err := asMap(cfg.Concourse)
-	if err != nil {
-		return plugin.Spec{}, err
+	// a runner with settings of its own gets no concourse section
+	var ci map[string]any
+
+	if concourse {
+		m, err := asMap(cfg.Concourse)
+		if err != nil {
+			return plugin.Spec{}, err
+		}
+
+		ci = m
 	}
 
 	s := plugin.Spec{

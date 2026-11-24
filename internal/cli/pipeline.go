@@ -180,18 +180,6 @@ func pipelineText(ctx context.Context, cfg *config.Config, root string, conf con
 		include, _ = os.ReadFile(filepath.Join(absRoot, filepath.Clean(f))) //nolint:errcheck,gosec // the root pipeline file the config names; the runner says when it's missing
 	}
 
-	s, err := spec.FromInclude(cfg, include)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	s.Runs, s.OtherRuns = ownedRuns(cfg, conf.Name, s.Runs)
-	if len(cfg.Runners()) > 1 {
-		s.Runner = conf.Name
-	}
-
-	owned := ownedConfig(cfg, conf.Name)
-
 	work, err := os.MkdirTemp("", "pipelinegen-runner-")
 	if err != nil {
 		return nil, nil, fmt.Errorf("pipeline: %w", err)
@@ -204,6 +192,18 @@ func pipelineText(ctx context.Context, cfg *config.Config, root string, conf con
 	if err != nil {
 		return nil, nil, err
 	}
+
+	s, err := spec.ForRunner(cfg, include, slices.Contains(desc.Capabilities, plugin.CapOwnSettings))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	s.Runs, s.OtherRuns = ownedRuns(cfg, conf.Name, s.Runs)
+	if len(cfg.Runners()) > 1 {
+		s.Runner = conf.Name
+	}
+
+	owned := ownedConfig(cfg, conf.Name)
 
 	if err := runnerPlaces(conf.Name, desc); err != nil {
 		return nil, nil, err

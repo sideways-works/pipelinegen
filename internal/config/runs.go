@@ -499,6 +499,9 @@ func (c *Config) validateTokens(bad func(string, ...any)) {
 	}
 }
 
+// HasConcourse tells whether the config has a concourse section.
+func (c *Config) HasConcourse() bool { return c.hasConcourse() }
+
 func (c *Config) hasConcourse() bool {
 	cc := c.Concourse
 	bs := cc.Planner.Bootstrap
@@ -546,7 +549,11 @@ func (c *Config) validateNoHost(bad func(string, ...any)) {
 
 // ValidatePipeline checks what making the pipeline needs beyond a valid config, once it
 // declares runs.
-func (c *Config) ValidatePipeline() error {
+func (c *Config) ValidatePipeline() error { return c.ValidatePipelineFor(false) }
+
+// ValidatePipelineFor checks the config as ValidatePipeline does, for a runner that takes its CI
+// system's settings from its own config when ownSettings: it needs no concourse section then.
+func (c *Config) ValidatePipelineFor(ownSettings bool) error {
 	if len(c.Runs) == 0 {
 		return nil
 	}
@@ -565,7 +572,7 @@ func (c *Config) ValidatePipeline() error {
 		bad("concourse.mock is %q: %s (the default) or %s", m, MockBundled, MockMissing)
 	}
 
-	if !c.hasConcourse() {
+	if !ownSettings && !c.hasConcourse() {
 		c.validateConcourse(bad)
 	}
 

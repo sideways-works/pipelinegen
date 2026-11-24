@@ -95,6 +95,12 @@ either. The string itself holds no secret: it names vars, pins and refs,
 and stands in the pipeline as a literal. The kit checks that such a task
 gets the string and no token.
 
+A runner for another CI system reads that system's settings (where the
+repository is, the images and the secrets' names) from its config block
+too, and reports the capability `own-settings`: the core then asks for no
+`concourse` section, and the spec's `ci` is empty unless the config has
+one.
+
 Where each step runs is the runner's own business, in its own words: the
 spec carries no worker tags, and the core passes the runner's config block
 (its entry's `config`) in every call without reading it. Read the
