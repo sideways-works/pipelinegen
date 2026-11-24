@@ -1,0 +1,9 @@
+{
+  "label": "internal/report/failed_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T11:23:27.606669383Z",
+  "seconds": 0.27,
+  "recorded": true,
+  "cpu_seconds": 0.49304099999972095,
+  "peak_mb": 123
+}
