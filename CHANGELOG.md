@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-24
+
 ### Added
 
 - `pipelinegen why --cost`: what a plan's selection cost, per suite the changed units and the junctions on the way that selected the most slices, and how many each selected alone, so a change or a link that selects widely shows at a glance
