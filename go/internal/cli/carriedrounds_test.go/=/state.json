@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/carriedrounds_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:18.557462319Z",
+  "seconds": 1877.6200000000001,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:18.557501741Z"
+    }
+  ],
+  "cpu_seconds": 508.93860799999993,
+  "peak_mb": 1034
+}

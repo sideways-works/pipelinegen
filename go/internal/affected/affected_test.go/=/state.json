@@ -1,0 +1,16 @@
+{
+  "label": "internal/affected/affected_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:18.556257792Z",
+  "seconds": 322.32,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:18.556794498Z"
+    }
+  ],
+  "cpu_seconds": 160.665163,
+  "peak_mb": 604
+}

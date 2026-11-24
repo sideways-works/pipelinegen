@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/decidefirst_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:18.55759793Z",
+  "seconds": 44.650000000000006,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:18.557635263Z"
+    }
+  ],
+  "cpu_seconds": 5.95908200000008,
+  "peak_mb": 63
+}
