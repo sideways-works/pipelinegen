@@ -10,8 +10,11 @@ minor version may change the config or the protocol.
 ### Added
 
 - `pipelinegen why --cost`: what a plan's selection cost, per suite the changed units and the junctions on the way that selected the most slices, and how many each selected alone, so a change or a link that selects widely shows at a glance
-
 - A runner capability `own-settings`: a runner for a CI system other than Concourse takes its settings from its own config block, and a config whose runner reports it needs no `concourse` section; the spec's `ci` is then empty
+
+### Fixed
+
+- Reading the lists asked git once per live recording whether its run came before the lists, though a run's recordings share the answer, and read and parsed the recordings the lists then dropped whole. A plan reading tens of thousands of live recordings, as one does while a branch stays red and its lists aren't replaced, now asks once per run and reads only what it keeps
 
 ## [0.9.0] - 2026-11-24
 

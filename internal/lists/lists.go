@@ -346,10 +346,7 @@ func Live(ctx context.Context, store *gitstore.Store, keep func(LiveRun, string)
 		return nil, nil, nil, err
 	}
 
-	commits := make([]string, 0, len(refs))
-	for _, ref := range refs {
-		commits = append(commits, ref.Commit)
-	}
+	kepts, commits := toRead(refs, keep)
 
 	data, err := store.FileEach(ctx, commits, recordingFile)
 	if err != nil {
@@ -361,25 +358,17 @@ func Live(ctx context.Context, store *gitstore.Store, keep func(LiveRun, string)
 
 	var marks []LiveMark
 
-	for name, ref := range refs {
-		data, ok := data[ref.Commit]
+	for name, kept := range kepts {
+		data, ok := data[refs[name].Commit]
 		if !ok || len(data) == 0 {
 			continue
 		}
 
-		run, key, ok := recordingOf(name)
-		if !ok {
-			continue
-		}
+		run, key, _ := recordingOf(name)
 
 		rec, err := recording.Parse(data)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("%w: %s: %w", ErrLists, name, err)
-		}
-
-		kept := Kept{Own: true, Setup: true, Mark: true}
-		if keep != nil {
-			kept = keep(run, key)
 		}
 
 		if len(rec.CannotTell) > 0 && kept.Mark {
@@ -413,6 +402,34 @@ func Live(ctx context.Context, store *gitstore.Store, keep func(LiveRun, string)
 	})
 
 	return recording.Union(out), marks, live, nil
+}
+
+// toRead are the recordings keep keeps any of, and their versions: what it drops whole is never
+// read, since a plan reads tens of thousands of recordings, most of them older than the lists.
+func toRead(refs map[string]gitstore.Ref, keep func(LiveRun, string) Kept) (map[string]Kept, []string) {
+	kepts := map[string]Kept{}
+	commits := make([]string, 0, len(refs))
+
+	for name, ref := range refs {
+		run, key, ok := recordingOf(name)
+		if !ok {
+			continue
+		}
+
+		kept := Kept{Own: true, Setup: true, Mark: true}
+		if keep != nil {
+			kept = keep(run, key)
+		}
+
+		if !kept.Own && !kept.Setup && !kept.Mark {
+			continue
+		}
+
+		commits = append(commits, ref.Commit)
+		kepts[name] = kept
+	}
+
+	return kepts, commits
 }
 
 func addKept(l recording.Lists, key string, rec recording.Recording, kept Kept) bool {
@@ -635,8 +652,10 @@ func liveKept(ctx context.Context, repo, commit string, l recording.Lists, src S
 		return nil
 	}
 
-	told := toldSince(ctx, repo, l, src)
+	// one answer per pair of commits: a run's recordings share its commit, and a plan reads tens
+	// of thousands of them
 	precedes := ancestry(ctx, repo)
+	told := toldSince(l, src, precedes)
 
 	return func(r LiveRun, key string) Kept {
 		suite, _, _ := strings.Cut(key, "/")
@@ -682,6 +701,15 @@ func replacedSince(at string, r LiveRun, precedes func(a, b string) (ok, known b
 }
 
 func ancestry(ctx context.Context, repo string) func(a, b string) (ok, known bool) {
+	return remembered(func(a, b string) (bool, bool) {
+		is, err := gitx.Repo{Dir: repo}.IsAncestor(ctx, a, b)
+
+		return is, err == nil
+	})
+}
+
+// remembered asks precedes once per pair of commits.
+func remembered(precedes func(a, b string) (ok, known bool)) func(a, b string) (ok, known bool) {
 	type answer struct{ ok, known bool }
 
 	seen := map[[2]string]answer{}
@@ -689,8 +717,7 @@ func ancestry(ctx context.Context, repo string) func(a, b string) (ok, known boo
 	return func(a, b string) (bool, bool) {
 		got, ok := seen[[2]string{a, b}]
 		if !ok {
-			is, err := gitx.Repo{Dir: repo}.IsAncestor(ctx, a, b)
-			got = answer{ok: is, known: err == nil}
+			got.ok, got.known = precedes(a, b)
 			seen[[2]string{a, b}] = got
 		}
 
@@ -698,8 +725,8 @@ func ancestry(ctx context.Context, repo string) func(a, b string) (ok, known boo
 	}
 }
 
-func toldSince(ctx context.Context, repo string, l recording.Lists, src Source) func(LiveRun, string) bool {
-	if repo == "" || src.From == "" {
+func toldSince(l recording.Lists, src Source, precedes func(a, b string) (ok, known bool)) func(LiveRun, string) bool {
+	if src.From == "" {
 		return nil
 	}
 
@@ -709,8 +736,8 @@ func toldSince(ctx context.Context, repo string, l recording.Lists, src Source) 
 			return false
 		}
 
-		ok, err := gitx.Repo{Dir: repo}.IsAncestor(ctx, r.Commit, src.From)
+		ok, known := precedes(r.Commit, src.From)
 
-		return ok && err == nil
+		return ok && known
 	}
 }

@@ -347,3 +347,38 @@ func TestARerunOfARunThatAddsAddsWhatPassedSince(t *testing.T) {
 		t.Fatalf("attached a third time: %+v", got)
 	}
 }
+
+func TestARecordingTheListsDropWholeIsNeverRead(t *testing.T) {
+	s := remote(t)
+	id := report.ID{Run: "main", Change: "main", Commit: strings.Repeat("a", 40)}
+
+	liveRecording(t, s, id, passes, "passed", recording.Recording{Own: []string{unitOld}})
+
+	// a recording that can't be parsed: a line past the parser's 1 MB
+	if _, err := s.Write(t.Context(), "run", gitstore.Update{Ref: id.StateRef("api", "dropped_test.go"), Files: map[string][]byte{
+		"state.json": []byte(`{"state": "passed"}`), "recording.txt": []byte(strings.Repeat("x", 2<<20)),
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, _, err := lists.Live(t.Context(), s, nil); err == nil {
+		t.Fatal("the unparsable recording was read and passed")
+	}
+
+	drop := func(_ lists.LiveRun, key string) lists.Kept {
+		if key == "api/dropped_test.go" {
+			return lists.Kept{}
+		}
+
+		return lists.Kept{Own: true, Setup: true, Mark: true}
+	}
+
+	l, _, _, err := lists.Live(t.Context(), s, drop)
+	if err != nil {
+		t.Fatalf("a recording dropped whole was read: %v", err)
+	}
+
+	if !slices.Contains(l[passes], recording.ID(unitOld)) {
+		t.Fatalf("the kept recording: %v", l)
+	}
+}
