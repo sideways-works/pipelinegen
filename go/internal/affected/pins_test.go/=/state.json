@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/pins_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T12:22:59.309568656Z",
+  "seconds": 0.6599999999999999,
+  "recorded": true,
+  "cpu_seconds": 1.0405010000000061,
+  "peak_mb": 53
+}
