@@ -110,7 +110,7 @@ type whyFlags struct {
 	common
 
 	slice, suite, base, head, run, change, commit, cache, bazelDiff, plugins string
-	asJSON, noLists, local, ids, verbose                                     bool
+	asJSON, noLists, local, ids, verbose, cost                               bool
 	noFill                                                                   *bool
 }
 
@@ -130,6 +130,7 @@ func (w *whyFlags) register(fs *flag.FlagSet) {
 	fs.BoolVar(&w.ids, "ids", false, "show each unit's id beside its name")
 	fs.BoolVar(&w.verbose, "verbose", false, "also say how many files each plugin answered from the cache")
 	fs.BoolVar(&w.noLists, "no-lists", false, "when planning again, bind recorded slices to everything instead of reading the lists")
+	fs.BoolVar(&w.cost, "cost", false, "instead of one slice, say what selected the plan's slices: per suite the changed units and the junctions on the way that selected the most, and how many each alone selected")
 	fs.BoolVar(&w.local, "local", false, "read the lists, or a kept plan, from the local store `pipelinegen record` writes")
 	w.noFill = fillFlag(fs)
 }
@@ -138,8 +139,10 @@ func (w *whyFlags) mode() (bool, error) {
 	kept := w.run != "" || w.change != ""
 
 	switch {
-	case w.slice == "":
-		return false, fmt.Errorf("%w: --slice is needed", errUsage)
+	case w.cost && w.slice != "":
+		return false, fmt.Errorf("%w: --cost is about a whole plan: no --slice", errUsage)
+	case w.slice == "" && !w.cost:
+		return false, fmt.Errorf("%w: --slice is needed, or --cost", errUsage)
 	case kept && w.base != "":
 		return false, fmt.Errorf("%w: either --base and --head, or --run and --change", errUsage)
 	case kept && (w.run == "" || w.change == ""):
@@ -229,6 +232,15 @@ func runWhy(ctx context.Context, args []string, stdout io.Writer) (err error) {
 	}
 
 	showIDs, showCache = w.ids, w.verbose
+
+	return w.write(ctx, stdout, store, id, plan, title)
+}
+
+// write is why's answer: the plan's cost, or the slice's reasons.
+func (w *whyFlags) write(ctx context.Context, stdout io.Writer, store *gitstore.Store, id report.ID, plan *whyPlan, title string) error {
+	if w.cost {
+		return writeCosts(stdout, costs(plan, w.suite), title, w.asJSON, plan.Warnings)
+	}
 
 	answers := failureFiles(ctx, store, id, explain(plan, w.suite, w.slice))
 	if len(answers) == 0 {

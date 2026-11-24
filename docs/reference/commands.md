@@ -1390,6 +1390,25 @@ recordings read from the repository's refs: use it for commits no run
 planned yet, or to try a change on your machine. It needs Bazel and the
 plugins, and takes as long as a plan.
 
+With `--cost` instead of `--slice`, either form says what the plan's
+selection cost, per suite that selected something: the changed units that
+selected the most slices, then the units and junctions on the way there
+that the most slices reach a change only through. Each line counts the
+slices a reason names it in and, as `alone`, the slices every reason
+names it in: those a narrowing there would leave out. A changed unit with
+many slices alone, or a junction many slices pass alone, is where a plan
+selects widely, as when an import made a whole package change:
+
+```
+backend: 717 of 862 selected for main at 9c1e4a2b7f30
+  changed, by the slices it selects (alone: the slices nothing else selects):
+    group:internal/shop                 710 (380 alone)
+    go:internal/shop#func:Reserve       311 (0 alone)
+```
+
+It counts the reasons the plan kept for each slice (`--json` prints `[{"suite", "selected", "of", "changed", "through"}]`,
+each entry `{"what", "slices", "alone"}`).
+
 Read from a kept run, a slice that ran there and failed or errored with
 failure files says how many it kept and dropped, and the command that
 writes them out:
@@ -1481,6 +1500,7 @@ that observe it. A slice that is in no suite of the plan exits 1.
 | `--local` | `false` | Reads the lists, or the kept plan of a local recording (`--run local`), from the local store `pipelinegen record` writes. |
 | `--json` | `false` | Prints JSON: a list of `{"suite", "slice", "label", "ran", "reasons": [{"kind", "what", "through", "hops", "narrowing", "off_at", "text"}], "observed_by"}`. `hops` is the chain from the unit the slice's recording holds to what changed: `{"from", "to", "kind", "plugin", "back", "label", "file"}`, the first with kind `listed`, each other with the link's kind and the plugin that gave it. |
 | `--ids` | `false` | Shows each unit's id beside its name in the chains. |
+| `--cost` | `false` | Instead of one slice, what selected the plan's slices: per suite the changed units and the junctions on the way that selected the most, and how many each selected alone. |
 | `--verbose` | `false` | Also says how many files each plugin answered from the plan's cache. |
 
 Give either `--run` and `--change` or `--base`; both, or neither, exit 2.
