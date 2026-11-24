@@ -334,7 +334,7 @@ func runnerRunsContinuous(cfg *config.Config, runner string, desc plugin.Descrip
 
 func runnerCan(cfg *config.Config, name string, desc plugin.Description) error {
 	for _, can := range []func(*config.Config, string, plugin.Description) error{
-		runnerBuildsForgeRuns, runnerHandsSSHKeys, runnerRunsContinuous, runnerWritesSteps,
+		runnerBuildsForgeRuns, runnerHandsSSHKeys, runnerRunsContinuous, runnerWritesSteps, runnerHandsStoreKeys,
 	} {
 		if err := can(cfg, name, desc); err != nil {
 			return err
@@ -342,6 +342,17 @@ func runnerCan(cfg *config.Config, name string, desc plugin.Description) error {
 	}
 
 	return nil
+}
+
+// runnerHandsStoreKeys refuses a store plugin to a runner that can't give its steps the store's keys:
+// none of them could read or write a record.
+func runnerHandsStoreKeys(cfg *config.Config, runner string, desc plugin.Description) error {
+	if _, ok := cfg.StorePlugin(); !ok || slices.Contains(desc.Capabilities, plugin.CapStoreKeys) {
+		return nil
+	}
+
+	return fmt.Errorf("%w: a store plugin keeps the records (store.backend %s), and runner %s %s can't hand its steps the store's keys: update the runner",
+		errRunner, config.StorePlugin, runner, desc.Version)
 }
 
 // runnerWritesSteps refuses a driver-run suite the runner can't write tasks for: it would look for task

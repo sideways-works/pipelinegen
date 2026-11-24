@@ -77,8 +77,10 @@ each written by its own steps alone, and sweeps of guarded deletes.
 
 A store plugin reads its credentials from `PIPELINEGEN_STORE_ACCESS_KEY_ID`,
 `PIPELINEGEN_STORE_SECRET_ACCESS_KEY` and, for a temporary key,
-`PIPELINEGEN_STORE_SESSION_TOKEN`. They reach the plugin's calls and
-nothing else pipelinegen runs, with the proxy and certificate settings
+`PIPELINEGEN_STORE_SESSION_TOKEN`, and where its store is from
+`PIPELINEGEN_STORE_ENDPOINT`, `_REGION`, `_BUCKET` and `_PREFIX` when a CI
+system knows that only at run time, over its config's. They reach the
+plugin's calls and nothing else pipelinegen runs, with the proxy and certificate settings
 (`HTTPS_PROXY`, `SSL_CERT_FILE` and their kin) it needs to reach its
 service. A runner gives a step that only reads records, such as a proposed
 change's first planning step, a key that only reads, and pipelinegen's own

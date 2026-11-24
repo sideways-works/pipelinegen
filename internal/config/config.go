@@ -287,6 +287,14 @@ type Store struct {
 	Deadline Period `yaml:"deadline"`
 	// Plugin names the store plugin that keeps the records, with backend plugin.
 	Plugin string `yaml:"plugin"`
+	// Credentials name the CI vars of the store plugin's keys: one that writes, for pipelinegen's
+	// own steps, and one that only reads, for a step that plans a proposed change.
+	Credentials StoreCredentials `yaml:"credentials"`
+}
+
+type StoreCredentials struct {
+	Write *PlansCredentials `yaml:"write"`
+	Read  *PlansCredentials `yaml:"read"`
 }
 
 const (
@@ -298,6 +306,33 @@ const (
 )
 
 func (c *Config) OnBranch() bool { return c.Store.Backend == StoreBranch }
+
+// validateStoreCredentials wants the writing key's vars, and the reading key's for a run of proposed
+// changes: its first planning step runs the change's code and may hold no key that writes.
+func (c *Config) validateStoreCredentials(bad func(string, ...any)) {
+	cr := c.Store.Credentials
+
+	for _, k := range []struct {
+		name string
+		key  *PlansCredentials
+	}{{"write", cr.Write}, {"read", cr.Read}} {
+		if k.key == nil {
+			continue
+		}
+
+		if !varName.MatchString(k.key.AccessKeyID) || !varName.MatchString(k.key.SecretAccessKey) {
+			bad("store.credentials.%s needs access_key_id and secret_access_key, each the name of a CI var", k.name)
+		}
+	}
+
+	if cr.Write == nil {
+		bad("store.backend %s needs store.credentials.write, the CI vars of the key pipelinegen's own steps write records with", StorePlugin)
+	}
+
+	if cr.Read == nil && slices.ContainsFunc(c.RunNames(), func(n string) bool { return c.Runs[n].Trigger.PullRequests != nil }) {
+		bad("store.backend %s with a run of pull requests needs store.credentials.read: the run's first planning step runs the change's code, and may hold only a key that reads", StorePlugin)
+	}
+}
 
 // KindStore is a store plugin's kind.
 const KindStore = plugin.KindStore
@@ -1204,6 +1239,8 @@ func (c *Config) validateStore(bad func(string, ...any)) {
 		if _, ok := c.StorePlugin(); !ok {
 			bad("store.backend %s needs store.plugin, the name of a plugin entry of kind %s", StorePlugin, KindStore)
 		}
+
+		c.validateStoreCredentials(bad)
 	default:
 		bad("store.backend must be %s, %s or %s", StoreRefs, StoreBranch, StorePlugin)
 	}

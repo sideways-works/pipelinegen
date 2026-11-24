@@ -658,6 +658,13 @@ branch.
 | `store.backend` | string | `refs` | `refs`, `branch`, or `plugin`: a store plugin keeps the records instead of the repository ([writing a store](../writing-plugins/store.md)). |
 | `store.branch` | string | `pipelinegen` | With `backend: branch`, the branch the records live on; an older pipelinegen's leases live on the same name with `-locks` added. No run may be triggered by either, since every write would start it again. With `refs` it is not used. |
 | `store.plugin` | string | | With `backend: plugin`, the name of the plugin entry, of kind `store`, that keeps the records. Its credentials come in `PIPELINEGEN_STORE_ACCESS_KEY_ID`, `PIPELINEGEN_STORE_SECRET_ACCESS_KEY` and, for a temporary key, `PIPELINEGEN_STORE_SESSION_TOKEN`, which reach the plugin and nothing else the store's calls run. |
+| `store.credentials` | mapping | | With `backend: plugin`, the names of the CI vars holding the store's keys, never their values. |
+| `store.credentials.write` | mapping | (required with `backend: plugin`) | The key pipelinegen's own steps read and write records with. |
+| `store.credentials.write.access_key_id` | var name | (required) | The var of the key's id. |
+| `store.credentials.write.secret_access_key` | var name | (required) | The var of the key's secret. |
+| `store.credentials.read` | mapping | (required with a run of pull requests) | A key that only reads, for the first step of a proposed change's planning, which runs the change's code and may hold no key that writes. |
+| `store.credentials.read.access_key_id` | var name | (required) | The var of the key's id. |
+| `store.credentials.read.secret_access_key` | var name | (required) | The var of the key's secret. |
 | `store.deadline` | period | `10m` | How long a write keeps applying itself again after other writers moved the branch first, before the command fails. |
 
 ```yaml

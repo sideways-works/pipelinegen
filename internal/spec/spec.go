@@ -88,6 +88,15 @@ func ForRunner(cfg *config.Config, include []byte, ownSettings bool) (plugin.Spe
 		}
 	}
 
+	if p, ok := cfg.StorePlugin(); ok && cfg.Store.Credentials.Write != nil {
+		w := cfg.Store.Credentials.Write
+		s.Store = &plugin.SpecStore{Plugin: p.Name, Write: plugin.SpecKey{AccessKeyID: w.AccessKeyID, SecretAccessKey: w.SecretAccessKey}}
+
+		if r := cfg.Store.Credentials.Read; r != nil {
+			s.Store.Read = &plugin.SpecKey{AccessKeyID: r.AccessKeyID, SecretAccessKey: r.SecretAccessKey}
+		}
+	}
+
 	if p := cfg.Plans.S3; p != nil {
 		s.Plans = &plugin.SpecPlans{AccessKeyID: p.Credentials.AccessKeyID, SecretAccessKey: p.Credentials.SecretAccessKey}
 	}

@@ -32,10 +32,20 @@ const (
 	EnvStoreSessionToken    = "PIPELINEGEN_STORE_SESSION_TOKEN"     //nolint:gosec // a variable's name, not a credential
 )
 
-// storeEnv are the variables a store plugin keeps besides its toolchain's: its credentials and how
-// it reaches the network.
+// Where the store is, when a CI system knows it only at run time, as piperun's services do: a store
+// plugin takes these over its config's.
+const (
+	EnvStoreEndpoint = "PIPELINEGEN_STORE_ENDPOINT"
+	EnvStoreRegion   = "PIPELINEGEN_STORE_REGION"
+	EnvStoreBucket   = "PIPELINEGEN_STORE_BUCKET"
+	EnvStorePrefix   = "PIPELINEGEN_STORE_PREFIX"
+)
+
+// storeEnv are the variables a store plugin keeps besides its toolchain's: its credentials, where
+// its store is, and how it reaches the network.
 var storeEnv = []string{
 	EnvStoreAccessKeyID, EnvStoreSecretAccessKey, EnvStoreSessionToken,
+	EnvStoreEndpoint, EnvStoreRegion, EnvStoreBucket, EnvStorePrefix,
 	"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy", "SSL_CERT_FILE", "SSL_CERT_DIR",
 }
 

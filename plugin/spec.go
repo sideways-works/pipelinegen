@@ -55,7 +55,30 @@ type Spec struct {
 	// Plans name the vars of the key that copies each plan to a bucket, when the config has a
 	// plans section.
 	Plans *SpecPlans `json:"plans,omitempty"`
+
+	// Store, when a store plugin keeps the records, names the CI vars of its keys.
+	Store *SpecStore `json:"store,omitempty"`
 }
+
+// SpecStore names the CI vars of a store plugin's keys. A runner gives the writing key, as
+// EnvStoreAccessKeyID and EnvStoreSecretAccessKey, to every step of pipelinegen's own that reads or
+// writes records; to the first step of a proposed change's planning (`plan --out`), which runs the
+// change's code, the reading key alone; and to a step that runs the change's code otherwise (a
+// prepare, a batch, a whole-suite check) neither. A runner reports CapStoreKeys to say it does.
+type SpecStore struct {
+	Plugin string   `json:"plugin"`
+	Write  SpecKey  `json:"write"`
+	Read   *SpecKey `json:"read,omitempty"`
+}
+
+// SpecKey names the CI vars of a key.
+type SpecKey struct {
+	AccessKeyID     string `json:"access_key_id"`
+	SecretAccessKey string `json:"secret_access_key"`
+}
+
+// CapStoreKeys is a runner's capability to hand a store plugin's keys to the steps SpecStore says.
+const CapStoreKeys = "store-keys"
 
 // SpecPlans name the CI vars of the key that writes the plans' bucket. A runner gives them, as
 // EnvPlansAccessKeyID and EnvPlansSecretAccessKey, to the steps that write a run's plan and to no
