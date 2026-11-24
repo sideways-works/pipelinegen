@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/narrowednames_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:45.065368495Z",
+  "seconds": 2.254225155,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:45.065384683Z"
+    }
+  ],
+  "cpu_seconds": 0.5823050000001331,
+  "peak_mb": 51
+}

@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/batchnotoken_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:45.064368589Z",
+  "seconds": 1.35,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:45.064386591Z"
+    }
+  ],
+  "cpu_seconds": 0.8112050000000295,
+  "peak_mb": 164
+}

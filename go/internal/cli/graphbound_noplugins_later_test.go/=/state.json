@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/graphbound_noplugins_later_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:45.064729622Z",
+  "seconds": 1392.04,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:45.064749117Z"
+    }
+  ],
+  "cpu_seconds": 335.889535,
+  "peak_mb": 1698
+}
