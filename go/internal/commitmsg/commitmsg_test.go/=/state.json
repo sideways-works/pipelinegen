@@ -1,0 +1,9 @@
+{
+  "label": "internal/commitmsg/commitmsg_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T11:27:57.766009144Z",
+  "seconds": 0.24,
+  "recorded": true,
+  "cpu_seconds": 1.6359610000001794,
+  "peak_mb": 93
+}
