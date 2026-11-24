@@ -1,0 +1,9 @@
+{
+  "label": "internal/plugins/needs_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T11:30:22.013927654Z",
+  "seconds": 0.72,
+  "recorded": true,
+  "cpu_seconds": 0.6226349999997183,
+  "peak_mb": 212
+}
