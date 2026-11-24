@@ -1,0 +1,12 @@
+go:internal/gitx#method:Repo.Checkout
+go:internal/gitx#method:Repo.Git
+go:internal/gitx#method:Repo.run
+go:internal/progress#func:Git
+go:internal/progress#func:from
+go:internal/progress#func:gitVerb
+go:internal/secret#func:HardenGit
+go:internal/secret#func:InPipeline
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
