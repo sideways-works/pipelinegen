@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/pluginpins_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:34.31550593Z",
+  "seconds": 1.3699999999999999,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:34.315529518Z"
+    }
+  ],
+  "cpu_seconds": 0.8441359999999349,
+  "peak_mb": 64
+}
