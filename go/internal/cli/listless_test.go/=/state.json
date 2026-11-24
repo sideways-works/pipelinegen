@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/listless_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:45.065302984Z",
+  "seconds": 797.25,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:45.065321765Z"
+    }
+  ],
+  "cpu_seconds": 142.01061000000004,
+  "peak_mb": 1149
+}

@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/mixed_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:34.315229963Z",
+  "seconds": 2855.9100000000003,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:34.315257114Z"
+    }
+  ],
+  "cpu_seconds": 384.4005710000001,
+  "peak_mb": 2558
+}

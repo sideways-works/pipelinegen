@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/memgate_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:34.315199963Z",
+  "seconds": 23.1,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:34.31522209Z"
+    }
+  ],
+  "cpu_seconds": 2.977767999999969,
+  "peak_mb": 68
+}

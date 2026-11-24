@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/planrace_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:34.315421851Z",
+  "seconds": 17.049999999999997,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:34.315492721Z"
+    }
+  ],
+  "cpu_seconds": 2.3910280000000057,
+  "peak_mb": 65
+}

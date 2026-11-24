@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/forgechain_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:45.064694236Z",
+  "seconds": 9.33,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:45.064720229Z"
+    }
+  ],
+  "cpu_seconds": 1.2119700000000648,
+  "peak_mb": 67
+}

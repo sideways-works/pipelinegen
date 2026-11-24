@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/bazelisk_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:34.314774008Z",
+  "seconds": 0.07,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:34.314796431Z"
+    }
+  ],
+  "cpu_seconds": 0.5905239999999878,
+  "peak_mb": 64
+}

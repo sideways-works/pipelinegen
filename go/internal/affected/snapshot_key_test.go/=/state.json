@@ -1,0 +1,16 @@
+{
+  "label": "internal/affected/snapshot_key_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:45.064241888Z",
+  "seconds": 0.81,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:45.06425955Z"
+    }
+  ],
+  "cpu_seconds": 0.6529950000000042,
+  "peak_mb": 105
+}

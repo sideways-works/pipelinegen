@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/childenv_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:02:45.064439219Z",
+  "seconds": 1.6700000000000002,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:02:45.064459089Z"
+    }
+  ],
+  "cpu_seconds": 0.9579340000000229,
+  "peak_mb": 47
+}

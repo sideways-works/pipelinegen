@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/trusted_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:06.777173981Z",
+  "seconds": 1.3900000000000001,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:06.777211342Z"
+    }
+  ],
+  "cpu_seconds": 0.8195370000000821,
+  "peak_mb": 64
+}

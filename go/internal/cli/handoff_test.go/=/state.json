@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/handoff_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:06.775954695Z",
+  "seconds": 5.65,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:06.775992404Z"
+    }
+  ],
+  "cpu_seconds": 1.4669969999999921,
+  "peak_mb": 52
+}
