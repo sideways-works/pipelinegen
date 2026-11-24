@@ -1,0 +1,27 @@
+# observed
+go:internal/launch#func:CheckVersions
+go:internal/launch#func:ChildEnv
+go:internal/launch#func:Rlocation
+go:internal/launch#func:cmpOr
+go:internal/launch#func:fromBazelRun
+go:internal/launch#func:gateArgs
+go:internal/launch#func:getenv
+go:internal/launch#func:sayf
+go:internal/launch#func:sortedKeys
+go:internal/launch#method:Launch.Gate
+go:internal/launch#method:Launch.Lint
+go:internal/launch#method:Launch.Main
+go:internal/launch#method:Launch.build
+go:internal/launch#method:Launch.command
+go:internal/launch#method:Launch.env
+go:internal/launch#method:Launch.goCmd
+go:internal/launch#method:Launch.main
+go:internal/launch#method:Launch.output
+go:internal/launch#method:Launch.proof
+go:internal/launch#method:Launch.run
+go:internal/launch#method:Launch.setUp
+go:internal/launch#method:Launch.stage
+go:internal/launch#method:Launch.versions
+go:internal/launch#method:Tally.Write
+go:internal/testenv#func:WriteExecutable
+go:internal/testenv#var:cp

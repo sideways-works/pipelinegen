@@ -1,0 +1,13 @@
+# observed
+go:internal/progress#func:Count
+go:internal/progress#func:Git
+go:internal/progress#func:Stage
+go:internal/progress#func:Start
+go:internal/progress#func:Summary
+go:internal/progress#func:from
+go:internal/progress#func:gitVerb
+go:internal/progress#func:seconds
+go:internal/progress#func:stageKey
+go:internal/progress#method:Meter.charge
+go:internal/progress#method:Meter.line
+go:internal/progress#method:Meter.say
