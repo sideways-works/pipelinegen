@@ -10,7 +10,6 @@ minor version may change the config or the protocol.
 ### Added
 
 - `runs.<name>.passed_within` (off by default): a full run (`select: all`) leaves out a slice that passed in it within the period and that nothing changed since reaches, under the `passed-since` narrowing; suites with whole-suite checks run whole, and a slice that ran and passed still replaces its list. A full run following every commit no longer runs every slice again after a round that failed in one place
-
 - Store plugins: with `store.backend: plugin` and `store.plugin` naming a plugin entry of the new kind `store`, a plugin keeps the records (plans, run and slice states, rounds, recordings and lists, the plugins' answers) instead of the repository's refs, through the calls `store.list`, `store.get`, `store.read` and `store.write`, its credentials in `PIPELINEGEN_STORE_*`. `store.credentials` names the CI vars of a key that writes and one that only reads, which the spec hands a runner as `store`; a runner reports `store-keys` to say it gives each step the key it may hold, and a runner without it is refused. Every store, the refs and a branch included, is held to one conformance suite of the promises the core relies on (docs/writing-plugins/store.md)
 
 ## [0.10.0] - 2026-11-24
