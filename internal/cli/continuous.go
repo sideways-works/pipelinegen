@@ -426,6 +426,11 @@ func (d *decider) unplanned(ctx context.Context, newestPlan time.Time) (busy, er
 			continue
 		}
 
+		// a round whose plan failed is over, unless a build of it recorded something since
+		if failed, ok := r.Records[report.RoundFailed]; ok && !r.Last().After(failed.Time) {
+			continue
+		}
+
 		quiet := time.Since(r.Last())
 		if quiet > d.planning {
 			if r.Last().After(newestPlan) {

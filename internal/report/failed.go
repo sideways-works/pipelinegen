@@ -3,6 +3,7 @@ package report
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -53,7 +54,29 @@ func (r *Reporter) PlanFailed(ctx context.Context, cause error) error {
 		r.warnf("more pull requests for the comment: %v", err)
 	}
 
-	return r.show(ctx, scope{all: true, run: true}, statuses, body, alsoTo)
+	// the round is over first, so the next commit's build plans whatever the statuses do
+	return errors.Join(r.roundFailed(ctx), r.show(ctx, scope{all: true, run: true}, statuses, body, alsoTo))
+}
+
+// roundFailed records that a continuous run's round failed to plan, so the next commit's build no
+// longer waits for it.
+func (r *Reporter) roundFailed(ctx context.Context) error {
+	if !r.runConfig().Trigger.Continuous || r.Store == nil {
+		return nil
+	}
+
+	up, err := RoundUpdate(r.ID, RoundFailed, r.URL, "")
+	if err != nil {
+		return err
+	}
+
+	up.Any = true
+
+	if _, err := r.Store.Write(ctx, "round failed "+r.ID.Run+" "+short(r.ID.Commit), up); err != nil {
+		return fmt.Errorf("the round's failure: %w", err)
+	}
+
+	return nil
 }
 
 func readAlsoTo(ctx context.Context, store *gitstore.Store, id ID) ([]int, error) {

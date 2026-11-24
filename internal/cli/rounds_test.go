@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -549,6 +550,54 @@ func TestABuildThatDiedBeforeItsPlan(t *testing.T) {
 
 	if got := <-w.decide(t, third); got.err != nil || !got.run || strings.Contains(got.out, "waiting") {
 		t.Fatalf("the build after a round ended by hand: %+v", got)
+	}
+}
+
+var errNoSuchPackage = errors.New("no such package")
+
+func TestAFailedPlanEndsItsRound(t *testing.T) {
+	w := newContinuousWorld(t)
+
+	planFailed := func(commit string) {
+		t.Helper()
+
+		r := &report.Reporter{Config: w.cfg, ID: reportID(w.change(commit)), Store: w.store, GitHub: host(w.cfg), Warn: io.Discard}
+		if err := r.PlanFailed(t.Context(), errNoSuchPackage); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	failed := w.first
+	if _, err := report.RecordRound(t.Context(), w.store, reportID(w.change(failed)), report.RoundStarted, "", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	planFailed(failed)
+
+	next := w.push()
+
+	if got := <-w.decide(t, next); got.err != nil || !got.run || strings.Contains(got.out, "waiting") {
+		t.Fatalf("the build after a round whose plan failed: %+v", got)
+	}
+
+	planFailed(next)
+
+	// a build of the failed commit that starts again is a round in progress until its plan fails too;
+	// the store's records tell time to the second
+	time.Sleep(1100 * time.Millisecond)
+
+	if _, err := report.RecordRound(t.Context(), w.store, reportID(w.change(failed)), report.RoundPlanning, "", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	third := w.push()
+	done, said := w.decideSaying(t, third)
+
+	within(t, said, "the wait for the failed commit's later build")
+	planFailed(failed)
+
+	if got := <-done; got.err != nil || !got.run || !strings.Contains(got.out, "waiting for the round of "+failed[:12]) {
+		t.Fatalf("the build after the failed commit's later build: %+v", got)
 	}
 }
 

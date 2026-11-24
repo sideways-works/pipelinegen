@@ -18,6 +18,9 @@ const (
 	RoundStarted = "started"
 	// RoundPlanning is the record that it stopped waiting and plans.
 	RoundPlanning = "planning"
+	// RoundFailed is the record that its plan failed: the round is over unless a build of it records
+	// something later.
+	RoundFailed = "failed"
 
 	roundFile = "round.json"
 )
@@ -31,8 +34,8 @@ func RoundsPrefix(run, change string) string {
 	return AllRounds + run + "/" + RefPart(change) + "/"
 }
 
-// RoundRef is one record of the round of id: RoundStarted or
-// RoundPlanning.
+// RoundRef is one record of the round of id: RoundStarted, RoundPlanning
+// or RoundFailed.
 func (id ID) RoundRef(kind string) string {
 	return RoundsPrefix(id.Run, id.Change) + short(id.Commit) + "/" + kind
 }

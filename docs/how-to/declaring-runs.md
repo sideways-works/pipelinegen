@@ -212,6 +212,9 @@ ended.
   a plan that takes longer fails and says to raise `limits.plan`. The
   records are written once and never renewed; they are swept after 14
   days. `pipelinegen end` ends such a round too.
+- A round whose plan fails records that, beside its statuses: the next
+  build no longer waits for it and plans at once. A build of the same
+  commit that starts again records anew, and the next build waits for it.
 
 ## What it compares with
 

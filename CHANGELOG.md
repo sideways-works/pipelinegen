@@ -9,6 +9,7 @@ minor version may change the config or the protocol.
 
 ### Changed
 
+- A continuous run's round whose plan fails records it, so the next commit's build plans at once instead of waiting for the round to count as dead (`limits.plan` and its margin, 2h10m by default). A build of the same commit that starts again is waited for as before
 - `passed-since` leaves out a slice that passed since the base in a suite whose setup's change runs it whole, unless the suite has whole-suite checks: what changed from its pass to the head would have reached it, setup and all. Such a suite ran every slice on each commit of a red branch. The slices that still run give the setup's target as their reason
 
 ## [0.8.1] - 2026-11-23
