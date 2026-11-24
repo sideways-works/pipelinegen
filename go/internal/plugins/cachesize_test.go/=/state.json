@@ -1,0 +1,9 @@
+{
+  "label": "internal/plugins/cachesize_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T14:21:06.557556215Z",
+  "seconds": 1.37,
+  "recorded": true,
+  "cpu_seconds": 1.4747900000002119,
+  "peak_mb": 156
+}

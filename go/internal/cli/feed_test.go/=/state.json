@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/feed_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-24T14:21:06.551609086Z",
+  "failures": [
+    {
+      "test": "TestEachSliceHasTheLimitNotTheSession",
+      "tail": "=== RUN   TestEachSliceHasTheLimitNotTheSession\n    feed_test.go:333: result lines: [\"start quick1\" \"end quick1 passed\" \"start slow\" \"end slow errored\" \"start quick2\" \"end quick2 errored\" \"start quick3\" \"end quick3 passed\"]\n--- FAIL: TestEachSliceHasTheLimitNotTheSession (10.88s)"
+    }
+  ],
+  "seconds": 26.12,
+  "recorded": true,
+  "cpu_seconds": 7.970684000000006,
+  "peak_mb": 280
+}
