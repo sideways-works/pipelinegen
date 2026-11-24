@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/configured_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T11:37:02.54063863Z",
+  "seconds": 0.03,
+  "recorded": true,
+  "cpu_seconds": 32.19173099999999,
+  "peak_mb": 297
+}
