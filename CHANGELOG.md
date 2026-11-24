@@ -7,24 +7,18 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-24
+
 ### Added
 
 - `runs.<name>.passed_within` (off by default): a full run (`select: all`) leaves out a slice that passed in it within the period and that nothing changed since reaches, under the `passed-since` narrowing; suites with whole-suite checks run whole, and a slice that ran and passed still replaces its list. A full run following every commit no longer runs every slice again after a round that failed in one place
 - Store plugins: with `store.backend: plugin` and `store.plugin` naming a plugin entry of the new kind `store`, a plugin keeps the records (plans, run and slice states, rounds, recordings and lists, the plugins' answers) instead of the repository's refs, through the calls `store.list`, `store.get`, `store.read` and `store.write`, its credentials in `PIPELINEGEN_STORE_*`. `store.credentials` names the CI vars of a key that writes and one that only reads, which the spec hands a runner as `store`; a runner reports `store-keys` to say it gives each step the key it may hold, and a runner without it is refused. Every store, the refs and a branch included, is held to one conformance suite of the promises the core relies on (docs/writing-plugins/store.md)
-
-### Fixed
-
-- `passed-since` compared a slice only from the newest two commits at which any slice passed, so on a red branch whose checks passed on every commit, a suite whose slices last passed further back ran whole: each suite now counts its own newest two (four commits at most in all)
-
-## [0.10.0] - 2026-11-24
-
-### Added
-
 - `pipelinegen why --cost`: what a plan's selection cost, per suite the changed units and the junctions on the way that selected the most slices, and how many each selected alone, so a change or a link that selects widely shows at a glance
 - A runner capability `own-settings`: a runner for a CI system other than Concourse takes its settings from its own config block, and a config whose runner reports it needs no `concourse` section; the spec's `ci` is then empty
 
 ### Fixed
 
+- `passed-since` compared a slice only from the newest two commits at which any slice passed, so on a red branch whose checks passed on every commit, a suite whose slices last passed further back ran whole: each suite now counts its own newest two (four commits at most in all)
 - Reading the lists asked git once per live recording whether its run came before the lists, though a run's recordings share the answer, and read and parsed the recordings the lists then dropped whole. A plan reading tens of thousands of live recordings, as one does while a branch stays red and its lists aren't replaced, now asks once per run and reads only what it keeps
 
 ## [0.9.0] - 2026-11-24
