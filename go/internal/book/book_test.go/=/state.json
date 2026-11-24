@@ -1,0 +1,16 @@
+{
+  "label": "internal/book/book_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:03:13.195251437Z",
+  "seconds": 0.22000000000000003,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:03:13.19526715Z"
+    }
+  ],
+  "cpu_seconds": 3.579033999999993,
+  "peak_mb": 163
+}
