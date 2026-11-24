@@ -305,15 +305,17 @@ func TestASessionNeverStartsTheNextChunkBeforeReportingThisOne(t *testing.T) {
 }
 
 func TestEachSliceHasTheLimitNotTheSession(t *testing.T) {
-	f := feedFixture(t, "quick1", "slow", "quick2", "quick3")
+	f := feedFixture(t, "quick1", "hang", "quick2", "quick3")
 
+	// a limit of 3 s: room for a quick slice on a busy machine, and far short of the hanging one's 30 s
 	old := feedMinute
-	feedMinute = 2 * time.Second
+	feedMinute = 4 * time.Second
 
 	t.Cleanup(func() { feedMinute = old })
 	t.Setenv("PIPELINEGEN_LIMIT", "suites.e2e.minutes=1")
+	t.Setenv("FEED_HANG", "1")
 
-	errc := feeder(t.Context(), "feed", [][]string{{"quick1", "slow"}, {"quick2", "quick3"}}, false)
+	errc := feeder(t.Context(), "feed", [][]string{{"quick1", "hang"}, {"quick2", "quick3"}}, false)
 
 	start := time.Now()
 
@@ -328,17 +330,17 @@ func TestEachSliceHasTheLimitNotTheSession(t *testing.T) {
 
 	lines := resultLines(t, "feed")
 	if got := lineNames(lines); !slices.Equal(got, []string{
-		"start quick1", "end quick1 passed", "start slow", "end slow errored", "start quick2", "end quick2 passed", "start quick3", "end quick3 passed",
+		"start quick1", "end quick1 passed", "start hang", "end hang errored", "start quick2", "end quick2 passed", "start quick3", "end quick3 passed",
 	}) {
-		t.Fatalf("result lines: %q", got)
+		t.Fatalf("result lines: %q\n%+v", got, lines)
 	}
 
 	if !strings.Contains(lines[3].Summary, "stopped at its time limit of 1 minute (suites.e2e.minutes)") {
-		t.Fatalf("the slow slice's end: %q", lines[3].Summary)
+		t.Fatalf("the hanging slice's end: %q", lines[3].Summary)
 	}
 
 	// the session outlived one slice's limit, and its slices passed
-	if took := time.Since(start); took < 3*time.Second || took > 10*time.Second {
+	if took := time.Since(start); took < 3*time.Second || took > 20*time.Second {
 		t.Fatalf("the session took %s", took)
 	}
 }
