@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/explain_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T10:52:47.08832625Z",
+  "seconds": 0.763739221,
+  "recorded": true,
+  "cpu_seconds": 0.42771500000000096,
+  "peak_mb": 212
+}

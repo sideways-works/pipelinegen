@@ -1,0 +1,9 @@
+{
+  "label": "internal/report/net_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T10:52:47.096628796Z",
+  "seconds": 28.73,
+  "recorded": true,
+  "cpu_seconds": 13.970579000000043,
+  "peak_mb": 315
+}
