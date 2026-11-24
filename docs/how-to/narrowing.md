@@ -123,15 +123,20 @@ works that out before the sample is drawn:
   were skipped, so a pass in which some tests skipped still counts. Only the same run of the same branch
   counts, never a nightly or a pull request (a pull request carries over
   from its own last build, [below](#a-pull-requests-later-builds)).
-- For the newest two commits at which some slice last passed, it plans
-  what changed from there to the head, as it plans any change. A slice
+- For each suite, the newest two commits at which a slice of it last
+  passed (four at most over every suite, newest first), it plans what
+  changed from there to the head, as it plans any change. A suite whose
+  slices last passed further back than another suite's counts all the
+  same: on a red branch, checks may pass on every commit while a browser
+  suite's slices last passed days before. A slice
   that passed at one of them and that this change doesn't reach is left
   out, with the reason "compared from `<commit>`, where it last passed in
   run `<run>`: nothing from there to the head reaches it".
-- A slice with no such pass, or whose pass is older than those two
-  commits, keeps the run's base. So do a suite whose checks of the whole
-  suite would run, the sample's own targets, a plan of everything, and a
-  commit after which the config changed.
+- A slice with no such pass, or whose pass is older than those commits,
+  keeps the run's base. So do a suite whose checks of the whole suite
+  would run, the sample's own targets, a plan of everything, and a commit
+  after which the config changed, a new pipelinegen pinned included,
+  since it runs the suites' steps.
 - A suite whose setup's change runs it whole, with no checks of the whole
   suite, leaves out the slices that passed since too: a change to the
   setup from their pass to the head would have reached them. The slices

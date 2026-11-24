@@ -222,17 +222,41 @@ func passedSinceOffAt(cfg *config.Config) int {
 	return plugins.CoreOffAt(plugins.NarrowPassedSince)
 }
 
-// newestPassed are the newest commits, at most passedSinceBases, at which some slice last passed.
+// passedSinceMost bounds the commits a plan compares from over every suite: each is one more plan.
+const passedSinceMost = 2 * passedSinceBases
+
+// newestPassed are the commits a plan compares slices from: per suite, the newest passedSinceBases at
+// which some slice of it last passed, so a suite whose slices passed further back than another's
+// still counts; at most passedSinceMost in all, newest first.
 func newestPassed(commits []string, passes map[string]report.Pass) []string {
-	at := map[string]bool{}
-	for _, p := range passes {
-		at[p.Commit] = true
+	bySuite := map[string]map[string]bool{}
+
+	for key, p := range passes {
+		suite, _, _ := strings.Cut(key, "/")
+		if bySuite[suite] == nil {
+			bySuite[suite] = map[string]bool{}
+		}
+
+		bySuite[suite][p.Commit] = true
+	}
+
+	want := map[string]bool{}
+
+	for _, at := range bySuite {
+		n := 0
+
+		for _, c := range commits {
+			if at[c] && n < passedSinceBases {
+				want[c] = true
+				n++
+			}
+		}
 	}
 
 	var out []string
 
 	for _, c := range commits {
-		if at[c] && len(out) < passedSinceBases {
+		if want[c] && len(out) < passedSinceMost {
 			out = append(out, c)
 		}
 	}
