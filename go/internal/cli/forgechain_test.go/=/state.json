@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/forgechain_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T12:46:28.163385794Z",
+  "seconds": 0.35,
+  "recorded": true,
+  "cpu_seconds": 0.7726180000000795,
+  "peak_mb": 105
+}

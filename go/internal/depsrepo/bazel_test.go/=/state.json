@@ -1,0 +1,9 @@
+{
+  "label": "internal/depsrepo/bazel_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T12:46:28.16732273Z",
+  "seconds": 157.95,
+  "recorded": true,
+  "cpu_seconds": 237.38140700000008,
+  "peak_mb": 1048
+}
