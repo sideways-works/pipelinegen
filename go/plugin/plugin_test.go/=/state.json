@@ -1,0 +1,9 @@
+{
+  "label": "plugin/plugin_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T02:56:06.29196613Z",
+  "seconds": 0.31,
+  "recorded": true,
+  "cpu_seconds": 3.6920070000001033,
+  "peak_mb": 327
+}
