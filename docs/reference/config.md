@@ -655,8 +655,9 @@ branch.
 | Key | Type | Default | What it does |
 |---|---|---|---|
 | `store` | mapping | | The section. |
-| `store.backend` | string | `refs` | `refs` or `branch`. |
+| `store.backend` | string | `refs` | `refs`, `branch`, or `plugin`: a store plugin keeps the records instead of the repository ([writing a store](../writing-plugins/store.md)). |
 | `store.branch` | string | `pipelinegen` | With `backend: branch`, the branch the records live on; an older pipelinegen's leases live on the same name with `-locks` added. No run may be triggered by either, since every write would start it again. With `refs` it is not used. |
+| `store.plugin` | string | | With `backend: plugin`, the name of the plugin entry, of kind `store`, that keeps the records. Its credentials come in `PIPELINEGEN_STORE_ACCESS_KEY_ID`, `PIPELINEGEN_STORE_SECRET_ACCESS_KEY` and, for a temporary key, `PIPELINEGEN_STORE_SESSION_TOKEN`, which reach the plugin and nothing else the store's calls run. |
 | `store.deadline` | period | `10m` | How long a write keeps applying itself again after other writers moved the branch first, before the command fails. |
 
 ```yaml

@@ -285,16 +285,37 @@ type Store struct {
 	// "-locks" added, which the plan step sweeps.
 	Branch   string `yaml:"branch"`
 	Deadline Period `yaml:"deadline"`
+	// Plugin names the store plugin that keeps the records, with backend plugin.
+	Plugin string `yaml:"plugin"`
 }
 
 const (
 	StoreRefs          = "refs"
 	StoreBranch        = "branch"
+	StorePlugin        = "plugin"
 	DefaultStoreBranch = "pipelinegen"
 	defaultDeadline    = 10 * time.Minute
 )
 
 func (c *Config) OnBranch() bool { return c.Store.Backend == StoreBranch }
+
+// KindStore is a store plugin's kind.
+const KindStore = plugin.KindStore
+
+// StorePlugin is the plugin entry of the store plugin that keeps the records, with backend plugin.
+func (c *Config) StorePlugin() (Plugin, bool) {
+	if c.Store.Backend != StorePlugin || c.Store.Plugin == "" {
+		return Plugin{}, false
+	}
+
+	for _, p := range c.Plugins {
+		if p.Kind == KindStore && p.Name == c.Store.Plugin {
+			return p, true
+		}
+	}
+
+	return Plugin{}, false
+}
 
 func (c *Config) StoreBranchName() string {
 	if c.Store.Branch == "" {
@@ -1176,8 +1197,15 @@ func (c *Config) validateStore(bad func(string, ...any)) {
 
 	switch c.Store.Backend {
 	case "", StoreRefs, StoreBranch:
+		if c.Store.Plugin != "" {
+			bad("store.plugin names the store plugin of store.backend %s", StorePlugin)
+		}
+	case StorePlugin:
+		if _, ok := c.StorePlugin(); !ok {
+			bad("store.backend %s needs store.plugin, the name of a plugin entry of kind %s", StorePlugin, KindStore)
+		}
 	default:
-		bad("store.backend must be %s or %s", StoreRefs, StoreBranch)
+		bad("store.backend must be %s, %s or %s", StoreRefs, StoreBranch, StorePlugin)
 	}
 
 	if b := c.Store.Branch; b != "" && !branchName.MatchString(b) {

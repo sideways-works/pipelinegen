@@ -24,6 +24,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/osproc"
+	"github.com/sideways-works/pipelinegen/internal/pluginstore"
 	"github.com/sideways-works/pipelinegen/internal/report"
 	"github.com/sideways-works/pipelinegen/internal/runs"
 	"github.com/sideways-works/pipelinegen/internal/secret"
@@ -218,8 +219,31 @@ func openStoreAt(cfg *config.Config, remote string) *gitstore.Store {
 		s.Branch = branchStore(cfg, remote, cfg.StoreBranchName())
 	}
 
+	if p, ok := cfg.StorePlugin(); ok {
+		s.Records = storeRecords(cfg, p)
+	}
+
 	return s
 }
+
+// storeRecords are the records of the config's store plugin, its program found as planning finds a
+// plugin's: the plugins directory's copy, else fetched, built or unpacked by its pin.
+func storeRecords(cfg *config.Config, p config.Plugin) *pluginstore.Records {
+	return &pluginstore.Records{
+		Plugin: plugin.Plugin{Name: p.Name, Config: p.Config, Timeout: storeCallTimeout},
+		Resolve: func(ctx context.Context) (string, error) {
+			f, err := pluginsFor(ctx, cfg, pluginsDir(), defaultCache(), config.Platform(), func(q config.Plugin) bool { return q.Name == p.Name }, false)
+			if err != nil {
+				return "", err
+			}
+
+			return f.files[p.Name], nil
+		},
+	}
+}
+
+// storeCallTimeout bounds one call of a store plugin: a listing of every live recording included.
+const storeCallTimeout = 10 * time.Minute
 
 func codeRemote(cfg *config.Config) string {
 	switch {

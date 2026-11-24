@@ -10,7 +10,7 @@ import (
 
 // Kinds are in the order a repository's name is matched against them; a runner's shell
 // bootstrap keeps the same list, and its tests hold it equal to this one.
-var Kinds = []string{KindSBOM, KindCorrelator, KindRunner, KindDriver, KindForge}
+var Kinds = []string{KindSBOM, KindCorrelator, KindRunner, KindDriver, KindForge, KindStore}
 
 var ErrKind = errors.New("not a pipelinegen plugin kind")
 
