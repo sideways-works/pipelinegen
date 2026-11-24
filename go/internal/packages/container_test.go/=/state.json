@@ -1,0 +1,16 @@
+{
+  "label": "internal/packages/container_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T15:08:25.786365136Z",
+  "seconds": 1.426199926,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "correlators",
+      "reason": "3 tests ran and nothing was recorded",
+      "since": "2026-11-24T15:08:25.78640737Z"
+    }
+  ],
+  "cpu_seconds": 1.9464579999998932,
+  "peak_mb": 307
+}

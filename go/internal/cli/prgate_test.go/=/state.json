@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/prgate_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T15:08:25.781176152Z",
+  "seconds": 91.78,
+  "recorded": true,
+  "cpu_seconds": 9.664106000000174,
+  "peak_mb": 70
+}
