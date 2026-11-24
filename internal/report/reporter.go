@@ -680,7 +680,7 @@ func (r *Reporter) Finish(ctx context.Context) (bool, error) {
 // failed run ended with a slice that passed; the run is red then, so a failed attach only warns.
 func (r *Reporter) ending(ctx context.Context, run Run, snap snapshot) {
 	if r.attaches() && !r.attachTried {
-		switch end := endingOf(run, snap.plan.All); {
+		switch end := endingOf(run, snap.plan.All || r.runConfig().Select == config.SelectAll); {
 		case end.Passed:
 			r.attachTried = true
 			r.attachErr = r.attach(ctx, end)

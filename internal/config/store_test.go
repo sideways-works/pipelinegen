@@ -46,3 +46,22 @@ func TestTheStorePluginIsItsEntry(t *testing.T) {
 		t.Fatalf("store plugin %+v %v", p, ok)
 	}
 }
+
+func TestPassedWithinIsForARunOfEverySlice(t *testing.T) {
+	for _, c := range []struct {
+		name, run, want string
+	}{
+		{"a full run", "  full:\n    trigger: {branch: main, continuous: true}\n    compare: none\n    select: all\n    suites: {backend: {}}\n    passed_within: 24h\n", ""},
+		{"a run of what changed", "  main:\n    trigger: {branch: main}\n    compare: last_passed\n    select: affected\n    suites: {backend: {}}\n    passed_within: 24h\n", "select: all"},
+		{"no period", "  full:\n    trigger: {branch: main}\n    compare: none\n    select: all\n    suites: {backend: {}}\n    passed_within: soon\n", "a period such as 24h"},
+	} {
+		_, err := Parse([]byte(withRuns + c.run))
+
+		switch {
+		case c.want == "" && err != nil:
+			t.Errorf("%s: %v", c.name, err)
+		case c.want != "" && (err == nil || !strings.Contains(err.Error(), c.want)):
+			t.Errorf("%s: want %q, got %v", c.name, c.want, err)
+		}
+	}
+}

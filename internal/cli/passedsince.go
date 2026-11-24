@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/affected"
@@ -102,7 +103,13 @@ func branchPassedSince(ctx context.Context, cfg *config.Config, ch runs.Change, 
 		return nil, notes
 	}
 
-	since := func(suite string, sl bazel.Slice) (affected.Since, bool) {
+	return &affected.Rebase{OffAt: offAt, Since: sinceOf(ch.Run, passes, reaches)}, notes
+}
+
+// sinceOf says of a slice where it last passed in the run, when nothing from there to the head
+// reaches it.
+func sinceOf(run string, passes map[string]report.Pass, reaches map[string]map[string]reached) func(string, bazel.Slice) (affected.Since, bool) {
+	return func(suite string, sl bazel.Slice) (affected.Since, bool) {
 		p, ok := passes[suite+"/"+sl.Name]
 		if !ok || !passedAs(p.Label, sl) {
 			return affected.Since{}, false
@@ -114,12 +121,68 @@ func branchPassedSince(ctx context.Context, cfg *config.Config, ch runs.Change, 
 		}
 
 		return affected.Since{
-			Why:     fmt.Sprintf("compared from %s, where it last passed in run %s: nothing from there to the head reaches it", short12(p.Commit), ch.Run),
+			Why:     fmt.Sprintf("compared from %s, where it last passed in run %s: nothing from there to the head reaches it", short12(p.Commit), run),
 			Sampled: r.sampled,
 		}, true
 	}
+}
 
-	return &affected.Rebase{OffAt: offAt, Since: since}, notes
+// fullPasses is how many first parents back a run with passed_within looks for its slices' passes.
+const fullPasses = 50
+
+// keepPassed leaves out of a plan of every slice, for a run with passed_within, the slices that passed
+// in the run within the period with nothing from there to the head reaching them; anything it can't
+// tell keeps the slice, with a note for the plan's warnings.
+func keepPassed(ctx context.Context, cfg *config.Config, ch runs.Change, store *gitstore.Store, trigger, head, cache, bdPath string, plan *affected.Plan) []string {
+	run := cfg.Runs[ch.Run]
+
+	within, ok := run.PassedWithin.Duration()
+	if !ok || run.Select != config.SelectAll || !plan.All || store == nil || store.Proposed ||
+		narrowingLevel(cfg) >= passedSinceOffAt(cfg) {
+		return nil
+	}
+
+	progress.Stage(ctx, "the slices that passed within passed_within")
+
+	commits, err := runs.FirstParents(ctx, trigger, head, fullPasses)
+	if err != nil {
+		return []string{fmt.Sprintf("every slice runs: the first parents of %s: %v", short12(head), err)}
+	}
+
+	all, err := report.Passes(ctx, store, ch.Run, ch.ID, commits)
+	if err != nil {
+		return []string{fmt.Sprintf("every slice runs: the run's records: %v", err)}
+	}
+
+	cut := time.Now().Add(-within)
+	passes := map[string]report.Pass{}
+
+	for k, p := range all {
+		if p.At.After(cut) && !strings.HasPrefix(head, p.Commit) {
+			passes[k] = p
+		}
+	}
+
+	var notes []string
+
+	reaches := map[string]map[string]reached{}
+
+	for _, c := range newestPassed(commits, passes) {
+		r, err := reachFrom(ctx, cfg, store, trigger, ch.Run, c, head, cache, bdPath, false)
+		if err != nil && !errors.Is(err, errReachesAll) {
+			notes = append(notes, fmt.Sprintf("the slices that passed at %s run again: what changed since could not be planned: %v", short12(c), err))
+		}
+
+		if r != nil {
+			reaches[c] = r
+		}
+	}
+
+	if len(reaches) > 0 {
+		affected.KeepPassed(plan, cfg, &affected.Rebase{OffAt: passedSinceOffAt(cfg), Since: sinceOf(ch.Run, passes, reaches)})
+	}
+
+	return notes
 }
 
 // passedAs tells whether a pass recorded under label is one of sl. A test file's slice is recorded

@@ -514,6 +514,7 @@ func planChange(ctx context.Context, cfg *config.Config, ch runs.Change, store *
 
 	if err == nil {
 		plan.Warnings = append(plan.Warnings, notes...)
+		plan.Warnings = append(plan.Warnings, keepPassed(ctx, cfg, ch, store, trigger, head, cache, bdPath, plan)...)
 	}
 
 	return plan, err

@@ -143,6 +143,19 @@ and the plan reads no records for it. Each of the two plans costs about
 what a plan of one commit costs, and less when that commit was planned on
 the same machine, since its hashes are cached.
 
+### A full run's recent passes
+
+A run that selects every slice (`select: all`) runs them all every time:
+it is what checks the narrowings, since it relies on no reach analysis.
+A full run that follows every commit can opt out of part of that with
+`passed_within: 24h`: a slice that passed in the same run within the
+period, and that nothing from that commit to the head reaches, is left
+out, with the same reason and narrowing as above. A slice that failed,
+one whose pass is older, and every slice of a suite with whole-suite
+checks run. So within the period the run checks the analysis only where a
+slice's pass is old enough, and once a period every slice runs in full.
+From level 4 the option does nothing.
+
 ### A pull request's later builds
 
 A pull request's build compares the pull request merged into its target's

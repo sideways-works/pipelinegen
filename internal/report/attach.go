@@ -19,8 +19,8 @@ type Attacher func(ctx context.Context, r *Reporter, end Ending) error
 
 // Ending is what an Attacher is told of the run it attaches.
 type Ending struct {
-	// All says the run selected every slice: a slice that passed in it may
-	// replace its list.
+	// All says the run selects every slice: a slice that passed in it may
+	// replace its list, though passed_within left some out of this round.
 	All          bool
 	Passed, Some bool
 	// Suites are the suites every selected slice of which passed: only their
@@ -91,5 +91,7 @@ func RunEnding(ctx context.Context, store *gitstore.Store, cfg *config.Config, i
 		return Ending{}, err
 	}
 
-	return endingOf(buildRun(id, snap, nil), snap.plan.All), nil
+	// a run of every slice records them all as a full run does, its passes within passed_within left
+	// out or not
+	return endingOf(buildRun(id, snap, nil), snap.plan.All || cfg.Runs[id.Run].Select == config.SelectAll), nil
 }

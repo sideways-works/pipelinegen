@@ -199,6 +199,10 @@ type Run struct {
 	// as dead after IdleMinutes.
 	TurnMinutes int `yaml:"turn_minutes"`
 	IdleMinutes int `yaml:"idle_minutes"`
+	// PassedWithin, on a run that selects every slice, leaves out a slice that passed in this run
+	// within the period and that nothing changed since reaches: the run then checks the reach
+	// analysis only for slices whose pass is older. Off by default.
+	PassedWithin Period `yaml:"passed_within"`
 	// WaitMinutes is how long a continuous run's newest build waits for the round in progress
 	// before it fails naming the round; a newer commit ends the wait at once.
 	WaitMinutes int `yaml:"wait_minutes"`
@@ -579,6 +583,23 @@ func (c *Config) ValidatePipelineFor(ownSettings bool) error {
 	return errors.Join(errs...)
 }
 
+func validatePassedWithin(where string, r Run, bad func(string, ...any)) {
+	if r.PassedWithin == "" {
+		return
+	}
+
+	d, ok := r.PassedWithin.Duration()
+
+	switch {
+	case !ok || d <= 0:
+		bad("%s: passed_within must be a period such as 24h", where)
+	case r.Select != SelectAll:
+		bad("%s: passed_within is for a run that selects every slice (select: all); a run of what changed leaves out what passed since through the passed-since narrowing", where)
+	case r.Trigger.PullRequests != nil:
+		bad("%s: passed_within is for a branch's run, not a pull request's", where)
+	}
+}
+
 func (c *Config) validateRun(name string, r Run, bad func(string, ...any)) {
 	where := "run " + name
 
@@ -592,6 +613,8 @@ func (c *Config) validateRun(name string, r Run, bad func(string, ...any)) {
 	if r.IdleMinutes != 0 && (!r.Trigger.Continuous || r.IdleMinutes < 1) {
 		bad("%s: idle_minutes is for a continuous run, and at least 1", where)
 	}
+
+	validatePassedWithin(where, r, bad)
 
 	t := r.Trigger
 
