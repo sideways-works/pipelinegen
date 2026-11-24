@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/anchor_equiv_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:06.775281207Z",
+  "seconds": 1.970056662,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:06.775326868Z"
+    }
+  ],
+  "cpu_seconds": 0.5362430000000131,
+  "peak_mb": 67
+}

@@ -1,0 +1,23 @@
+{
+  "label": "internal/config/groups_test.go",
+  "state": "errored",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-24T20:01:06.777465793Z",
+  "failures": [
+    {
+      "test": "(no result)",
+      "tail": "go gave no result for it (driver failed: go run: exit status 1); its last lines:\ngo-driver: the step's time is nearly gone: the caches are not trimmed this time\ngo: context deadline exceeded"
+    }
+  ],
+  "seconds": 1.255838556,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:06.777495545Z"
+    }
+  ],
+  "cpu_seconds": 0.027450999999928172,
+  "peak_mb": 64
+}

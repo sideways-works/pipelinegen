@@ -1,0 +1,16 @@
+{
+  "label": "internal/affected/cachelock_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:06.774493921Z",
+  "seconds": 0.2,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:06.774890173Z"
+    }
+  ],
+  "cpu_seconds": 0.41153699999999915,
+  "peak_mb": 40
+}

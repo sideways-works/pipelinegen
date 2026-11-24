@@ -1,0 +1,16 @@
+{
+  "label": "internal/bazeldiff/bazeldiff_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:06.775171945Z",
+  "seconds": 119.37,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:06.77521044Z"
+    }
+  ],
+  "cpu_seconds": 73.980048,
+  "peak_mb": 934
+}

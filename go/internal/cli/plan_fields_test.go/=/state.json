@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/plan_fields_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T20:01:06.776557321Z",
+  "seconds": 2.64,
+  "recorded": true,
+  "cannot_tell": [
+    {
+      "plugin": "go-correlator",
+      "reason": "the batch left it unobserved, and its end has no tree to observe it in: the tree stays with the batch",
+      "since": "2026-11-24T20:01:06.776602505Z"
+    }
+  ],
+  "cpu_seconds": 1.0661649999999554,
+  "peak_mb": 63
+}
