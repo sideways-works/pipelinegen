@@ -1,0 +1,16 @@
+{
+  "label": "internal/cli/graphbound_later_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-24T17:53:26.312621317Z",
+  "failures": [
+    {
+      "test": "TestGraphBoundWalkedSelectsWhatSelectorsSelectLater",
+      "tail": "        Extracting Bazel installation...\n        Starting local Bazel server (9.2.0) and connecting to it...\n        ... still trying to connect to local Bazel server (18629) after 10 seconds ...\n        ... still trying to connect to local Bazel server (18629) after 20 seconds ...\n        ... still trying to connect to local Bazel server (18629) after 30 seconds ...\n        ... still trying to connect to local Bazel server (18629) after 44 seconds ...\n        ... still trying to connect to local Bazel server (18629) after 59 seconds ...\n        ... still trying to connect to local Bazel server (18629) after 73 seconds ...\n        ... still trying to connect to local Bazel server (18629) after 83 seconds ...\n        ... still trying to connect to local Bazel server (18629) after 93 seconds ...\n        ... still trying to connect to local Bazel server (18629) after 103 seconds ...\n        ... still trying to connect to local Bazel server (18629) after 113 seconds ...\n        FATAL: couldn't connect to server (18629) after 120 seconds.\n    testrepo.go:173: bazel clean: bazel query: no Bazel at \"bazelisk\": tried PIPELINEGEN_BAZELISK, the config's bazel.bazelisk and tools/bazelisk in the working directory; set one of them\n--- FAIL: TestGraphBoundWalkedSelectsWhatSelectorsSelectLater (561.88s)"
+    }
+  ],
+  "seconds": 561.88,
+  "recorded": true,
+  "cpu_seconds": 125.79076000000003,
+  "peak_mb": 378
+}

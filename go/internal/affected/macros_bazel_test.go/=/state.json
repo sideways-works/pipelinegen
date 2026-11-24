@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/macros_bazel_test.go",
+  "state": "passed",
+  "updated": "2026-11-24T17:53:26.310987598Z",
+  "seconds": 38.94,
+  "recorded": true,
+  "cpu_seconds": 29.288902999999998,
+  "peak_mb": 505
+}
