@@ -139,3 +139,56 @@ func TestAnUnreachableBrokerSaysSo(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestTheFirstInLineHoldsTheOthersBackOnlyForAWhile(t *testing.T) {
+	f := &fake{}
+	f.free.Store(5000)
+
+	l, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b := &Broker{Read: f.read, Ramp: time.Minute, Every: 10 * time.Millisecond, FirstFor: 150 * time.Millisecond}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() { _ = b.Serve(ctx, l) }() //nolint:errcheck // ends with the test
+
+	addr := l.Addr().String()
+
+	go func() {
+		_, _ = Ask(t.Context(), addr, Request{MB: 15000, WaitSeconds: 5, Who: "most of it"}) //nolint:errcheck // never granted here
+	}()
+
+	time.Sleep(30 * time.Millisecond)
+
+	start := time.Now()
+
+	small, err := Ask(t.Context(), addr, Request{MB: 1000, WaitSeconds: 5, Who: "small"})
+	if err != nil || !small.Granted {
+		t.Fatalf("small: %+v %v", small, err)
+	}
+
+	if waited := time.Since(start); waited < 80*time.Millisecond {
+		t.Fatalf("small went first after %s, before the first in line's while", waited)
+	}
+}
+
+func TestARequestOutOfBoundsIsRefusedUnread(t *testing.T) {
+	f := &fake{}
+	f.free.Store(8000)
+	addr := serve(t, f, time.Minute)
+
+	for name, req := range map[string]Request{
+		"a negative ask":   {MB: -1, WaitSeconds: 1},
+		"a wait of a week": {MB: 1, WaitSeconds: 7 * 24 * 3600},
+		"a long name":      {MB: 1, WaitSeconds: 1, Who: strings.Repeat("x", 300)},
+	} {
+		ans, err := Ask(t.Context(), addr, req)
+		if err != nil || ans.Granted || !strings.Contains(ans.Why, "a request is one line of JSON") {
+			t.Errorf("%s: %+v %v", name, ans, err)
+		}
+	}
+}

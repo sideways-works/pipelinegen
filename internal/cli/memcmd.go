@@ -15,10 +15,13 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/memory"
 )
 
-// The broker's defaults: where it listens, and how long a grant counts against the worker's memory.
+// The broker's defaults: where it listens, how long a grant counts against the worker's memory, and how
+// long the first ask in line holds back the others, so a proposed change's batch asking for most of the
+// worker delays them at most that long.
 const (
-	brokerListen = ":7480"
-	brokerRamp   = 5 * time.Minute
+	brokerListen   = ":7480"
+	brokerRamp     = 5 * time.Minute
+	brokerFirstFor = 10 * time.Minute
 )
 
 func runMemory(ctx context.Context, args []string, stdout io.Writer) error {
@@ -37,12 +40,13 @@ func runMemory(ctx context.Context, args []string, stdout io.Writer) error {
 func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 	var (
 		listen, root, cgroup string
-		ramp                 time.Duration
+		ramp, firstFor       time.Duration
 	)
 
 	fs := flag.NewFlagSet("memory serve", flag.ContinueOnError)
 	textVar(fs, &listen, "listen", brokerListen, "the address the broker listens on")
 	fs.DurationVar(&ramp, "ramp", brokerRamp, "how long a grant counts against the worker's free memory, by when the batch's own use shows in it")
+	fs.DurationVar(&firstFor, "first-for", brokerFirstFor, "how long the first ask in line holds back later ones the memory covers")
 	textVar(fs, &root, "root", "/", "where the machine's /proc and /sys are")
 	textVar(fs, &cgroup, "cgroup", "", "the cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the first line of /proc/<the worker's pid>/cgroup less its 0::, such as /system.slice/docker-<id>.scope (default the broker's own)")
 
@@ -69,8 +73,9 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 
 			return r, memory.Pressure(root), err
 		},
-		Ramp: ramp,
-		Log:  stdout,
+		Ramp:     ramp,
+		FirstFor: firstFor,
+		Log:      stdout,
 	}
 
 	if err := say(stdout, "memory broker on %s, grants counting %s\n", l.Addr(), ramp); err != nil {

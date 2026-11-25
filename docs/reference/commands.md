@@ -812,7 +812,14 @@ memory broker on [::]:7480, grants counting 5m0s
 |---|---|---|
 | `--listen` | `:7480` | The address it listens on. |
 | `--ramp` | `5m` | How long a grant counts against the free memory, by when the batch's own use shows in it. |
+| `--first-for` | `10m` | How long the first ask in line holds back later asks the memory covers: an ask for most of the worker, from a proposed change's batch say, delays the others at most this long. |
+| `--cgroup` | the broker's own | The cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the line of `/proc/<the worker's pid>/cgroup` less its `0::`, such as `/system.slice/docker-<id>.scope`. |
 | `--root` | `/` | Where the machine's `/proc` and `/sys` are. |
+
+A request is one line of JSON from any batch on the worker, a proposed
+change's among them: one asking for less than nothing, a wait over a day
+or a name over 256 bytes is refused unread, the broker serves 512
+connections at once, and its log quotes each name.
 
 `memory sample` measures a sample of a suite's slices on this machine and
 records their peaks, each the measured peak and the headroom, in the

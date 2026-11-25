@@ -50,17 +50,23 @@ type Broker struct {
 	Every time.Duration
 	// Log, when set, gets a line per grant and per refusal.
 	Log io.Writer
+	// FirstFor is how long the first ask in line holds back the asks after it: past it, an ask behind
+	// it that the memory covers goes first, so one ask for most of the worker, from a proposed
+	// change's batch say, delays the others at most this long. 0 holds them back as long as it waits.
+	FirstFor time.Duration
 
 	mu      sync.Mutex
 	queue   []*ask
 	granted []grant
 	wake    chan struct{}
+	conns   chan struct{}
 	once    sync.Once
 }
 
 type ask struct {
 	req  Request
 	done chan Answer
+	at   time.Time
 }
 
 type grant struct {
@@ -69,7 +75,16 @@ type grant struct {
 }
 
 func (b *Broker) init() {
-	b.once.Do(func() { b.wake = make(chan struct{}, 1) })
+	b.once.Do(func() {
+		b.wake = make(chan struct{}, 1)
+		b.conns = make(chan struct{}, maxConns)
+	})
+}
+
+func (b *Broker) slots() chan struct{} {
+	b.init()
+
+	return b.conns
 }
 
 // held is what the grants still ramping hold, dropping the ended ones.
@@ -95,7 +110,7 @@ func (b *Broker) held(now time.Time) int64 {
 func (b *Broker) Ask(ctx context.Context, req Request) Answer {
 	b.init()
 
-	a := &ask{req: req, done: make(chan Answer, 1)}
+	a := &ask{req: req, done: make(chan Answer, 1), at: time.Now()}
 
 	b.mu.Lock()
 	b.queue = append(b.queue, a)
@@ -137,7 +152,7 @@ func (b *Broker) Ask(ctx context.Context, req Request) Answer {
 	r, pressure, _ := b.Read() //nolint:errcheck // a refusal says what it read, or nothing
 	held := b.held(time.Now())
 	ans := Answer{FreeMB: r.Free() - held, HeldMB: held, Why: fmt.Sprintf("%d MB free less %d MB granted lately, pressure %.1f%%, for %d MB asked", r.Free(), held, pressure, req.MB)}
-	b.logf("refused %s: %s after %s\n", req.Who, ans.Why, wait.Round(time.Second))
+	b.logf("refused %q: %s after %s\n", req.Who, ans.Why, wait.Round(time.Second))
 
 	return ans
 }
@@ -173,35 +188,60 @@ func (b *Broker) Run(ctx context.Context) {
 	}
 }
 
-// step grants asks from the queue's front while the memory covers them.
+// step grants asks in their order while the memory covers them; once the first has held the others back
+// for FirstFor, the first after it that the memory covers goes ahead of it.
 func (b *Broker) step() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	for len(b.queue) > 0 {
-		a := b.queue[0]
-
+	for {
 		r, pressure, err := b.Read()
 		now := time.Now()
 		held := b.held(now)
 
-		switch {
-		case err != nil:
-			// a worker whose memory can't be read grants as a batch without a broker starts: unchecked
-		case a.req.MB > r.Capacity():
-			// an ask no worker could ever cover starts at once, rather than wait for room never coming
-		case r.Free()-held < a.req.MB || pressure >= admitPressure:
+		i := b.next(r, pressure, err, held, now)
+		if i < 0 {
 			return
 		}
 
-		b.queue = b.queue[1:]
+		a := b.queue[i]
+		b.queue = append(b.queue[:i], b.queue[i+1:]...)
 		b.granted = append(b.granted, grant{mb: a.req.MB, until: now.Add(b.Ramp)})
 
 		ans := Answer{Granted: true, FreeMB: r.Free() - held, HeldMB: held + a.req.MB}
-		b.logf("granted %s %d MB: %d MB free less %d MB granted lately\n", a.req.Who, a.req.MB, r.Free(), held)
+		b.logf("granted %q %d MB: %d MB free less %d MB granted lately\n", a.req.Who, a.req.MB, r.Free(), held)
 
 		a.done <- ans
 	}
+}
+
+// next is the queue's index of the ask to grant now, -1 for none.
+func (b *Broker) next(r memory.Reading, pressure float64, err error, held int64, now time.Time) int {
+	fits := func(a *ask) bool {
+		switch {
+		case err != nil:
+			// a worker whose memory can't be read grants as a batch without a broker starts: unchecked
+			return true
+		case a.req.MB > r.Capacity():
+			// an ask no worker could ever cover starts at once, rather than wait for room never coming
+			return true
+		default:
+			return r.Free()-held >= a.req.MB && pressure < admitPressure
+		}
+	}
+
+	for i, a := range b.queue {
+		if fits(a) {
+			return i
+		}
+
+		// the first in line holds the others back until FirstFor has passed
+		if i == 0 && (b.FirstFor <= 0 || now.Sub(a.at) < b.FirstFor) {
+			return -1
+		}
+	}
+
+	return -1
 }
 
 func (b *Broker) logf(format string, args ...any) {
@@ -230,12 +270,32 @@ func (b *Broker) Serve(ctx context.Context, l net.Listener) error {
 			return fmt.Errorf("membroker: %w", err)
 		}
 
-		go b.handle(ctx, c)
+		select {
+		case b.slots() <- struct{}{}:
+		case <-ctx.Done():
+			_ = c.Close() //nolint:errcheck // the broker ends
+
+			return nil
+		}
+
+		go func() {
+			defer func() { <-b.slots() }()
+
+			b.handle(ctx, c)
+		}()
 	}
 }
 
-// maxRequest bounds a request line: a few numbers and a name.
-const maxRequest = 4096
+// What a request may hold: a request comes from any batch on the worker, a proposed change's among them.
+const (
+	// maxRequest bounds a request line: a few numbers and a name.
+	maxRequest = 4096
+	maxWho     = 256
+	// maxWait is the longest wait a request may ask for: a suite's time limit is shorter.
+	maxWait = 24 * time.Hour
+	// maxConns bounds the connections served at once; more wait to be accepted.
+	maxConns = 512
+)
 
 func (b *Broker) handle(ctx context.Context, c net.Conn) {
 	defer c.Close() //nolint:errcheck // the answer was written or the batch went
@@ -248,7 +308,7 @@ func (b *Broker) handle(ctx context.Context, c net.Conn) {
 	}
 
 	var req Request
-	if json.Unmarshal(line, &req) != nil || req.MB < 0 || req.WaitSeconds < 0 {
+	if json.Unmarshal(line, &req) != nil || req.MB < 0 || req.WaitSeconds < 0 || req.WaitSeconds > maxWait.Seconds() || len(req.Who) > maxWho {
 		answer(c, Answer{Why: "a request is one line of JSON: {\"mb\": <n>, \"wait_seconds\": <n>, \"who\": \"...\"}"})
 
 		return
