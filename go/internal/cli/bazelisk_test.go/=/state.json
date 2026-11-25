@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/bazelisk_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T02:17:10.15723685Z",
+  "seconds": 0.254430589,
+  "recorded": true,
+  "cpu_seconds": 0.41702399999999784,
+  "peak_mb": 55
+}
