@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"sync"
 	"time"
 
@@ -54,8 +55,12 @@ type Broker struct {
 	// it that the memory covers goes first, so one ask for most of the worker, from a proposed
 	// change's batch say, delays the others at most this long. 0 holds them back as long as it waits.
 	FirstFor time.Duration
+	// MaxGrant is the most one grant counts against the free memory, in MB, and the most an ask waits
+	// for: a batch predicted above it starts once that much is free. 0 is no cap.
+	MaxGrant int64
 
 	mu      sync.Mutex
+	pending map[string]bool
 	queue   []*ask
 	granted []grant
 	wake    chan struct{}
@@ -67,11 +72,14 @@ type ask struct {
 	req  Request
 	done chan Answer
 	at   time.Time
+	// from is the asking task's address: one ask at a time from it, and its grant replaces its last.
+	from string
 }
 
 type grant struct {
 	mb    int64
 	until time.Time
+	from  string
 }
 
 func (b *Broker) init() {
@@ -108,11 +116,61 @@ func (b *Broker) held(now time.Time) int64 {
 // Ask queues req and waits for its answer: granted once it is first in line and the memory covers it,
 // refused when its wait ends first or ctx ends.
 func (b *Broker) Ask(ctx context.Context, req Request) Answer {
-	b.init()
+	return b.ask(ctx, req, "")
+}
 
-	a := &ask{req: req, done: make(chan Answer, 1), at: time.Now()}
+// busy is why a second ask from an address whose first still waits is refused.
+const busy = "one ask at a time from a task: its first still waits"
+
+// take marks from as waiting, false when it is already; b.mu is held.
+func (b *Broker) take(from string) bool {
+	if from == "" {
+		return true
+	}
+
+	if b.pending[from] {
+		return false
+	}
+
+	if b.pending == nil {
+		b.pending = map[string]bool{}
+	}
+
+	b.pending[from] = true
+
+	return true
+}
+
+func (b *Broker) release(from string) {
+	if from == "" {
+		return
+	}
 
 	b.mu.Lock()
+	delete(b.pending, from)
+	b.mu.Unlock()
+}
+
+func (b *Broker) ask(ctx context.Context, req Request, from string) Answer {
+	b.init()
+
+	if b.MaxGrant > 0 {
+		req.MB = min(req.MB, b.MaxGrant)
+	}
+
+	a := &ask{req: req, done: make(chan Answer, 1), at: time.Now(), from: from}
+
+	b.mu.Lock()
+
+	if !b.take(from) {
+		b.mu.Unlock()
+		b.logf("refused %q from %s: %s\n", req.Who, from, busy)
+
+		return Answer{Why: busy}
+	}
+
+	defer b.release(from)
+
 	b.queue = append(b.queue, a)
 	b.mu.Unlock()
 	b.poke()
@@ -206,7 +264,13 @@ func (b *Broker) step() {
 
 		a := b.queue[i]
 		b.queue = append(b.queue[:i], b.queue[i+1:]...)
-		b.granted = append(b.granted, grant{mb: a.req.MB, until: now.Add(b.Ramp)})
+
+		// a task's new grant replaces its last: one task holds one grant at most
+		if a.from != "" {
+			b.granted = slices.DeleteFunc(b.granted, func(g grant) bool { return g.from == a.from })
+		}
+
+		b.granted = append(b.granted, grant{mb: a.req.MB, until: now.Add(b.Ramp), from: a.from})
 
 		ans := Answer{Granted: true, FreeMB: r.Free() - held, HeldMB: held + a.req.MB}
 		b.logf("granted %q %d MB: %d MB free less %d MB granted lately\n", a.req.Who, a.req.MB, r.Free(), held)
@@ -326,9 +390,24 @@ func (b *Broker) handle(ctx context.Context, c net.Conn) {
 		cancel()
 	}()
 
-	ans := b.Ask(gone, req)
+	ans := b.ask(gone, req, source(c))
 
 	answer(c, ans)
+}
+
+// source is the asking task's address; the worker's host itself, on loopback, is none: it may ask as often
+// as it likes.
+func source(c net.Conn) string {
+	host, _, err := net.SplitHostPort(c.RemoteAddr().String())
+	if err != nil {
+		return ""
+	}
+
+	if ip := net.ParseIP(host); ip == nil || ip.IsLoopback() {
+		return ""
+	}
+
+	return host
 }
 
 // answer writes ans to the batch, which may be gone: it then takes no answer.

@@ -192,3 +192,55 @@ func TestARequestOutOfBoundsIsRefusedUnread(t *testing.T) {
 		}
 	}
 }
+
+func TestATaskAsksOnceAtATimeAndHoldsOneGrant(t *testing.T) {
+	f := &fake{}
+	f.free.Store(9000)
+
+	b := &Broker{Read: f.read, Ramp: time.Minute, Every: 10 * time.Millisecond}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go b.Run(ctx)
+
+	// a first ask from the task waits for room
+	waiting := make(chan Answer, 1)
+
+	go func() { waiting <- b.ask(t.Context(), Request{MB: 12000, WaitSeconds: 0.3}, "10.80.0.7") }()
+
+	time.Sleep(50 * time.Millisecond)
+
+	if ans := b.ask(t.Context(), Request{MB: 1000, WaitSeconds: 1}, "10.80.0.7"); ans.Granted || ans.Why != busy {
+		t.Fatalf("a second ask at once: %+v", ans)
+	}
+
+	<-waiting
+
+	// granted twice in a row, the task holds its last grant alone
+	for range 2 {
+		if ans := b.ask(t.Context(), Request{MB: 4000, WaitSeconds: 1}, "10.80.0.7"); !ans.Granted {
+			t.Fatalf("%+v", ans)
+		}
+	}
+
+	if ans := b.ask(t.Context(), Request{MB: 5000, WaitSeconds: 1}, "10.80.0.8"); !ans.Granted || ans.HeldMB != 9000 {
+		t.Fatalf("another task: %+v", ans)
+	}
+}
+
+func TestAGrantCountsAtMostTheCap(t *testing.T) {
+	f := &fake{}
+	f.free.Store(9000)
+
+	b := &Broker{Read: f.read, Ramp: time.Minute, Every: 10 * time.Millisecond, MaxGrant: 8000}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go b.Run(ctx)
+
+	if ans := b.Ask(t.Context(), Request{MB: 12000, WaitSeconds: 1}); !ans.Granted || ans.HeldMB != 8000 {
+		t.Fatalf("%+v", ans)
+	}
+}

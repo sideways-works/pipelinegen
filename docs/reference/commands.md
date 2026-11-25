@@ -813,13 +813,17 @@ memory broker on [::]:7480, grants counting 5m0s
 | `--listen` | `:7480` | The address it listens on. |
 | `--ramp` | `5m` | How long a grant counts against the free memory, by when the batch's own use shows in it. |
 | `--first-for` | `10m` | How long the first ask in line holds back later asks the memory covers: an ask for most of the worker, from a proposed change's batch say, delays the others at most this long. |
+| `--max-grant` | `16384` | The most one grant counts against the free memory, in MB: a batch predicted above it starts once that much is free. 0 is no cap. |
 | `--cgroup` | the broker's own | The cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the line of `/proc/<the worker's pid>/cgroup` less its `0::`, such as `/system.slice/docker-<id>.scope`. |
 | `--root` | `/` | Where the machine's `/proc` and `/sys` are. |
 
 A request is one line of JSON from any batch on the worker, a proposed
 change's among them: one asking for less than nothing, a wait over a day
 or a name over 256 bytes is refused unread, the broker serves 512
-connections at once, and its log quotes each name.
+connections at once, and its log quotes each name. A task asks once at a
+time, by its address on the worker's bridge, and its new grant replaces
+its last, so one task holds at most one grant, of at most `--max-grant`;
+the host itself, on loopback, is not held to it.
 
 `memory sample` measures a sample of a suite's slices on this machine and
 records their peaks, each the measured peak and the headroom, in the

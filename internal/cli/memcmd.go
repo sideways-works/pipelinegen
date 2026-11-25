@@ -22,6 +22,8 @@ const (
 	brokerListen   = ":7480"
 	brokerRamp     = 5 * time.Minute
 	brokerFirstFor = 10 * time.Minute
+	// one grant counts at most this, in MB: above the heaviest batch a worker runs, below half a worker.
+	brokerMaxGrant = 16384
 )
 
 func runMemory(ctx context.Context, args []string, stdout io.Writer) error {
@@ -41,12 +43,14 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 	var (
 		listen, root, cgroup string
 		ramp, firstFor       time.Duration
+		maxGrant             int64
 	)
 
 	fs := flag.NewFlagSet("memory serve", flag.ContinueOnError)
 	textVar(fs, &listen, "listen", brokerListen, "the address the broker listens on")
 	fs.DurationVar(&ramp, "ramp", brokerRamp, "how long a grant counts against the worker's free memory, by when the batch's own use shows in it")
 	fs.DurationVar(&firstFor, "first-for", brokerFirstFor, "how long the first ask in line holds back later ones the memory covers")
+	fs.Int64Var(&maxGrant, "max-grant", brokerMaxGrant, "the most one grant counts against the free memory, in MB; 0 is no cap")
 	textVar(fs, &root, "root", "/", "where the machine's /proc and /sys are")
 	textVar(fs, &cgroup, "cgroup", "", "the cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the first line of /proc/<the worker's pid>/cgroup less its 0::, such as /system.slice/docker-<id>.scope (default the broker's own)")
 
@@ -75,6 +79,7 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 		},
 		Ramp:     ramp,
 		FirstFor: firstFor,
+		MaxGrant: maxGrant,
 		Log:      stdout,
 	}
 

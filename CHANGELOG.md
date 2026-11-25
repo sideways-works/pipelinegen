@@ -9,7 +9,7 @@ minor version may change the config or the protocol.
 
 ### Added
 
-- `memory serve --cgroup <path>`: a broker on the worker's host reads the worker container's limit, not the host's, and `--first-for` (10 minutes): the first ask in line holds back later asks the memory covers at most that long, so one batch asking for most of the worker can't hold the others back for its whole wait. A request asking for less than nothing, a wait over a day or a name over 256 bytes is refused, and at most 512 connections are served at once
+- `memory serve --cgroup <path>`: a broker on the worker's host reads the worker container's limit, not the host's, and `--first-for` (10 minutes): the first ask in line holds back later asks the memory covers at most that long, so one batch asking for most of the worker can't hold the others back for its whole wait. A request asking for less than nothing, a wait over a day or a name over 256 bytes is refused, and at most 512 connections are served at once. A task asks once at a time and holds one grant at most, its new one replacing its last, and a grant counts at most `--max-grant` (16384 MB)
 
 ## [0.11.0] - 2026-11-25
 
