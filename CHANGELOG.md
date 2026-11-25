@@ -22,6 +22,7 @@ minor version may change the config or the protocol.
 ### Changed
 
 - A slice without a recorded peak is predicted at the 90th percentile of its suite's others, not their median
+- A change to `memory` or a suite's `memory` in the config selects nothing: when a batch starts is no test's to observe
 
 ### Fixed
 

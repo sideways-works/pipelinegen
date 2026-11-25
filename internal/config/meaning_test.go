@@ -131,6 +131,8 @@ func TestWhatThePlannerDoesntUnderstand(t *testing.T) {
 		{[]string{"pipeline: shop\n", "pipeline: shop\nnarrowing: 4\n"}, true},
 		{[]string{"pipeline: shop\n", "pipeline: shop\nkeep: {runs: {last: 3}}\n"}, true},
 		{[]string{"    image: golang\n", "    image: golang\n    parallel: 8\n"}, true},
+		{[]string{"    image: golang\n", "    image: golang\n    memory: {wait: true}\n"}, true},
+		{[]string{"pipeline: shop\n", "pipeline: shop\nmemory: {wait: true, broker: \"gateway:7480\"}\n"}, true},
 		{[]string{"    image: golang\n", "    image: golang\n    minutes: 30\n"}, false},
 		{[]string{"pipeline: shop\n", "pipeline: shop\nbazel: {startup_flags: [--host_jvm_args=-Xmx2g]}\n"}, false},
 	} {
@@ -219,5 +221,17 @@ func TestALockRemovedMeansNothingButItsMinutes(t *testing.T) {
 		[]string{"    image: golang\n", "    image: golang\n    lock: {name: other, slots: 4, weight: 2}\n"})
 	if !m.Changed() || !m.Understood() {
 		t.Errorf("a lock edited: parts %+v", m.Parts)
+	}
+}
+
+func TestWaitingForMemoryRunsNothing(t *testing.T) {
+	for _, edit := range [][]string{
+		{"pipeline: shop\n", "pipeline: shop\nmemory: {wait: true, broker: \"gateway:7480\"}\n"},
+		{"    image: golang\n", "    image: golang\n    memory: {wait: true}\n"},
+	} {
+		m := meaningOf(t, nil, edit)
+		if !m.Understood() || len(runs(m, "go", "a_test.go")) != 0 {
+			t.Errorf("%q: understood %v, parts %+v", edit[1], m.Understood(), m.Parts)
+		}
 	}
 }
