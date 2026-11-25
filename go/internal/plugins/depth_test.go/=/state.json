@@ -1,0 +1,9 @@
+{
+  "label": "internal/plugins/depth_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T04:34:26.497037813Z",
+  "seconds": 0.26,
+  "recorded": true,
+  "cpu_seconds": 0.610779999999977,
+  "peak_mb": 238
+}
