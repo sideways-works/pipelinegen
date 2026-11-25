@@ -1,0 +1,26 @@
+# observed
+go:internal/gitstore/storetest#func:Both
+go:internal/report#func:JournalIn
+go:internal/report#func:key
+go:internal/report#func:mapPaths
+go:internal/report#func:summarize
+go:internal/report#method:Journal.append
+go:internal/report#method:Journal.dir
+go:internal/report#method:Journal.load
+go:internal/report#method:Journal.local
+go:internal/report#method:Journal.localLine
+go:internal/report#method:Journal.portable
+go:internal/report#method:Journal.portableLine
+go:internal/report#method:Journal.read
+go:internal/report#method:Journal.saveSummary
+go:internal/report#method:Journal.summaryPath
+go:internal/report#method:SliceEvent.withPaths
+go:internal/report#method:sliceSum.addUse
+go:internal/report#method:summary.add
+go:internal/report#method:summary.of
+go:internal/report#method:summary.slice
+go:internal/report#method:summary.withSummaryPaths
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
