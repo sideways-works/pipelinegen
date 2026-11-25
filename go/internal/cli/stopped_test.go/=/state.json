@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/stopped_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T03:25:54.38649244Z",
+  "seconds": 11.72,
+  "recorded": true,
+  "cpu_seconds": 5.788467999999966,
+  "peak_mb": 91
+}

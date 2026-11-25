@@ -1,0 +1,9 @@
+{
+  "label": "internal/runs/runs_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T03:25:54.391518971Z",
+  "seconds": 0.21,
+  "recorded": true,
+  "cpu_seconds": 0.5938510000000861,
+  "peak_mb": 223
+}
