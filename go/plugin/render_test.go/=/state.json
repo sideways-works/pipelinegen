@@ -1,0 +1,9 @@
+{
+  "label": "plugin/render_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T02:00:31.123580671Z",
+  "seconds": 0.139973978,
+  "recorded": true,
+  "cpu_seconds": 0.3107140000001891,
+  "peak_mb": 85
+}
