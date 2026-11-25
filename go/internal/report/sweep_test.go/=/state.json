@@ -1,0 +1,9 @@
+{
+  "label": "internal/report/sweep_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T01:41:56.807256836Z",
+  "seconds": 4.0600000000000005,
+  "recorded": true,
+  "cpu_seconds": 13.136458000000175,
+  "peak_mb": 335
+}
