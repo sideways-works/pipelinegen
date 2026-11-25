@@ -230,7 +230,9 @@ func (c *Command) cmd(ctx context.Context, req plugin.DriverRequest, conf comman
 
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...) //nolint:gosec // the suite's own command, from the trusted config
 	cmd.Dir = filepath.Join(req.Tree, conf.Dir)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// a session of its own: its process group, which stops with it, and no terminal, so what asks
+	// the terminal (git for a password, say) fails at once rather than stopping the slice for good
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	cmd.Cancel = func() error { return killGroup(cmd, syscall.SIGKILL) }
 	cmd.WaitDelay = 10 * time.Second
 

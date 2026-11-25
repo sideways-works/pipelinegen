@@ -229,3 +229,22 @@ func TestABareCommandIsFoundOnTheStepsPath(t *testing.T) {
 		t.Fatalf("a command on the step's PATH only: %+v", got["a"])
 	}
 }
+
+// A slice runs in a session of its own, without a terminal: a step that asks the terminal (git for
+// a password, say) fails rather than stopping its process group for good.
+func TestASliceHasNoTerminalToAsk(t *testing.T) {
+	if _, err := os.Stat("/proc/self/stat"); err != nil {
+		t.Skip("no /proc")
+	}
+
+	c := &Command{Env: os.Environ(), Log: io.Discard}
+
+	script := `session=$(cut -d' ' -f6 /proc/$$/stat)
+[ "$session" = "$$" ] || { echo "in session $session, not its own"; exit 1; }
+if (: </dev/tty) 2>/dev/null; then echo "it has a terminal"; exit 1; fi`
+	req := commandRequest(t, map[string]any{"each": []any{"sh", "-c", script}}, false, "a")
+
+	if got := ends(t, c, req); !got["a"].Passed {
+		t.Fatalf("a slice's session: %+v", got["a"].Failures)
+	}
+}

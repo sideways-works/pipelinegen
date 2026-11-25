@@ -63,8 +63,9 @@ func (e *Exec) command(ctx context.Context, verb string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, e.Path, verb) //nolint:gosec // a driver the config pins by checksum
 	cmd.Dir = e.Dir
 	cmd.Env = e.Env
-	// its own process group, so whatever it started stops with it
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	// a session of its own: its process group, so whatever it started stops with it, and no
+	// terminal for a slice to ask
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	cmd.Cancel = func() error { return killGroup(cmd, syscall.SIGKILL) }
 	cmd.WaitDelay = 10 * time.Second
 
