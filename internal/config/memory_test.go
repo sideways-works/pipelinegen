@@ -41,3 +41,32 @@ func TestASuiteAsksItsOwnBrokerOrTheTopLevels(t *testing.T) {
 		t.Fatalf("backend %q, e2e %q", c.MemoryBroker("backend"), c.MemoryBroker("e2e"))
 	}
 }
+
+func TestTheStepsMemoryHasDefaultsTheTopLevelReplaces(t *testing.T) {
+	c, err := Parse([]byte(example))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.StepMemoryMB(StepPlanning) != 4096 || c.StepMemoryMB(StepBookkeeping) != 1024 {
+		t.Errorf("defaults: %d %d", c.StepMemoryMB(StepPlanning), c.StepMemoryMB(StepBookkeeping))
+	}
+
+	c, err = Parse([]byte(example + "memory: {wait: true, steps: {planning: 6000}}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.StepMemoryMB(StepPlanning) != 6000 || c.StepMemoryMB(StepBookkeeping) != 1024 || !c.WaitsForMemory("e2e") {
+		t.Errorf("set: %d %d", c.StepMemoryMB(StepPlanning), c.StepMemoryMB(StepBookkeeping))
+	}
+
+	if _, err := Parse([]byte(example + "memory: {steps: {bookkeeping: -1}}\n")); err == nil {
+		t.Error("a negative size")
+	}
+
+	suite := strings.Replace(example, "    run_slice: ci/tasks/backend-slice.yml\n", "    run_slice: ci/tasks/backend-slice.yml\n    memory: {steps: {planning: 1}}\n", 1)
+	if _, err := Parse([]byte(suite)); err == nil {
+		t.Error("a suite's own memory.steps: the steps are the pipeline's, not a suite's")
+	}
+}

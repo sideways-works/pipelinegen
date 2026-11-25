@@ -132,6 +132,29 @@ container (`docker exec <worker> pipelinegen memory serve`), so the memory
 it reads is the worker's, cgroup limit and all; it holds nothing a batch
 must give back, so a batch that dies frees its grant when the ramp ends.
 
+**The pipeline's own steps.** With the top-level `memory.wait`, the
+steps that plan (a branch's plan, a pull request's first step) and the
+bookkeeping steps that end a batch or a suite wait for their own memory
+the same way, before their heavy part, asking the broker when
+`memory.broker` names one:
+
+```
+memory: this planning step should use 2640 MB, by its recent peaks
+```
+
+Each such step of a trusted run records the most its task used when it
+ends (its cgroup's peak), by step: its command, its run and, for a
+suite's step, the suite. A step expects the 90th percentile of its own
+last 10 peaks and 10% more; without any, the most the same command's steps
+of other runs expect (a pull request's plan, which keeps no peaks,
+expects what the branches' plans used); without those,
+`memory.steps.planning` (4096 MB) or `memory.steps.bookkeeping` (1024 MB).
+Unlike a batch, such a step never gives up: it waits at most a third of
+what its own time limit leaves (15 minutes at most), then starts anyway
+and says so, since a plan or a report that failed for memory would stop
+the run it is for. With these steps waiting too, the worker that plans can
+take more tasks at once without running out of memory.
+
 **Sampled here.** `pipelinegen memory sample --suite <suite>` runs 8 of
 the suite's slices on your machine (`--slices`, spread over their
 durations from the longest; `--slice` names them), each in a batch of its

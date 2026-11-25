@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Added
+
+- `memory.wait` makes the pipeline's own planning steps (a branch's plan, a pull request's first step) and bookkeeping steps (a batch's end, a suite's end) wait for their memory too, asking `memory.broker` when it names one, before their heavy part: each trusted run's such step records its task's peak by step, and a step expects what its recent peaks predict, else what the same command's steps of other runs use, else `memory.steps.planning` (4096 MB) or `memory.steps.bookkeeping` (1024 MB). Such a step waits at most a third of what its limit leaves, then starts anyway, since a plan or report that failed for memory would stop its run
+
 ## [0.11.1] - 2026-11-25
 
 ### Fixed

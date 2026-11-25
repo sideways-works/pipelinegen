@@ -21,6 +21,10 @@ const (
 
 func PeaksRef(suite string) string { return refRoot + "peaks/" + suite }
 
+// StepPeaksRef keeps the recent peaks of the pipeline's own planning and bookkeeping steps, by step:
+// such a step waits for the memory they predict before its heavy part.
+const StepPeaksRef = refRoot + "step-peaks"
+
 type peakSample struct {
 	MB     int64  `json:"mb"`
 	Commit string `json:"commit"`
@@ -30,10 +34,10 @@ type peaksDoc struct {
 	Slices map[string][]peakSample `json:"slices"`
 }
 
-func readPeaks(ctx context.Context, store *gitstore.Store, suite string) (peaksDoc, string, error) {
+func readPeaks(ctx context.Context, store *gitstore.Store, at string) (peaksDoc, string, error) {
 	doc := peaksDoc{Slices: map[string][]peakSample{}}
 
-	ref, ok, err := store.First(ctx, []string{PeaksRef(suite)})
+	ref, ok, err := store.First(ctx, []string{at})
 	if err != nil || !ok {
 		return doc, "", err
 	}
@@ -53,9 +57,28 @@ func readPeaks(ctx context.Context, store *gitstore.Store, suite string) (peaksD
 
 // Peaks reads a suite's recent peaks, oldest first, in MB, by slice.
 func Peaks(ctx context.Context, store *gitstore.Store, suite string) (map[string][]int64, error) {
-	doc, _, err := readPeaks(ctx, store, suite)
+	out, err := peaksAt(ctx, store, PeaksRef(suite))
 	if err != nil {
 		return nil, fmt.Errorf("peaks of %s: %w", suite, err)
+	}
+
+	return out, nil
+}
+
+// StepPeaks reads the recent peaks of the pipeline's own steps, oldest first, in MB, by step.
+func StepPeaks(ctx context.Context, store *gitstore.Store) (map[string][]int64, error) {
+	out, err := peaksAt(ctx, store, StepPeaksRef)
+	if err != nil {
+		return nil, fmt.Errorf("the steps' peaks: %w", err)
+	}
+
+	return out, nil
+}
+
+func peaksAt(ctx context.Context, store *gitstore.Store, at string) (map[string][]int64, error) {
+	doc, _, err := readPeaks(ctx, store, at)
+	if err != nil {
+		return nil, err
 	}
 
 	out := map[string][]int64{}
@@ -102,10 +125,20 @@ func (r *Reporter) recordPeaks(ctx context.Context, run Run, suite string) {
 // AddPeaks adds a peak per slice measured at commit to a suite's peaks, the last PeaksKept of each; a
 // slice that has one of the commit already keeps it.
 func AddPeaks(ctx context.Context, store *gitstore.Store, suite, commit string, measured map[string]int64) error {
+	return addPeaksAt(ctx, store, PeaksRef(suite), "peaks of "+suite, commit, measured)
+}
+
+// AddStepPeak adds the peak a step of the pipeline's own measured at commit to the steps' peaks, the last
+// PeaksKept of each step; a step that has one of the commit already keeps it.
+func AddStepPeak(ctx context.Context, store *gitstore.Store, step, commit string, mb int64) error {
+	return addPeaksAt(ctx, store, StepPeaksRef, "peak of "+step, commit, map[string]int64{step: mb})
+}
+
+func addPeaksAt(ctx context.Context, store *gitstore.Store, at, what, commit string, measured map[string]int64) error {
 	var err error
 
 	for range peakRetries {
-		if err = addPeaks(ctx, store, suite, commit, measured); !errors.Is(err, gitstore.ErrStale) {
+		if err = addPeaks(ctx, store, at, what, commit, measured); !errors.Is(err, gitstore.ErrStale) {
 			break
 		}
 	}
@@ -113,8 +146,8 @@ func AddPeaks(ctx context.Context, store *gitstore.Store, suite, commit string, 
 	return err
 }
 
-func addPeaks(ctx context.Context, store *gitstore.Store, suite, full string, measured map[string]int64) error {
-	doc, old, err := readPeaks(ctx, store, suite)
+func addPeaks(ctx context.Context, store *gitstore.Store, at, what, full string, measured map[string]int64) error {
+	doc, old, err := readPeaks(ctx, store, at)
 	if err != nil {
 		return err
 	}
@@ -140,7 +173,7 @@ func addPeaks(ctx context.Context, store *gitstore.Store, suite, full string, me
 		return err
 	}
 
-	_, err = store.Write(ctx, "peaks of "+suite, gitstore.Update{Ref: PeaksRef(suite), Old: old, Files: map[string][]byte{peaksFile: data}})
+	_, err = store.Write(ctx, what, gitstore.Update{Ref: at, Old: old, Files: map[string][]byte{peaksFile: data}})
 
 	return err
 }

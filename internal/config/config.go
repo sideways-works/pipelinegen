@@ -51,8 +51,9 @@ type Config struct {
 	Packages Packages `yaml:"packages,omitempty"`
 	Images   Images   `yaml:"images,omitempty"`
 	Learn    Learn    `yaml:"learn"`
-	// Memory says whether a batch waits for the memory its slices' recorded peaks predict.
-	Memory   Memory         `yaml:"memory"`
+	// Memory says whether a batch waits for the memory its slices' recorded peaks predict, and a
+	// planning or bookkeeping step for its own.
+	Memory   TopMemory      `yaml:"memory"`
 	Keep     Keep           `yaml:"keep"`
 	Writes   Writes         `yaml:"writes"`
 	Store    Store          `yaml:"store"`
@@ -615,6 +616,46 @@ type Memory struct {
 	Broker string `yaml:"broker"`
 }
 
+// TopMemory is the top level's memory: a suite's, and what the pipeline's own steps wait for.
+type TopMemory struct {
+	Memory `yaml:",inline"`
+
+	// Steps is what a planning or bookkeeping step waits for until its own peaks are recorded.
+	Steps StepMemory `yaml:"steps"`
+}
+
+// StepMemory is, in MB, what a kind of the pipeline's own steps is expected to use before any of its
+// peaks are recorded.
+type StepMemory struct {
+	Planning    int64 `yaml:"planning"`
+	Bookkeeping int64 `yaml:"bookkeeping"`
+}
+
+// The kinds of the pipeline's own steps that wait for memory, and what each is expected to use before
+// its peaks are recorded.
+const (
+	StepPlanning    = "planning"
+	StepBookkeeping = "bookkeeping"
+
+	defaultPlanningMB    = 4096
+	defaultBookkeepingMB = 1024
+)
+
+// StepMemoryMB is what a step of kind is expected to use, in MB, before its peaks are recorded.
+func (c *Config) StepMemoryMB(kind string) int64 {
+	if kind == StepPlanning {
+		return cmp.Or(c.Memory.Steps.Planning, defaultPlanningMB)
+	}
+
+	return cmp.Or(c.Memory.Steps.Bookkeeping, defaultBookkeepingMB)
+}
+
+func (c *Config) validateStepMemory(bad func(string, ...any)) {
+	if c.Memory.Steps.Planning < 0 || c.Memory.Steps.Bookkeeping < 0 {
+		bad("memory.steps: planning and bookkeeping are MB, none of them negative")
+	}
+}
+
 // MemoryBroker is the address of the memory broker suite's batches ask: the suite's own, else the
 // top level's.
 func (c *Config) MemoryBroker(suite string) string {
@@ -982,6 +1023,7 @@ func (c *Config) Validate() error {
 	c.validateCorrelators(bad)
 	c.validateCollectLimits(bad)
 	c.validateLimits(bad)
+	c.validateStepMemory(bad)
 	c.learnGoingAway()
 	c.oldMinutes()
 

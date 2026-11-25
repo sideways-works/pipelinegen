@@ -186,8 +186,9 @@ func runPlan(ctx context.Context, args []string, stdout io.Writer) (err error) {
 	// after the store's scratch repository is back in the cache.
 	defer trimAfter(ctx, cfg, b.trigger, cache, start)
 
-	store := planStore(cfg, ch, cache)
-	defer closeStore(store, &err)
+	// a plan's work waits for its memory; a decision, a beginning or the write of another step's plan doesn't
+	store, done := planStoreWaiting(ctx, cfg, ch, cache, out != "" || em.dir == "" && from == "" && !begin && !decide)
+	defer done(&err)
 
 	switch {
 	case out != "":
@@ -216,6 +217,23 @@ func planBranchGated(ctx context.Context, cfg *config.Config, ch runs.Change, st
 	return planGated(ctx, gate, ch, store, func() error {
 		return planAfter(ctx, cfg, ch, store, trigger, cache, bdPath, stdout, prior)
 	})
+}
+
+// planStoreWaiting is planStore and, when works, the plan's wait for its memory; done keeps the plan's
+// peak and closes the store.
+func planStoreWaiting(ctx context.Context, cfg *config.Config, ch runs.Change, cache string, works bool) (*gitstore.Store, func(*error)) {
+	store := planStore(cfg, ch, cache)
+	if !works {
+		return store, func(err *error) { closeStore(store, err) }
+	}
+
+	sm := planMemory(cfg, ch, store)
+	sm.admit(ctx, os.Stderr)
+
+	return store, func(err *error) {
+		sm.keep(ctx, os.Stderr)
+		closeStore(store, err)
+	}
 }
 
 func planStore(cfg *config.Config, ch runs.Change, cache string) *gitstore.Store {
