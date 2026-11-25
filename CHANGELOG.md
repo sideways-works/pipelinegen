@@ -7,6 +7,8 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-25
+
 ### Fixed
 
 - A slice's command and a driver plugin run in a session of their own, without a terminal: a step that asked the terminal (git for a password, say) used to stop its whole process group when pipelinegen ran under one, as it does in a Concourse task, and the slice then waited forever with its timeouts stopped too; it now fails at once
