@@ -83,6 +83,26 @@ func Read(root string) (Reading, error) {
 	return r, nil
 }
 
+// ReadAt is Read with the cgroup v2 path p (as /proc/<pid>/cgroup names it) in place of the reading
+// process's own: for a reader outside the cgroup whose room it reads, such as a worker's memory
+// broker on the host reading the worker container's limit.
+func ReadAt(root, p string) (Reading, error) {
+	info, err := fields(filepath.Join(root, "proc", "meminfo"), ":")
+	if err != nil {
+		return Reading{}, fmt.Errorf("%w: %w", ErrNoReading, err)
+	}
+
+	avail, ok := info["MemAvailable"]
+	if !ok {
+		return Reading{}, fmt.Errorf("%w: /proc/meminfo has no MemAvailable", ErrNoReading)
+	}
+
+	r := Reading{Available: kb(avail), Total: kb(info["MemTotal"])}
+	r.Limit, r.Used, r.Cgroup = tightest(filepath.Join(root, "sys", "fs", "cgroup"), path.Clean("/"+p))
+
+	return r, nil
+}
+
 // unifiedPath is the process's cgroup v2 path ("0::/a/b"), "/" inside a container's own namespace.
 func unifiedPath(root string) (string, bool) {
 	data, err := os.ReadFile(filepath.Join(root, "proc", "self", "cgroup")) //nolint:gosec // the machine's own file

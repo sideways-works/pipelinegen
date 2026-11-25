@@ -36,14 +36,15 @@ func runMemory(ctx context.Context, args []string, stdout io.Writer) error {
 // so the memory it reads is what the worker's tasks may use.
 func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 	var (
-		listen, root string
-		ramp         time.Duration
+		listen, root, cgroup string
+		ramp                 time.Duration
 	)
 
 	fs := flag.NewFlagSet("memory serve", flag.ContinueOnError)
 	textVar(fs, &listen, "listen", brokerListen, "the address the broker listens on")
 	fs.DurationVar(&ramp, "ramp", brokerRamp, "how long a grant counts against the worker's free memory, by when the batch's own use shows in it")
-	textVar(fs, &root, "root", "/", "where the machine's /proc and /sys are, for a broker outside the worker's container")
+	textVar(fs, &root, "root", "/", "where the machine's /proc and /sys are")
+	textVar(fs, &cgroup, "cgroup", "", "the cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the first line of /proc/<the worker's pid>/cgroup less its 0::, such as /system.slice/docker-<id>.scope (default the broker's own)")
 
 	if err := parse(ctx, fs, args); err != nil {
 		return err
@@ -59,7 +60,12 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 
 	b := &membroker.Broker{
 		Read: func() (memory.Reading, float64, error) {
-			r, err := memory.Read(root)
+			read := memory.Read
+			if cgroup != "" {
+				read = func(root string) (memory.Reading, error) { return memory.ReadAt(root, cgroup) }
+			}
+
+			r, err := read(root)
 
 			return r, memory.Pressure(root), err
 		},

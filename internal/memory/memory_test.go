@@ -187,3 +187,27 @@ func TestAContainerNamingTheHostsPathIsMeasuredAtTheMount(t *testing.T) {
 		t.Fatalf("%+v %v", u, err)
 	}
 }
+
+func TestAReaderOutsideACgroupReadsItsLimitByPath(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, map[string]string{
+		"proc/meminfo":     meminfo,
+		"proc/self/cgroup": "0::/system.slice/broker.service\n",
+		"sys/fs/cgroup/system.slice/docker-1.scope/memory.max":     "5242880000\n",
+		"sys/fs/cgroup/system.slice/docker-1.scope/memory.current": "1048576000\n",
+	})
+
+	r, err := ReadAt(root, "/system.slice/docker-1.scope")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if r.Limit != 5000 || r.Used != 1000 || r.Free() != 4000 || r.Cgroup != "/system.slice/docker-1.scope" {
+		t.Fatalf("%+v free %d", r, r.Free())
+	}
+
+	// the reader's own cgroup has no limit: Read sees the machine alone
+	if own, err := Read(root); err != nil || own.Limit != 0 {
+		t.Fatalf("own: %+v %v", own, err)
+	}
+}
