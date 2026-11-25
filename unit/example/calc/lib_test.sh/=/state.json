@@ -1,0 +1,8 @@
+{
+  "label": "example/calc/lib_test.sh",
+  "state": "passed",
+  "updated": "2026-11-25T01:37:54.486871284Z",
+  "seconds": 0.003258233,
+  "cpu_seconds": 0.012355000000000005,
+  "peak_mb": 5
+}
