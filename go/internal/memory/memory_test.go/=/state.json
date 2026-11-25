@@ -1,0 +1,9 @@
+{
+  "label": "internal/memory/memory_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T06:12:51.89996326Z",
+  "seconds": 0.3,
+  "recorded": true,
+  "cpu_seconds": 1.3723899999999958,
+  "peak_mb": 120
+}
