@@ -1,0 +1,9 @@
+{
+  "label": "internal/runs/pulls_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T03:07:07.511901048Z",
+  "seconds": 0.138253702,
+  "recorded": true,
+  "cpu_seconds": 0.3198679999995875,
+  "peak_mb": 258
+}
