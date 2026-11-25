@@ -1,0 +1,9 @@
+{
+  "label": "internal/releasetest/program_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T03:07:07.510701591Z",
+  "seconds": 13.76,
+  "recorded": true,
+  "cpu_seconds": 0.7486510000003364,
+  "peak_mb": 251
+}

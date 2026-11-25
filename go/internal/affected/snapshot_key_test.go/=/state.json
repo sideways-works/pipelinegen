@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/snapshot_key_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T03:23:09.887845583Z",
+  "seconds": 0.34,
+  "recorded": true,
+  "cpu_seconds": 0.533424999999994,
+  "peak_mb": 251
+}

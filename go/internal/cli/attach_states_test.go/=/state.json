@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/attach_states_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T03:23:09.888607781Z",
+  "seconds": 1.11,
+  "recorded": true,
+  "cpu_seconds": 1.6184689999999762,
+  "peak_mb": 300
+}
