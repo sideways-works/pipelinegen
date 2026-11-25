@@ -1,0 +1,19 @@
+# observed
+go:internal/bazel#func:command
+go:internal/bazel#method:Client.Run
+go:internal/depsrepo#func:ReadKey
+go:internal/depsrepo#func:Stub
+go:internal/depsrepo#func:keys
+go:internal/depsrepo#func:skipDir
+go:internal/depsrepo#func:writeDir
+go:internal/progress#func:Stage
+go:internal/progress#func:from
+go:internal/testenv#func:Bazel
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:defaultRoots
+go:internal/testenv#func:outputBases
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
+go:internal/testrepo#func:Bazel
+go:internal/testrepo#func:NeedBazel

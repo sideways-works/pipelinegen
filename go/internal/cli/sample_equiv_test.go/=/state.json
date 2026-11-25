@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/sample_equiv_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T03:31:58.964547236Z",
+  "seconds": 0.35,
+  "recorded": true,
+  "cpu_seconds": 1.0168870000002244,
+  "peak_mb": 339
+}

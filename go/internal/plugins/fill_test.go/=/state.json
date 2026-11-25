@@ -1,0 +1,9 @@
+{
+  "label": "internal/plugins/fill_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T03:44:08.100198905Z",
+  "seconds": 0.13999999999999999,
+  "recorded": true,
+  "cpu_seconds": 0.4782839999998032,
+  "peak_mb": 51
+}
