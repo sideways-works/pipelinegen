@@ -1,0 +1,9 @@
+{
+  "label": "internal/s3/client_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T06:12:51.901223716Z",
+  "seconds": 0.639813273,
+  "recorded": true,
+  "cpu_seconds": 1.2747819999999592,
+  "peak_mb": 161
+}

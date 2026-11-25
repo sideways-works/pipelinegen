@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/unobservable_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T06:03:13.004822161Z",
+  "seconds": 0.176011823,
+  "recorded": true,
+  "cpu_seconds": 0.37631999999999266,
+  "peak_mb": 204
+}

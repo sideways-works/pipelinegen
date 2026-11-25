@@ -1,0 +1,17 @@
+# observed
+go:internal/memory#func:Measure
+go:internal/memory#func:Predict
+go:internal/memory#func:Pressure
+go:internal/memory#func:Read
+go:internal/memory#func:ReadAt
+go:internal/memory#func:atoi
+go:internal/memory#func:fields
+go:internal/memory#func:fieldsOf
+go:internal/memory#func:kb
+go:internal/memory#func:legacy
+go:internal/memory#func:number
+go:internal/memory#func:tightest
+go:internal/memory#func:unifiedPath
+go:internal/memory#func:workingSet
+go:internal/memory#method:Reading.Free
+go:internal/memory#method:Reading.String
