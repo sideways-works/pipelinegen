@@ -331,6 +331,8 @@ type localSuiteRun struct {
 	common                   *common
 	// temp says work is removed when the run ends.
 	temp bool
+	// measure measures each slice's memory, for memory sample.
+	measure bool
 }
 
 type suiteTally struct {
@@ -340,6 +342,8 @@ type suiteTally struct {
 	recording, attached bool
 	// short is why the suite's batch didn't start: this machine was short of memory.
 	short string
+	// peaks are the slices' measured peaks, in MB, when the run measured them.
+	peaks map[string]int64
 }
 
 // suite runs one batch of the suite's selected slices in a build of its own. Without recording its
@@ -375,7 +379,7 @@ func (r *localSuiteRun) suite(ctx context.Context, sp affected.SuitePlan, record
 	b := &localBuild{
 		cfg: derived, cfgPath: cfgPath, root: r.root, dir: filepath.Join(dir, "build"),
 		suite: sp.Suite, ch: ch, plugins: r.plugins, out: r.out, box: &imageBox{flags: r.images},
-		storeGoes: r.temp && !record,
+		storeGoes: r.temp && !record, measure: r.measure && !r.images.noImage,
 	}
 
 	if err := b.ready(ctx, r.common, names(sp.Selected)); err != nil {
@@ -404,7 +408,7 @@ func (r *localSuiteRun) suite(ctx context.Context, sp affected.SuitePlan, record
 
 	t := suiteTally{suite: sp.Suite, slices: names(sp.Selected), recording: record}
 
-	if t.states, err = localStates(ctx, derived, ch, sp.Suite); err != nil {
+	if err := r.read(ctx, &t, derived, ch); err != nil {
 		return t, errors.Join(err, ranErr, endErr)
 	}
 
@@ -440,6 +444,41 @@ func localStates(ctx context.Context, cfg *config.Config, ch runs.Change, suite 
 	}
 
 	return states, err
+}
+
+// read fills t with what the run's records hold: the slices' states, and their peaks when it measured.
+func (r *localSuiteRun) read(ctx context.Context, t *suiteTally, cfg *config.Config, ch runs.Change) error {
+	var err error
+
+	if t.states, err = localStates(ctx, cfg, ch, t.suite); err != nil {
+		return err
+	}
+
+	if r.measure {
+		t.peaks, err = localPeaks(ctx, cfg, ch, t.suite)
+	}
+
+	return err
+}
+
+// localPeaks are the peaks a run on this machine measured, by slice, in MB.
+func localPeaks(ctx context.Context, cfg *config.Config, ch runs.Change, suite string) (map[string]int64, error) {
+	store := openStore(cfg)
+
+	files, err := report.StateFiles(ctx, store, reportID(ch), suite)
+	if cerr := store.Close(); err == nil {
+		err = cerr
+	}
+
+	out := map[string]int64{}
+
+	for name, sf := range files {
+		if sf.PeakMB > 0 {
+			out[name] = sf.PeakMB
+		}
+	}
+
+	return out, err
 }
 
 func (t suiteTally) count(st report.State) int {

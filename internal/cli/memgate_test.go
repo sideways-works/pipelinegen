@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,8 @@ import (
 
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
+	"github.com/sideways-works/pipelinegen/internal/membroker"
+	"github.com/sideways-works/pipelinegen/internal/memory"
 	"github.com/sideways-works/pipelinegen/internal/report"
 )
 
@@ -71,8 +74,8 @@ func TestPredictTakesEachSlicesPercentileAndTheMedianForANewOne(t *testing.T) {
 		t.Fatalf("known slices: %+v %v", p, ok)
 	}
 
-	// the slices' predictions are 1320, 2200 and 3300: a new slice takes 2200
-	if p, ok := predict(peaks, []string{"a", "new"}); !ok || p.MB != 2200 || !strings.Contains(p.Why, "1 of 2 without any at the suite's median, 2200 MB") {
+	// the slices' predictions are 1320, 2200 and 3300: a new slice takes the 90th percentile, 3300
+	if p, ok := predict(peaks, []string{"a", "new"}); !ok || p.MB != 3300 || !strings.Contains(p.Why, "1 of 2 without any at the 90th percentile of the suite's others, 3300 MB") {
 		t.Fatalf("a new slice: %+v %v", p, ok)
 	}
 
@@ -359,5 +362,99 @@ func TestABlockingWaitLeavesTheBatchTimeToFinish(t *testing.T) {
 		if got := blockingWait(c.minutes, c.seconds); got != c.want {
 			t.Errorf("%d minutes, %v s: %s, want %s", c.minutes, c.seconds, got, c.want)
 		}
+	}
+}
+
+// startBroker serves a broker over the fake machine at root.
+func startBroker(t *testing.T, ramp time.Duration) string {
+	t.Helper()
+
+	l, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b := &membroker.Broker{
+		Read: func() (memory.Reading, float64, error) {
+			r, err := memory.Read(memoryRoot)
+
+			return r, memory.Pressure(memoryRoot), err
+		},
+		Ramp: ramp, Every: 10 * time.Millisecond,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() { _ = b.Serve(ctx, l) }() //nolint:errcheck // ends with the test
+
+	return l.Addr().String()
+}
+
+// Two batches that would both fit by the free memory alone are granted one after the other by the
+// broker: the second waits until the first's grant has ramped out.
+func TestABrokerGrantsBatchesStartingAtOnceOneAfterTheOther(t *testing.T) {
+	fakeMemory(t, 8000, 50*time.Millisecond)
+	addr := startBroker(t, 300*time.Millisecond)
+
+	batches := t.TempDir()
+	predicted(t, batches, "1", 6000)
+	predicted(t, batches, "2", 6000)
+
+	var logs [2]strings.Builder
+
+	done := make(chan time.Time, 2)
+
+	for i, batch := range []string{"1", "2"} {
+		go func() {
+			err := awaitMemory(t.Context(), gate{batches: batches, batch: batch, suite: "e2e", minutes: 120, result: t.TempDir(), block: true, broker: addr}, &logs[i])
+			if err != nil {
+				t.Error(err)
+			}
+
+			done <- time.Now()
+		}()
+	}
+
+	first, second := <-done, <-done
+	if second.Sub(first) < 200*time.Millisecond {
+		t.Fatalf("granted %s apart:\n%s\n%s", second.Sub(first), logs[0].String(), logs[1].String())
+	}
+
+	for i := range logs {
+		if !strings.Contains(logs[i].String(), "the worker's broker granted 6000 MB") {
+			t.Fatalf("batch %d: %s", i+1, logs[i].String())
+		}
+	}
+}
+
+func TestAnUnreachableBrokerLeavesTheBatchItsOwnReading(t *testing.T) {
+	fakeMemory(t, 8000, 50*time.Millisecond)
+
+	batches := t.TempDir()
+	predicted(t, batches, "1", 6000)
+
+	var log strings.Builder
+	if err := awaitMemory(t.Context(), gate{batches: batches, batch: "1", suite: "e2e", minutes: 120, result: t.TempDir(), block: true, broker: "127.0.0.1:1"}, &log); err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(log.String(), "memory broker unreachable") || !strings.Contains(log.String(), "the batch waits by its own reading") {
+		t.Fatalf("%s", log.String())
+	}
+}
+
+func TestTheGatewayIsTheDefaultRoutes(t *testing.T) {
+	root := fakeMemory(t, 8000, time.Minute)
+	writeFile(t, filepath.Join(root, "proc", "net", "route"), "Iface\tDestination\tGateway \tFlags\n"+
+		"eth0\t0050A8C0\t00000000\t0001\n"+
+		"eth0\t00000000\t0150A8C0\t0003\n")
+
+	if got, err := brokerAddr("gateway:7480"); err != nil || got != "192.168.80.1:7480" {
+		t.Fatalf("%q %v", got, err)
+	}
+
+	if got, err := brokerAddr("10.0.0.5:7480"); err != nil || got != "10.0.0.5:7480" {
+		t.Fatalf("%q %v", got, err)
 	}
 }

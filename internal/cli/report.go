@@ -951,7 +951,7 @@ func sliceStep(ctx context.Context, args []string, start bool, stdout io.Writer)
 	ev := sliceEvent(suite, list[i], s.root, result, rec)
 	j := report.JournalIn(result)
 
-	if s.reporter.ID.Run != localRun {
+	if s.reporter.ID.Run != localRun || measuring() {
 		s.reporter.Meter = cgroupMeter()
 	}
 

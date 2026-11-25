@@ -73,9 +73,11 @@ nothing.
 **Predicted.** `pipelinegen batches` reads those peaks and writes each
 batch's prediction beside its slices, `batches/<n>/memory.json`: the most
 any of its slices should use, each the 90th percentile of its recent
-peaks and 10% more. A slice without peaks takes the median of the suite's
-slices. A suite with no peaks at all gets no prediction, and its batches
-start as before; its first trusted run measures them.
+peaks and 10% more. A slice without peaks takes the 90th percentile of the
+suite's other slices, so a suite measured only in part errs high. A suite
+with no peaks at all gets no prediction, and its batches start as before;
+its first trusted run measures them, or `pipelinegen memory sample` does
+(below).
 
 **Admitted.** At its start, before its setup, a batch logs what the
 worker has free, its cgroup's limit and the memory pressure, and what it
@@ -110,8 +112,34 @@ a recorded peak and whether its batches wait:
 memory: e2e: 256 of 256 selected slices have a recorded peak; its batches wait for their predicted memory (memory.wait)
 ```
 
-A slice without a peak is predicted at the suite's median, so raise the
-task limit once the suites that run heavy batches are measured whole.
+A slice without a peak is predicted high, at the 90th percentile of the
+suite's others, so raise the task limit once the suites that run heavy
+batches have peaks, measured on CI or sampled.
+
+**One after the other: the broker.** Batches that read the worker's free
+memory at the same moment all see the same room, and all start. A worker
+that runs `pipelinegen memory serve` (port 7480 by default) hands its
+memory out instead: with `memory.broker` set (`gateway:7480` for the
+task's default gateway, where a Concourse worker's tasks reach their
+worker), a waiting batch asks the broker for its prediction, less what it
+holds. The broker grants the asks in the order they came, each once the
+worker's free memory, less what it granted in the last `--ramp` (5
+minutes by default), covers it: by then a batch's own use shows in the
+free memory itself. A batch whose wait ends before its grant leaves its
+slices not run, as above, and one that can't reach the broker waits by its
+own reading. The broker runs beside the Concourse worker, in its
+container (`docker exec <worker> pipelinegen memory serve`), so the memory
+it reads is the worker's, cgroup limit and all; it holds nothing a batch
+must give back, so a batch that dies frees its grant when the ramp ends.
+
+**Sampled here.** `pipelinegen memory sample --suite <suite>` runs 8 of
+the suite's slices on your machine (`--slices`, spread over their
+durations from the longest; `--slice` names them), each in a batch of its
+own in its image, measures each one's peak as CI does, set-up included,
+and adds it to the store's peaks with 25% on top (`--headroom`). It needs
+the store's writing credential, as `seed` does; `--dry-run` measures
+without writing. A suite sampled this way waits for memory from its next
+run on, and CI's own measurements join the sample's.
 
 **Not run.** A batch still short when its wait ends starts none of its
 slices. Its end marks them `not run` with the reading ("not run: the

@@ -447,6 +447,9 @@ type localBuild struct {
 	out io.Writer
 	// storeGoes says the run's store is removed when it ends, so a failure is said in full.
 	storeGoes bool
+	// measure has the batch's steps measure each slice's memory, as on CI: in its image, its
+	// container's cgroup holds the batch alone.
+	measure bool
 }
 
 // findPlugins puts in b.plugins the drivers and correlators the suite's batch runs, fetching those
@@ -712,10 +715,16 @@ func names(todo []bazel.Slice) []string {
 // ownEnv is the build's own PIPELINEGEN_ variables: never a job's address or the pipeline step's mark,
 // which would make the tasks a pipeline's.
 func (b *localBuild) ownEnv() map[string]string {
-	return map[string]string{
+	own := map[string]string{
 		envRun: localRun, envSuite: b.suite, envBatch: "0", "PIPELINEGEN_RECORD": strconv.FormatBool(b.cfg.Records(localRun, b.suite)),
 		"PIPELINEGEN_RUN_FILE": filepath.Join(batchesOf(b.dir), runs.RunFile), envConfig: b.cfgPath,
 	}
+
+	if b.measure {
+		own[envMeasure] = "1"
+	}
+
+	return own
 }
 
 // env is the steps' environment on this machine: its own, less what ownEnv leaves out.

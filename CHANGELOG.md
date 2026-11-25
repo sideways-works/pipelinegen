@@ -10,6 +10,12 @@ minor version may change the config or the protocol.
 ### Added
 
 - `memory.wait` (top level, or a suite's own): a batch waits for the memory its slices' recorded peaks predict until it fits, for as long as it could still finish within its time limit, instead of at most 5 minutes; a task file's batch that never calls `slice memory` waits at its first `slice start`, for its prediction less what its set-up holds. With it on, pipelinegen rather than Concourse's task limit decides how many batches a worker runs at once. The plan's log says per suite how many selected slices have a recorded peak
+- `pipelinegen memory serve`, a worker's memory broker, and `memory.broker`: a waiting batch asks the broker of its worker, which grants the asks in the order they came, each once the free memory less what it granted lately covers it, so batches starting at once no longer all see the same room
+- `pipelinegen memory sample --suite <suite>`: runs a sample of a suite's slices on this machine, each alone in its image, measures their peaks as CI does and records them with 25% headroom, so a suite can wait for memory before CI measured it
+
+### Changed
+
+- A slice without a recorded peak is predicted at the 90th percentile of its suite's others, not their median
 
 ## [0.11.0] - 2026-11-24
 

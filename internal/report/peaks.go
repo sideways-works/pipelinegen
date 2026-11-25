@@ -94,26 +94,32 @@ func (r *Reporter) recordPeaks(ctx context.Context, run Run, suite string) {
 		return
 	}
 
-	var err error
-
-	for range peakRetries {
-		if err = r.writePeaks(ctx, suite, measured); !errors.Is(err, gitstore.ErrStale) {
-			break
-		}
-	}
-
-	if err != nil {
+	if err := AddPeaks(ctx, r.Store, suite, r.ID.Commit, measured); err != nil {
 		r.warnf("keeping %s's memory peaks: %v", suite, err)
 	}
 }
 
-func (r *Reporter) writePeaks(ctx context.Context, suite string, measured map[string]int64) error {
-	doc, old, err := readPeaks(ctx, r.Store, suite)
+// AddPeaks adds a peak per slice measured at commit to a suite's peaks, the last PeaksKept of each; a
+// slice that has one of the commit already keeps it.
+func AddPeaks(ctx context.Context, store *gitstore.Store, suite, commit string, measured map[string]int64) error {
+	var err error
+
+	for range peakRetries {
+		if err = addPeaks(ctx, store, suite, commit, measured); !errors.Is(err, gitstore.ErrStale) {
+			break
+		}
+	}
+
+	return err
+}
+
+func addPeaks(ctx context.Context, store *gitstore.Store, suite, full string, measured map[string]int64) error {
+	doc, old, err := readPeaks(ctx, store, suite)
 	if err != nil {
 		return err
 	}
 
-	commit, added := short(r.ID.Commit), false
+	commit, added := short(full), false
 
 	for _, name := range slices.Sorted(maps.Keys(measured)) {
 		samples := doc.Slices[name]
@@ -134,7 +140,7 @@ func (r *Reporter) writePeaks(ctx context.Context, suite string, measured map[st
 		return err
 	}
 
-	_, err = r.Store.Write(ctx, "peaks of "+suite, gitstore.Update{Ref: PeaksRef(suite), Old: old, Files: map[string][]byte{peaksFile: data}})
+	_, err = store.Write(ctx, "peaks of "+suite, gitstore.Update{Ref: PeaksRef(suite), Old: old, Files: map[string][]byte{peaksFile: data}})
 
 	return err
 }

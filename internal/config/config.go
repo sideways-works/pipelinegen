@@ -608,6 +608,10 @@ type Memory struct {
 	// recorded peaks predict, for as long as the batch could still finish within its time limit.
 	// Off, a batch waits at most a few minutes and then leaves its slices not run.
 	Wait *bool `yaml:"wait"`
+	// Broker is the address of the memory broker of the worker a batch runs on (pipelinegen memory
+	// serve), host:port, the host "gateway" for the task's default gateway: a waiting batch asks it,
+	// so batches starting at once are granted one after the other. Top level only.
+	Broker string `yaml:"broker"`
 }
 
 // WaitsForMemory tells whether a batch of suite waits for its predicted memory until it fits.

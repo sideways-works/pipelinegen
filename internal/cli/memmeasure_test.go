@@ -120,8 +120,8 @@ func keepsPeaks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// c has no peaks: the suite's median of a's 2200 and b's 4400
-	if p.MB != 4400 || !strings.Contains(p.Why, "1 of 1 without any at the suite's median, 4400 MB") {
+	// c has no peaks: the 90th percentile of a's 2200 and b's 4400
+	if p.MB != 4400 || !strings.Contains(p.Why, "1 of 1 without any at the 90th percentile of the suite's others, 4400 MB") {
 		t.Fatalf("c's batch: %+v", p)
 	}
 }

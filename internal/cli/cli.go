@@ -51,6 +51,7 @@ func commands() []command {
 		{"end", "end a run of a change by hand, such as a continuous run's round whose build is gone: --run <run> --commit <commit> [--change <change>]", runEnd},
 		{"also-to", "post a pull request run's comment to more pull requests", runAlsoTo},
 		{"lists", "attach a run's recordings to a branch commit, or show a commit's lists: attach, show", runLists},
+		{"memory", "share a worker's memory among its batches, and measure a suite's slices' peaks here: serve, sample", runMemory},
 		{"durations", "record a run's test reports into a suite's durations file", runDurations},
 		{"why", "say why a slice ran for a change, or why it didn't", runWhy},
 		{"status", "say what the records hold about a commit's runs, one line each; exit 0 passed, 1 failed, 2 pending, 3 no run: <commit|branch>", runStatus},

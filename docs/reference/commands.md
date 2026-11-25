@@ -794,6 +794,50 @@ At least one source is needed: `--go-json`, `--playwright` or `--run`.
 `--param` names the parameter set any of them ran with. See
 [durations](../how-to/durations.md).
 
+## `pipelinegen memory`
+
+`memory serve` is a worker's memory broker: batches that wait for memory
+(`memory.wait`) with `memory.broker` set ask it for their prediction, and
+it grants the asks in the order they came, each once the worker's free
+memory, less what it granted within the ramp, covers it. Run it beside the
+Concourse worker, in its container, so it reads the worker's memory:
+
+```
+$ docker exec concourse-worker-worker-1 /opt/pipelinegen/pipelinegen memory serve
+memory broker on [::]:7480, grants counting 5m0s
+2026-11-25T09:12:03Z granted pr pr-240 e2e batch 3 3200 MB: 41200 MB free less 6400 MB granted lately
+```
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--listen` | `:7480` | The address it listens on. |
+| `--ramp` | `5m` | How long a grant counts against the free memory, by when the batch's own use shows in it. |
+| `--root` | `/` | Where the machine's `/proc` and `/sys` are. |
+
+`memory sample` measures a sample of a suite's slices on this machine and
+records their peaks, each the measured peak and the headroom, in the
+store's peaks, where batches' predictions read them. Each slice runs in a
+batch of its own in its image, so its peak is its own, set-up included.
+
+```
+$ pipelinegen memory sample --suite e2e --slices 4
+e2e/checkout.spec.ts: passed, peak 2810 MB, recorded as 3512 MB
+...
+recorded 4 peaks of e2e at 81ca1ac0397c, each the measured peak and 25%
+```
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--suite` | none | The suite. Required. |
+| `--slices` | `8` | How many slices, spread over their recorded durations from the longest. |
+| `--slice` | none | Names a slice to measure instead (repeatable). |
+| `--headroom` | `25` | The percentage added to each measured peak. |
+| `--dry-run` | off | Measures and prints, writing nothing. |
+
+It takes `pipelinegen run`'s other flags (`--root`, `--plugins`, the image
+flags) and needs the store's writing credential unless `--dry-run`;
+`--no-image` is refused, since the batch would share this machine's cgroup.
+
 ## `pipelinegen plugins`
 
 `plugins claims` prints what each configured sbom and correlator plugin

@@ -2,22 +2,26 @@ package cli
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/affected"
 	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
+	"github.com/sideways-works/pipelinegen/internal/membroker"
 	"github.com/sideways-works/pipelinegen/internal/memory"
 	"github.com/sideways-works/pipelinegen/internal/report"
 )
@@ -55,7 +59,8 @@ type prediction struct {
 }
 
 // predict is a batch's peak: the most any slice should reach, each its recent peaks' 90th percentile and
-// a tenth more, one without any at the suite's median; a suite with no peaks predicts nothing.
+// a tenth more, one without any at the 90th percentile of the suite's others, so a suite measured only in
+// part errs high; a suite with no peaks predicts nothing.
 func predict(peaks map[string][]int64, names []string) (prediction, bool) {
 	var all []int64
 
@@ -70,7 +75,7 @@ func predict(peaks map[string][]int64, names []string) (prediction, bool) {
 	}
 
 	slices.Sort(all)
-	median := all[len(all)/2]
+	high := all[(len(all)*9)/10]
 
 	var (
 		most    int64
@@ -80,7 +85,7 @@ func predict(peaks map[string][]int64, names []string) (prediction, bool) {
 	for _, name := range names {
 		p := memory.Predict(peaks[name])
 		if p == 0 {
-			p, unknown = median, unknown+1
+			p, unknown = high, unknown+1
 		}
 
 		most = max(most, p)
@@ -88,7 +93,7 @@ func predict(peaks map[string][]int64, names []string) (prediction, bool) {
 
 	why := fmt.Sprintf("the most its slices should use, each the 90th percentile of up to %d recent peaks and %d%% more", report.PeaksKept, memory.Headroom)
 	if unknown > 0 {
-		why += fmt.Sprintf("; %d of %d without any at the suite's median, %d MB", unknown, len(names), median)
+		why += fmt.Sprintf("; %d of %d without any at the 90th percentile of the suite's others, %d MB", unknown, len(names), high)
 	}
 
 	return prediction{MB: most, Why: why}, true
@@ -187,6 +192,20 @@ type gate struct {
 	// held is what the batch's own cgroup uses already, in MB: a task file's batch reaches
 	// pipelinegen first at its first slice, when its set-up runs already.
 	held int64
+	// broker is memory.broker: the worker's broker a blocking wait asks.
+	broker string
+}
+
+// need is what the batch waits for: its prediction less what it holds already, logged with the reading.
+func (g gate) need(r memory.Reading, pressure float64, p prediction, log io.Writer) int64 {
+	warnf(log, "memory: %s, pressure %s; this batch should use %d MB: %s\n", r, psi(pressure), p.MB, p.Why)
+
+	need := max(p.MB-g.held, 0)
+	if g.held > 0 {
+		warnf(log, "memory: the batch holds %d MB already, so it needs %d MB more\n", g.held, need)
+	}
+
+	return need
 }
 
 func (g gate) limit(p prediction) time.Duration {
@@ -223,12 +242,7 @@ func awaitMemory(ctx context.Context, g gate, log io.Writer) error {
 		return nil
 	}
 
-	warnf(log, "memory: %s, pressure %s; this batch should use %d MB: %s\n", r, psi(pressure), p.MB, p.Why)
-
-	need := max(p.MB-g.held, 0)
-	if g.held > 0 {
-		warnf(log, "memory: the batch holds %d MB already, so it needs %d MB more\n", g.held, need)
-	}
+	need := g.need(r, pressure, p, log)
 
 	// waiting for room that never comes would leave its slices never run
 	if c := r.Capacity(); p.MB > c {
@@ -238,6 +252,13 @@ func awaitMemory(ctx context.Context, g gate, log io.Writer) error {
 	}
 
 	limit := g.limit(p)
+
+	if g.block && g.broker != "" {
+		if done, err := g.askBroker(ctx, need, limit, log); done {
+			return err
+		}
+	}
+
 	start := time.Now()
 	told := start
 
@@ -275,6 +296,90 @@ func awaitMemory(ctx context.Context, g gate, log io.Writer) error {
 	}
 
 	return nil
+}
+
+// askBroker asks the worker's broker for need, waiting at most limit: done with the broker's answer, or
+// not done when it can't be reached, and the batch waits by its own reading.
+func (g gate) askBroker(ctx context.Context, need int64, limit time.Duration, log io.Writer) (bool, error) {
+	addr, err := brokerAddr(g.broker)
+	if err != nil {
+		warnf(log, "memory: %v; the batch waits by its own reading\n", err)
+
+		return false, nil
+	}
+
+	who := fmt.Sprintf("%s %s %s batch %s", os.Getenv(envRun), os.Getenv(envChange), g.suite, g.batch)
+	start := time.Now()
+
+	ans, err := membroker.Ask(ctx, addr, membroker.Request{MB: need, WaitSeconds: limit.Seconds(), Who: who})
+	if err != nil {
+		if ctx.Err() != nil {
+			return true, fmt.Errorf("memory: %w", ctx.Err())
+		}
+
+		warnf(log, "memory: %v; the batch waits by its own reading\n", err)
+
+		return false, nil
+	}
+
+	waited := time.Since(start)
+
+	if ans.Granted {
+		warnf(log, "memory: the worker's broker granted %d MB after %s (%d MB free less %d MB granted lately): the batch starts\n",
+			need, waited.Round(time.Second), ans.FreeMB+ans.HeldMB-need, ans.HeldMB-need)
+
+		return true, nil
+	}
+
+	short := memoryShort{Free: ans.FreeMB, Predicted: need, Waited: waited.Seconds(), Reading: "the broker: " + ans.Why}
+
+	return true, leaveNotRun(g.result, g.suite, short, log)
+}
+
+// brokerAddr is memory.broker with the host "gateway" read as the task's default gateway.
+func brokerAddr(broker string) (string, error) {
+	host, port, err := net.SplitHostPort(broker)
+	if err != nil {
+		return "", fmt.Errorf("memory.broker %q: host:port: %w", broker, err)
+	}
+
+	if host != "gateway" {
+		return broker, nil
+	}
+
+	gw, err := defaultGateway(memoryRoot)
+	if err != nil {
+		return "", fmt.Errorf("memory.broker %q: %w", broker, err)
+	}
+
+	return net.JoinHostPort(gw, port), nil
+}
+
+var errNoGateway = errors.New("no default gateway in /proc/net/route")
+
+// defaultGateway is the default route's gateway in root/proc/net/route, the kernel's own table.
+func defaultGateway(root string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(root, "proc", "net", "route")) //nolint:gosec // the machine's own file
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", errNoGateway, err)
+	}
+
+	for line := range strings.SplitSeq(string(data), "\n") {
+		f := strings.Fields(line)
+		if len(f) < 3 || f[1] != "00000000" || f[2] == "00000000" {
+			continue
+		}
+
+		// the gateway is a little-endian hex IPv4 address
+		raw, err := hex.DecodeString(f[2])
+		if err != nil || len(raw) != net.IPv4len {
+			continue
+		}
+
+		return net.IPv4(raw[3], raw[2], raw[1], raw[0]).String(), nil
+	}
+
+	return "", errNoGateway
 }
 
 func psi(p float64) string {
@@ -351,6 +456,12 @@ func sayMemoryCoverage(ctx context.Context, cfg *config.Config, store *gitstore.
 	}
 }
 
+// envMeasure set to 1 has a batch on this machine measure its slices' memory as one on CI does: `memory
+// sample` sets it for a batch in its image, whose container's cgroup holds the batch alone.
+const envMeasure = "PIPELINEGEN_MEASURE"
+
+func measuring() bool { return os.Getenv(envMeasure) == "1" }
+
 // memoryAdmitted, in a task file's batch result, says its first slice's start waited for its memory.
 const memoryAdmitted = ".memory-admitted"
 
@@ -375,7 +486,7 @@ func awaitMemoryOnce(ctx context.Context, r *report.Reporter, batches, suite, re
 
 	if err := awaitMemory(ctx, gate{
 		batches: batches, batch: os.Getenv(envBatch), suite: suite, result: result,
-		minutes: r.Config.SuiteMinutes(r.ID.Run, suite), block: true, held: held,
+		minutes: r.Config.SuiteMinutes(r.ID.Run, suite), block: true, held: held, broker: r.Config.Memory.Broker,
 	}, os.Stderr); err != nil {
 		return err
 	}
@@ -491,7 +602,7 @@ func sliceMemory(ctx context.Context, args []string) error {
 
 	return awaitMemory(ctx, gate{
 		batches: batches, batch: os.Getenv(envBatch), suite: suite, result: result,
-		minutes: cfg.SuiteMinutes(run, suite), block: cfg.WaitsForMemory(suite),
+		minutes: cfg.SuiteMinutes(run, suite), block: cfg.WaitsForMemory(suite), broker: cfg.Memory.Broker,
 	}, os.Stderr)
 }
 
@@ -500,12 +611,16 @@ func sliceMemory(ctx context.Context, args []string) error {
 func (s *step) admit(ctx context.Context, f drivenFlags, batch, suite string) (stop func(), err error) {
 	run := s.reporter.ID.Run
 	if run == localRun {
+		if measuring() {
+			return s.sample(ctx), nil
+		}
+
 		return func() {}, nil
 	}
 
 	if err := awaitMemory(ctx, gate{
 		batches: f.batches, batch: batch, suite: suite, result: f.result,
-		minutes: s.reporter.Config.SuiteMinutes(run, suite), block: s.reporter.Config.WaitsForMemory(suite),
+		minutes: s.reporter.Config.SuiteMinutes(run, suite), block: s.reporter.Config.WaitsForMemory(suite), broker: s.reporter.Config.Memory.Broker,
 	}, os.Stderr); err != nil {
 		return nil, err
 	}
