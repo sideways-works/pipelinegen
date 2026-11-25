@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/continuous_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T01:56:16.692791369Z",
+  "seconds": 0.238874523,
+  "recorded": true,
+  "cpu_seconds": 0.42051399999996875,
+  "peak_mb": 70
+}

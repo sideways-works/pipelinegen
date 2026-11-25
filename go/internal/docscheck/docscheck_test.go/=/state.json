@@ -1,0 +1,20 @@
+{
+  "label": "internal/docscheck/docscheck_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-25T01:56:16.704772989Z",
+  "failures": [
+    {
+      "test": "TestCommandReferenceHasEveryCommandAndFlag",
+      "tail": "=== RUN   TestCommandReferenceHasEveryCommandAndFlag\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--all`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--as-me`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--base`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--bazel-diff`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--cache`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--config`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--container-tool`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--local`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--no-fill`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--no-lists`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--record`\n    docscheck_test.go:135: docs/reference/commands.md: `pipelinegen memory` doesn't document its flag `--work`\n--- FAIL: TestCommandReferenceHasEveryCommandAndFlag (0.00s)"
+    },
+    {
+      "test": "TestConfigReferenceHasEveryKey",
+      "tail": "=== RUN   TestConfigReferenceHasEveryKey\n    docscheck_test.go:85: docs/reference/config.md has no row for the config key `memory`\n    docscheck_test.go:85: docs/reference/config.md has no row for the config key `suites.\u003cname\u003e.memory`\n    docscheck_test.go:85: docs/reference/config.md has no row for the config key `suites.\u003cname\u003e.memory.broker`\n--- FAIL: TestConfigReferenceHasEveryKey (0.00s)"
+    }
+  ],
+  "seconds": 0.06999999999999999,
+  "recorded": true,
+  "cpu_seconds": 14.905966999999919,
+  "peak_mb": 488
+}
