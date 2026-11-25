@@ -1,0 +1,13 @@
+go:internal/membroker#func:Ask
+go:internal/membroker#func:answer
+go:internal/membroker#method:Broker.Ask
+go:internal/membroker#method:Broker.Run
+go:internal/membroker#method:Broker.Serve
+go:internal/membroker#method:Broker.handle
+go:internal/membroker#method:Broker.held
+go:internal/membroker#method:Broker.init
+go:internal/membroker#method:Broker.logf
+go:internal/membroker#method:Broker.poke
+go:internal/membroker#method:Broker.step
+go:internal/memory#method:Reading.Capacity
+go:internal/memory#method:Reading.Free
