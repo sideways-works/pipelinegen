@@ -1,0 +1,4 @@
+{
+  "ended": "2026-11-25T17:04:44.874012716Z",
+  "why": "suite unit stopped 4 minutes after its work began, before these slices reported: not its time limit of 120 minutes (suites.unit.minutes); its prepare or a batch failed, or the build was aborted: the build log says which"
+}
