@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -308,7 +309,8 @@ func (g gate) askBroker(ctx context.Context, need int64, limit time.Duration, lo
 		return false, nil
 	}
 
-	who := fmt.Sprintf("%s %s %s batch %s", os.Getenv(envRun), os.Getenv(envChange), g.suite, g.batch)
+	// a branch's batch has no change of its own: its commit names it
+	who := fmt.Sprintf("%s %s %s batch %s", os.Getenv(envRun), cmp.Or(os.Getenv(envChange), short12(os.Getenv(envCommit))), g.suite, g.batch)
 	start := time.Now()
 
 	ans, err := membroker.Ask(ctx, addr, membroker.Request{MB: need, WaitSeconds: limit.Seconds(), Who: who})
