@@ -1,0 +1,9 @@
+{
+  "label": "internal/plugins/cold_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T05:28:23.229084099Z",
+  "seconds": 1.5999999999999999,
+  "recorded": true,
+  "cpu_seconds": 2.2312379999998484,
+  "peak_mb": 279
+}
