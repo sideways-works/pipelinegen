@@ -1,0 +1,9 @@
+go:internal/gitstore/storetest#func:Both
+go:internal/report#func:closeUse
+go:internal/report#func:killed
+go:internal/report#func:usedIn
+go:internal/report#method:sliceSum.addUse
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
