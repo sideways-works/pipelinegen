@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Added
+
+- `memory.wait` (top level, or a suite's own): a batch waits for the memory its slices' recorded peaks predict until it fits, for as long as it could still finish within its time limit, instead of at most 5 minutes; a task file's batch that never calls `slice memory` waits at its first `slice start`, for its prediction less what its set-up holds. With it on, pipelinegen rather than Concourse's task limit decides how many batches a worker runs at once. The plan's log says per suite how many selected slices have a recorded peak
+
 ## [0.11.0] - 2026-11-24
 
 ### Added

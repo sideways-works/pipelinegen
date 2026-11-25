@@ -959,6 +959,10 @@ func sliceStep(ctx context.Context, args []string, start bool, stdout io.Writer)
 		if err := checkPlanOnce(ctx, s.reporter, result); err != nil {
 			return err
 		}
+
+		if err := awaitMemoryOnce(ctx, s.reporter, batches, suite, result); err != nil {
+			return err
+		}
 	}
 
 	if start && rec != "" {

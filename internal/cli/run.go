@@ -1543,7 +1543,7 @@ func runBatches(ctx context.Context, args []string, stdout io.Writer) (err error
 		return err
 	}
 
-	if err := writePredictions(ctx, store, out, b.suite, dealt, os.Stderr); err != nil {
+	if err := writePredictions(ctx, store, out, b.suite, dealt, batchSeconds(b.root, s, todo, dealt), os.Stderr); err != nil {
 		return err
 	}
 
@@ -1584,6 +1584,56 @@ func deal(root string, s config.Suite, todo []bazel.Slice) [][]string {
 	}
 
 	return batch.Deal(in, n)
+}
+
+// batchSeconds is how long each dealt batch should take by the durations file, a slice without a
+// recorded time at the median of those with one; none when the suite has no durations.
+func batchSeconds(root string, s config.Suite, todo []bazel.Slice, dealt [][]string) []float64 {
+	if s.Durations == "" {
+		return nil
+	}
+
+	file, err := durations.Read(filepath.Join(root, s.Durations))
+	if err != nil {
+		return nil
+	}
+
+	secs := map[string]float64{}
+
+	var known []float64
+
+	for _, sl := range todo {
+		for _, src := range sl.Sources {
+			if v, ok := file.Seconds(src, nil); ok {
+				secs[sl.Name] += v
+			}
+		}
+
+		if v, ok := secs[sl.Name]; ok {
+			known = append(known, v)
+		}
+	}
+
+	if len(known) == 0 {
+		return nil
+	}
+
+	slices.Sort(known)
+	median := known[len(known)/2]
+
+	out := make([]float64, len(dealt))
+
+	for i, names := range dealt {
+		for _, n := range names {
+			if v, ok := secs[n]; ok {
+				out[i] += v
+			} else {
+				out[i] += median
+			}
+		}
+	}
+
+	return out
 }
 
 func writeBatches(out string, ch runs.Change, todo []bazel.Slice, dealt [][]string) error {

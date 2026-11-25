@@ -94,6 +94,25 @@ shorter: the wait counts against the batch's own limit. A prediction above
 all the worker could ever have starts at once, and says so, rather than
 waiting for room that never comes.
 
+**Waiting until it fits.** With `memory: {wait: true}` (top level, or a
+suite's own `memory.wait`), a batch waits for as long as it could still
+finish within its time limit instead of 5 minutes: the suite's `minutes`
+less the batch's expected time (its slices' durations) half again and a
+2-minute margin, or half the limit for a batch of no known time. That is
+how pipelinegen, not Concourse's task limit, decides how many batches a
+worker runs at once: with every suite waiting for memory, Concourse's
+`limit-active-tasks` placement can allow more tasks per worker, and a
+batch the worker hasn't the room for waits on it until earlier batches
+end. The plan's log says, per suite, how many of the selected slices have
+a recorded peak and whether its batches wait:
+
+```
+memory: e2e: 256 of 256 selected slices have a recorded peak; its batches wait for their predicted memory (memory.wait)
+```
+
+A slice without a peak is predicted at the suite's median, so raise the
+task limit once the suites that run heavy batches are measured whole.
+
 **Not run.** A batch still short when its wait ends starts none of its
 slices. Its end marks them `not run` with the reading ("not run: the
 worker had 3120 MB free of 6600 MB predicted, after waiting 5m0s"), the
@@ -122,7 +141,9 @@ on.
 
 A task file calls `tools/pipelinegen slice memory` first, before its
 setup ([writing tasks](writing-tasks.md#the-batch-task)); `slice run`
-does it itself. On your machine, `pipelinegen run` and `record` read the
+does it itself. With `memory.wait`, a task file that doesn't is waited
+for at its first `slice start`: the batch then needs its prediction less
+what its container already holds, since its own setup runs before. On your machine, `pipelinegen run` and `record` read the
 peaks from the store the config names and refuse a suite whose batch this
 machine hasn't the room for, naming the figures; nothing waits there. As
 on CI, the suite's packages come first: the images with them installed

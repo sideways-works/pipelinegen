@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sideways-works/pipelinegen/internal/affected"
+	"github.com/sideways-works/pipelinegen/internal/config"
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 	"github.com/sideways-works/pipelinegen/internal/memory"
 	"github.com/sideways-works/pipelinegen/internal/report"
@@ -47,6 +49,9 @@ var (
 type prediction struct {
 	MB  int64  `json:"predicted_mb"`
 	Why string `json:"why"`
+	// Seconds is how long the batch should take by the suite's durations, 0 when unknown: a batch
+	// that waits for memory waits only as long as it could still finish within its time limit.
+	Seconds float64 `json:"seconds,omitempty"`
 }
 
 // predict is a batch's peak: the most any slice should reach, each its recent peaks' 90th percentile and
@@ -91,7 +96,7 @@ func predict(peaks map[string][]int64, names []string) (prediction, bool) {
 
 // writePredictions puts each batch's predicted peak beside its slices; a suite without peaks gets none,
 // and its batches start unchecked. Peaks that can't be read only warn.
-func writePredictions(ctx context.Context, store *gitstore.Store, out, suite string, dealt [][]string, log io.Writer) error {
+func writePredictions(ctx context.Context, store *gitstore.Store, out, suite string, dealt [][]string, secs []float64, log io.Writer) error {
 	peaks, err := report.Peaks(ctx, store, suite)
 	if err != nil {
 		warnf(log, "memory: %v; the batches start unchecked\n", err)
@@ -103,6 +108,10 @@ func writePredictions(ctx context.Context, store *gitstore.Store, out, suite str
 		p, ok := predict(peaks, names)
 		if !ok {
 			return nil
+		}
+
+		if i < len(secs) {
+			p.Seconds = secs[i]
 		}
 
 		data, err := json.Marshal(p)
@@ -155,13 +164,49 @@ func memoryWait(minutes int) time.Duration {
 	return min(memoryMaxWait, time.Duration(minutes)*time.Minute/10)
 }
 
+// blockingWait is the longest a batch of a suite that waits for memory (memory.wait) waits: for as long
+// as it could still finish within its time limit, its expected time half again and a margin left over;
+// a batch of no known time keeps half its limit for its slices. Never less than memoryWait.
+func blockingWait(minutes int, seconds float64) time.Duration {
+	limit := time.Duration(minutes) * time.Minute
+
+	need := limit / 2
+	if seconds > 0 {
+		need = time.Duration(seconds*1.5*float64(time.Second)) + limitMargin
+	}
+
+	return max(limit-need, memoryWait(minutes))
+}
+
+// gate is a batch's wait for memory.
+type gate struct {
+	batches, batch, suite, result string
+	minutes                       int
+	// block waits for as long as the batch could still finish (memory.wait), not memoryWait.
+	block bool
+	// held is what the batch's own cgroup uses already, in MB: a task file's batch reaches
+	// pipelinegen first at its first slice, when its set-up runs already.
+	held int64
+}
+
+func (g gate) limit(p prediction) time.Duration {
+	if g.block {
+		return blockingWait(g.minutes, p.Seconds)
+	}
+
+	return memoryWait(g.minutes)
+}
+
 func admits(r memory.Reading, pressure float64, need int64) bool {
 	return r.Free() >= need && pressure < pressureAdmit
 }
 
-// awaitMemory waits while the worker has less free than the batch's predicted peak, or is under pressure;
-// still short, it writes why into the result for its end and fails. Unreadable memory starts unchecked.
-func awaitMemory(ctx context.Context, batches, batch, suite string, minutes int, result string, log io.Writer) error {
+// awaitMemory waits while the worker has less free than the batch's predicted peak, less what it holds
+// already, or is under pressure; still short, it writes why into the result for its end and fails.
+// Unreadable memory starts unchecked.
+func awaitMemory(ctx context.Context, g gate, log io.Writer) error {
+	batches, batch, suite, result := g.batches, g.batch, g.suite, g.result
+
 	r, err := memory.Read(memoryRoot)
 	if err != nil {
 		warnf(log, "memory: %v; the batch starts unchecked\n", err)
@@ -180,6 +225,11 @@ func awaitMemory(ctx context.Context, batches, batch, suite string, minutes int,
 
 	warnf(log, "memory: %s, pressure %s; this batch should use %d MB: %s\n", r, psi(pressure), p.MB, p.Why)
 
+	need := max(p.MB-g.held, 0)
+	if g.held > 0 {
+		warnf(log, "memory: the batch holds %d MB already, so it needs %d MB more\n", g.held, need)
+	}
+
 	// waiting for room that never comes would leave its slices never run
 	if c := r.Capacity(); p.MB > c {
 		warnf(log, "memory: %d MB predicted is more than the %d MB this worker could ever give: the batch starts unchecked\n", p.MB, c)
@@ -187,14 +237,14 @@ func awaitMemory(ctx context.Context, batches, batch, suite string, minutes int,
 		return nil
 	}
 
-	limit := memoryWait(minutes)
+	limit := g.limit(p)
 	start := time.Now()
 	told := start
 
-	for !admits(r, pressure, p.MB) {
+	for !admits(r, pressure, need) {
 		waited := time.Since(start)
 		if waited >= limit {
-			short := memoryShort{Free: r.Free(), Predicted: p.MB, Pressure: pressure, Waited: waited.Seconds(), Reading: r.String()}
+			short := memoryShort{Free: r.Free(), Predicted: need, Pressure: pressure, Waited: waited.Seconds(), Reading: r.String()}
 
 			return leaveNotRun(result, suite, short, log)
 		}
@@ -202,7 +252,7 @@ func awaitMemory(ctx context.Context, batches, batch, suite string, minutes int,
 		if time.Since(told) >= time.Minute {
 			told = time.Now()
 
-			warnf(log, "memory: %d MB free of %d MB predicted, pressure %s: waiting, %s of at most %s\n", r.Free(), p.MB, psi(pressure), waited.Round(time.Second), limit)
+			warnf(log, "memory: %d MB free of %d MB predicted, pressure %s: waiting, %s of at most %s\n", r.Free(), need, psi(pressure), waited.Round(time.Second), limit)
 		}
 
 		select {
@@ -221,7 +271,7 @@ func awaitMemory(ctx context.Context, batches, batch, suite string, minutes int,
 	}
 
 	if waited := time.Since(start); waited >= memoryEvery {
-		warnf(log, "memory: %d MB free of %d MB predicted after %s: the batch starts\n", r.Free(), p.MB, waited.Round(time.Second))
+		warnf(log, "memory: %d MB free of %d MB predicted after %s: the batch starts\n", r.Free(), need, waited.Round(time.Second))
 	}
 
 	return nil
@@ -268,6 +318,77 @@ func shortOfMemoryIn(result string) string {
 	}
 
 	return short.why()
+}
+
+// sayMemoryCoverage says, per suite the plan runs, how many of its selected slices have a recorded
+// peak: a suite whose batches wait for memory (memory.wait) predicts a slice without one at the
+// suite's median, so a worker can take more tasks at once when they all have one.
+func sayMemoryCoverage(ctx context.Context, cfg *config.Config, store *gitstore.Store, plan *affected.Plan, out io.Writer) {
+	for _, sp := range plan.Suites {
+		if len(sp.Selected) == 0 {
+			continue
+		}
+
+		peaks, err := report.Peaks(ctx, store, sp.Suite)
+		if err != nil {
+			continue
+		}
+
+		measured := 0
+
+		for _, sl := range sp.Selected {
+			if memory.Predict(peaks[sl.Name]) > 0 {
+				measured++
+			}
+		}
+
+		waits := "its batches start without waiting for memory"
+		if cfg.WaitsForMemory(sp.Suite) {
+			waits = "its batches wait for their predicted memory (memory.wait)"
+		}
+
+		_ = say(out, "memory: %s: %d of %d selected slices have a recorded peak; %s\n", sp.Suite, measured, len(sp.Selected), waits) //nolint:errcheck // a line of the log
+	}
+}
+
+// memoryAdmitted, in a task file's batch result, says its first slice's start waited for its memory.
+const memoryAdmitted = ".memory-admitted"
+
+// awaitMemoryOnce is a task file's batch's wait for memory, at its first slice's start, for a suite that
+// waits for memory (memory.wait): the task file runs its own set-up before any pipelinegen step, so the
+// batch needs what its prediction says less what its set-up holds already. Other suites' task files
+// start unchecked, as they always did.
+func awaitMemoryOnce(ctx context.Context, r *report.Reporter, batches, suite, result string) error {
+	if r.ID.Run == localRun || !r.Config.WaitsForMemory(suite) {
+		return nil
+	}
+
+	mark := filepath.Join(result, memoryAdmitted)
+	if _, err := os.Stat(mark); err == nil {
+		return nil
+	}
+
+	var held int64
+	if u, err := memory.Measure(memoryRoot); err == nil {
+		held = u.Set
+	}
+
+	if err := awaitMemory(ctx, gate{
+		batches: batches, batch: os.Getenv(envBatch), suite: suite, result: result,
+		minutes: r.Config.SuiteMinutes(r.ID.Run, suite), block: true, held: held,
+	}, os.Stderr); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(result, 0o750); err != nil {
+		return fmt.Errorf("memory: %w", err)
+	}
+
+	if err := os.WriteFile(mark, nil, 0o600); err != nil {
+		return fmt.Errorf("memory: %w", err)
+	}
+
+	return nil
 }
 
 // localMemory refuses a batch this machine hasn't the free memory for by the store's peaks, waiting for
@@ -368,7 +489,10 @@ func sliceMemory(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	return awaitMemory(ctx, batches, os.Getenv(envBatch), suite, cfg.SuiteMinutes(run, suite), result, os.Stderr)
+	return awaitMemory(ctx, gate{
+		batches: batches, batch: os.Getenv(envBatch), suite: suite, result: result,
+		minutes: cfg.SuiteMinutes(run, suite), block: cfg.WaitsForMemory(suite),
+	}, os.Stderr)
 }
 
 // admit waits for a batch's memory, then samples each slice's use until stop; on this machine run and
@@ -379,7 +503,10 @@ func (s *step) admit(ctx context.Context, f drivenFlags, batch, suite string) (s
 		return func() {}, nil
 	}
 
-	if err := awaitMemory(ctx, f.batches, batch, suite, s.reporter.Config.SuiteMinutes(run, suite), f.result, os.Stderr); err != nil {
+	if err := awaitMemory(ctx, gate{
+		batches: f.batches, batch: batch, suite: suite, result: f.result,
+		minutes: s.reporter.Config.SuiteMinutes(run, suite), block: s.reporter.Config.WaitsForMemory(suite),
+	}, os.Stderr); err != nil {
 		return nil, err
 	}
 

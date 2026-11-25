@@ -213,8 +213,14 @@ func planFromWith(ctx context.Context, cfg *config.Config, ch runs.Change, store
 
 	sweepStore(ctx, cfg, ch, store, trigger, plan)
 
-	if err := say(stdout, "%s %s: %s\n", ch.Run, ch.ID, summary(plan)); err != nil || em == nil {
+	if err := say(stdout, "%s %s: %s\n", ch.Run, ch.ID, summary(plan)); err != nil {
 		return true, err
+	}
+
+	sayMemoryCoverage(ctx, cfg, store, plan, os.Stderr)
+
+	if em == nil {
+		return true, nil
 	}
 
 	return true, em.write(emitted, stdout)

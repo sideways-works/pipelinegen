@@ -47,9 +47,11 @@ type Config struct {
 	Git          Git              `yaml:"git"`
 	Concourse    Concourse        `yaml:"concourse"`
 	// Packages are what every suite's steps need installed.
-	Packages Packages       `yaml:"packages,omitempty"`
-	Images   Images         `yaml:"images,omitempty"`
-	Learn    Learn          `yaml:"learn"`
+	Packages Packages `yaml:"packages,omitempty"`
+	Images   Images   `yaml:"images,omitempty"`
+	Learn    Learn    `yaml:"learn"`
+	// Memory says whether a batch waits for the memory its slices' recorded peaks predict.
+	Memory   Memory         `yaml:"memory"`
 	Keep     Keep           `yaml:"keep"`
 	Writes   Writes         `yaml:"writes"`
 	Store    Store          `yaml:"store"`
@@ -596,6 +598,25 @@ type Suite struct {
 	EmptyRecordings string `yaml:"empty_recordings"`
 	Lock            *Lock  `yaml:"lock"`
 	Minutes         int    `yaml:"minutes"`
+	// Memory is the suite's own over the top level's.
+	Memory Memory `yaml:"memory"`
+}
+
+// Memory is how batches share a worker's memory.
+type Memory struct {
+	// Wait makes a batch wait, before its setup, until the worker has the memory its slices'
+	// recorded peaks predict, for as long as the batch could still finish within its time limit.
+	// Off, a batch waits at most a few minutes and then leaves its slices not run.
+	Wait *bool `yaml:"wait"`
+}
+
+// WaitsForMemory tells whether a batch of suite waits for its predicted memory until it fits.
+func (c *Config) WaitsForMemory(suite string) bool {
+	if w := c.Suites[suite].Memory.Wait; w != nil {
+		return *w
+	}
+
+	return c.Memory.Wait != nil && *c.Memory.Wait
 }
 
 // ExtraDeps makes the test files matching Tests depend on Deps too.

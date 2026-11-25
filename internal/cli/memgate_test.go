@@ -88,7 +88,7 @@ func TestABatchStartsAtOnceWithTheMemoryItShouldUse(t *testing.T) {
 	predicted(t, batches, "1", 6600)
 
 	var log strings.Builder
-	if err := awaitMemory(t.Context(), batches, "1", "e2e", 120, t.TempDir(), &log); err != nil {
+	if err := awaitMemory(t.Context(), gate{batches: batches, batch: "1", suite: "e2e", minutes: 120, result: t.TempDir()}, &log); err != nil {
 		t.Fatal(err)
 	}
 
@@ -121,7 +121,7 @@ func TestABatchWaitsThenStartsWhenMemoryFreesAndPressureEases(t *testing.T) {
 
 	var log strings.Builder
 
-	if err := awaitMemory(t.Context(), batches, "1", "e2e", 120, result, &log); err != nil {
+	if err := awaitMemory(t.Context(), gate{batches: batches, batch: "1", suite: "e2e", minutes: 120, result: result}, &log); err != nil {
 		t.Fatal(err)
 	}
 
@@ -141,7 +141,7 @@ func TestABatchStillShortLeavesItsSlicesNotRun(t *testing.T) {
 	batches, result := t.TempDir(), t.TempDir()
 	predicted(t, batches, "1", 6600)
 
-	err := awaitMemory(t.Context(), batches, "1", "e2e", 120, result, io.Discard)
+	err := awaitMemory(t.Context(), gate{batches: batches, batch: "1", suite: "e2e", minutes: 120, result: result}, io.Discard)
 	if !errors.Is(err, errShortOfMemory) || !strings.Contains(err.Error(), "a batch of e2e: the worker had 3120 MB free of 6600 MB predicted") {
 		t.Fatalf("%v", err)
 	}
@@ -156,7 +156,7 @@ func TestWithoutPeaksNoBatchWaits(t *testing.T) {
 	result := t.TempDir()
 
 	var log strings.Builder
-	if err := awaitMemory(t.Context(), t.TempDir(), "1", "e2e", 120, result, &log); err != nil {
+	if err := awaitMemory(t.Context(), gate{batches: t.TempDir(), batch: "1", suite: "e2e", minutes: 120, result: result}, &log); err != nil {
 		t.Fatal(err)
 	}
 
@@ -181,7 +181,7 @@ func TestAPredictionNoWorkerCanGiveDoesntStrandTheBatch(t *testing.T) {
 	predicted(t, batches, "1", 20000)
 
 	var log strings.Builder
-	if err := awaitMemory(t.Context(), batches, "1", "e2e", 120, result, &log); err != nil {
+	if err := awaitMemory(t.Context(), gate{batches: batches, batch: "1", suite: "e2e", minutes: 120, result: result}, &log); err != nil {
 		t.Fatal(err)
 	}
 
@@ -306,5 +306,58 @@ func TestSliceRunWaitsForMemoryBeforeItsSetup(t *testing.T) {
 
 	if shortOfMemoryIn("result") == "" {
 		t.Fatal("the batch's end can't tell why it ran nothing")
+	}
+}
+
+func TestABatchThatWaitsForMemoryWaitsPastTheShortWait(t *testing.T) {
+	root := fakeMemory(t, 3000, 50*time.Millisecond)
+
+	batches, result := t.TempDir(), t.TempDir()
+	predicted(t, batches, "1", 6600)
+
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		setFree(t, root, 7000)
+	}()
+
+	var log strings.Builder
+	if err := awaitMemory(t.Context(), gate{batches: batches, batch: "1", suite: "e2e", minutes: 120, result: result, block: true}, &log); err != nil {
+		t.Fatalf("%v\n%s", err, log.String())
+	}
+
+	if shortOfMemoryIn(result) != "" || !strings.Contains(log.String(), "7000 MB free of 6600 MB predicted after ") {
+		t.Fatalf("%s", log.String())
+	}
+}
+
+func TestABatchNeedsItsPredictionLessWhatItHolds(t *testing.T) {
+	fakeMemory(t, 4000, 50*time.Millisecond)
+
+	batches, result := t.TempDir(), t.TempDir()
+	predicted(t, batches, "1", 6600)
+
+	var log strings.Builder
+	if err := awaitMemory(t.Context(), gate{batches: batches, batch: "1", suite: "e2e", minutes: 120, result: result, held: 3000}, &log); err != nil {
+		t.Fatalf("%v\n%s", err, log.String())
+	}
+
+	if !strings.Contains(log.String(), "the batch holds 3000 MB already, so it needs 3600 MB more") {
+		t.Fatalf("%s", log.String())
+	}
+}
+
+func TestABlockingWaitLeavesTheBatchTimeToFinish(t *testing.T) {
+	for _, c := range []struct {
+		minutes int
+		seconds float64
+		want    time.Duration
+	}{
+		{120, 0, 60 * time.Minute},
+		{120, 1200, 120*time.Minute - 30*time.Minute - limitMargin},
+		{30, 1800, memoryWait(30)},
+	} {
+		if got := blockingWait(c.minutes, c.seconds); got != c.want {
+			t.Errorf("%d minutes, %v s: %s, want %s", c.minutes, c.seconds, got, c.want)
+		}
 	}
 }
