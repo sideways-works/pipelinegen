@@ -7,10 +7,6 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
-### Added
-
-- `memory serve --cgroup <path>`: a broker on the worker's host reads the worker container's limit, not the host's, and `--first-for` (10 minutes): the first ask in line holds back later asks the memory covers at most that long, so one batch asking for most of the worker can't hold the others back for its whole wait. A request asking for less than nothing, a wait over a day or a name over 256 bytes is refused, and at most 512 connections are served at once. A task asks once at a time and holds one grant at most, its new one replacing its last, and a grant counts at most `--max-grant` (16384 MB)
-
 ## [0.11.0] - 2026-11-25
 
 ### Added
@@ -20,7 +16,8 @@ minor version may change the config or the protocol.
 - `pipelinegen why --cost`: what a plan's selection cost, per suite the changed units and the junctions on the way that selected the most slices, and how many each selected alone, so a change or a link that selects widely shows at a glance
 - A runner capability `own-settings`: a runner for a CI system other than Concourse takes its settings from its own config block, and a config whose runner reports it needs no `concourse` section; the spec's `ci` is then empty
 - `memory.wait` (top level, or a suite's own): a batch waits for the memory its slices' recorded peaks predict until it fits, for as long as it could still finish within its time limit, instead of at most 5 minutes; a task file's batch that never calls `slice memory` waits at its first `slice start`, for its prediction less what its set-up holds. With it on, pipelinegen rather than Concourse's task limit decides how many batches a worker runs at once. The plan's log says per suite how many selected slices have a recorded peak
-- `pipelinegen memory serve`, a worker's memory broker, and `memory.broker`: a waiting batch asks the broker of its worker, which grants the asks in the order they came, each once the free memory less what it granted lately covers it, so batches starting at once no longer all see the same room
+- `pipelinegen memory serve`, a worker's memory broker, and `memory.broker` (top level, or a suite's own): a waiting batch asks the broker of its worker, which grants the asks in the order they came, each once the free memory less what it granted lately covers it, so batches starting at once no longer all see the same room
+- `memory serve --cgroup <path>`: a broker on the worker's host reads the worker container's limit, not the host's, and `--first-for` (10 minutes): the first ask in line holds back later asks the memory covers at most that long, so one batch asking for most of the worker can't hold the others back for its whole wait. A request asking for less than nothing, a wait over a day or a name over 256 bytes is refused, and at most 512 connections are served at once. A task asks once at a time and holds one grant at most, its new one replacing its last, and a grant counts at most `--max-grant` (16384 MB)
 - `pipelinegen memory sample --suite <suite>`: runs a sample of a suite's slices on this machine, each alone in its image, measures their peaks as CI does and records them with 25% headroom, so a suite can wait for memory before CI measured it
 
 ### Changed
