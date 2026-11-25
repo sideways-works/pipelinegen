@@ -486,7 +486,7 @@ func awaitMemoryOnce(ctx context.Context, r *report.Reporter, batches, suite, re
 
 	if err := awaitMemory(ctx, gate{
 		batches: batches, batch: os.Getenv(envBatch), suite: suite, result: result,
-		minutes: r.Config.SuiteMinutes(r.ID.Run, suite), block: true, held: held, broker: r.Config.Memory.Broker,
+		minutes: r.Config.SuiteMinutes(r.ID.Run, suite), block: true, held: held, broker: r.Config.MemoryBroker(suite),
 	}, os.Stderr); err != nil {
 		return err
 	}
@@ -602,7 +602,7 @@ func sliceMemory(ctx context.Context, args []string) error {
 
 	return awaitMemory(ctx, gate{
 		batches: batches, batch: os.Getenv(envBatch), suite: suite, result: result,
-		minutes: cfg.SuiteMinutes(run, suite), block: cfg.WaitsForMemory(suite), broker: cfg.Memory.Broker,
+		minutes: cfg.SuiteMinutes(run, suite), block: cfg.WaitsForMemory(suite), broker: cfg.MemoryBroker(suite),
 	}, os.Stderr)
 }
 
@@ -620,7 +620,7 @@ func (s *step) admit(ctx context.Context, f drivenFlags, batch, suite string) (s
 
 	if err := awaitMemory(ctx, gate{
 		batches: f.batches, batch: batch, suite: suite, result: f.result,
-		minutes: s.reporter.Config.SuiteMinutes(run, suite), block: s.reporter.Config.WaitsForMemory(suite), broker: s.reporter.Config.Memory.Broker,
+		minutes: s.reporter.Config.SuiteMinutes(run, suite), block: s.reporter.Config.WaitsForMemory(suite), broker: s.reporter.Config.MemoryBroker(suite),
 	}, os.Stderr); err != nil {
 		return nil, err
 	}

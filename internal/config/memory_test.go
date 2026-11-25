@@ -29,3 +29,15 @@ func TestASuiteWaitsForMemoryByItsOwnSettingOrTheTopLevels(t *testing.T) {
 		})
 	}
 }
+
+func TestASuiteAsksItsOwnBrokerOrTheTopLevels(t *testing.T) {
+	c, err := Parse([]byte(strings.Replace(example, "    run_slice: ci/tasks/backend-slice.yml\n",
+		"    run_slice: ci/tasks/backend-slice.yml\n    memory: {broker: \"10.0.0.2:7480\"}\n", 1) + "memory: {broker: \"gateway:7480\"}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.MemoryBroker("backend") != "10.0.0.2:7480" || c.MemoryBroker("e2e") != "gateway:7480" {
+		t.Fatalf("backend %q, e2e %q", c.MemoryBroker("backend"), c.MemoryBroker("e2e"))
+	}
+}

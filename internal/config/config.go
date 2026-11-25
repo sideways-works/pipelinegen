@@ -4,6 +4,7 @@ package config
 
 import (
 	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
 	"maps"
@@ -610,8 +611,14 @@ type Memory struct {
 	Wait *bool `yaml:"wait"`
 	// Broker is the address of the memory broker of the worker a batch runs on (pipelinegen memory
 	// serve), host:port, the host "gateway" for the task's default gateway: a waiting batch asks it,
-	// so batches starting at once are granted one after the other. Top level only.
+	// so batches starting at once are granted one after the other.
 	Broker string `yaml:"broker"`
+}
+
+// MemoryBroker is the address of the memory broker suite's batches ask: the suite's own, else the
+// top level's.
+func (c *Config) MemoryBroker(suite string) string {
+	return cmp.Or(c.Suites[suite].Memory.Broker, c.Memory.Broker)
 }
 
 // WaitsForMemory tells whether a batch of suite waits for its predicted memory until it fits.

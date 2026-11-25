@@ -33,7 +33,7 @@ func memorySampleRun(ctx context.Context, args []string, stdout io.Writer) error
 	)
 
 	fs := flag.NewFlagSet("memory sample", flag.ContinueOnError)
-	f.register(fs)
+	f.registerBuild(fs)
 	fs.IntVar(&n, "slices", 8, "how many of the suite's slices to measure, spread over their durations; --slice names them instead")
 	fs.IntVar(&headroom, "headroom", 25, "the percentage added to each measured peak before it is recorded")
 	fs.BoolVar(&dryRun, "dry-run", false, "measure and say what would be recorded, writing nothing to the store")

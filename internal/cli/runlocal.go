@@ -35,8 +35,19 @@ type localRunFlags struct {
 }
 
 func (f *localRunFlags) register(fs *flag.FlagSet) {
-	f.common.register(fs)
+	f.registerBuild(fs)
 	textVar(fs, &f.base, "base", "", "the commit to compare with (required unless --all)")
+	fs.BoolVar(&f.all, "all", false, "run every slice, not only those the change selects")
+	fs.BoolVar(&f.record, "record", false, "record the suites bound by recording and attach their lists to the head in the local store, a suite's only when every slice of it passed")
+	fs.BoolVar(&f.noLists, "no-lists", false, "bind recorded slices to everything instead of reading the lists")
+	fs.BoolVar(&f.local, "local", false, "read the lists from the local store `pipelinegen record` writes, not the remote")
+	pathVar(fs, &f.work, "work", "", "where the builds' directories go, one per suite (default a temporary directory, removed after)", writes)
+}
+
+// registerBuild registers what names the commit, its suites and slices, the plan's plugins and the
+// images, the flags of a run that a sample of every slice takes too.
+func (f *localRunFlags) registerBuild(fs *flag.FlagSet) {
+	f.common.register(fs)
 	textVar(fs, &f.head, "head", "HEAD", "the commit to plan and run: uncommitted changes are neither planned nor run")
 	fs.Func("suite", "only this suite (repeatable; default every suite)", func(s string) error {
 		f.suites = append(f.suites, s)
@@ -50,11 +61,6 @@ func (f *localRunFlags) register(fs *flag.FlagSet) {
 	})
 	f.lp.register(fs)
 	fs.Lookup("plugins").Usage = "the directory holding the configured plugins, the drivers among them (default: tools/plugins under the root)"
-	fs.BoolVar(&f.all, "all", false, "run every slice, not only those the change selects")
-	fs.BoolVar(&f.record, "record", false, "record the suites bound by recording and attach their lists to the head in the local store, a suite's only when every slice of it passed")
-	fs.BoolVar(&f.noLists, "no-lists", false, "bind recorded slices to everything instead of reading the lists")
-	fs.BoolVar(&f.local, "local", false, "read the lists from the local store `pipelinegen record` writes, not the remote")
-	pathVar(fs, &f.work, "work", "", "where the builds' directories go, one per suite (default a temporary directory, removed after)", writes)
 	f.images.register(fs)
 }
 

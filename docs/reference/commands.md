@@ -844,10 +844,20 @@ recorded 4 peaks of e2e at 81ca1ac0397c, each the measured peak and 25%
 | `--slice` | none | Names a slice to measure instead (repeatable). |
 | `--headroom` | `25` | The percentage added to each measured peak. |
 | `--dry-run` | off | Measures and prints, writing nothing. |
+| `--root` | `.` | The repository's root. |
+| `--config` | `<root>/pipelinegen.yaml` | The config file. |
+| `--head` | `HEAD` | The commit whose slices run, and at which the peaks are recorded. |
+| `--plugins` | `<root>/tools/plugins` | Where the configured plugins are, the drivers among them. |
+| `--cache` | your user cache directory, then `pipelinegen/repos/<repository>` | Where the work tree and hashes are kept, as for `run`. |
+| `--bazel-diff` | the pinned release | A bazel-diff binary to run instead of downloading one. |
+| `--no-fill` | `false` | Doesn't fill the plugins' caches first, as for `affected`. |
+| `--container-tool` | docker, else podman | The container tool that runs each batch in its image. |
+| `--as-me` | `false` | Runs the steps in their images as you, as for `run`. |
+| `--no-image` | `false` | Refused: the batch would share this machine's cgroup, which holds more than the batch. |
 
-It takes `pipelinegen run`'s other flags (`--root`, `--plugins`, the image
-flags) and needs the store's writing credential unless `--dry-run`;
-`--no-image` is refused, since the batch would share this machine's cgroup.
+It plans every slice of `--head`, so it takes none of `run`'s flags for
+choosing slices by a change, and needs the store's writing credential
+unless `--dry-run`.
 
 ## `pipelinegen plugins`
 
