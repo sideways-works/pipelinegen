@@ -73,7 +73,9 @@ func memorySampleRun(ctx context.Context, args []string, stdout io.Writer) error
 	}
 
 	if len(measured) == 0 {
-		return fmt.Errorf("%w: no slice of the sample was measured", errSampleRefused)
+		return fmt.Errorf("%w: no slice of the sample was measured; a batch in its image measures with the pipelinegen it runs there, "+
+			"this one only when it is a static linux-amd64 build (a release is), the config's pinned release otherwise, which may predate memory sample",
+			errSampleRefused)
 	}
 
 	if dryRun {
