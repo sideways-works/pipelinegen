@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/limit_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T01:28:10.407148363Z",
+  "seconds": 0.83,
+  "recorded": true,
+  "cpu_seconds": 0.49953400000003967,
+  "peak_mb": 81
+}

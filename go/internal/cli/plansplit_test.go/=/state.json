@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/plansplit_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T01:28:10.40958518Z",
+  "seconds": 4.55,
+  "recorded": true,
+  "cpu_seconds": 2.4254510000000664,
+  "peak_mb": 91
+}

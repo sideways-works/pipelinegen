@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/notpinned_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T01:28:05.446416955Z",
+  "seconds": 0.15,
+  "recorded": true,
+  "cpu_seconds": 0.6423670000000357,
+  "peak_mb": 422
+}

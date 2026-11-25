@@ -1,0 +1,9 @@
+{
+  "label": "internal/s3/sign_test.go",
+  "state": "passed",
+  "updated": "2026-11-25T01:28:05.458955891Z",
+  "seconds": 0.426595069,
+  "recorded": true,
+  "cpu_seconds": 0.7468450000001212,
+  "peak_mb": 495
+}

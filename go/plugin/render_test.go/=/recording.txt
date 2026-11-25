@@ -1,0 +1,10 @@
+# observed
+go:internal/testenv#var:cp
+go:plugin#func:RendersProblem
+go:plugin#func:ServeDriver
+go:plugin#func:exitFor
+go:plugin#func:say
+go:plugin#func:serveDescribe
+go:plugin#func:serveRender
+go:plugin#method:RenderAnswer.Problem
+go:plugin#method:RenderTarget.Choose
