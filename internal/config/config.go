@@ -53,7 +53,10 @@ type Config struct {
 	Learn    Learn    `yaml:"learn"`
 	// Memory says whether a batch waits for the memory its slices' recorded peaks predict, and a
 	// planning or bookkeeping step for its own.
-	Memory   TopMemory      `yaml:"memory"`
+	Memory TopMemory `yaml:"memory"`
+	// CPU says whether a batch waits for the cores its slices' recorded use predicts and for the
+	// worker's CPU pressure to ease, and a planning or bookkeeping step for the pressure.
+	CPU      CPU            `yaml:"cpu"`
 	Keep     Keep           `yaml:"keep"`
 	Writes   Writes         `yaml:"writes"`
 	Store    Store          `yaml:"store"`
@@ -602,6 +605,8 @@ type Suite struct {
 	Minutes         int    `yaml:"minutes"`
 	// Memory is the suite's own over the top level's.
 	Memory Memory `yaml:"memory"`
+	// CPU is the suite's own over the top level's.
+	CPU CPU `yaml:"cpu"`
 }
 
 // Memory is how batches share a worker's memory.
@@ -650,6 +655,12 @@ func (c *Config) StepMemoryMB(kind string) int64 {
 	return cmp.Or(c.Memory.Steps.Bookkeeping, defaultBookkeepingMB)
 }
 
+// validateSharing checks how batches and steps share a worker: memory.steps and cpu.
+func (c *Config) validateSharing(bad func(string, ...any)) {
+	c.validateStepMemory(bad)
+	c.validateCPU(bad)
+}
+
 func (c *Config) validateStepMemory(bad func(string, ...any)) {
 	if c.Memory.Steps.Planning < 0 || c.Memory.Steps.Bookkeeping < 0 {
 		bad("memory.steps: planning and bookkeeping are MB, none of them negative")
@@ -669,6 +680,62 @@ func (c *Config) WaitsForMemory(suite string) bool {
 	}
 
 	return c.Memory.Wait != nil && *c.Memory.Wait
+}
+
+// CPU is how batches share a worker's cores; the broker that grants them is memory.broker's.
+type CPU struct {
+	// Wait makes a batch wait, with its wait for memory, until the worker's CPU pressure is below
+	// Pressure and, with a broker, until the cores granted lately leave room for its predicted cores.
+	Wait *bool `yaml:"wait"`
+	// Pressure is the CPU pressure (PSI "some avg10", percent) at or above which a batch waits.
+	Pressure *float64 `yaml:"pressure"`
+	// Cores is what a batch whose slices have no recorded cores is predicted to use.
+	Cores *float64 `yaml:"cores"`
+}
+
+// The defaults of cpu: the pressure a batch waits below, in percent, and the cores of a batch with
+// no recorded use.
+const (
+	DefaultCPUPressure = 40
+	DefaultCPUCores    = 1
+)
+
+// WaitsForCPU tells whether a batch of suite waits for the worker's CPU.
+func (c *Config) WaitsForCPU(suite string) bool {
+	if w := c.Suites[suite].CPU.Wait; w != nil {
+		return *w
+	}
+
+	return c.CPU.Wait != nil && *c.CPU.Wait
+}
+
+// CPUPressure is the CPU pressure, in percent, at or above which a batch of suite waits: the suite's
+// own, else the top level's, else DefaultCPUPressure. The empty suite is the top level's alone.
+func (c *Config) CPUPressure(suite string) float64 {
+	return *cmp.Or(c.Suites[suite].CPU.Pressure, c.CPU.Pressure, new(float64(DefaultCPUPressure)))
+}
+
+// CPUCores is the cores a batch of suite whose slices have no recorded cores is predicted to use.
+func (c *Config) CPUCores(suite string) float64 {
+	return *cmp.Or(c.Suites[suite].CPU.Cores, c.CPU.Cores, new(float64(DefaultCPUCores)))
+}
+
+func (c *Config) validateCPU(bad func(string, ...any)) {
+	check := func(where string, cpu CPU) {
+		if p := cpu.Pressure; p != nil && (*p <= 0 || *p > 100) {
+			bad("%scpu.pressure: a percentage above 0 and at most 100, not %v", where, *p)
+		}
+
+		if n := cpu.Cores; n != nil && *n <= 0 {
+			bad("%scpu.cores: more than 0 cores, not %v", where, *n)
+		}
+	}
+
+	check("", c.CPU)
+
+	for _, name := range slices.Sorted(maps.Keys(c.Suites)) {
+		check("suites."+name+".", c.Suites[name].CPU)
+	}
 }
 
 // ExtraDeps makes the test files matching Tests depend on Deps too.
@@ -1023,7 +1090,7 @@ func (c *Config) Validate() error {
 	c.validateCorrelators(bad)
 	c.validateCollectLimits(bad)
 	c.validateLimits(bad)
-	c.validateStepMemory(bad)
+	c.validateSharing(bad)
 	c.learnGoingAway()
 	c.oldMinutes()
 

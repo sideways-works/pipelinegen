@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
@@ -279,7 +280,7 @@ func TestABatchShortOfMemoryIsNotRunAndSaysWhy(t *testing.T) {
 		t.Fatalf("suite: %d", code)
 	}
 
-	if got := api.status("pipelinegen/pr/e2e"); got != "error 0 of 2 slices ran, 2 not run (worker short of memory)" {
+	if got := api.status("pipelinegen/pr/e2e"); got != "error 0 of 2 slices ran, 2 not run (worker short of memory or CPU)" {
 		t.Fatalf("suite status %q", got)
 	}
 
@@ -456,5 +457,230 @@ func TestTheGatewayIsTheDefaultRoutes(t *testing.T) {
 
 	if got, err := brokerAddr("10.0.0.5:7480"); err != nil || got != "10.0.0.5:7480" {
 		t.Fatalf("%q %v", got, err)
+	}
+}
+
+func setCPUPressure(t *testing.T, root string, avg10 float64) {
+	t.Helper()
+
+	writeFile(t, filepath.Join(root, "proc", "pressure", "cpu"), fmt.Sprintf("some avg10=%.2f avg60=0.00 avg300=0.00 total=1\n", avg10))
+}
+
+// predictedUse writes a batch's prediction of memory, cores and seconds.
+func predictedUse(t *testing.T, batches, batch string, mb int, cores, seconds float64) {
+	t.Helper()
+
+	writeFile(t, filepath.Join(batches, batch, predictedFile), fmt.Sprintf(`{"predicted_mb": %d, "why": "the test's", "cores": %v, "seconds": %v}`, mb, cores, seconds))
+}
+
+// cpuGate is batch 1 of e2e waiting for CPU below 40% pressure, 1 core when its prediction has none.
+func cpuGate(batches, result string) gate {
+	return gate{batches: batches, batch: "1", suite: "e2e", minutes: 120, result: result, cpu: true, cpuPressure: 40, cores: 1}
+}
+
+func TestABatchThatWaitsForCPUStartsOnceThePressureEases(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		cpu   bool
+		waits bool
+	}{
+		{"cpu.wait", true, true},
+		{"no cpu.wait", false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := fakeMemory(t, 8000, time.Minute)
+			setCPUPressure(t, root, 70)
+
+			batches, result := t.TempDir(), t.TempDir()
+			predicted(t, batches, "1", 1000)
+
+			eased := make(chan time.Time, 1)
+
+			go func() {
+				time.Sleep(100 * time.Millisecond)
+
+				at := time.Now()
+
+				setCPUPressure(t, root, 10)
+
+				eased <- at
+			}()
+
+			g := cpuGate(batches, result)
+			g.cpu = tc.cpu
+
+			var log strings.Builder
+			if err := awaitMemory(t.Context(), g, &log); err != nil {
+				t.Fatalf("%v\n%s", err, log.String())
+			}
+
+			started := time.Now()
+			if at := <-eased; started.After(at) != tc.waits {
+				t.Fatalf("started %s after the pressure eased:\n%s", started.Sub(at), log.String())
+			}
+
+			if tc.waits && !strings.Contains(log.String(), "memory: 8000 MB free of 1000 MB predicted, CPU pressure 10.0% after ") {
+				t.Fatalf("%s", log.String())
+			}
+		})
+	}
+}
+
+func TestABatchStillShortOfCPULeavesItsSlicesNotRunAndSaysCPU(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		prediction func(t *testing.T, batches string)
+	}{
+		{"with a prediction", func(t *testing.T, batches string) { t.Helper(); predicted(t, batches, "1", 1000) }},
+		// a suite without peaks still waits for its CPU, its memory need none
+		{"without one", func(*testing.T, string) {}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := fakeMemory(t, 8000, 50*time.Millisecond)
+			setCPUPressure(t, root, 70)
+
+			batches, result := t.TempDir(), t.TempDir()
+			tc.prediction(t, batches)
+
+			err := awaitMemory(t.Context(), cpuGate(batches, result), io.Discard)
+			if !errors.Is(err, errShortOfCPU) || !strings.Contains(err.Error(), "a batch of e2e: the worker's CPU pressure was 70%, at or above the 40% a batch waits below (cpu.pressure)") {
+				t.Fatalf("%v", err)
+			}
+
+			if got := shortOfMemoryIn(result); !strings.HasPrefix(got, "the worker's CPU pressure was 70%, at or above the 40% a batch waits below (cpu.pressure), after waiting ") {
+				t.Fatalf("%q", got)
+			}
+		})
+	}
+}
+
+func TestAnUnreadableCPUPressureHoldsNoBatchBack(t *testing.T) {
+	fakeMemory(t, 8000, 50*time.Millisecond)
+
+	batches, result := t.TempDir(), t.TempDir()
+	predicted(t, batches, "1", 1000)
+
+	if err := awaitMemory(t.Context(), cpuGate(batches, result), io.Discard); err != nil || shortOfMemoryIn(result) != "" {
+		t.Fatalf("%v", err)
+	}
+}
+
+// startCPUBroker serves a broker over the fake machine at root that grants at most cpus cores at once.
+func startCPUBroker(t *testing.T, ramp time.Duration, cpus float64) string {
+	t.Helper()
+
+	l, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b := &membroker.Broker{
+		Read: func() (memory.Reading, float64, error) {
+			r, err := memory.Read(memoryRoot)
+
+			return r, memory.Pressure(memoryRoot), err
+		},
+		Ramp: ramp, Every: 10 * time.Millisecond, CPUs: cpus, CPUHold: 40,
+		ReadCPU: func() float64 { return memory.CPUPressure(memoryRoot) },
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() { _ = b.Serve(ctx, l) }() //nolint:errcheck // ends with the test
+
+	return l.Addr().String()
+}
+
+// Two batches the memory fits at once but whose cores don't: the second waits until the first's batch
+// ends and releases its cores, though its lease runs for minutes.
+func TestABrokerGrantsTheCoresOfABatchThatEndedToTheNext(t *testing.T) {
+	fakeMemory(t, 8000, 50*time.Millisecond)
+	addr := startCPUBroker(t, 10*time.Millisecond, 4)
+
+	batches := t.TempDir()
+	predictedUse(t, batches, "1", 1000, 3, 600)
+	predictedUse(t, batches, "2", 1000, 3, 600)
+
+	first, second := cpuGate(batches, t.TempDir()), cpuGate(batches, t.TempDir())
+	first.block, first.broker = true, addr
+	second.block, second.broker, second.batch = true, addr, "2"
+
+	var logs [2]strings.Builder
+	if err := awaitMemory(t.Context(), first, &logs[0]); err != nil || !strings.Contains(logs[0].String(), "the worker's broker granted 1000 MB and 3.0 cores") {
+		t.Fatalf("%v\n%s", err, logs[0].String())
+	}
+
+	done := make(chan error, 1)
+
+	go func() { done <- awaitMemory(t.Context(), second, &logs[1]) }()
+
+	select {
+	case err := <-done:
+		t.Fatalf("the second started beside the first's cores: %v\n%s", err, logs[1].String())
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	first.releaseCores(t.Context(), &logs[0])
+
+	select {
+	case err := <-done:
+		if err != nil || !strings.Contains(logs[1].String(), "the worker's broker granted 1000 MB and 3.0 cores") {
+			t.Fatalf("%v\n%s", err, logs[1].String())
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("the second still waits after the first released its cores:\n%s", logs[1].String())
+	}
+}
+
+// A suite of steps' batch hands its cores back at its end: a second batch is granted them at once,
+// though the first's lease would hold them for 15 minutes.
+func TestSliceRunReleasesItsCoresAtItsEnd(t *testing.T) {
+	root := memoryBatch(t).root
+	mem := fakeMemory(t, 8000, 50*time.Millisecond)
+	setCPUPressure(t, mem, 0)
+
+	addr := startCPUBroker(t, 10*time.Millisecond, 4)
+	writeFile(t, filepath.Join(root, config.FileName), strings.Replace(reportConfig, "    run_slice: ci/tasks/e2e-slice.yml\n",
+		"    steps:\n      - {run: command, with: {each: [\"true\"]}}\n", 1)+"cpu: {wait: true}\nmemory: {broker: \""+addr+"\"}\n")
+	predictedUse(t, "batches", "1", 1000, 3, 600)
+
+	if _, stderr, code := run(t, "slice", "run", "-root", root); code != 0 {
+		t.Fatalf("slice run: %d %s", code, stderr)
+	}
+
+	if ans, err := membroker.Ask(t.Context(), addr, membroker.Request{MB: 100, WaitSeconds: 0.5, Who: "next", CPU: true, Cores: 3}); err != nil || !ans.Granted {
+		t.Fatalf("the next batch: %+v %v", ans, err)
+	}
+}
+
+// A batch asks the broker for its predicted cores, held for half again its expected time, and without a
+// prediction for the suite's cpu.cores, held for as long as it may wait.
+func TestABatchAsksForItsCoresForHalfAgainItsTime(t *testing.T) {
+	g := cpuGate("", "")
+
+	if req := g.ask(1000, time.Hour, prediction{MB: 1000, Cores: 2.5, Seconds: 600}); !req.CPU || req.Cores != 2.5 || req.LeaseSeconds != 900 || req.MB != 1000 {
+		t.Fatalf("predicted: %+v", req)
+	}
+
+	if req := g.ask(0, time.Hour, prediction{}); !req.CPU || req.Cores != 1 || req.LeaseSeconds != 3600 {
+		t.Fatalf("unpredicted: %+v", req)
+	}
+
+	g.cpu = false
+	if req := g.ask(1000, time.Hour, prediction{MB: 1000, Cores: 2.5, Seconds: 600}); req.CPU || req.Cores != 0 || req.LeaseSeconds != 0 {
+		t.Fatalf("no cpu.wait: %+v", req)
+	}
+}
+
+func TestABatchsCoresAreItsBusiestSlices(t *testing.T) {
+	cores := map[string][]float64{"a": {1, 2}, "b": {0.5}}
+
+	if got := predictCores(cores, []string{"a", "b", "new"}); math.Abs(got-2.2) > 1e-9 {
+		t.Fatalf("%v", got)
+	}
+
+	if got := predictCores(cores, []string{"new"}); got != 0 {
+		t.Fatalf("no slice with cores: %v", got)
 	}
 }

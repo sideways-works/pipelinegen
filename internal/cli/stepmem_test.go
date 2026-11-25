@@ -2,6 +2,7 @@ package cli
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -63,5 +64,81 @@ func TestAStepWaitsAShareOfWhatItsDeadlineLeaves(t *testing.T) {
 		if got := stepWait(now); got != tc.want {
 			t.Errorf("deadline %q: %s, want %s", tc.deadline, got, tc.want)
 		}
+	}
+}
+
+func TestAStepUnderCPUWaitWaitsForThePressureThenStartsAnyway(t *testing.T) {
+	root := fakeMemory(t, 8000, time.Minute)
+	setCPUPressure(t, root, 70)
+
+	on := true
+	s := stepMemory{cfg: &config.Config{CPU: config.CPU{Wait: &on}}, step: "plan pr", kind: config.StepPlanning}
+
+	// eased below cpu.pressure, the step starts
+	eased := make(chan time.Time, 1)
+
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+
+		at := time.Now()
+
+		setCPUPressure(t, root, 10)
+
+		eased <- at
+	}()
+
+	var log strings.Builder
+
+	s.awaitReading(t.Context(), 0, time.Minute, &log)
+
+	if started, at := time.Now(), <-eased; started.Before(at) {
+		t.Fatalf("started before the pressure eased:\n%s", log.String())
+	}
+
+	// never eased, it starts anyway once its wait ends
+	setCPUPressure(t, root, 70)
+	log.Reset()
+
+	s.awaitReading(t.Context(), 0, 50*time.Millisecond, &log)
+
+	if !strings.Contains(log.String(), ", CPU pressure 70.0%, after ") || !strings.Contains(log.String(), "the step starts anyway") {
+		t.Fatalf("%s", log.String())
+	}
+
+	// without cpu.wait the CPU holds nothing back
+	log.Reset()
+
+	s.cfg = &config.Config{}
+	s.awaitReading(t.Context(), 0, time.Minute, &log)
+
+	if log.String() != "" {
+		t.Fatalf("%s", log.String())
+	}
+}
+
+func TestAStepUnderCPUWaitAsksTheBrokerForThePressureAlone(t *testing.T) {
+	root := fakeMemory(t, 8000, time.Minute)
+	setCPUPressure(t, root, 70)
+
+	on := true
+	addr := startCPUBroker(t, time.Minute, 4)
+
+	for _, tc := range []struct {
+		name string
+		cfg  *config.Config
+		want string
+	}{
+		{"cpu.wait", &config.Config{CPU: config.CPU{Wait: &on}}, "the worker's broker granted nothing after 0s ("},
+		{"no cpu.wait", &config.Config{}, "the worker's broker granted 100 MB after 0s: the step starts"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.cfg.Memory.Broker = addr
+			s := stepMemory{cfg: tc.cfg, step: "plan pr", kind: config.StepPlanning}
+
+			var log strings.Builder
+			if !s.askBroker(t.Context(), 100, 100*time.Millisecond, &log) || !strings.Contains(log.String(), tc.want) {
+				t.Fatalf("%s", log.String())
+			}
+		})
 	}
 }

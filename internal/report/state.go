@@ -535,6 +535,10 @@ func buildRun(id ID, snap snapshot, groups map[string]*regexp.Regexp) Run {
 			sl.NoTests = sf.State == Passed && sf.Tests != nil && *sf.Tests == 0
 			sl.Recorded, sl.CannotTell, sl.Files, sl.PeakMB = sf.Recorded, sf.CannotTell, len(sf.Files), sf.PeakMB
 
+			if sf.CPUSeconds > 0 && sf.Seconds > 0 {
+				sl.Cores = sf.CPUSeconds / sf.Seconds
+			}
+
 			if over && (sl.State == Pending || sl.State == Running) && !sf.Updated.After(ended) {
 				f := noResult
 				if why := snap.whys[sp.Suite]; why != "" {

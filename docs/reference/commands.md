@@ -799,13 +799,16 @@ At least one source is needed: `--go-json`, `--playwright` or `--run`.
 `memory serve` is a worker's memory broker: batches that wait for memory
 (`memory.wait`) with `memory.broker` set ask it for their prediction, and
 it grants the asks in the order they came, each once the worker's free
-memory, less what it granted within the ramp, covers it. Run it beside the
+memory, less what it granted within the ramp, covers it. A batch that waits
+for CPU too (`cpu.wait`) is granted once the CPU pressure is below
+`--cpu-pressure` and its predicted cores fit beside those of the grants
+whose leases run; its batch's end releases them. Run it beside the
 Concourse worker, in its container, so it reads the worker's memory:
 
 ```
 $ docker exec concourse-worker-worker-1 /opt/pipelinegen/pipelinegen memory serve
-memory broker on [::]:7480, grants counting 5m0s
-2026-11-25T09:12:03Z granted pr pr-240 e2e batch 3 3200 MB: 41200 MB free less 6400 MB granted lately
+memory broker on [::]:7480, grants counting 5m0s, 20.0 cores
+2026-11-25T09:12:03Z granted "pr pr-240 e2e batch 3" 3200 MB, 2.0 cores: 41200 MB free less 6400 MB granted lately, 4.0 cores granted lately
 ```
 
 | Flag | Default | What it does |
@@ -814,6 +817,8 @@ memory broker on [::]:7480, grants counting 5m0s
 | `--ramp` | `5m` | How long a grant counts against the free memory, by when the batch's own use shows in it. |
 | `--first-for` | `10m` | How long the first ask in line holds back later asks the memory covers: an ask for most of the worker, from a proposed change's batch say, delays the others at most this long. |
 | `--max-grant` | `16384` | The most one grant counts against the free memory, in MB: a batch predicted above it starts once that much is free. 0 is no cap. |
+| `--cpu-factor` | `1.25` | The cores the grants of batches that wait for CPU may hold at once, per core of the machine the broker runs on: a batch's predicted cores wait until they fit beside those of the grants whose leases run, and one predicted above them all starts at once. 0 counts no cores. |
+| `--cpu-pressure` | `40` | The CPU pressure (`/proc/pressure/cpu`, `some avg10`, percent) at or above which no batch or step that waits for CPU is granted. 0 holds none back. |
 | `--cgroup` | the broker's own | The cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the line of `/proc/<the worker's pid>/cgroup` less its `0::`, such as `/system.slice/docker-<id>.scope`. |
 | `--root` | `/` | Where the machine's `/proc` and `/sys` are. |
 

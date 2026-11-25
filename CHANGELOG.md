@@ -10,6 +10,11 @@ minor version may change the config or the protocol.
 ### Added
 
 - `memory.wait` makes the pipeline's own planning steps (a branch's plan, a pull request's first step) and bookkeeping steps (a batch's end, a suite's end) wait for their memory too, asking `memory.broker` when it names one, before their heavy part: each trusted run's such step records its task's peak by step, and a step expects what its recent peaks predict, else what the same command's steps of other runs use, else `memory.steps.planning` (4096 MB) or `memory.steps.bookkeeping` (1024 MB). Such a step waits at most a third of what its limit leaves, then starts anyway, since a plan or report that failed for memory would stop its run
+- `cpu.wait` (top level, or a suite's own): a batch also waits, in its wait for memory, until the worker's CPU pressure (`/proc/pressure/cpu`, `some avg10`) is below `cpu.pressure` (40%) and, with `memory.broker`, until the broker's cores leave room for its predicted cores: a trusted run's suite end keeps each slice's cores (its CPU seconds over its seconds) beside its peak, and a batch is predicted the most any of its slices should keep busy, else `cpu.cores` (1). The broker counts `--cpu-factor` (1.25) cores per core of its machine and holds back asks for CPU at or above `--cpu-pressure` (40%); a grant's cores are a lease of the batch's expected time half again, which a `slice run` batch releases at its end. A batch still short of CPU leaves its slices not run and says so, and under the top-level `cpu.wait` the planning and bookkeeping steps wait for the CPU pressure, then start anyway. Upgrade each worker's `memory serve` before turning `cpu.wait` on: an older broker grants an ask for CPU as one for memory alone
+
+### Changed
+
+- A suite's status counts the slices not run for room as "not run (worker short of memory or CPU)", since a batch may now wait for either
 
 ## [0.11.1] - 2026-11-25
 

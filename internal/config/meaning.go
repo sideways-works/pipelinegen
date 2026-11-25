@@ -194,11 +194,11 @@ var (
 	}, sharedSelection...)
 	// how slices are dealt into batches and share machines: a slice must pass beside any other,
 	// in any batch, so none of it is observable.
-	suiteNothing = []string{"run_on", "parallel", "batches", "batch_minutes", "empty_recordings", "memory"}
+	suiteNothing = []string{"run_on", "parallel", "batches", "batch_minutes", "empty_recordings", "memory", "cpu"}
 	topSelection = append([]string{
 		"everything_on", "untested", "macros", "uncovered", "narrowing_alarm", "narrowings", "explain_limit", "rebuild_check",
 	}, sharedSelection...)
-	topNothing = []string{"pipeline", "github", "git", "store", "keep", "writes", "forges", "generated", "learn", "limits", "bazel_diff", "images", "plans", "memory"}
+	topNothing = []string{"pipeline", "github", "git", "store", "keep", "writes", "forges", "generated", "learn", "limits", "bazel_diff", "images", "plans", "memory", "cpu"}
 )
 
 func suiteRuns(key string) bool {

@@ -185,6 +185,9 @@ type Slice struct {
 	Recorded   bool             `json:"recorded,omitempty"`
 	CannotTell []recording.Mark `json:"cannot_tell,omitempty"`
 	PeakMB     int64            `json:"peak_mb,omitempty"`
+	// Cores is the slice's CPU seconds over its seconds, 0 when either is unknown: the suite's end
+	// keeps it with its peak, and the report doesn't show it.
+	Cores float64 `json:"-"`
 	// Files is how many failure files the slice's ref keeps.
 	Files int `json:"files,omitempty"`
 }
@@ -760,7 +763,7 @@ func erroredText(c map[State]int, short, ran, total int) string {
 	}
 
 	if short > 0 {
-		description += fmt.Sprintf(", %d not run (worker short of memory)", short)
+		description += fmt.Sprintf(", %d not run (worker short of memory or CPU)", short)
 	}
 
 	if c[Errored] > 0 {

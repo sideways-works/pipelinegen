@@ -85,7 +85,12 @@ func memorySampleRun(ctx context.Context, args []string, stdout io.Writer) error
 	store := openStore(cfg)
 	defer closeStore(store, &err)
 
-	if err := report.AddPeaks(ctx, store, suite, plan.Head, measured); err != nil {
+	peaks := make(map[string]report.Peak, len(measured))
+	for name, mb := range measured {
+		peaks[name] = report.Peak{MB: mb}
+	}
+
+	if err := report.AddPeaks(ctx, store, suite, plan.Head, peaks); err != nil {
 		return fmt.Errorf("memory sample: %w", err)
 	}
 

@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"io"
+	"math"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -84,7 +85,14 @@ func keepsPeaks(t *testing.T) {
 		for name, mb := range peaks {
 			result := filepath.Join(t.TempDir(), "r.json")
 			writeFile(t, result, `{"passed": true, "tests": 1}`)
-			evs = append(evs, report.SliceEvent{Suite: "e2e", Slice: name, Label: "@pipelinegen_deps//slices:" + name, Result: result, Used: &report.Use{CPU: 1, Peak: mb}})
+			evs = append(evs, report.SliceEvent{Suite: "e2e", Slice: name, Label: "@pipelinegen_deps//slices:" + name, Result: result, Used: &report.Use{CPU: 1, Peak: mb}, Seconds: 4})
+		}
+
+		// c fails, its CPU measured and its peak not: its cores alone are kept
+		if len(peaks) > 1 {
+			result := filepath.Join(t.TempDir(), "r.json")
+			writeFile(t, result, `{"passed": false, "failures": [{"test": "pays"}]}`)
+			evs = append(evs, report.SliceEvent{Suite: "e2e", Slice: "e2e/c.spec.ts", Label: "@pipelinegen_deps//slices:e2e/c.spec.ts", Result: result, Used: &report.Use{CPU: 6}, Seconds: 2})
 		}
 
 		if _, err := rep.Slices(t.Context(), evs); err != nil {
@@ -101,8 +109,14 @@ func keepsPeaks(t *testing.T) {
 	end(map[string]int64{"e2e/a.spec.ts": 2000})
 
 	peaks, err := report.Peaks(t.Context(), h.store, "e2e")
-	if err != nil || len(peaks["e2e/a.spec.ts"]) != 1 || len(peaks["e2e/b.spec.ts"]) != 1 {
+	if err != nil || len(peaks["e2e/a.spec.ts"]) != 1 || len(peaks["e2e/b.spec.ts"]) != 1 || len(peaks["e2e/c.spec.ts"]) != 0 {
 		t.Fatalf("peaks: %v %v", peaks, err)
+	}
+
+	// a slice's cores are its CPU seconds over its seconds
+	cores, err := report.Cores(t.Context(), h.store, "e2e")
+	if err != nil || len(cores["e2e/a.spec.ts"]) != 1 || cores["e2e/a.spec.ts"][0] != 0.25 || len(cores["e2e/c.spec.ts"]) != 1 || cores["e2e/c.spec.ts"][0] != 3 {
+		t.Fatalf("cores: %v %v", cores, err)
 	}
 
 	out := filepath.Join(t.TempDir(), "batches")
@@ -120,8 +134,8 @@ func keepsPeaks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// c has no peaks: the 90th percentile of a's 2200 and b's 4400
-	if p.MB != 4400 || !strings.Contains(p.Why, "1 of 1 without any at the 90th percentile of the suite's others, 4400 MB") {
+	// c has no peaks: the 90th percentile of a's 2200 and b's 4400; its 3 cores and a tenth more
+	if p.MB != 4400 || !strings.Contains(p.Why, "1 of 1 without any at the 90th percentile of the suite's others, 4400 MB") || math.Abs(p.Cores-3.3) > 1e-9 {
 		t.Fatalf("c's batch: %+v", p)
 	}
 }

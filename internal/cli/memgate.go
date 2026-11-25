@@ -48,6 +48,7 @@ const (
 
 var (
 	errShortOfMemory = errors.New("the worker is short of memory")
+	errShortOfCPU    = errors.New("the worker is short of CPU")
 	errNoMemoryHere  = errors.New("not enough free memory")
 )
 
@@ -57,6 +58,21 @@ type prediction struct {
 	// Seconds is how long the batch should take by the suite's durations, 0 when unknown: a batch
 	// that waits for memory waits only as long as it could still finish within its time limit.
 	Seconds float64 `json:"seconds,omitempty"`
+	// Cores is the most cores any of the batch's slices should keep busy, since the batch runs them one
+	// at a time: each its recent cores' 90th percentile and a tenth more. 0 is unknown, a batch none of
+	// whose slices has recorded cores, and the suite's cpu.cores stands for it.
+	Cores float64 `json:"cores,omitempty"`
+}
+
+// predictCores is the most cores any of names should keep busy by their recorded cores, 0 for none.
+func predictCores(cores map[string][]float64, names []string) float64 {
+	var most float64
+
+	for _, name := range names {
+		most = max(most, memory.PredictCores(cores[name]))
+	}
+
+	return most
 }
 
 // predict is a batch's peak: the most any slice should reach, each its recent peaks' 90th percentile and
@@ -100,8 +116,8 @@ func predict(peaks map[string][]int64, names []string) (prediction, bool) {
 	return prediction{MB: most, Why: why}, true
 }
 
-// writePredictions puts each batch's predicted peak beside its slices; a suite without peaks gets none,
-// and its batches start unchecked. Peaks that can't be read only warn.
+// writePredictions puts each batch's predicted peak and cores beside its slices; a batch with neither
+// gets none, and starts unchecked. Peaks that can't be read only warn.
 func writePredictions(ctx context.Context, store *gitstore.Store, out, suite string, dealt [][]string, secs []float64, log io.Writer) error {
 	peaks, err := report.Peaks(ctx, store, suite)
 	if err != nil {
@@ -110,10 +126,16 @@ func writePredictions(ctx context.Context, store *gitstore.Store, out, suite str
 		return nil
 	}
 
+	// the cores are in the peaks' own file: read once, it reads again
+	cores, err := report.Cores(ctx, store, suite)
+	if err != nil {
+		cores = nil
+	}
+
 	for i, names := range dealt {
 		p, ok := predict(peaks, names)
-		if !ok {
-			return nil
+		if p.Cores = predictCores(cores, names); !ok && p.Cores == 0 {
+			continue
 		}
 
 		if i < len(secs) {
@@ -139,8 +161,9 @@ func readPrediction(batches, batch string) (prediction, bool) {
 		return prediction{}, false
 	}
 
+	// a prediction of a batch's cores alone predicts no peak: its MB is 0
 	var p prediction
-	if json.Unmarshal(data, &p) != nil || p.MB <= 0 {
+	if json.Unmarshal(data, &p) != nil || p.MB < 0 || p.Cores < 0 || p.MB == 0 && p.Cores == 0 {
 		return prediction{}, false
 	}
 
@@ -153,9 +176,15 @@ type memoryShort struct {
 	Pressure  float64 `json:"psi"`
 	Waited    float64 `json:"waited_seconds"`
 	Reading   string  `json:"reading"`
+	// CPU, when the memory was there and the worker's CPU was not, says what the CPU was.
+	CPU string `json:"cpu,omitempty"`
 }
 
 func (m memoryShort) why() string {
+	if m.CPU != "" {
+		return m.CPU + fmt.Sprintf(", after waiting %s", time.Duration(m.Waited*float64(time.Second)).Round(time.Second))
+	}
+
 	s := fmt.Sprintf("the worker had %d MB free of %d MB predicted", m.Free, m.Predicted)
 	if m.Free >= m.Predicted {
 		s += fmt.Sprintf(", under memory pressure (%.0f%%)", m.Pressure)
@@ -184,17 +213,57 @@ func blockingWait(minutes int, seconds float64) time.Duration {
 	return max(limit-need, memoryWait(minutes))
 }
 
-// gate is a batch's wait for memory.
+// gate is a batch's wait for memory, and for CPU under cpu.wait.
 type gate struct {
 	batches, batch, suite, result string
 	minutes                       int
-	// block waits for as long as the batch could still finish (memory.wait), not memoryWait.
+	// block waits for as long as the batch could still finish (memory.wait or cpu.wait), not memoryWait.
 	block bool
 	// held is what the batch's own cgroup uses already, in MB: a task file's batch reaches
 	// pipelinegen first at its first slice, when its set-up runs already.
 	held int64
 	// broker is memory.broker: the worker's broker a blocking wait asks.
 	broker string
+	// cpu waits for the worker's CPU too (cpu.wait): its pressure below cpuPressure, and with a broker
+	// its cores granted lately leaving room for the batch's, cores when the prediction has none.
+	cpu         bool
+	cpuPressure float64
+	cores       float64
+}
+
+// batchGate is the wait of a batch of suite by the config.
+func batchGate(cfg *config.Config, run, suite, batches, batch, result string) gate {
+	return gate{
+		batches: batches, batch: batch, suite: suite, result: result, minutes: cfg.SuiteMinutes(run, suite),
+		block: cfg.WaitsForMemory(suite) || cfg.WaitsForCPU(suite), broker: cfg.MemoryBroker(suite),
+		cpu: cfg.WaitsForCPU(suite), cpuPressure: cfg.CPUPressure(suite), cores: cfg.CPUCores(suite),
+	}
+}
+
+// who names the batch in the broker's log, and its grant for a release: a branch's batch has no change
+// of its own, and its commit names it.
+func (g gate) who() string {
+	return fmt.Sprintf("%s %s %s batch %s", os.Getenv(envRun), cmp.Or(os.Getenv(envChange), short12(os.Getenv(envCommit))), g.suite, g.batch)
+}
+
+// coresOf is the cores the batch should keep busy: its prediction's, else the suite's cpu.cores.
+func (g gate) coresOf(p prediction) float64 {
+	if p.Cores > 0 {
+		return p.Cores
+	}
+
+	return g.cores
+}
+
+// cpuAdmits is whether the worker's CPU pressure lets the batch start: always when it doesn't wait for
+// CPU or the pressure can't be read.
+func (g gate) cpuAdmits(cpu float64) bool {
+	return !g.cpu || cpu < 0 || cpu < g.cpuPressure
+}
+
+// cpuShort says what the worker's CPU pressure was, for a batch whose wait ended short of CPU.
+func (g gate) cpuShort(cpu float64) string {
+	return fmt.Sprintf("the worker's CPU pressure was %.0f%%, at or above the %.0f%% a batch waits below (cpu.pressure)", cpu, g.cpuPressure)
 }
 
 // need is what the batch waits for: its prediction less what it holds already, logged with the reading.
@@ -222,11 +291,9 @@ func admits(r memory.Reading, pressure float64, need int64) bool {
 }
 
 // awaitMemory waits while the worker has less free than the batch's predicted peak, less what it holds
-// already, or is under pressure; still short, it writes why into the result for its end and fails.
-// Unreadable memory starts unchecked.
+// already, or is under pressure, and under cpu.wait while its CPU pressure is at or above cpu.pressure;
+// still short, it writes why into the result for its end and fails. Unreadable memory starts unchecked.
 func awaitMemory(ctx context.Context, g gate, log io.Writer) error {
-	batches, batch, suite, result := g.batches, g.batch, g.suite, g.result
-
 	r, err := memory.Read(memoryRoot)
 	if err != nil {
 		warnf(log, "memory: %v; the batch starts unchecked\n", err)
@@ -236,45 +303,103 @@ func awaitMemory(ctx context.Context, g gate, log io.Writer) error {
 
 	pressure := memory.Pressure(memoryRoot)
 
-	p, ok := readPrediction(batches, batch)
-	if !ok {
-		warnf(log, "memory: %s, pressure %s; %s has no peaks measured yet, so the batch doesn't wait for memory\n", r, psi(pressure), suite)
+	p, ok := readPrediction(g.batches, g.batch)
 
+	need, wait := g.memoryNeed(r, pressure, p, ok, log)
+	if !wait {
 		return nil
+	}
+
+	limit := g.limit(p)
+
+	if g.cpu {
+		warnf(log, "cpu: pressure %s; this batch should keep %.1f cores busy, and waits while the pressure is at or above %.0f%%\n",
+			psi(memory.CPUPressure(memoryRoot)), g.coresOf(p), g.cpuPressure)
+	}
+
+	if g.block && g.broker != "" {
+		if done, err := g.askBroker(ctx, need, g.ask(need, limit, p), log); done {
+			return err
+		}
+	}
+
+	return g.awaitReading(ctx, r, pressure, need, limit, log)
+}
+
+// memoryNeed is the memory the batch waits for, and whether it waits at all: a suite without peaks, or a
+// prediction no worker could give, waits for nothing but its CPU under cpu.wait.
+func (g gate) memoryNeed(r memory.Reading, pressure float64, p prediction, ok bool, log io.Writer) (int64, bool) {
+	if !ok || p.MB <= 0 {
+		if !g.cpu {
+			warnf(log, "memory: %s, pressure %s; %s has no peaks measured yet, so the batch doesn't wait for memory\n", r, psi(pressure), g.suite)
+
+			return 0, false
+		}
+
+		warnf(log, "memory: %s, pressure %s; %s has no peaks measured yet, so the batch waits for its CPU alone\n", r, psi(pressure), g.suite)
+
+		return 0, true
 	}
 
 	need := g.need(r, pressure, p, log)
 
 	// waiting for room that never comes would leave its slices never run
 	if c := r.Capacity(); p.MB > c {
-		warnf(log, "memory: %d MB predicted is more than the %d MB this worker could ever give: the batch starts unchecked\n", p.MB, c)
+		if !g.cpu {
+			warnf(log, "memory: %d MB predicted is more than the %d MB this worker could ever give: the batch starts unchecked\n", p.MB, c)
 
-		return nil
-	}
-
-	limit := g.limit(p)
-
-	if g.block && g.broker != "" {
-		if done, err := g.askBroker(ctx, need, limit, log); done {
-			return err
+			return 0, false
 		}
+
+		warnf(log, "memory: %d MB predicted is more than the %d MB this worker could ever give: the batch waits for its CPU alone\n", p.MB, c)
+
+		return 0, true
 	}
 
+	return need, true
+}
+
+// ask is the batch's request of the broker: need, waiting at most limit, and under cpu.wait its cores,
+// held for half again its expected time, else for as long as it may wait.
+func (g gate) ask(need int64, limit time.Duration, p prediction) membroker.Request {
+	req := membroker.Request{MB: need, WaitSeconds: limit.Seconds(), Who: g.who()}
+	if !g.cpu {
+		return req
+	}
+
+	req.CPU, req.Cores, req.LeaseSeconds = true, g.coresOf(p), limit.Seconds()
+	if p.Seconds > 0 {
+		req.LeaseSeconds = p.Seconds * 1.5
+	}
+
+	return req
+}
+
+// awaitReading waits by the worker's own reading until it admits the batch, at most limit; still short,
+// the batch's slices are left not run.
+func (g gate) awaitReading(ctx context.Context, r memory.Reading, pressure float64, need int64, limit time.Duration, log io.Writer) error {
 	start := time.Now()
 	told := start
 
-	for !admits(r, pressure, need) {
+	var err error
+
+	cpu := g.cpuPressureNow()
+
+	for !admits(r, pressure, need) || !g.cpuAdmits(cpu) {
 		waited := time.Since(start)
 		if waited >= limit {
 			short := memoryShort{Free: r.Free(), Predicted: need, Pressure: pressure, Waited: waited.Seconds(), Reading: r.String()}
+			if admits(r, pressure, need) {
+				short.CPU = g.cpuShort(cpu)
+			}
 
-			return leaveNotRun(result, suite, short, log)
+			return leaveNotRun(g.result, g.suite, short, log)
 		}
 
 		if time.Since(told) >= time.Minute {
 			told = time.Now()
 
-			warnf(log, "memory: %d MB free of %d MB predicted, pressure %s: waiting, %s of at most %s\n", r.Free(), need, psi(pressure), waited.Round(time.Second), limit)
+			warnf(log, "memory: %d MB free of %d MB predicted, pressure %s%s: waiting, %s of at most %s\n", r.Free(), need, psi(pressure), g.cpuSaid(cpu), waited.Round(time.Second), limit)
 		}
 
 		select {
@@ -289,19 +414,37 @@ func awaitMemory(ctx context.Context, g gate, log io.Writer) error {
 			return nil
 		}
 
-		pressure = memory.Pressure(memoryRoot)
+		pressure, cpu = memory.Pressure(memoryRoot), g.cpuPressureNow()
 	}
 
 	if waited := time.Since(start); waited >= memoryEvery {
-		warnf(log, "memory: %d MB free of %d MB predicted after %s: the batch starts\n", r.Free(), need, waited.Round(time.Second))
+		warnf(log, "memory: %d MB free of %d MB predicted%s after %s: the batch starts\n", r.Free(), need, g.cpuSaid(cpu), waited.Round(time.Second))
 	}
 
 	return nil
 }
 
-// askBroker asks the worker's broker for need, waiting at most limit: done with the broker's answer, or
+// cpuPressureNow is the worker's CPU pressure for a batch that waits for CPU, -1 for one that doesn't.
+func (g gate) cpuPressureNow() float64 {
+	if !g.cpu {
+		return -1
+	}
+
+	return memory.CPUPressure(memoryRoot)
+}
+
+// cpuSaid is the CPU pressure in a line of the wait's log, nothing for a batch that doesn't wait for CPU.
+func (g gate) cpuSaid(cpu float64) string {
+	if !g.cpu {
+		return ""
+	}
+
+	return ", CPU pressure " + psi(cpu)
+}
+
+// askBroker asks the worker's broker for req, waiting at most its wait: done with the broker's answer, or
 // not done when it can't be reached, and the batch waits by its own reading.
-func (g gate) askBroker(ctx context.Context, need int64, limit time.Duration, log io.Writer) (bool, error) {
+func (g gate) askBroker(ctx context.Context, need int64, req membroker.Request, log io.Writer) (bool, error) {
 	addr, err := brokerAddr(g.broker)
 	if err != nil {
 		warnf(log, "memory: %v; the batch waits by its own reading\n", err)
@@ -309,11 +452,9 @@ func (g gate) askBroker(ctx context.Context, need int64, limit time.Duration, lo
 		return false, nil
 	}
 
-	// a branch's batch has no change of its own: its commit names it
-	who := fmt.Sprintf("%s %s %s batch %s", os.Getenv(envRun), cmp.Or(os.Getenv(envChange), short12(os.Getenv(envCommit))), g.suite, g.batch)
 	start := time.Now()
 
-	ans, err := membroker.Ask(ctx, addr, membroker.Request{MB: need, WaitSeconds: limit.Seconds(), Who: who})
+	ans, err := membroker.Ask(ctx, addr, req)
 	if err != nil {
 		if ctx.Err() != nil {
 			return true, fmt.Errorf("memory: %w", ctx.Err())
@@ -327,15 +468,44 @@ func (g gate) askBroker(ctx context.Context, need int64, limit time.Duration, lo
 	waited := time.Since(start)
 
 	if ans.Granted {
-		warnf(log, "memory: the worker's broker granted %d MB after %s (%d MB free less %d MB granted lately): the batch starts\n",
-			need, waited.Round(time.Second), ans.FreeMB+ans.HeldMB-need, ans.HeldMB-need)
+		cores := ""
+		if req.CPU {
+			cores = fmt.Sprintf(" and %.1f cores", req.Cores)
+		}
+
+		warnf(log, "memory: the worker's broker granted %d MB%s after %s (%d MB free less %d MB granted lately): the batch starts\n",
+			need, cores, waited.Round(time.Second), ans.FreeMB+ans.HeldMB-need, ans.HeldMB-need)
 
 		return true, nil
 	}
 
 	short := memoryShort{Free: ans.FreeMB, Predicted: need, Waited: waited.Seconds(), Reading: "the broker: " + ans.Why}
+	if req.CPU && ans.FreeMB >= need {
+		short.CPU = "the worker's broker found no room for its CPU: " + ans.Why
+	}
 
 	return true, leaveNotRun(g.result, g.suite, short, log)
+}
+
+// releaseCores tells the worker's broker the batch has ended, so the cores it was granted count no
+// longer; a broker that can't be told lets the grant's lease run out.
+func (g gate) releaseCores(ctx context.Context, log io.Writer) {
+	if !g.cpu || !g.block || g.broker == "" {
+		return
+	}
+
+	addr, err := brokerAddr(g.broker)
+	if err == nil {
+		// the batch's own context may have ended with it
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+		defer cancel()
+
+		err = membroker.Release(ctx, addr, g.who())
+	}
+
+	if err != nil {
+		warnf(log, "cpu: releasing the batch's cores: %v; they count until the grant's lease ends\n", err)
+	}
 }
 
 // brokerAddr is memory.broker with the host "gateway" read as the task's default gateway.
@@ -407,9 +577,14 @@ func leaveNotRun(result, suite string, short memoryShort, log io.Writer) error {
 		return fmt.Errorf("memory: %w", err)
 	}
 
-	warnf(log, "memory: %s: the batch's slices are left not run; a pull request's sweep hands its head on again once its run has ended, and a branch's next round selects them again\n", short.why())
+	what, cause := "memory:", errShortOfMemory
+	if short.CPU != "" {
+		what, cause = "cpu:", errShortOfCPU
+	}
 
-	return fmt.Errorf("%w: a batch of %s: %s", errShortOfMemory, suite, short.why())
+	warnf(log, "%s %s: the batch's slices are left not run; a pull request's sweep hands its head on again once its run has ended, and a branch's next round selects them again\n", what, short.why())
+
+	return fmt.Errorf("%w: a batch of %s: %s", cause, suite, short.why())
 }
 
 // shortOfMemoryIn is why a batch never started its slices, as it wrote it, empty when it did start.
@@ -420,7 +595,7 @@ func shortOfMemoryIn(result string) string {
 	}
 
 	var short memoryShort
-	if err := json.Unmarshal(data, &short); err != nil || short.Predicted == 0 {
+	if err := json.Unmarshal(data, &short); err != nil || short.Predicted == 0 && short.CPU == "" {
 		return ""
 	}
 
@@ -455,7 +630,31 @@ func sayMemoryCoverage(ctx context.Context, cfg *config.Config, store *gitstore.
 		}
 
 		_ = say(out, "memory: %s: %d of %d selected slices have a recorded peak; %s\n", sp.Suite, measured, len(sp.Selected), waits) //nolint:errcheck // a line of the log
+
+		if cfg.WaitsForCPU(sp.Suite) {
+			sayCoresCoverage(ctx, cfg, store, sp, out)
+		}
 	}
+}
+
+// sayCoresCoverage says how many of a suite's selected slices have recorded cores: a batch none of whose
+// slices has any is predicted the suite's cpu.cores.
+func sayCoresCoverage(ctx context.Context, cfg *config.Config, store *gitstore.Store, sp affected.SuitePlan, out io.Writer) {
+	cores, err := report.Cores(ctx, store, sp.Suite)
+	if err != nil {
+		return
+	}
+
+	measured := 0
+
+	for _, sl := range sp.Selected {
+		if len(cores[sl.Name]) > 0 {
+			measured++
+		}
+	}
+
+	_ = say(out, "cpu: %s: %d of %d selected slices have recorded cores; its batches wait for their predicted cores (cpu.wait), %.1f for a batch of none\n", //nolint:errcheck // a line of the log
+		sp.Suite, measured, len(sp.Selected), cfg.CPUCores(sp.Suite))
 }
 
 // envMeasure set to 1 has a batch on this machine measure its slices' memory as one on CI does: `memory
@@ -472,7 +671,7 @@ const memoryAdmitted = ".memory-admitted"
 // batch needs what its prediction says less what its set-up holds already. Other suites' task files
 // start unchecked, as they always did.
 func awaitMemoryOnce(ctx context.Context, r *report.Reporter, batches, suite, result string) error {
-	if r.ID.Run == localRun || !r.Config.WaitsForMemory(suite) {
+	if r.ID.Run == localRun || !r.Config.WaitsForMemory(suite) && !r.Config.WaitsForCPU(suite) {
 		return nil
 	}
 
@@ -486,10 +685,10 @@ func awaitMemoryOnce(ctx context.Context, r *report.Reporter, batches, suite, re
 		held = u.Set
 	}
 
-	if err := awaitMemory(ctx, gate{
-		batches: batches, batch: os.Getenv(envBatch), suite: suite, result: result,
-		minutes: r.Config.SuiteMinutes(r.ID.Run, suite), block: true, held: held, broker: r.Config.MemoryBroker(suite),
-	}, os.Stderr); err != nil {
+	g := batchGate(r.Config, r.ID.Run, suite, batches, os.Getenv(envBatch), result)
+	g.block, g.held = true, held
+
+	if err := awaitMemory(ctx, g, os.Stderr); err != nil {
 		return err
 	}
 
@@ -602,14 +801,12 @@ func sliceMemory(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	return awaitMemory(ctx, gate{
-		batches: batches, batch: os.Getenv(envBatch), suite: suite, result: result,
-		minutes: cfg.SuiteMinutes(run, suite), block: cfg.WaitsForMemory(suite), broker: cfg.MemoryBroker(suite),
-	}, os.Stderr)
+	return awaitMemory(ctx, batchGate(cfg, run, suite, batches, os.Getenv(envBatch), result), os.Stderr)
 }
 
-// admit waits for a batch's memory, then samples each slice's use until stop; on this machine run and
-// record checked beforehand and nothing is measured, since its cgroup holds more than the batch.
+// admit waits for a batch's memory, then samples each slice's use until stop, which also hands back
+// the cores the worker's broker granted it; on this machine run and record checked beforehand and nothing
+// is measured, since its cgroup holds more than the batch.
 func (s *step) admit(ctx context.Context, f drivenFlags, batch, suite string) (stop func(), err error) {
 	run := s.reporter.ID.Run
 	if run == localRun {
@@ -620,14 +817,17 @@ func (s *step) admit(ctx context.Context, f drivenFlags, batch, suite string) (s
 		return func() {}, nil
 	}
 
-	if err := awaitMemory(ctx, gate{
-		batches: f.batches, batch: batch, suite: suite, result: f.result,
-		minutes: s.reporter.Config.SuiteMinutes(run, suite), block: s.reporter.Config.WaitsForMemory(suite), broker: s.reporter.Config.MemoryBroker(suite),
-	}, os.Stderr); err != nil {
+	g := batchGate(s.reporter.Config, run, suite, f.batches, batch, f.result)
+	if err := awaitMemory(ctx, g, os.Stderr); err != nil {
 		return nil, err
 	}
 
-	return s.sample(ctx), nil
+	sampled := s.sample(ctx)
+
+	return func() {
+		sampled()
+		g.releaseCores(ctx, os.Stderr)
+	}, nil
 }
 
 // sample measures each slice's use until stop.

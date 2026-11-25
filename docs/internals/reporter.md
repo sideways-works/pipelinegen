@@ -15,7 +15,7 @@ not run (`1 of 4 slices ran, 2 not run (a batch's setup failed)`), not as
 failed. A rerun runs them. A batch that found the worker short of memory
 (`slice memory`, or `slice run` before its set-up) is not run the same
 way, with the failure `(memory)` and the figures, and the status counts
-those apart: `2 not run (worker short of memory)`. A suite's end that
+those apart: `2 not run (worker short of memory or CPU)`. A suite's end that
 finds the run's only gaps are such slices, or slices that crashed out of
 memory, writes the run's `_short` mark, by which the sweep hands the head
 on again. A recording batch whose slices ran but left no

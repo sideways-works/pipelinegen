@@ -2,6 +2,7 @@ package memory
 
 import (
 	"errors"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -209,5 +210,41 @@ func TestAReaderOutsideACgroupReadsItsLimitByPath(t *testing.T) {
 	// the reader's own cgroup has no limit: Read sees the machine alone
 	if own, err := Read(root); err != nil || own.Limit != 0 {
 		t.Fatalf("own: %+v %v", own, err)
+	}
+}
+
+func TestCPUPressureIsTheCPUsOwnSomeAvg10(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, map[string]string{
+		"proc/pressure/memory": "some avg10=1.00 avg60=0.00 avg300=0.00 total=1\n",
+		"proc/pressure/cpu":    "some avg10=47.25 avg60=30.00 avg300=10.00 total=99\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
+	})
+
+	if p := CPUPressure(root); p != 47.25 {
+		t.Fatalf("cpu: %v", p)
+	}
+
+	if p := Pressure(root); p != 1 {
+		t.Fatalf("memory: %v", p)
+	}
+
+	if p := CPUPressure(t.TempDir()); p != -1 {
+		t.Fatalf("no file: %v", p)
+	}
+}
+
+func TestPredictCoresTakesTheNinetiethPercentileAndATenthMore(t *testing.T) {
+	for _, tc := range []struct {
+		cores []float64
+		want  float64
+	}{
+		{nil, 0},
+		{[]float64{2}, 2.2},
+		{[]float64{0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 20}, 4.95},
+		{[]float64{3, 1, 2}, 3.3},
+	} {
+		if got := PredictCores(tc.cores); math.Abs(got-tc.want) > 1e-9 {
+			t.Errorf("%v: %v, want %v", tc.cores, got, tc.want)
+		}
 	}
 }

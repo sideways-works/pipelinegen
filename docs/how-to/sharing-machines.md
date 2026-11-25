@@ -155,6 +155,45 @@ and says so, since a plan or a report that failed for memory would stop
 the run it is for. With these steps waiting too, the worker that plans can
 take more tasks at once without running out of memory.
 
+**CPU.** Memory is not all batches share: a worker running more browser
+batches than it has cores starts none out of memory, yet each runs slower
+and hits its timeouts. With `cpu: {wait: true}` (top level, or a suite's
+own `cpu.wait`), a batch also waits for the worker's CPU, in the same wait
+and for as long as it could still finish within its time limit:
+
+- **The pressure hold.** It starts only while the worker's CPU pressure
+  (`/proc/pressure/cpu`, `some avg10`: the share of the last 10 seconds
+  some runnable task waited for a core) is below `cpu.pressure`, 40% by
+  default. An unreadable pressure holds nothing back.
+- **Cores.** A trusted run's suite end keeps each slice's cores beside its
+  peak: its `cpu_seconds` over its `seconds`, the cores it kept busy on
+  average. A batch runs its slices one at a time, so its prediction,
+  `cores` in `batches/<n>/memory.json`, is the most any of its slices
+  should keep busy, each the 90th percentile of its recent cores and 10%
+  more; a batch none of whose slices has any is predicted `cpu.cores` (1
+  by default). The plan's log says, per suite that waits for CPU, how many
+  selected slices have recorded cores.
+- **Core grants are leases.** With `memory.broker`, the batch asks the
+  broker for its cores with its memory. The broker counts `--cpu-factor`
+  (1.25) cores per core of its machine, and grants the ask once its cores
+  fit beside those of the grants whose leases still run, and the CPU
+  pressure is below `--cpu-pressure`. A grant's cores count for the
+  batch's expected time half again (for as long as it may wait, when its
+  time is unknown); a suite of steps (`slice run`) releases them at its
+  batch's end, so the next batch starts at once, while a task file's
+  batch can't, and its lease runs out instead. A batch predicted more
+  cores than the broker counts starts once the pressure allows.
+
+A batch still short of CPU when its wait ends leaves its slices not run as
+one short of memory does, and says so: "not run: the worker's CPU pressure
+was 63%, at or above the 40% a batch waits below (cpu.pressure), after
+waiting 45m0s". Under the top-level `cpu.wait` the planning and
+bookkeeping steps wait for the CPU pressure too, keeping no cores, and
+start anyway when their wait ends. Once the suites that run heavy batches
+wait for CPU as well as memory, Concourse's task limit can rise further:
+pipelinegen then holds a batch back when the worker is busy, whichever
+runs short.
+
 **Sampled here.** `pipelinegen memory sample --suite <suite>` runs 8 of
 the suite's slices on your machine (`--slices`, spread over their
 durations from the longest; `--slice` names them), each in a batch of its
@@ -167,7 +206,7 @@ run on, and CI's own measurements join the sample's.
 **Not run.** A batch still short when its wait ends starts none of its
 slices. Its end marks them `not run` with the reading ("not run: the
 worker had 3120 MB free of 6600 MB predicted, after waiting 5m0s"), the
-suite's status says `2 not run (worker short of memory)`, and the comment
+suite's status says `2 not run (worker short of memory or CPU)`, and the comment
 lists them. They run again without anyone:
 
 - in a pull request's run, once every suite build of the head has ended

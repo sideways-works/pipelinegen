@@ -82,31 +82,58 @@ func (s stepMemory) need(peaks map[string][]int64) (int64, string) {
 	return s.cfg.StepMemoryMB(s.kind), "memory.steps." + s.kind + ", with no peaks recorded yet"
 }
 
-// admit waits, under memory.wait, until the worker has the memory the step is expected to use: asking the
-// worker's broker when memory.broker names one, else by its own reading. Waited out or unreadable, the step
-// starts anyway, and says so.
+// admit waits, under memory.wait, until the worker has the memory the step is expected to use, and under
+// the top level's cpu.wait until its CPU pressure is below cpu.pressure: asking the worker's broker when
+// memory.broker names one, else by its own reading. Waited out or unreadable, the step starts anyway, and
+// says so.
 func (s stepMemory) admit(ctx context.Context, log io.Writer) {
-	if !secret.InPipeline() || s.cfg.Memory.Wait == nil || !*s.cfg.Memory.Wait {
+	waitsForMemory := s.cfg.Memory.Wait != nil && *s.cfg.Memory.Wait
+	if !secret.InPipeline() || !waitsForMemory && !s.waitsForCPU() {
 		return
 	}
 
-	peaks, err := report.StepPeaks(ctx, s.store)
-	if err != nil {
-		warnf(log, "memory: %v; the step starts unchecked\n", err)
+	var need int64
 
-		return
+	if waitsForMemory {
+		peaks, err := report.StepPeaks(ctx, s.store)
+		if err != nil {
+			warnf(log, "memory: %v; the step starts unchecked\n", err)
+
+			return
+		}
+
+		var why string
+
+		need, why = s.need(peaks)
+		warnf(log, "memory: this %s step should use %d MB, by %s\n", s.kind, need, why)
 	}
 
-	need, why := s.need(peaks)
+	if s.waitsForCPU() {
+		warnf(log, "cpu: this %s step waits while the worker's CPU pressure is at or above %.0f%%\n", s.kind, s.cfg.CPUPressure(""))
+	}
+
 	limit := stepWait(time.Now())
-
-	warnf(log, "memory: this %s step should use %d MB, by %s\n", s.kind, need, why)
 
 	if s.cfg.Memory.Broker != "" && s.askBroker(ctx, need, limit, log) {
 		return
 	}
 
 	s.awaitReading(ctx, need, limit, log)
+}
+
+// waitsForCPU is the top level's cpu.wait: a step of the pipeline's own keeps no cores of its own, and
+// waits only while the worker's CPU pressure is at or above cpu.pressure.
+func (s stepMemory) waitsForCPU() bool {
+	return s.cfg.CPU.Wait != nil && *s.cfg.CPU.Wait
+}
+
+// cpuPressure is the worker's CPU pressure for a step that waits for it, -1 for one that doesn't.
+func (s stepMemory) cpuPressure() float64 {
+	if !s.waitsForCPU() {
+		return -1
+	}
+
+	return memory.CPUPressure(memoryRoot)
 }
 
 // askBroker asks the worker's broker for need: done once it answered, granted or not; not done when it
@@ -121,7 +148,8 @@ func (s stepMemory) askBroker(ctx context.Context, need int64, limit time.Durati
 
 	start := time.Now()
 
-	ans, err := membroker.Ask(ctx, addr, membroker.Request{MB: need, WaitSeconds: limit.Seconds(), Who: s.step + " " + short12(s.commit)})
+	// a step asks for no cores: it waits for the CPU pressure alone
+	ans, err := membroker.Ask(ctx, addr, membroker.Request{MB: need, WaitSeconds: limit.Seconds(), Who: s.step + " " + short12(s.commit), CPU: s.waitsForCPU()})
 	if err != nil {
 		if ctx.Err() == nil {
 			warnf(log, "memory: %v; the step waits by its own reading\n", err)
@@ -143,8 +171,8 @@ func (s stepMemory) askBroker(ctx context.Context, need int64, limit time.Durati
 	return true
 }
 
-// awaitReading waits until the worker's free memory covers need and it is under no pressure, at most
-// limit; then the step starts whatever it reads.
+// awaitReading waits until the worker's free memory covers need and it is under no pressure, nor under
+// CPU pressure for a step that waits for CPU, at most limit; then the step starts whatever it reads.
 func (s stepMemory) awaitReading(ctx context.Context, need int64, limit time.Duration, log io.Writer) {
 	start := time.Now()
 
@@ -156,10 +184,10 @@ func (s stepMemory) awaitReading(ctx context.Context, need int64, limit time.Dur
 			return
 		}
 
-		pressure := memory.Pressure(memoryRoot)
+		pressure, cpu := memory.Pressure(memoryRoot), s.cpuPressure()
 
 		switch waited := time.Since(start); {
-		case admits(r, pressure, need):
+		case admits(r, pressure, need) && (cpu < 0 || cpu < s.cfg.CPUPressure("")):
 			if waited >= memoryEvery {
 				warnf(log, "memory: %d MB free of %d MB after %s: the step starts\n", r.Free(), need, waited.Round(time.Second))
 			}
@@ -170,7 +198,12 @@ func (s stepMemory) awaitReading(ctx context.Context, need int64, limit time.Dur
 
 			return
 		case waited >= limit:
-			warnf(log, "memory: %s, pressure %s, after %s: the step starts anyway\n", r, psi(pressure), waited.Round(time.Second))
+			cpuSaid := ""
+			if s.waitsForCPU() {
+				cpuSaid = ", CPU pressure " + psi(cpu)
+			}
+
+			warnf(log, "memory: %s, pressure %s%s, after %s: the step starts anyway\n", r, psi(pressure), cpuSaid, waited.Round(time.Second))
 
 			return
 		}

@@ -77,8 +77,14 @@ func Measure(root string) (Usage, error) {
 }
 
 // Pressure is the machine's PSI "some avg10" for memory, -1 where the kernel doesn't say.
-func Pressure(root string) float64 {
-	psi, err := fields(filepath.Join(root, "proc", "pressure", "memory"), " ")
+func Pressure(root string) float64 { return someAvg10(root, "memory") }
+
+// CPUPressure is the machine's PSI "some avg10" for CPU: the share of the last 10 seconds some
+// runnable task waited for a core, in percent; -1 where the kernel doesn't say.
+func CPUPressure(root string) float64 { return someAvg10(root, "cpu") }
+
+func someAvg10(root, resource string) float64 {
+	psi, err := fields(filepath.Join(root, "proc", "pressure", resource), " ")
 	if err != nil {
 		return -1
 	}
@@ -129,4 +135,19 @@ func Predict(peaks []int64) int64 {
 	p90 := s[(len(s)*9+9)/10-1]
 
 	return p90 + (p90*Headroom+99)/100
+}
+
+// PredictCores is the cores to expect from recent ones, as Predict: their 90th percentile by nearest
+// rank, and Headroom more; 0 without any.
+func PredictCores(cores []float64) float64 {
+	if len(cores) == 0 {
+		return 0
+	}
+
+	s := slices.Clone(cores)
+	slices.Sort(s)
+
+	p90 := s[(len(s)*9+9)/10-1]
+
+	return p90 * (100 + Headroom) / 100
 }

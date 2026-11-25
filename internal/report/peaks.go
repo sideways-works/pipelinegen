@@ -11,8 +11,8 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/gitstore"
 )
 
-// A suite's recent memory peaks, by slice, in one ref the trusted runs' suite ends keep: `batches`
-// predicts each batch's peak from it, and a batch waits for that much memory before it starts.
+// A suite's recent memory peaks and cores, by slice, in one ref the trusted runs' suite ends keep:
+// `batches` predicts each batch's peak and cores from it, and a batch waits for them before it starts.
 const (
 	peaksFile   = "peaks.json"
 	PeaksKept   = 10
@@ -28,6 +28,14 @@ const StepPeaksRef = refRoot + "step-peaks"
 type peakSample struct {
 	MB     int64  `json:"mb"`
 	Commit string `json:"commit"`
+	// Cores is the slice's CPU seconds over its seconds: the cores it kept busy on average.
+	Cores float64 `json:"cores,omitempty"`
+}
+
+// Peak is what a slice used at one commit: the most memory, in MB, and its cores, either 0 when unmeasured.
+type Peak struct {
+	MB    int64
+	Cores float64
 }
 
 type peaksDoc struct {
@@ -85,7 +93,31 @@ func peaksAt(ctx context.Context, store *gitstore.Store, at string) (map[string]
 
 	for name, samples := range doc.Slices {
 		for _, s := range samples {
-			out[name] = append(out[name], s.MB)
+			// a slice's cores may be recorded without its peak
+			if s.MB > 0 {
+				out[name] = append(out[name], s.MB)
+			}
+		}
+	}
+
+	return out, nil
+}
+
+// Cores reads a suite's recent cores, oldest first, by slice: each the CPU seconds a slice used over
+// its seconds.
+func Cores(ctx context.Context, store *gitstore.Store, suite string) (map[string][]float64, error) {
+	doc, _, err := readPeaks(ctx, store, PeaksRef(suite))
+	if err != nil {
+		return nil, fmt.Errorf("cores of %s: %w", suite, err)
+	}
+
+	out := map[string][]float64{}
+
+	for name, samples := range doc.Slices {
+		for _, s := range samples {
+			if s.Cores > 0 {
+				out[name] = append(out[name], s.Cores)
+			}
 		}
 	}
 
@@ -99,7 +131,7 @@ func (r *Reporter) recordPeaks(ctx context.Context, run Run, suite string) {
 		return
 	}
 
-	measured := map[string]int64{}
+	measured := map[string]Peak{}
 
 	for _, s := range run.Suites {
 		if s.Name != suite {
@@ -107,8 +139,8 @@ func (r *Reporter) recordPeaks(ctx context.Context, run Run, suite string) {
 		}
 
 		for _, sl := range s.Slices {
-			if sl.PeakMB > 0 {
-				measured[sl.display()] = sl.PeakMB
+			if sl.PeakMB > 0 || sl.Cores > 0 {
+				measured[sl.display()] = Peak{MB: sl.PeakMB, Cores: sl.Cores}
 			}
 		}
 	}
@@ -122,19 +154,19 @@ func (r *Reporter) recordPeaks(ctx context.Context, run Run, suite string) {
 	}
 }
 
-// AddPeaks adds a peak per slice measured at commit to a suite's peaks, the last PeaksKept of each; a
-// slice that has one of the commit already keeps it.
-func AddPeaks(ctx context.Context, store *gitstore.Store, suite, commit string, measured map[string]int64) error {
+// AddPeaks adds a peak and cores per slice measured at commit to a suite's peaks, the last PeaksKept of
+// each; a slice that has one of the commit already keeps it.
+func AddPeaks(ctx context.Context, store *gitstore.Store, suite, commit string, measured map[string]Peak) error {
 	return addPeaksAt(ctx, store, PeaksRef(suite), "peaks of "+suite, commit, measured)
 }
 
 // AddStepPeak adds the peak a step of the pipeline's own measured at commit to the steps' peaks, the last
 // PeaksKept of each step; a step that has one of the commit already keeps it.
 func AddStepPeak(ctx context.Context, store *gitstore.Store, step, commit string, mb int64) error {
-	return addPeaksAt(ctx, store, StepPeaksRef, "peak of "+step, commit, map[string]int64{step: mb})
+	return addPeaksAt(ctx, store, StepPeaksRef, "peak of "+step, commit, map[string]Peak{step: {MB: mb}})
 }
 
-func addPeaksAt(ctx context.Context, store *gitstore.Store, at, what, commit string, measured map[string]int64) error {
+func addPeaksAt(ctx context.Context, store *gitstore.Store, at, what, commit string, measured map[string]Peak) error {
 	var err error
 
 	for range peakRetries {
@@ -146,7 +178,7 @@ func addPeaksAt(ctx context.Context, store *gitstore.Store, at, what, commit str
 	return err
 }
 
-func addPeaks(ctx context.Context, store *gitstore.Store, at, what, full string, measured map[string]int64) error {
+func addPeaks(ctx context.Context, store *gitstore.Store, at, what, full string, measured map[string]Peak) error {
 	doc, old, err := readPeaks(ctx, store, at)
 	if err != nil {
 		return err
@@ -160,7 +192,7 @@ func addPeaks(ctx context.Context, store *gitstore.Store, at, what, full string,
 			continue
 		}
 
-		samples = append(samples, peakSample{MB: measured[name], Commit: commit})
+		samples = append(samples, peakSample{MB: measured[name].MB, Commit: commit, Cores: measured[name].Cores})
 		doc.Slices[name], added = samples[max(len(samples)-PeaksKept, 0):], true
 	}
 
