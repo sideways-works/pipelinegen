@@ -7,17 +7,7 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
-### Added
-
-- `memory.wait` (top level, or a suite's own): a batch waits for the memory its slices' recorded peaks predict until it fits, for as long as it could still finish within its time limit, instead of at most 5 minutes; a task file's batch that never calls `slice memory` waits at its first `slice start`, for its prediction less what its set-up holds. With it on, pipelinegen rather than Concourse's task limit decides how many batches a worker runs at once. The plan's log says per suite how many selected slices have a recorded peak
-- `pipelinegen memory serve`, a worker's memory broker, and `memory.broker`: a waiting batch asks the broker of its worker, which grants the asks in the order they came, each once the free memory less what it granted lately covers it, so batches starting at once no longer all see the same room
-- `pipelinegen memory sample --suite <suite>`: runs a sample of a suite's slices on this machine, each alone in its image, measures their peaks as CI does and records them with 25% headroom, so a suite can wait for memory before CI measured it
-
-### Changed
-
-- A slice without a recorded peak is predicted at the 90th percentile of its suite's others, not their median
-
-## [0.11.0] - 2026-11-24
+## [0.11.0] - 2026-11-25
 
 ### Added
 
@@ -25,6 +15,13 @@ minor version may change the config or the protocol.
 - Store plugins: with `store.backend: plugin` and `store.plugin` naming a plugin entry of the new kind `store`, a plugin keeps the records (plans, run and slice states, rounds, recordings and lists, the plugins' answers) instead of the repository's refs, through the calls `store.list`, `store.get`, `store.read` and `store.write`, its credentials in `PIPELINEGEN_STORE_*`. `store.credentials` names the CI vars of a key that writes and one that only reads, which the spec hands a runner as `store`; a runner reports `store-keys` to say it gives each step the key it may hold, and a runner without it is refused. Every store, the refs and a branch included, is held to one conformance suite of the promises the core relies on (docs/writing-plugins/store.md)
 - `pipelinegen why --cost`: what a plan's selection cost, per suite the changed units and the junctions on the way that selected the most slices, and how many each selected alone, so a change or a link that selects widely shows at a glance
 - A runner capability `own-settings`: a runner for a CI system other than Concourse takes its settings from its own config block, and a config whose runner reports it needs no `concourse` section; the spec's `ci` is then empty
+- `memory.wait` (top level, or a suite's own): a batch waits for the memory its slices' recorded peaks predict until it fits, for as long as it could still finish within its time limit, instead of at most 5 minutes; a task file's batch that never calls `slice memory` waits at its first `slice start`, for its prediction less what its set-up holds. With it on, pipelinegen rather than Concourse's task limit decides how many batches a worker runs at once. The plan's log says per suite how many selected slices have a recorded peak
+- `pipelinegen memory serve`, a worker's memory broker, and `memory.broker`: a waiting batch asks the broker of its worker, which grants the asks in the order they came, each once the free memory less what it granted lately covers it, so batches starting at once no longer all see the same room
+- `pipelinegen memory sample --suite <suite>`: runs a sample of a suite's slices on this machine, each alone in its image, measures their peaks as CI does and records them with 25% headroom, so a suite can wait for memory before CI measured it
+
+### Changed
+
+- A slice without a recorded peak is predicted at the 90th percentile of its suite's others, not their median
 
 ### Fixed
 
