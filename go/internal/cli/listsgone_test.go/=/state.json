@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/listsgone_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.948971805Z",
+  "seconds": 31.17,
+  "recorded": true,
+  "cpu_seconds": 116.25092599999994,
+  "cpu_wall": 31.937398124,
+  "peak_mb": 1895
+}

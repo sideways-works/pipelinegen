@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/pipelinegate_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.951506645Z",
+  "seconds": 0.2,
+  "recorded": true,
+  "cpu_seconds": 0.7482500000000982,
+  "cpu_wall": 0.501369613,
+  "peak_mb": 330
+}

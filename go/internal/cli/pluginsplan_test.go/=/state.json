@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/pluginsplan_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.952020362Z",
+  "seconds": 154.62,
+  "recorded": true,
+  "cpu_seconds": 332.71552700000007,
+  "cpu_wall": 41.58396563,
+  "peak_mb": 3815
+}

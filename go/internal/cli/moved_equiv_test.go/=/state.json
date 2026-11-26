@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/moved_equiv_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.949702425Z",
+  "seconds": 2.2,
+  "recorded": true,
+  "cpu_seconds": 3.554986999999983,
+  "cpu_wall": 2.522308318,
+  "peak_mb": 337
+}

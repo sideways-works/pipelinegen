@@ -1,0 +1,10 @@
+{
+  "label": "internal/planbucket/planbucket_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.956291225Z",
+  "seconds": 0.02,
+  "recorded": true,
+  "cpu_seconds": 2.214419999999791,
+  "cpu_wall": 1.259539413,
+  "peak_mb": 435
+}
