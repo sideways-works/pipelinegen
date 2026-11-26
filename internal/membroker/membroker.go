@@ -453,8 +453,9 @@ func (b *Broker) probe(ctx context.Context) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	freed := false
+	var freed []grant
 
+	// held drops ended grants from b.granted, so it runs only once this loop is done with it
 	for i := range b.granted {
 		g := &b.granted[i]
 
@@ -470,16 +471,21 @@ func (b *Broker) probe(ctx context.Context) {
 		}
 
 		if g.missed++; g.missed >= 2 {
-			g.cores, freed = 0, true
-
-			_, cores := b.held(now)
-			b.logf("released %q: its task at %s is gone, %.1f cores granted lately now\n", g.who, g.from, cores)
+			freed = append(freed, *g)
+			g.cores = 0
 		}
 	}
 
-	if freed {
-		b.poke()
+	if len(freed) == 0 {
+		return
 	}
+
+	_, cores := b.held(now)
+	for _, g := range freed {
+		b.logf("released %q: its task at %s is gone, %.1f cores granted lately now\n", g.who, g.from, cores)
+	}
+
+	b.poke()
 }
 
 // TaskGone is whether the task at the address from is gone from the worker's network: no host answers

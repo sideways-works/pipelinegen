@@ -449,6 +449,36 @@ func TestAGoneTasksCoresEndOnTheSecondProbeThatMissesIt(t *testing.T) {
 	}
 }
 
+func TestTasksGoneAfterTheirMemoryRampedEndTogether(t *testing.T) {
+	b, _ := cpuBroker(t, 8, 0)
+	b.Gone = func(context.Context, string) bool { return true }
+
+	for _, from := range []string{"10.80.0.7", "10.80.0.8", "10.80.0.9"} {
+		if ans := b.ask(t.Context(), Request{MB: 1000, WaitSeconds: 1, Who: from, CPU: true, Cores: 2, LeaseSeconds: 600}, from); !ans.Granted {
+			t.Fatalf("%s: %+v", from, ans)
+		}
+	}
+
+	// their memory no longer ramps, so a grant whose cores end leaves the broker
+	b.mu.Lock()
+	for i := range b.granted {
+		b.granted[i].until = time.Now().Add(-time.Minute)
+	}
+	b.mu.Unlock()
+
+	b.probe(t.Context())
+	b.probe(t.Context())
+
+	b.mu.Lock()
+	_, cores := b.held(time.Now())
+	left := len(b.granted)
+	b.mu.Unlock()
+
+	if cores != 0 || left != 0 {
+		t.Fatalf("after two probes missing all three tasks: %v cores in %d grants, want none", cores, left)
+	}
+}
+
 func TestATaskIsGoneOnlyWhenNoRouteLeadsToIt(t *testing.T) {
 	// nothing listens on port 1 here: the host refuses at once
 	if TaskGone(t.Context(), "127.0.0.1") {
