@@ -1,0 +1,12 @@
+{
+  "label": "internal/cli/check_test.go",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-26T21:31:37.909753948Z",
+  "failures": [
+    {
+      "test": "(memory)",
+      "tail": "not run: the worker's broker found no room for its CPU: 33397 MB free less 18222 MB granted lately, pressure 1.7%, for 5921 MB asked; 19.2 of 20.0 cores granted lately, CPU pressure 11.9%, for 13.8 cores asked, after waiting 1h0m0s"
+    }
+  ]
+}
