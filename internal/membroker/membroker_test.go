@@ -307,7 +307,8 @@ func TestAnAskForMoreCoresThanTheWorkerHasStartsAtOnce(t *testing.T) {
 		t.Fatalf("%+v", ans)
 	}
 
-	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 0.5, CPU: true, Cores: 6}, "10.80.0.8"); !ans.Granted || ans.HeldCores != 9 {
+	// it holds all 4 cores, not 6
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 0.5, CPU: true, Cores: 6}, "10.80.0.8"); !ans.Granted || ans.HeldCores != 7 {
 		t.Fatalf("more than the worker has: %+v", ans)
 	}
 
@@ -614,5 +615,23 @@ func TestAStepsCoresStartNoSettleTime(t *testing.T) {
 	// a batch's grant does start one, for steps as for batches
 	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 0.1, Who: "report batch-end pr e2e", CPU: true, Cores: 0.5, Step: true}, "10.80.0.9"); ans.Granted {
 		t.Fatalf("a step within the batch's settle time: %+v", ans)
+	}
+}
+
+// An ask for more cores than the broker counts starts at once and holds them all, no more: the asks
+// after it wait for its release, not for cores no worker has.
+func TestAnAskForMoreThanAllTheCoresHoldsThemAll(t *testing.T) {
+	b, _ := cpuBroker(t, 8, 0)
+
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 1, Who: "big", CPU: true, Cores: 60, LeaseSeconds: 60}, "10.80.0.7"); !ans.Granted || ans.HeldCores != 8 {
+		t.Fatalf("big: %+v", ans)
+	}
+
+	b.mu.Lock()
+	_, cores := b.held(time.Now())
+	b.mu.Unlock()
+
+	if cores != 8 {
+		t.Fatalf("held %v cores, want 8", cores)
 	}
 }

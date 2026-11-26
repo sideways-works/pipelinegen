@@ -490,12 +490,19 @@ func (r *Reporter) endPart(ctx context.Context, j *Journal, ev SliceEvent, every
 		ev.Seconds += at.Sub(mine.From).Seconds()
 	}
 
+	// the CPU is read over the parts' time, whatever the driver measured of the slice
+	wall := ev.Seconds
+
 	if measured > 0 {
 		ev.Seconds = measured
 	}
 
 	ev.Use = r.meter(false)
 	ev.Used = closeUse(mine.Use, ev.Use)
+
+	if ev.Used != nil {
+		ev.Used.Wall = wall
+	}
 
 	if err := j.append(journalLine{Event: eventEnd, At: at, Slice: &ev}); err != nil {
 		return "", err

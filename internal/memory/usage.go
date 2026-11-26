@@ -3,6 +3,7 @@ package memory
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -144,13 +145,15 @@ func Predict(peaks []int64) int64 {
 }
 
 // PredictCores is the cores to expect from recent ones, as Predict: their 90th percentile by nearest
-// rank, and Headroom more; 0 without any.
+// rank, and Headroom more, leaving out any above the machine's cores; 0 without any.
 func PredictCores(cores []float64) float64 {
-	if len(cores) == 0 {
+	// more cores than the machine has is no reading but a slice's CPU over too short a time, as older
+	// records hold, and counts for nothing
+	s := slices.DeleteFunc(slices.Clone(cores), func(c float64) bool { return c > float64(runtime.NumCPU()) })
+	if len(s) == 0 {
 		return 0
 	}
 
-	s := slices.Clone(cores)
 	slices.Sort(s)
 
 	p90 := s[(len(s)*9+9)/10-1]

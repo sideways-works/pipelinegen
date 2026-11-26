@@ -569,7 +569,11 @@ func (b *Broker) grantOf(a *ask, now time.Time) grant {
 			lease = b.Ramp
 		}
 
+		// an ask for more than all the cores starts at once, and holds them all: no more
 		g.cores, g.coresUntil = a.req.Cores, now.Add(lease)
+		if b.CPUs > 0 {
+			g.cores = min(g.cores, b.CPUs)
+		}
 	}
 
 	return g

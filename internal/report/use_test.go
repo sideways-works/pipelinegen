@@ -51,3 +51,29 @@ func TestAKillUnderPressureCrashesASliceAndAnOrdinaryFailureDoesnt(t *testing.T)
 		}
 	}
 }
+
+// A slice's cores are its CPU over the time the CPU was read over, not over a driver's own, shorter,
+// measure of the slice: a bundle's compile is in the one and not the other.
+func TestASlicesCoresAreItsCPUOverTheTimeItWasReadOver(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		sf   StateFile
+		want float64
+	}{
+		{"read over its parts", StateFile{CPUSeconds: 120, CPUWall: 60, Seconds: 0.5}, 2},
+		{"an older state", StateFile{CPUSeconds: 30, Seconds: 15}, 2},
+		{"no CPU", StateFile{Seconds: 15}, 0},
+		{"no time", StateFile{CPUSeconds: 30}, 0},
+	} {
+		if got := tc.sf.cores(); got != tc.want {
+			t.Errorf("%s: %v, want %v", tc.name, got, tc.want)
+		}
+	}
+
+	sf := StateFile{State: Passed}
+	usedIn(&sf, &Use{CPU: 120, Wall: 60, Peak: 100})
+
+	if sf.CPUSeconds != 120 || sf.CPUWall != 60 {
+		t.Fatalf("%+v", sf)
+	}
+}

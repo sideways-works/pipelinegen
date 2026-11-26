@@ -20,6 +20,10 @@ type Use struct {
 	Room int64 `json:"room_mb,omitempty"`
 	// Pressure is the machine's PSI "some avg10" for memory, -1 unknown.
 	Pressure float64 `json:"psi"`
+	// Wall is the seconds the slice's CPU was read over, in Used: its parts' time from start to end. A
+	// driver's own measure of a slice's time can be far shorter, a bundle's compile left out, so the
+	// cores it kept busy are CPU over Wall.
+	Wall float64 `json:"wall,omitempty"`
 }
 
 // Meter reads the batch's cgroup; start marks a slice's start, from which a meter that samples takes
@@ -100,7 +104,7 @@ func usedIn(sf *StateFile, used *Use) {
 		return
 	}
 
-	sf.CPUSeconds, sf.PeakMB = used.CPU, used.Peak
+	sf.CPUSeconds, sf.CPUWall, sf.PeakMB = used.CPU, used.Wall, used.Peak
 
 	var why string
 

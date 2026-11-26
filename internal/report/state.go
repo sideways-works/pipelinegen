@@ -219,7 +219,9 @@ type StateFile struct {
 	// CPUSeconds and PeakMB are what the slice used of its batch's cgroup: CPU, and the most memory the
 	// batch held while it ran.
 	CPUSeconds float64 `json:"cpu_seconds,omitempty"`
-	PeakMB     int64   `json:"peak_mb,omitempty"`
+	// CPUWall is the seconds CPUSeconds was read over, the slice's parts' time; none in older states.
+	CPUWall float64 `json:"cpu_wall,omitempty"`
+	PeakMB  int64   `json:"peak_mb,omitempty"`
 }
 
 type endMark struct {
@@ -535,9 +537,7 @@ func buildRun(id ID, snap snapshot, groups map[string]*regexp.Regexp) Run {
 			sl.NoTests = sf.State == Passed && sf.Tests != nil && *sf.Tests == 0
 			sl.Recorded, sl.CannotTell, sl.Files, sl.PeakMB = sf.Recorded, sf.CannotTell, len(sf.Files), sf.PeakMB
 
-			if sf.CPUSeconds > 0 && sf.Seconds > 0 {
-				sl.Cores = sf.CPUSeconds / sf.Seconds
-			}
+			sl.Cores = sf.cores()
 
 			if over && (sl.State == Pending || sl.State == Running) && !sf.Updated.After(ended) {
 				f := noResult
@@ -1257,4 +1257,19 @@ func Seconds(ctx context.Context, store *gitstore.Store, id ID, suite string) (m
 	}
 
 	return out, nil
+}
+
+// cores is the cores the slice kept busy on average: its CPU seconds over the time they were read over,
+// else, in an older state, over its seconds; 0 unknown.
+func (sf StateFile) cores() float64 {
+	switch {
+	case sf.CPUSeconds <= 0:
+		return 0
+	case sf.CPUWall > 0:
+		return sf.CPUSeconds / sf.CPUWall
+	case sf.Seconds > 0:
+		return sf.CPUSeconds / sf.Seconds
+	default:
+		return 0
+	}
 }

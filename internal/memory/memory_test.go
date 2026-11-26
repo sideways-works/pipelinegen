@@ -249,6 +249,9 @@ func TestPredictCoresTakesTheNinetiethPercentileAndATenthMore(t *testing.T) {
 		{[]float64{2}, 2.2},
 		{[]float64{0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 20}, 4.95},
 		{[]float64{3, 1, 2}, 3.3},
+		// more than the machine's cores is no reading
+		{[]float64{2, 1000}, 2.2},
+		{[]float64{1000}, 0},
 	} {
 		if got := PredictCores(tc.cores); math.Abs(got-tc.want) > 1e-9 {
 			t.Errorf("%v: %v, want %v", tc.cores, got, tc.want)
