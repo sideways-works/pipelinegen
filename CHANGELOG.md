@@ -18,6 +18,10 @@ minor version may change the config or the protocol.
 
 - A suite's status counts the slices not run for room as "not run (worker short of memory or CPU)", since a batch may now wait for either
 
+### Fixed
+
+- A write to a branch store (`store.backend: branch`) names the tip it was made on when it pushes, so a remote whose answer briefly leaves out the branch while another push replaces it (seen with git's files backend on btrfs) costs the write a replay; it used to push as if creating the branch and fail with "a push needed an object the store never had", since that pack holds every file of the tree, most never fetched
+
 ## [0.11.1] - 2026-11-25
 
 ### Fixed

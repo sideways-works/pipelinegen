@@ -522,3 +522,51 @@ func TestReadsAndWritesOverOthersOnAnOldGit(t *testing.T) {
 		t.Errorf("reads %q", got)
 	}
 }
+
+// hidesTheBranchOnce is a receive-pack that leaves the branch out of its first answer, as a remote
+// does whose filesystem lists a ref being replaced by another push as no ref at all.
+func hidesTheBranchOnce(t *testing.T) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	p := filepath.Join(dir, "receive-pack")
+	script := "#!/bin/sh\nif mkdir '" + filepath.Join(dir, "once") + "' 2>/dev/null; then\n" +
+		"\texec git -c receive.hideRefs=refs/heads/pipelinegen receive-pack \"$@\"\nfi\nexec git receive-pack \"$@\"\n"
+
+	if err := testenv.WriteExecutable(t.Context(), p, []byte(script)); err != nil {
+		t.Fatal(err)
+	}
+
+	return p
+}
+
+func TestABranchMissingFromThePushsAnswerIsALostRace(t *testing.T) {
+	ctx := t.Context()
+	url := remote(t, "")
+
+	if err := open(t, url).Write(ctx, "first", Change{Files: map[string][]byte{"a/state.json": []byte("running")}}); err != nil {
+		t.Fatal(err)
+	}
+
+	s := open(t, url)
+	if _, err := s.Snapshot(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	run(t, s.Dir, "git", "config", "remote."+remoteName+".receivepack", hidesTheBranchOnce(t))
+
+	// pushed as a new branch, the commit would carry a.json, which this store never fetched
+	if err := s.Write(ctx, "second", Change{Files: map[string][]byte{"b/state.json": []byte("pending")}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if s.Replays() != 1 || s.Retried() != 0 {
+		t.Errorf("%d replays, %d retries; want 1, 0", s.Replays(), s.Retried())
+	}
+
+	for p, want := range map[string]string{"a/state.json": "running", "b/state.json": "pending"} {
+		if got, ok := read(t, open(t, url), p); !ok || got != want {
+			t.Errorf("%s reads %q, %v", p, got, ok)
+		}
+	}
+}

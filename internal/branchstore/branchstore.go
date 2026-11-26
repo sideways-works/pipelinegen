@@ -966,17 +966,13 @@ var missingRE = regexp.MustCompile(`could not fetch ([0-9a-f]{40,64}) from promi
 func (s *Store) push(ctx context.Context, old, commit string) (bool, error) {
 	ref := "refs/heads/" + s.Branch
 	// over HTTP every push is thin whatever it is told: so is every push
-	// here, whose bases Update fetched first
-	args := []string{"push", "--thin", "--porcelain", "--no-verify"}
-
-	switch {
-	case s.Roots:
-		args = append(args, "--force-with-lease="+ref+":"+old, remoteName, commit+":"+ref)
-	default:
-		// a commit on the tip read moves the branch forward only while it
-		// still points there; the remote refuses it otherwise
-		args = append(args, remoteName, commit+":"+ref)
-	}
+	// here, whose bases Update fetched first.
+	//
+	// The push names the tip it was made on, so the branch moves (or, for Roots, is replaced) only
+	// while it still points there. A remote's answer can leave out a branch another push is
+	// replacing at that moment; a push trusting it would create the branch, its pack holding every
+	// file of the tree, most never fetched. Named, an answer without the branch is a lost race.
+	args := []string{"push", "--thin", "--porcelain", "--no-verify", "--force-with-lease=" + ref + ":" + old, remoteName, commit + ":" + ref}
 
 	out, err := s.git(ctx, []string{noLazyFetch}, nil, args...)
 	if err == nil {
