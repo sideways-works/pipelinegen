@@ -1,0 +1,9 @@
+{
+  "label": "internal/config/runners_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:25:43.867942125Z",
+  "seconds": 0.060000000000000005,
+  "recorded": true,
+  "cpu_seconds": 0.41521000000011554,
+  "peak_mb": 120
+}
