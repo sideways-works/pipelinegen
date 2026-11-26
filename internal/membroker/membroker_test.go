@@ -810,7 +810,9 @@ func TestAnAskWaitingWhileTheBrokerEndsAsksTheNextOne(t *testing.T) {
 	serving, stop := context.WithCancel(context.Background())
 	t.Cleanup(stop)
 
-	go func() { _ = (&Broker{Read: f.read, Ramp: time.Minute, Every: 10 * time.Millisecond}).Serve(serving, next) }() //nolint:errcheck // ends with the test
+	go func() {
+		_ = (&Broker{Read: f.read, Ramp: time.Minute, Every: 10 * time.Millisecond}).Serve(serving, next) //nolint:errcheck // ends with the test
+	}()
 
 	if ans := <-got; !ans.Granted {
 		t.Fatalf("an ask waiting as its broker ended: %+v", ans)
