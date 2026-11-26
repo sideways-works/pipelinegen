@@ -1,0 +1,9 @@
+go:internal/check#func:images
+go:internal/check#func:keys
+go:internal/check#func:registryImages
+go:internal/check#method:Finding.String
+go:internal/config#method:Config.SuiteNames
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
