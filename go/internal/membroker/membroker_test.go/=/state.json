@@ -1,0 +1,9 @@
+{
+  "label": "internal/membroker/membroker_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:35:38.728195659Z",
+  "seconds": 1.41,
+  "recorded": true,
+  "cpu_seconds": 2.0631490000000667,
+  "peak_mb": 365
+}

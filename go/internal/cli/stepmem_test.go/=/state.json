@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/stepmem_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:35:38.725227583Z",
+  "seconds": 0.28,
+  "recorded": true,
+  "cpu_seconds": 0.8604300000001786,
+  "peak_mb": 157
+}
