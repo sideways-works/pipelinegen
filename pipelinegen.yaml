@@ -21,6 +21,9 @@ memory:
   broker: 10.80.0.1:7480
 cpu:
   wait: true
+  # until a suite's slices have recorded cores: Bazel and go test keep one
+  # to two busy
+  cores: 2
 
 concourse:
   url: https://concourse.home.simulevski.at
