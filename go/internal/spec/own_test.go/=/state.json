@@ -1,0 +1,9 @@
+{
+  "label": "internal/spec/own_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:33:10.170757123Z",
+  "seconds": 0.01,
+  "recorded": true,
+  "cpu_seconds": 2.4878020000001015,
+  "peak_mb": 412
+}

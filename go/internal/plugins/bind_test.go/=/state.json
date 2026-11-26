@@ -1,0 +1,9 @@
+{
+  "label": "internal/plugins/bind_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:33:10.16911359Z",
+  "seconds": 0.33,
+  "recorded": true,
+  "cpu_seconds": 0.6632380000000921,
+  "peak_mb": 350
+}
