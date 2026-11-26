@@ -127,7 +127,8 @@ worker's free memory, less what it granted in the last `--ramp` (5
 minutes by default), covers it: by then a batch's own use shows in the
 free memory itself. A batch whose wait ends before its grant leaves its
 slices not run, as above. A batch whose broker goes away while it waits (a
-restart forgets every ask) asks again within its wait, a few seconds
+broker that stops drops the asks still waiting, unanswered, and the one
+started after it knows none) asks again within its wait, a few seconds
 later, since batches that all went by their own readings then would see
 the same room and start together; one that can't reach the broker for 30
 seconds waits by its own reading. The broker keeps its grants in

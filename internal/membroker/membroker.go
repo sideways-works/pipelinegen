@@ -880,6 +880,12 @@ func (b *Broker) handle(ctx context.Context, c net.Conn) {
 
 	ans := b.ask(gone, req, source(c))
 
+	// a broker that ends answers no ask it hasn't granted: the connection drops, and the asker asks the
+	// broker started after it again, where a refusal would have ended its wait
+	if !ans.Granted && ctx.Err() != nil {
+		return
+	}
+
 	answer(c, ans)
 }
 

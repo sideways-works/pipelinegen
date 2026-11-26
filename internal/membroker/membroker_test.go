@@ -765,6 +765,58 @@ func TestAnAskTheBrokerDroppedIsAskedAgain(t *testing.T) {
 
 // A broker that restarts keeps its grants: the batches it granted run on, and their memory and cores still
 // count against the next ask; a released grant's cores stay released.
+// A broker that ends drops the asks still waiting instead of refusing them, so each asks the broker that
+// starts after it.
+func TestAnAskWaitingWhileTheBrokerEndsAsksTheNextOne(t *testing.T) {
+	l, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	addr := l.Addr().String()
+	f := &fake{}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	ended := make(chan struct{})
+
+	go func() {
+		defer close(ended)
+
+		_ = (&Broker{Read: f.read, Ramp: time.Minute, Every: 10 * time.Millisecond}).Serve(ctx, l) //nolint:errcheck // ends with cancel
+	}()
+
+	got := make(chan Answer, 1)
+
+	go func() {
+		ans, err := AskAgain(t.Context(), addr, Request{MB: 1000, WaitSeconds: 20, Who: "waiting"})
+		if err != nil {
+			t.Errorf("the ask across the restart: %v", err)
+		}
+
+		got <- ans
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+	cancel()
+	<-ended
+
+	f.free.Store(5000)
+
+	next, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serving, stop := context.WithCancel(context.Background())
+	t.Cleanup(stop)
+
+	go func() { _ = (&Broker{Read: f.read, Ramp: time.Minute, Every: 10 * time.Millisecond}).Serve(serving, next) }() //nolint:errcheck // ends with the test
+
+	if ans := <-got; !ans.Granted {
+		t.Fatalf("an ask waiting as its broker ended: %+v", ans)
+	}
+}
+
 func TestARestartedBrokerKeepsItsGrants(t *testing.T) {
 	state := filepath.Join(t.TempDir(), "grants.json")
 
