@@ -13,6 +13,15 @@ github:
   repository: sideways-works/pipelinegen
   token: github_token
 
+# the workers are shared with other pipelines: a batch, and the pipeline's own
+# steps, wait for the memory and cores they should use, asking each worker's
+# broker
+memory:
+  wait: true
+  broker: 10.80.0.1:7480
+cpu:
+  wait: true
+
 concourse:
   url: https://concourse.home.simulevski.at
   team: sideways-works
@@ -27,7 +36,7 @@ concourse:
     prepare: go mod download
     digest: sha256:162be5298a40ed317005c8339c6de4d10d3eef336d66dc8e9259b03ab9d3a6d2
     bootstrap:
-      release: {version: v0.7.2, sha256: 24bdd777df4616b0caafb8eea36e9612f0dc411cda5a144f813516fdd2590531}
+      release: {version: v0.12.0-rc.3, sha256: 3c8e107faee0aaa55918f8e134a21900d99c3d98541fffdc7844eaeeb35dee84}
       bazelisk: {version: v1.30.0, sha256: a248ae2b2b62b5baebb748f6fba7203bff1a27e5d01b55399a8406744cb539e8}
   include: ci/root.yml
 
