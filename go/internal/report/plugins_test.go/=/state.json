@@ -1,0 +1,10 @@
+{
+  "label": "internal/report/plugins_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.181580534Z",
+  "seconds": 0.22,
+  "recorded": true,
+  "cpu_seconds": 0.7500270000000455,
+  "cpu_wall": 0.568384372,
+  "peak_mb": 409
+}

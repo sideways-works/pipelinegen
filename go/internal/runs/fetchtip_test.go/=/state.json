@@ -1,0 +1,10 @@
+{
+  "label": "internal/runs/fetchtip_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.182000252Z",
+  "seconds": 0.09,
+  "recorded": true,
+  "cpu_seconds": 0.40952800000013667,
+  "cpu_wall": 0.239454348,
+  "peak_mb": 400
+}

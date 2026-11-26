@@ -1,0 +1,10 @@
+{
+  "label": "internal/depsrepo/depsrepo_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.179639969Z",
+  "seconds": 0.34,
+  "recorded": true,
+  "cpu_seconds": 2.831749999999829,
+  "cpu_wall": 1.689019423,
+  "peak_mb": 407
+}

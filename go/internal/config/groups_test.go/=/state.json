@@ -1,0 +1,10 @@
+{
+  "label": "internal/config/groups_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.179390813Z",
+  "seconds": 0.05,
+  "recorded": true,
+  "cpu_seconds": 0.37674699999979566,
+  "cpu_wall": 0.59357429,
+  "peak_mb": 344
+}

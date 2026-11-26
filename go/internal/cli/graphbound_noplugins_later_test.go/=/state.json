@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/graphbound_noplugins_later_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.170718646Z",
+  "seconds": 63.72,
+  "recorded": true,
+  "cpu_seconds": 213.22454499999992,
+  "cpu_wall": 64.742069205,
+  "peak_mb": 2214
+}

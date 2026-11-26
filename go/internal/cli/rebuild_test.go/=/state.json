@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/rebuild_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.175587704Z",
+  "seconds": 5.3100000000000005,
+  "recorded": true,
+  "cpu_seconds": 6.609628000000157,
+  "cpu_wall": 5.738396003,
+  "peak_mb": 345
+}
