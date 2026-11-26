@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/suiteref_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.178329895Z",
+  "seconds": 0.360205404,
+  "recorded": true,
+  "cpu_seconds": 0.5675850000002356,
+  "cpu_wall": 0.360205404,
+  "peak_mb": 354
+}

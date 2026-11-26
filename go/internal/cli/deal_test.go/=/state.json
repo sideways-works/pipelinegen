@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/deal_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:28:22.958991624Z",
+  "seconds": 0.424248812,
+  "recorded": true,
+  "cpu_seconds": 0.4956680000000233,
+  "cpu_wall": 0.424248812,
+  "peak_mb": 346
+}

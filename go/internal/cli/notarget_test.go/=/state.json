@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/notarget_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.949964511Z",
+  "seconds": 13.98,
+  "recorded": true,
+  "cpu_seconds": 59.400317000000086,
+  "cpu_wall": 14.888977017,
+  "peak_mb": 1170
+}

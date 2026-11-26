@@ -1,0 +1,10 @@
+{
+  "label": "internal/affected/sample_on_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.942163322Z",
+  "seconds": 15.98,
+  "recorded": true,
+  "cpu_seconds": 64.478741,
+  "cpu_wall": 16.816682986,
+  "peak_mb": 1127
+}

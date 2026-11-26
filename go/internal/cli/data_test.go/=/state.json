@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/data_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.168403828Z",
+  "seconds": 198.20999999999998,
+  "recorded": true,
+  "cpu_seconds": 385.994309,
+  "cpu_wall": 59.758299244,
+  "peak_mb": 3448
+}

@@ -1,0 +1,10 @@
+{
+  "label": "internal/config/writingsecrets_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.179588792Z",
+  "seconds": 0.156074678,
+  "recorded": true,
+  "cpu_seconds": 0.3089159999999538,
+  "cpu_wall": 0.156074678,
+  "peak_mb": 345
+}

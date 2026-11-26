@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/pluginsprep_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.406575865Z",
+  "seconds": 24.59,
+  "recorded": true,
+  "cpu_seconds": 49.623984000000064,
+  "cpu_wall": 13.017785452,
+  "peak_mb": 1048
+}

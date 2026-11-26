@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/alone_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.943113589Z",
+  "seconds": 26.51,
+  "recorded": true,
+  "cpu_seconds": 104.53425800000002,
+  "cpu_wall": 27.366795015,
+  "peak_mb": 1794
+}

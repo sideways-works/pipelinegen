@@ -1,0 +1,10 @@
+{
+  "label": "internal/kit/tasks_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.410176828Z",
+  "seconds": 0.11,
+  "recorded": true,
+  "cpu_seconds": 0.5957710000000134,
+  "cpu_wall": 0.345488537,
+  "peak_mb": 364
+}

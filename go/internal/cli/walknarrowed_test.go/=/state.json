@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/walknarrowed_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.954927448Z",
+  "seconds": 0.344268112,
+  "recorded": true,
+  "cpu_seconds": 0.5476180000000568,
+  "cpu_wall": 0.344268112,
+  "peak_mb": 353
+}

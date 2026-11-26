@@ -1,0 +1,10 @@
+{
+  "label": "internal/depsrepo/bench_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.409161791Z",
+  "seconds": 1.250138403,
+  "recorded": true,
+  "cpu_seconds": 2.707593999999972,
+  "cpu_wall": 1.250138403,
+  "peak_mb": 387
+}

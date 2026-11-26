@@ -1,0 +1,10 @@
+{
+  "label": "internal/kit/observestep_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.180308434Z",
+  "seconds": 39.970000000000006,
+  "recorded": true,
+  "cpu_seconds": 42.706181000000015,
+  "cpu_wall": 40.326614744,
+  "peak_mb": 398
+}

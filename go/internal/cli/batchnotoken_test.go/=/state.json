@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/batchnotoken_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.167305951Z",
+  "seconds": 0.15,
+  "recorded": true,
+  "cpu_seconds": 0.7166489999999612,
+  "cpu_wall": 0.504544012,
+  "peak_mb": 337
+}

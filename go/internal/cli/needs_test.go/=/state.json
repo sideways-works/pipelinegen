@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/needs_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.949860787Z",
+  "seconds": 0.296453746,
+  "recorded": true,
+  "cpu_seconds": 0.5126150000000962,
+  "cpu_wall": 0.296453746,
+  "peak_mb": 328
+}

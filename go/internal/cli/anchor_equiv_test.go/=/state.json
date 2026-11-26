@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/anchor_equiv_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.402746534Z",
+  "seconds": 0.298885288,
+  "recorded": true,
+  "cpu_seconds": 0.46604899999999816,
+  "cpu_wall": 0.298885288,
+  "peak_mb": 334
+}

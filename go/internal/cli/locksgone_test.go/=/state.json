@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/locksgone_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.404827127Z",
+  "seconds": 0.5700000000000001,
+  "recorded": true,
+  "cpu_seconds": 1.1412919999999644,
+  "cpu_wall": 0.934356848,
+  "peak_mb": 337
+}

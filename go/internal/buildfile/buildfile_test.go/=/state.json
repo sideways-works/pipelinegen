@@ -1,0 +1,10 @@
+{
+  "label": "internal/buildfile/buildfile_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.942916319Z",
+  "seconds": 0.968262773,
+  "recorded": true,
+  "cpu_seconds": 2.891689999999997,
+  "cpu_wall": 0.968262773,
+  "peak_mb": 397
+}

@@ -1,0 +1,10 @@
+{
+  "label": "internal/report/lastbuild_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.410801479Z",
+  "seconds": 2.61,
+  "recorded": true,
+  "cpu_seconds": 5.825991000000158,
+  "cpu_wall": 4.89874459,
+  "peak_mb": 394
+}

@@ -1,0 +1,10 @@
+{
+  "label": "internal/kit/locks_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.410119636Z",
+  "seconds": 0.216558696,
+  "recorded": true,
+  "cpu_seconds": 0.41694200000006276,
+  "cpu_wall": 0.216558696,
+  "peak_mb": 359
+}

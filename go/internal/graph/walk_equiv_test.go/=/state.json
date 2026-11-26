@@ -1,0 +1,10 @@
+{
+  "label": "internal/graph/walk_equiv_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:34:42.180149691Z",
+  "seconds": 0.71,
+  "recorded": true,
+  "cpu_seconds": 1.2361359999999877,
+  "cpu_wall": 0.92605143,
+  "peak_mb": 375
+}

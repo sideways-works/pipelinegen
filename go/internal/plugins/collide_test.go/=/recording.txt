@@ -1,0 +1,9 @@
+# observed
+go:internal/plugins#func:collidingPaths
+go:internal/plugins#func:foldKey
+go:internal/plugins#method:Set.apartOnEveryFilesystem
+go:internal/plugins#method:Set.warnf
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp

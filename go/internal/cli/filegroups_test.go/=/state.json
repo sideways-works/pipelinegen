@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/filegroups_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:42:37.947809574Z",
+  "seconds": 256.53,
+  "recorded": true,
+  "cpu_seconds": 595.218142,
+  "cpu_wall": 75.493323843,
+  "peak_mb": 4627
+}

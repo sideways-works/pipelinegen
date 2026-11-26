@@ -1,0 +1,10 @@
+{
+  "label": "internal/kit/commands_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:28:22.966160249Z",
+  "seconds": 0.221620794,
+  "recorded": true,
+  "cpu_seconds": 0.4202810000001591,
+  "cpu_wall": 0.221620794,
+  "peak_mb": 369
+}

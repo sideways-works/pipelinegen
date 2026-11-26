@@ -1,0 +1,10 @@
+{
+  "label": "internal/runs/handoff_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:28:22.967959845Z",
+  "seconds": 0.160183249,
+  "recorded": true,
+  "cpu_seconds": 0.3307830000001104,
+  "cpu_wall": 0.160183249,
+  "peak_mb": 403
+}
