@@ -1,0 +1,9 @@
+{
+  "label": "internal/report/steppeaks_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T02:32:15.005924761Z",
+  "seconds": 6.63,
+  "recorded": true,
+  "cpu_seconds": 4.639047000000119,
+  "peak_mb": 530
+}
