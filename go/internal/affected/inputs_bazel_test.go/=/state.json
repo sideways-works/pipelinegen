@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/inputs_bazel_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T02:37:19.237570987Z",
+  "seconds": 0.291728823,
+  "recorded": true,
+  "cpu_seconds": 0.36278599999999983,
+  "peak_mb": 208
+}

@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/cachelock_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T02:37:19.237228826Z",
+  "seconds": 0.2,
+  "recorded": true,
+  "cpu_seconds": 0.39355999999999725,
+  "peak_mb": 213
+}

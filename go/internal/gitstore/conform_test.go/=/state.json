@@ -1,0 +1,16 @@
+{
+  "label": "internal/gitstore/conform_test.go",
+  "state": "failed",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-26T02:37:19.24449616Z",
+  "failures": [
+    {
+      "test": "TestABranchKeepsAStoresPromises",
+      "tail": "--- PASS: TestABranchKeepsAStoresPromises/first_is_in_order (0.31s)\n=== RUN   TestABranchKeepsAStoresPromises/files_by_path_and_dir\n--- PASS: TestABranchKeepsAStoresPromises/files_by_path_and_dir (0.57s)\n=== RUN   TestABranchKeepsAStoresPromises/one_creator_wins\n--- PASS: TestABranchKeepsAStoresPromises/one_creator_wins (0.74s)\n=== RUN   TestABranchKeepsAStoresPromises/many_writers_lose_nothing\n    conform.go:251: refs/pipelinegen/conform/many/8: git: a defect of pipelinegen, please report it: a push needed an object the store never had: the push needed 7813681f5b41c028345ca62a2be376bae70b7f61, which its scratch repository never fetched: trying again repeats it: git push --thin --porcelain --no-verify store 34567c27c522208920605f8833401c1c0c92bb8b:refs/heads/pipelinegen: exit status 1: warning: lazy fetching disabled; some objects may not be available\n        fatal: could not fetch 7813681f5b41c028345ca62a2be376bae70b7f61 from promisor remote\n        error: remote unpack failed: eof before pack header was fully read\n        error: failed to push some refs to 'file:///tmp/TestABranchKeepsAStoresPromisesmany_writers_lose_nothing1644761005/001/remote.git'\n    conform.go:39: 11 of 12 records: \u003cnil\u003e\n--- FAIL: TestABranchKeepsAStoresPromises/many_writers_lose_nothing (4.38s)\n=== RUN   TestABranchKeepsAStoresPromises/a_version_never_changes\n--- PASS: TestABranchKeepsAStoresPromises/a_version_never_changes (0.48s)\n--- FAIL: TestABranchKeepsAStoresPromises (7.95s)"
+    }
+  ],
+  "seconds": 10.15,
+  "recorded": true,
+  "cpu_seconds": 21.440489999999954,
+  "peak_mb": 399
+}
