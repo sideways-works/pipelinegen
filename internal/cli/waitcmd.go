@@ -18,12 +18,19 @@ var waitKinds = []string{config.StepPrepare, config.StepWhole}
 
 // runWait is a repository's task's own call before its work: under the suite's memory.wait or cpu.wait
 // it waits while the worker is under memory or CPU pressure, asking memory.broker when it names one, and
-// starts anyway once its wait is over. It never fails the task for room.
+// starts anyway once its wait is over. It never fails the task for room. With --release, in the task's
+// exit trap, it hands back the cores the broker granted the wait: the task's container stays on the
+// worker a while after its end, so the broker can't see the task end, and its cores would count for
+// their whole lease.
 func runWait(ctx context.Context, args []string, _ io.Writer) error {
-	var c common
+	var (
+		c       common
+		release bool
+	)
 
 	fs := flag.NewFlagSet("wait", flag.ContinueOnError)
 	c.register(fs)
+	fs.BoolVar(&release, "release", false, "hand back the cores the worker's broker granted this task's wait, in the task's exit trap")
 	fs.Lookup("root").DefValue = treeDir
 	c.root = treeDir
 
@@ -55,7 +62,17 @@ func runWait(ctx context.Context, args []string, _ io.Writer) error {
 		return nil
 	}
 
-	suiteStepMemory(cfg, kind, run, os.Getenv(envSuite), os.Getenv(envCommit)).admit(ctx, os.Stderr)
+	s := suiteStepMemory(cfg, kind, run, os.Getenv(envSuite), os.Getenv(envCommit))
+
+	if !release {
+		s.admit(ctx, os.Stderr)
+
+		return nil
+	}
+
+	if s.waitsForCPU() && cfg.MemoryBroker(s.suite) != "" {
+		s.release(ctx, os.Stderr)
+	}
 
 	return nil
 }

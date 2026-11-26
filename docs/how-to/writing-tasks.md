@@ -43,6 +43,7 @@ run:
   args:
     - -euc
     - |
+      trap 'tools/pipelinegen wait prepare --release || true' EXIT
       tools/pipelinegen wait prepare || true   # while the worker is busy
       cd source
       go build -trimpath -cover -covermode=atomic -coverpkg=./... -tags pipelinegen_cover \
@@ -51,7 +52,8 @@ run:
 
 `wait prepare` holds the build back while the worker's CPU or memory is
 under pressure, under the suite's `cpu.wait` or `memory.wait`, and lets
-it go once the pressure eases or its wait is over
+it go once the pressure eases or its wait is over; the exit trap hands its
+cores back to the worker's broker at the task's end
 ([`pipelinegen wait`](../reference/commands.md#pipelinegen-wait)).
 
 Prepare builds; it never starts a server. Each batch starts its own. The
@@ -299,6 +301,7 @@ list stays as it was either way.
 A check's task takes `source` and `prepared` and writes
 `result/result.json` in the same format. Under the suite's `cpu.wait` or
 `memory.wait` it starts with `tools/pipelinegen wait whole || true`, with
-`tools` among its inputs, as a prepare does. It runs after the batches, and
+`tools` among its inputs and `wait whole --release` in its exit trap, as a
+prepare does. It runs after the batches, and
 only when every batch passed: a failed slice skips it, and the report says
 so.

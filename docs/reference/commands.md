@@ -943,9 +943,11 @@ the CPU pressure (`/proc/pressure/cpu`, the larger of `some avg10` and `avg60`) 
 10% or more, asking the worker's broker when `memory.broker` names one,
 else by its own reading. Under `cpu.wait` it asks the broker for the
 task's cores, `cpu.steps.prepare` or `cpu.steps.whole` (2 each), held for
-30 minutes or until the deadline, whichever comes first: it ends before the task's work, so it
-releases nothing, and the broker ends the cores once the task is gone from
-the worker's network. It keeps no peak, never seeing the work. Its wait is a
+30 minutes or until the deadline, whichever comes first. It ends before
+the task's work, so the task hands the cores back in its exit trap with
+`wait <kind> --release`: Concourse keeps a finished task's container on
+the worker a while, so the broker can't see the task end, and without the
+release its cores count for the whole lease. It keeps no peak, never seeing the work. Its wait is a
 third of what the task's deadline leaves (`PIPELINEGEN_DEADLINE`), at most
 15 minutes, else 10 minutes; past it the task starts anyway, and it never
 fails for room. A suite with `steps` needs none: `slice prepare` waits the
@@ -954,7 +956,8 @@ at its end and, in a trusted run, keeps its own peak, cores and seconds.
 On this machine (`run`, `record`) it does nothing.
 
 ```sh
-tools/pipelinegen wait prepare || true   # first in ci/e2e-prepare.yml
+trap 'tools/pipelinegen wait prepare --release || true' EXIT   # first in ci/e2e-prepare.yml
+tools/pipelinegen wait prepare || true
 ```
 
 The argument is the task's kind: `prepare` or `whole`. The task declares
@@ -963,6 +966,7 @@ from the pipeline.
 
 | Flag | Default | What it does |
 |---|---|---|
+| `--release` | `false` | Hands back the cores the worker's broker granted the task's wait, in the task's exit trap; it waits for nothing. |
 | `--root` | `source` | The tree whose `pipelinegen.yaml` it reads. |
 | `--config` | `<root>/pipelinegen.yaml` | The config file, when it is elsewhere. |
 

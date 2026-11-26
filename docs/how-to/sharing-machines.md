@@ -232,8 +232,9 @@ suite's `cpu.wait` or `memory.wait` they wait the same way,
 cores the suite's recorded prepares used, else `cpu.steps.prepare` (2) or
 `cpu.steps.whole` (2), for 30 minutes at most. `slice prepare` releases
 them at its end and keeps what it used; `wait`, which ends before the
-task's work, releases nothing and keeps nothing, and the broker's probe
-ends its cores once the task is gone. Once the suites that run heavy batches
+task's work, keeps nothing, and the task releases its cores in its exit
+trap with `wait <kind> --release`, since the worker keeps a finished
+task's container a while and the broker's probe sees it there. Once the suites that run heavy batches
 wait for CPU as well as memory, Concourse's task limit can rise further:
 pipelinegen then holds a batch back when the worker is busy, whichever
 runs short.

@@ -705,6 +705,35 @@ func TestATaskFileThatRanSliceMemoryWaitsNoMoreAtItsFirstSlice(t *testing.T) {
 	}
 }
 
+// A prepare's wait books its kind's cores for its lease, ending before the task's work; the task hands
+// them back in its exit trap, so a finished prepare whose container the worker keeps holds none.
+func TestAPreparesWaitReleasesItsCoresAtTheTasksEnd(t *testing.T) {
+	root := memoryBatch(t).root
+	mem := fakeMemory(t, 8000, 50*time.Millisecond)
+	setCPUPressure(t, mem, 0)
+
+	addr := startCPUBroker(t, 10*time.Millisecond, 4)
+	writeFile(t, filepath.Join(root, config.FileName), reportConfig+"cpu: {wait: true}\nmemory: {broker: \""+addr+"\"}\n")
+
+	if _, stderr, code := run(t, "wait", "prepare", "-root", root); code != 0 {
+		t.Fatalf("wait prepare: %d %s", code, stderr)
+	}
+
+	next := membroker.Request{MB: 100, WaitSeconds: 0.3, Who: "next", CPU: true, Cores: 3}
+
+	if ans, err := membroker.Ask(t.Context(), addr, next); err != nil || ans.Granted {
+		t.Fatalf("a batch beside the prepare's 2 cores of 4: %+v %v", ans, err)
+	}
+
+	if _, stderr, code := run(t, "wait", "prepare", "--release", "-root", root); code != 0 {
+		t.Fatalf("wait prepare --release: %d %s", code, stderr)
+	}
+
+	if ans, err := membroker.Ask(t.Context(), addr, next); err != nil || !ans.Granted {
+		t.Fatalf("a batch once the prepare released its cores: %+v %v", ans, err)
+	}
+}
+
 // A batch asks the broker for its predicted cores, held for half again its expected time, and without a
 // prediction for the suite's cpu.cores, held for as long as it may wait.
 func TestABatchAsksForItsCoresForHalfAgainItsTime(t *testing.T) {
