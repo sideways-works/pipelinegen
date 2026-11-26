@@ -969,6 +969,16 @@ The change and its commit come from the trigger's input (`--trigger <dir>`).
 | suite job's ensure | `tools/pipelinegen report suite --root trigger --batches batches`: the suite's status and the run's aggregate; when the whole run has passed, the final report and, for a branch's recording run, `lists attach`; when the run's last suite has ended in a run that failed, `lists attach` of the slices that passed. Its root is the trigger, because the ensure runs even when the tree step never wrote `source`. The job may pass whatever else this step's failures are, but not exit 4, the suite's end that could not be recorded: that fails the job | `tools`, `trigger`, `batches` (when the start step wrote it) | none | `GITHUB_TOKEN`, `PIPELINEGEN_TRIGGER` |
 | pipeline job | `tools/pipelinegen pipeline --root repo --plugins tools/plugins --out pipeline.yml`, then a check that fails when it differs from the pipeline set (with `concourse.self_set`, `set_pipeline: self` without variables) | `tools`, `repo` | none | `PIPELINEGEN_CONCOURSE_URL` |
 
+Under the top-level `memory.wait` or `cpu.wait`, in a pipeline, the
+steps that plan (`plan` doing a plan's work), `tree` (with its gate open),
+`slice bookkeeping-files`, `batches`, `report batch-end`, `report
+collect`, `report whole` and `report suite` first wait for their memory
+and cores, asking `memory.broker` when it names one, and start anyway when
+their wait ends; a suite's `slice prepare` and its `wait prepare` and
+`wait whole` do under the suite's own. A step that ends in pipelinegen
+releases its cores at its end, and a trusted run's step that holds the
+store's writing key keeps what it used in the store's step peaks.
+
 With `plans.s3`, the steps that write a run's plan (the `plan` step of a
 branch's, a timer's or a manual run's planning job, and the `--from` step
 of a pull request run's planning job and of its sweep) also get `PIPELINEGEN_PLANS_ACCESS_KEY_ID` and

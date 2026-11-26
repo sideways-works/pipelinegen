@@ -9,6 +9,11 @@
 // expected time and half again, runs out. A batch that waits before its setup (slice memory) releases
 // nothing itself: its cores count while its task answers on the worker's network.
 //
+// The pipeline's own steps (a plan, a suite job's bookkeeping, a suite's prepare or whole-suite check)
+// ask as batches do, marked as steps: such an ask goes ahead of the first in line when the worker has
+// room for it, and one whose wait ends unanswered is granted then, counted and leased as any grant, since
+// the step starts anyway.
+//
 // Batches of one worker share no store and no file: the broker runs beside the worker, and a batch
 // reaches it over the network, its address in memory.broker. A batch that can't reach it waits by its
 // own reading of the worker's memory, as without a broker.
@@ -44,6 +49,14 @@ type Request struct {
 	LeaseSeconds float64 `json:"lease_seconds,omitempty"`
 	// Release says the task's batch has ended: its grant's cores count no longer, its memory still does.
 	Release bool `json:"release,omitempty"`
+	// Step marks the ask of a step of the pipeline's own, not a batch: a plan, a suite job's bookkeeping,
+	// a suite's prepare or whole-suite check. It goes ahead of the first in line whenever the worker has
+	// room for it, since its own wait is short and the batches wait on it, and its grant starts no settle
+	// time for later asks for cores.
+	Step bool `json:"step,omitempty"`
+	// Anyway grants the ask when its wait ends unanswered, its memory and cores counted and leased as any
+	// grant's: its task starts then whatever the worker has, and the asks after it see what it holds.
+	Anyway bool `json:"anyway,omitempty"`
 }
 
 // Answer is the broker's: Granted, or Why not.
@@ -55,6 +68,9 @@ type Answer struct {
 	// HeldCores and FreeCores are the cores the grants' leases hold and those left, under core accounting.
 	HeldCores float64 `json:"held_cores,omitempty"`
 	FreeCores float64 `json:"free_cores,omitempty"`
+	// Anyway says the grant came when the ask's wait ended, the worker short of what it asked; Why then
+	// says what the broker read.
+	Anyway bool `json:"anyway,omitempty"`
 }
 
 // admitPressure is the memory pressure (PSI "some avg10", percent) at or above which nothing is granted.
@@ -284,12 +300,25 @@ func (b *Broker) ask(ctx context.Context, req Request, from string) Answer {
 
 	defer timer.Stop()
 
+	// a wait that ended grants an ask that starts anyway; a task gone takes nothing
+	anyway := false
+
 	select {
 	case ans := <-a.done:
 		return ans
 	case <-timer.C:
+		// a task that went as its wait ended starts nothing
+		anyway = req.Anyway && ctx.Err() == nil
 	case <-ctx.Done():
 	}
+
+	return b.ended(a, wait, anyway)
+}
+
+// ended answers a whose wait ended, or whose task went: its grant if it came meanwhile, else its grant
+// anyway when it starts anyway, else its refusal.
+func (b *Broker) ended(a *ask, wait time.Duration, anyway bool) Answer {
+	req := a.req
 
 	// gone from the queue unless it was granted meanwhile
 	b.mu.Lock()
@@ -311,16 +340,23 @@ func (b *Broker) ask(ctx context.Context, req Request, from string) Answer {
 
 	b.poke()
 
-	// a refusal says what it read, or nothing
-	st := b.read(time.Now())
-	ans := Answer{
-		FreeMB: st.r.Free() - st.held, HeldMB: st.held, HeldCores: st.cores, FreeCores: b.freeCores(st.cores),
-		Why: fmt.Sprintf("%d MB free less %d MB granted lately, pressure %.1f%%, for %d MB asked", st.r.Free(), st.held, st.pressure, req.MB),
-	}
+	// a refusal, or a grant anyway, says what it read
+	now := time.Now()
+	st := b.read(now)
+	why := fmt.Sprintf("%d MB free less %d MB granted lately, pressure %.1f%%, for %d MB asked", st.r.Free(), st.held, st.pressure, req.MB)
 
 	if req.CPU {
-		ans.Why += b.cpuSaid(st, req)
+		why += b.cpuSaid(st, req)
 	}
+
+	if anyway {
+		ans := b.grant(a, st, now, "granted anyway after "+wait.Round(time.Second).String())
+		ans.Anyway, ans.Why = true, why
+
+		return ans
+	}
+
+	ans := Answer{FreeMB: st.r.Free() - st.held, HeldMB: st.held, HeldCores: st.cores, FreeCores: b.freeCores(st.cores), Why: why}
 
 	b.logf("refused %q: %s after %s\n", req.Who, ans.Why, wait.Round(time.Second))
 
@@ -495,24 +531,31 @@ func (b *Broker) step() {
 		a := b.queue[i]
 		b.queue = append(b.queue[:i], b.queue[i+1:]...)
 
-		// a task's new grant replaces its last: one task holds one grant at most
-		if a.from != "" {
-			b.granted = slices.DeleteFunc(b.granted, func(g grant) bool { return g.from == a.from })
-		}
-
-		g := b.grantOf(a, now)
-		b.granted = append(b.granted, g)
-
-		if g.cores > 0 {
-			b.coresAt = now
-		}
-
-		ans := Answer{Granted: true, FreeMB: st.r.Free() - st.held, HeldMB: st.held + a.req.MB, HeldCores: st.cores + g.cores, FreeCores: b.freeCores(st.cores)}
-		b.logf("granted %q %d MB, %.1f cores: %d MB free less %d MB granted lately, pressure %.1f%%, %.1f cores granted lately, CPU pressure %s%s\n",
-			a.req.Who, a.req.MB, g.cores, st.r.Free(), st.held, st.pressure, st.cores, cpuPSI(st.cpu), taskAt(a.from))
-
-		a.done <- ans
+		a.done <- b.grant(a, st, now, "granted")
 	}
+}
+
+// grant records a's grant, read st at now, and logs it as what: granted, or granted anyway once its
+// wait ended; b.mu is held.
+func (b *Broker) grant(a *ask, st reading, now time.Time, what string) Answer {
+	// a task's new grant replaces its last: one task holds one grant at most
+	if a.from != "" {
+		b.granted = slices.DeleteFunc(b.granted, func(g grant) bool { return g.from == a.from })
+	}
+
+	g := b.grantOf(a, now)
+	b.granted = append(b.granted, g)
+
+	// the settle time spaces batches' grants, so the pressure each reads shows the batch before it; a
+	// step's grant starts none, and a batch after it reads the pressure as it finds it
+	if g.cores > 0 && !a.req.Step {
+		b.coresAt = now
+	}
+
+	b.logf("%s %q %d MB, %.1f cores: %d MB free less %d MB granted lately, pressure %.1f%%, %.1f cores granted lately, CPU pressure %s%s\n",
+		what, a.req.Who, a.req.MB, g.cores, st.r.Free(), st.held, st.pressure, st.cores, cpuPSI(st.cpu), taskAt(a.from))
+
+	return Answer{Granted: true, FreeMB: st.r.Free() - st.held, HeldMB: st.held + a.req.MB, HeldCores: st.cores + g.cores, FreeCores: b.freeCores(st.cores)}
 }
 
 // grantOf is the grant of a, its memory counting for the ramp and its cores, when it waits for CPU, for
@@ -534,14 +577,16 @@ func (b *Broker) grantOf(a *ask, now time.Time) grant {
 
 // next is the queue's index of the ask to grant now, -1 for none.
 func (b *Broker) next(st reading, now time.Time) int {
+	held := false
+
 	for i, a := range b.queue {
-		if memoryFits(a, st) && b.cpuFits(a, st) && !b.settling(a, now) {
+		if (!held || a.req.Step) && memoryFits(a, st) && b.cpuFits(a, st) && !b.settling(a, now) {
 			return i
 		}
 
-		// the first in line holds the others back until FirstFor has passed
+		// the first in line holds the others back until FirstFor has passed, all but a step's ask
 		if i == 0 && (b.FirstFor <= 0 || now.Sub(a.at) < b.FirstFor) {
-			return -1
+			held = true
 		}
 	}
 

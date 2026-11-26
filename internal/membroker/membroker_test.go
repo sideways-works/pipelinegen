@@ -501,8 +501,118 @@ func TestAsksForCoresAreGrantedTheSettleTimeApart(t *testing.T) {
 		t.Fatalf("granted after %v: want the first at once and each next 300ms on", got)
 	}
 
-	// an ask that waits for the pressure alone, as a step's, isn't held back by the settle time
+	// an ask that waits for the pressure alone isn't held back by the settle time
 	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 1, Who: "step", CPU: true}, "10.80.0.10"); !ans.Granted {
 		t.Fatalf("a step's ask: %+v", ans)
+	}
+}
+
+// A step of the pipeline's own starts anyway once its wait ends: the broker grants it then, its memory and
+// cores counted and leased, so the asks after it see what it holds. A batch's ask is refused as before, and
+// a step gone before its wait ended takes nothing.
+func TestAStepsAskIsGrantedAnywayWhenItsWaitEnds(t *testing.T) {
+	b, psi := cpuBroker(t, 4, 40)
+	psi.Store(70)
+
+	step := Request{MB: 1000, WaitSeconds: 0.05, Who: "plan pr", CPU: true, Cores: 3, LeaseSeconds: 60, Step: true, Anyway: true}
+
+	ans := b.ask(t.Context(), step, "10.80.0.7")
+	if !ans.Granted || !ans.Anyway || ans.HeldCores != 3 || ans.HeldMB != 1000 || !strings.Contains(ans.Why, "CPU pressure 70.0%, for 3.0 cores asked") {
+		t.Fatalf("a step under CPU pressure: %+v", ans)
+	}
+
+	// a batch's ask is refused when its wait ends
+	batch := Request{MB: 1000, WaitSeconds: 0.05, Who: "e2e batch 1", CPU: true, Cores: 2, LeaseSeconds: 60}
+	if ans := b.ask(t.Context(), batch, "10.80.0.8"); ans.Granted || ans.Anyway {
+		t.Fatalf("a batch under CPU pressure: %+v", ans)
+	}
+
+	// the pressure gone, the step's cores still count: 3 of 4 held leave no room for 2
+	psi.Store(0)
+
+	if ans := b.ask(t.Context(), batch, "10.80.0.8"); ans.Granted || !strings.Contains(ans.Why, "3.0 of 4.0 cores granted lately") {
+		t.Fatalf("a batch beside the step's cores: %+v", ans)
+	}
+
+	// released, they count no longer
+	b.drop(Request{Release: true, Who: "plan pr"}, "10.80.0.7")
+
+	if ans := b.ask(t.Context(), batch, "10.80.0.8"); !ans.Granted || ans.Anyway {
+		t.Fatalf("a batch once the step released its cores: %+v", ans)
+	}
+
+	// a step whose task went before its wait ended is granted nothing
+	psi.Store(70)
+
+	gone, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if ans := b.ask(gone, Request{MB: 1000, WaitSeconds: 5, Who: "report suite pr e2e", CPU: true, Cores: 1, Step: true, Anyway: true}, "10.80.0.9"); ans.Granted {
+		t.Fatalf("a step gone: %+v", ans)
+	}
+
+	b.mu.Lock()
+	_, cores := b.held(time.Now())
+	b.mu.Unlock()
+
+	if cores != 2 {
+		t.Fatalf("%v cores held, want the batch's 2 alone", cores)
+	}
+}
+
+// The first in line holds the batches behind it back, but not a step's ask the worker has room for: a step
+// waits a short while and the batches it serves wait on it.
+func TestAStepGoesAheadOfTheFirstInLine(t *testing.T) {
+	f := &fake{}
+	f.free.Store(5000)
+
+	b := &Broker{Read: f.read, Ramp: time.Minute, Every: 10 * time.Millisecond, FirstFor: time.Minute}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go b.Run(ctx)
+
+	go func() {
+		_ = b.ask(t.Context(), Request{MB: 15000, WaitSeconds: 5, Who: "most of it"}, "10.80.0.7")
+	}()
+
+	time.Sleep(30 * time.Millisecond)
+
+	if ans := b.ask(t.Context(), Request{MB: 1000, WaitSeconds: 0.1, Who: "e2e batch 2"}, "10.80.0.8"); ans.Granted {
+		t.Fatalf("a batch behind the first in line: %+v", ans)
+	}
+
+	start := time.Now()
+
+	if ans := b.ask(t.Context(), Request{MB: 1000, WaitSeconds: 5, Who: "report batch-end pr e2e", Step: true}, "10.80.0.9"); !ans.Granted || time.Since(start) > time.Second {
+		t.Fatalf("a step behind the first in line: %+v after %s", ans, time.Since(start))
+	}
+
+	// a step the worker has no room for waits as any ask
+	if ans := b.ask(t.Context(), Request{MB: 6000, WaitSeconds: 0.1, Who: "plan pr", Step: true}, "10.80.0.10"); ans.Granted {
+		t.Fatalf("a step without room: %+v", ans)
+	}
+}
+
+// A step's grant of cores starts no settle time: its few cores for a short while leave the pressure the
+// next batch reads as it was.
+func TestAStepsCoresStartNoSettleTime(t *testing.T) {
+	b, _ := cpuBroker(t, 16, 0)
+	b.mu.Lock()
+	b.CPUSettle = time.Minute
+	b.mu.Unlock()
+
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 1, Who: "tree pr e2e", CPU: true, Cores: 0.5, LeaseSeconds: 60, Step: true}, "10.80.0.7"); !ans.Granted {
+		t.Fatalf("the step: %+v", ans)
+	}
+
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 1, Who: "e2e batch 1", CPU: true, Cores: 2, LeaseSeconds: 60}, "10.80.0.8"); !ans.Granted {
+		t.Fatalf("a batch after the step: %+v", ans)
+	}
+
+	// a batch's grant does start one, for steps as for batches
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 0.1, Who: "report batch-end pr e2e", CPU: true, Cores: 0.5, Step: true}, "10.80.0.9"); ans.Granted {
+		t.Fatalf("a step within the batch's settle time: %+v", ans)
 	}
 }

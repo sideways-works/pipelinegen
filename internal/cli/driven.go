@@ -826,7 +826,7 @@ func slicePrepare(ctx context.Context, args []string, stdout io.Writer) (err err
 	}
 
 	if s.reporter.ID.Run != localRun {
-		suiteStepMemory(cfg, config.StepPrepare, s.reporter.ID.Run, suite, s.reporter.ID.Commit).admit(ctx, os.Stderr)
+		defer s.prepareMemory(suite).during(ctx, os.Stderr)()
 	}
 
 	if err := b.prepare(ctx); err != nil {

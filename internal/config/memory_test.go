@@ -71,6 +71,41 @@ func TestTheStepsMemoryHasDefaultsTheTopLevelReplaces(t *testing.T) {
 	}
 }
 
+func TestTheStepsCoresHaveDefaultsTheTopLevelReplaces(t *testing.T) {
+	kinds := []string{StepPlanning, StepBookkeeping, StepPrepare, StepWhole}
+
+	for _, tc := range []struct {
+		name, text string
+		want       []float64
+	}{
+		{"the defaults", example, []float64{2, 0.5, 2, 2}},
+		{"set, kind by kind", example + "cpu: {wait: true, cores: 3, steps: {planning: 4, whole: 0.25}}\n", []float64{4, 0.5, 2, 0.25}},
+		{"all set", example + "cpu: {steps: {planning: 1, bookkeeping: 1, prepare: 6, whole: 3}}\n", []float64{1, 1, 6, 3}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, err := Parse([]byte(tc.text))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for i, kind := range kinds {
+				if got := c.StepCores(kind); got != tc.want[i] {
+					t.Errorf("%s: %v cores, want %v", kind, got, tc.want[i])
+				}
+			}
+		})
+	}
+
+	if _, err := Parse([]byte(example + "cpu: {steps: {prepare: -1}}\n")); err == nil || !strings.Contains(err.Error(), "cpu.steps: planning, bookkeeping, prepare and whole are cores") {
+		t.Errorf("negative cores: %v", err)
+	}
+
+	suite := strings.Replace(example, "    run_slice: ci/tasks/backend-slice.yml\n", "    run_slice: ci/tasks/backend-slice.yml\n    cpu: {steps: {prepare: 1}}\n", 1)
+	if _, err := Parse([]byte(suite)); err == nil {
+		t.Error("a suite's own cpu.steps: the steps' cores are the top level's")
+	}
+}
+
 func TestASuiteWaitsForCPUByItsOwnSettingsOrTheTopLevels(t *testing.T) {
 	backend := func(own string) string {
 		return strings.Replace(example, "    run_slice: ci/tasks/backend-slice.yml\n", "    run_slice: ci/tasks/backend-slice.yml\n    cpu: "+own+"\n", 1)

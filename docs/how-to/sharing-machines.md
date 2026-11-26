@@ -134,17 +134,21 @@ must give back, so a batch that dies frees its grant when the ramp ends.
 
 **The pipeline's own steps.** With the top-level `memory.wait`, the
 steps that plan (a branch's plan, a pull request's first step) and the
-bookkeeping steps that end a batch or a suite wait for their own memory
-the same way, before their heavy part, asking the broker when
-`memory.broker` names one:
+bookkeeping steps (a suite job's tree, batches and bookkeeping files, the
+ends of a batch and of a suite, a whole-suite check's collect and report)
+wait for their own memory the same way, before their heavy part, asking
+the broker when `memory.broker` names one:
 
 ```
 memory: this planning step should use 2640 MB, by its recent peaks
 ```
 
 Each such step of a trusted run records the most its task used when it
-ends (its cgroup's peak), by step: its command, its run and, for a
-suite's step, the suite. A step expects the 90th percentile of its own
+ends (its cgroup's peak), its cores (the CPU seconds its task used from
+the end of its wait over the seconds since, for a step of 5 seconds or
+more) and those seconds, by step: its command, its run and, for a
+suite's step, the suite. The bookkeeping files step opens no store: it
+asks for its kind's defaults and keeps nothing. A step expects the 90th percentile of its own
 last 10 peaks and 10% more; without any, the most the same command's steps
 of other runs expect (a pull request's plan, which keeps no peaks,
 expects what the branches' plans used); without those,
@@ -152,8 +156,13 @@ expects what the branches' plans used); without those,
 Unlike a batch, such a step never gives up: it waits at most a third of
 what its own time limit leaves (15 minutes at most), then starts anyway
 and says so, since a plan or a report that failed for memory would stop
-the run it is for. With these steps waiting too, the worker that plans can
-take more tasks at once without running out of memory.
+the run it is for. The broker books such a step all the same: a step's
+ask whose wait ends is granted anyway, its memory and cores counted and
+leased as a batch's, so the asks after it see the work that started under
+pressure. A step's ask also goes ahead of a batch first in line
+(`--first-for`) when the worker has room for it, since the batches wait on
+the steps. With these steps waiting too, the worker that plans can take
+more tasks at once without running out of memory.
 
 **CPU.** Memory is not all batches share: a worker running more browser
 batches than it has cores starts none out of memory, yet each runs slower
@@ -198,13 +207,23 @@ A batch still short of CPU when its wait ends leaves its slices not run as
 one short of memory does, and says so: "not run: the worker's CPU pressure
 was 63%, at or above the 40% a batch waits below (cpu.pressure), after
 waiting 45m0s". Under the top-level `cpu.wait` the planning and
-bookkeeping steps wait for the CPU pressure too, keeping no cores, and
-start anyway when their wait ends. A suite's prepare and its whole-suite
-checks run the change's code outside a batch: under the suite's
-`cpu.wait` or `memory.wait` they wait while the worker is under CPU or
-memory pressure, `slice prepare` by itself and a task of the
-repository's by calling `tools/pipelinegen wait prepare` (or `wait
-whole`) first, and start anyway when their wait ends. Once the suites that run heavy batches
+bookkeeping steps ask for their cores too: what their recent cores
+predict (each the 90th percentile and 10% more), else those of the same
+command's steps of other runs, else `cpu.steps.planning` (2) or
+`cpu.steps.bookkeeping` (0.5). A step's cores are leased for its recorded
+seconds half again (a minute at least; else 20 minutes for a plan, 5 for
+a bookkeeping step), never past its own time limit, and it releases them
+at its end, so the next batch starts at once. It starts anyway when its
+wait ends, its grant booked as above. A suite's prepare and its
+whole-suite checks run the change's code outside a batch: under the
+suite's `cpu.wait` or `memory.wait` they wait the same way,
+`slice prepare` by itself and a task of the repository's by calling
+`tools/pipelinegen wait prepare` (or `wait whole`) first, asking for the
+cores the suite's recorded prepares used, else `cpu.steps.prepare` (2) or
+`cpu.steps.whole` (2), for 30 minutes at most. `slice prepare` releases
+them at its end and keeps what it used; `wait`, which ends before the
+task's work, releases nothing and keeps nothing, and the broker's probe
+ends its cores once the task is gone. Once the suites that run heavy batches
 wait for CPU as well as memory, Concourse's task limit can rise further:
 pipelinegen then holds a batch back when the worker is busy, whichever
 runs short.

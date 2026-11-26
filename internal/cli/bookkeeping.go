@@ -34,6 +34,8 @@ func sliceBookkeepingFiles(ctx context.Context, args []string, stdout io.Writer)
 		return fmt.Errorf("bookkeeping files: %w", err)
 	}
 
+	defer bookkeepingFilesMemory(data).during(ctx, os.Stderr)()
+
 	if err := os.MkdirAll(out, 0o750); err != nil {
 		return fmt.Errorf("bookkeeping files: %w", err)
 	}
@@ -43,4 +45,19 @@ func sliceBookkeepingFiles(ctx context.Context, args []string, stdout io.Writer)
 	}
 
 	return say(stdout, "bookkeeping files: %s (%d bytes)\n", config.FileName, len(data))
+}
+
+// bookkeepingFilesMemory is the step's wait, by the config it copies: the step has no store, so it asks
+// for its kind's defaults and keeps nothing. A config it can't read waits for nothing, and the copy
+// goes on.
+func bookkeepingFilesMemory(data []byte) stepMemory {
+	cfg, err := config.Parse(data)
+	if err != nil {
+		cfg = &config.Config{}
+	}
+
+	return stepMemory{
+		cfg: cfg, kind: config.StepBookkeeping, commit: os.Getenv(envCommit),
+		step: "slice bookkeeping-files " + os.Getenv(envRun) + " " + os.Getenv(envSuite),
+	}
 }

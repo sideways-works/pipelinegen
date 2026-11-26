@@ -507,6 +507,8 @@ func reportCollect(ctx context.Context, args []string) (err error) {
 		return fmt.Errorf("%w: name the suite", errUsage)
 	}
 
+	defer s.memory("report collect", suite).during(ctx, os.Stderr)()
+
 	_, err = report.Collect(ctx, s.reporter.Store, s.reporter.ID, suite, out)
 
 	return err
@@ -557,6 +559,8 @@ func reportWhole(ctx context.Context, args []string) (err error) {
 	if err := needEnv(envSuite); err != nil {
 		return err
 	}
+
+	defer s.memory("report whole", os.Getenv(envSuite)).during(ctx, os.Stderr)()
 
 	ev := report.SliceEvent{
 		Suite: os.Getenv(envSuite), Slice: report.WholeName(name), Label: report.WholeName(name),
@@ -702,7 +706,7 @@ func reportBatchEnd(ctx context.Context, args []string, stdout io.Writer) (err e
 		return err
 	}
 
-	defer s.memory("report batch-end").during(ctx, os.Stderr)()
+	defer s.memory("report batch-end", os.Getenv(envSuite)).during(ctx, os.Stderr)()
 
 	if confirmed != "" || requeued != "" {
 		return sessionEnd(ctx, &s, sessionFiles{batch: batch, result: result, coverage: coverage, confirmed: confirmed, requeued: requeued, pools: pools}, stdout)
@@ -843,7 +847,7 @@ func reportSuite(ctx context.Context, args []string) (err error) {
 		return err
 	}
 
-	defer s.memory("report suite").during(ctx, os.Stderr)()
+	defer s.memory("report suite", os.Getenv(envSuite)).during(ctx, os.Stderr)()
 
 	if why, err := suiteStopWhy(ctx, &s, batches); err != nil {
 		return noPlanIsNothing(err)

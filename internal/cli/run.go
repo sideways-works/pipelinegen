@@ -219,19 +219,18 @@ func planBranchGated(ctx context.Context, cfg *config.Config, ch runs.Change, st
 	})
 }
 
-// planStoreWaiting is planStore and, when works, the plan's wait for its memory; done keeps the plan's
-// peak and closes the store.
+// planStoreWaiting is planStore and, when works, the plan's wait for its memory and cores; done releases
+// the plan's cores, keeps what it used and closes the store.
 func planStoreWaiting(ctx context.Context, cfg *config.Config, ch runs.Change, cache string, works bool) (*gitstore.Store, func(*error)) {
 	store := planStore(cfg, ch, cache)
 	if !works {
 		return store, func(err *error) { closeStore(store, err) }
 	}
 
-	sm := planMemory(cfg, ch, store)
-	sm.admit(ctx, os.Stderr)
+	end := planMemory(cfg, ch, store).during(ctx, os.Stderr)
 
 	return store, func(err *error) {
-		sm.keep(ctx, os.Stderr)
+		end()
 		closeStore(store, err)
 	}
 }
@@ -1376,6 +1375,9 @@ func runTree(ctx context.Context, args []string, stdout io.Writer) (err error) {
 		return say(stdout, "%s %s: nothing to run for %s\n", ch.Run, ch.ID, b.suite)
 	}
 
+	// a suite job with nothing to run ends at once; one that runs waits before its checkout
+	defer buildMemory(cfg, ch, store, "tree", b.suite).during(ctx, os.Stderr)()
+
 	if err := recordBegan(ctx, store, reportID(ch), b.suite, stdout); err != nil {
 		return err
 	}
@@ -1529,6 +1531,8 @@ func runBatches(ctx context.Context, args []string, stdout io.Writer) (err error
 
 	store := openStore(cfg)
 	defer closeStore(store, &err)
+
+	defer buildMemory(cfg, ch, store, "batches", b.suite).during(ctx, os.Stderr)()
 
 	id := reportID(ch)
 

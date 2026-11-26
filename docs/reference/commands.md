@@ -423,6 +423,10 @@ slices' observations are what the batch kept. A slice the batch left
 unobserved (its time ran out, or an observe failed) is marked can't tell
 there, as is every slice of a recording run of a suite whose batch is its
 own task file, which observes nothing; such a suite's ends keep the tree.
+Under `memory.wait` or `cpu.wait` in a pipeline it first waits for a
+bookkeeping step's memory and cores by the config it copies; it opens no
+store, so it asks for `memory.steps.bookkeeping` and
+`cpu.steps.bookkeeping` and keeps nothing.
 
 It reads the environment `report` does, with `PIPELINEGEN_SUITE` and
 `PIPELINEGEN_BATCH` required. `slice list` prints the batch's slices one per line,
@@ -710,7 +714,9 @@ began`; from then on the run counts the suite as begun, so its sweep and
 its planning builds hand the head on no more. A store that can't be
 written costs a warning on stderr and nothing else. Then it writes the
 tree under test into `--out`: a git work tree whose HEAD is the tested
-commit.
+commit. Under `memory.wait` or `cpu.wait` it first waits for its memory
+and cores, a bookkeeping step's, as the pipeline's other steps do; a
+suite job with nothing to run doesn't wait.
 
 | Flag | Default | What it does |
 |---|---|---|
@@ -733,7 +739,8 @@ the `across` step runs over, as strings: Concourse puts each into a task's
 and `batches/run.json`. From the suite's measured memory peaks
 (`refs/pipelinegen/peaks/<suite>`) it also writes `batches/<n>/memory.json`,
 the peak the batch should reach, which the batch waits for before it starts;
-a suite with no peaks gets none.
+a suite with no peaks gets none. Under `memory.wait` or `cpu.wait` it first
+waits for its own memory and cores, a bookkeeping step's.
 
 | Flag | Default | What it does |
 |---|---|---|
@@ -812,7 +819,14 @@ memory, less what it granted within the ramp, covers it. A batch that waits
 for CPU too (`cpu.wait`) is granted once the CPU pressure is below
 `--cpu-pressure` and its predicted cores fit beside those of the grants
 whose leases run; its batch's end releases them, and so does its task's
-going, for a batch that waited before its setup. Run it beside the
+going, for a batch that waited before its setup. The pipeline's own steps
+(a plan, a suite job's tree and batches, the reports, a suite's prepare
+and whole-suite checks) ask it too, marked as steps: a step's ask goes
+ahead of the first in line when the worker has room for it, its grant of
+cores starts no `--cpu-settle`, and one whose wait ends unanswered is
+granted then ("granted anyway", with what the broker read), its memory and
+cores counted and leased as any grant's, since the step starts anyway. A
+batch's ask whose wait ends is refused, as before. Run it beside the
 Concourse worker, in its container, so it reads the worker's memory:
 
 ```
@@ -825,11 +839,11 @@ memory broker on [::]:7480, grants counting 5m0s, 20.0 cores
 |---|---|---|
 | `--listen` | `:7480` | The address it listens on. |
 | `--ramp` | `5m` | How long a grant counts against the free memory, by when the batch's own use shows in it. |
-| `--first-for` | `10m` | How long the first ask in line holds back later asks the memory covers: an ask for most of the worker, from a proposed change's batch say, delays the others at most this long. |
+| `--first-for` | `10m` | How long the first ask in line holds back later asks the memory covers: an ask for most of the worker, from a proposed change's batch say, delays the others at most this long. A step's ask the worker has room for is never held back. |
 | `--max-grant` | `16384` | The most one grant counts against the free memory, in MB: a batch predicted above it starts once that much is free. 0 is no cap. |
 | `--cpu-factor` | `1.25` | The cores the grants of batches that wait for CPU may hold at once, per core of the machine the broker runs on: a batch's predicted cores wait until they fit beside those of the grants whose leases run, and one predicted above them all starts at once. 0 counts no cores. |
 | `--cpu-pressure` | `40` | The CPU pressure (`/proc/pressure/cpu`, the larger of `some avg10` and `avg60`, percent) at or above which no batch or step that waits for CPU is granted. 0 holds none back. |
-| `--cpu-settle` | `15s` | How long after a grant of cores the next ask for cores waits, so the CPU pressure it reads shows the batch granted before it: asks that fit at once start this far apart, not together. An ask that waits for the pressure alone, as a step's, isn't held back. 0 waits none. |
+| `--cpu-settle` | `15s` | How long after a grant of cores the next ask for cores waits, so the CPU pressure it reads shows the batch granted before it: asks that fit at once start this far apart, not together. An ask that waits for the pressure alone isn't held back, and a step's grant of cores starts no such wait. 0 waits none. |
 | `--probe-every` | `30s` | How often it asks whether the task of each grant holding cores is still there: a connection to the task's address that is refused at once is a task there, while no route to it (no host answers for the address) is one gone; a connection that times out, as behind a firewall that drops the refusal, counts as there. A grant whose task is gone on two probes in a row holds its cores no longer. 0 never asks, and a grant's cores count until its release or its lease's end. |
 | `--cgroup` | the broker's own | The cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the line of `/proc/<the worker's pid>/cgroup` less its `0::`, such as `/system.slice/docker-<id>.scope`. |
 | `--root` | `/` | Where the machine's `/proc` and `/sys` are. |
@@ -926,11 +940,17 @@ the change's code outside one: under the suite's `cpu.wait` it waits while
 the CPU pressure (`/proc/pressure/cpu`, the larger of `some avg10` and `avg60`) is at or above
 `cpu.pressure`, and under its `memory.wait` while the memory pressure is
 10% or more, asking the worker's broker when `memory.broker` names one,
-else by its own reading. It asks no cores and keeps no peak. Its wait is a
+else by its own reading. Under `cpu.wait` it asks the broker for the
+task's cores, `cpu.steps.prepare` or `cpu.steps.whole` (2 each), held for
+30 minutes or until the deadline, whichever comes first: it ends before the task's work, so it
+releases nothing, and the broker ends the cores once the task is gone from
+the worker's network. It keeps no peak, never seeing the work. Its wait is a
 third of what the task's deadline leaves (`PIPELINEGEN_DEADLINE`), at most
 15 minutes, else 10 minutes; past it the task starts anyway, and it never
 fails for room. A suite with `steps` needs none: `slice prepare` waits the
-same way. On this machine (`run`, `record`) it does nothing.
+same way, for what the suite's recorded prepares used, releases its cores
+at its end and, in a trusted run, keeps its own peak, cores and seconds.
+On this machine (`run`, `record`) it does nothing.
 
 ```sh
 tools/pipelinegen wait prepare || true   # first in ci/e2e-prepare.yml

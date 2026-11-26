@@ -55,8 +55,8 @@ type Config struct {
 	// planning or bookkeeping step for its own.
 	Memory TopMemory `yaml:"memory"`
 	// CPU says whether a batch waits for the cores its slices' recorded use predicts and for the
-	// worker's CPU pressure to ease, and a planning or bookkeeping step for the pressure.
-	CPU      CPU            `yaml:"cpu"`
+	// worker's CPU pressure to ease, and a step of the pipeline's own for its own cores.
+	CPU      TopCPU         `yaml:"cpu"`
 	Keep     Keep           `yaml:"keep"`
 	Writes   Writes         `yaml:"writes"`
 	Store    Store          `yaml:"store"`
@@ -641,8 +641,8 @@ type StepMemory struct {
 const (
 	StepPlanning    = "planning"
 	StepBookkeeping = "bookkeeping"
-	// StepWhole is a suite's whole-suite check which, as its prepare (StepPrepare), waits for the
-	// pressures alone and keeps no peak.
+	// StepWhole is a suite's whole-suite check which, as its prepare (StepPrepare), waits under its
+	// suite's own memory.wait and cpu.wait.
 	StepWhole = "whole"
 
 	defaultPlanningMB    = 4096
@@ -658,10 +658,11 @@ func (c *Config) StepMemoryMB(kind string) int64 {
 	return cmp.Or(c.Memory.Steps.Bookkeeping, defaultBookkeepingMB)
 }
 
-// validateSharing checks how batches and steps share a worker: memory.steps and cpu.
+// validateSharing checks how batches and steps share a worker: memory.steps, cpu and cpu.steps.
 func (c *Config) validateSharing(bad func(string, ...any)) {
 	c.validateStepMemory(bad)
 	c.validateCPU(bad)
+	c.validateStepCores(bad)
 }
 
 func (c *Config) validateStepMemory(bad func(string, ...any)) {
@@ -683,6 +684,57 @@ func (c *Config) WaitsForMemory(suite string) bool {
 	}
 
 	return c.Memory.Wait != nil && *c.Memory.Wait
+}
+
+// TopCPU is the top level's cpu: a suite's, and the cores the pipeline's own steps ask for.
+type TopCPU struct {
+	CPU `yaml:",inline"`
+
+	// Steps is the cores a kind of the pipeline's own steps asks for until its own are recorded.
+	Steps StepCores `yaml:"steps"`
+}
+
+// StepCores is the cores a kind of the pipeline's own steps is expected to keep busy before any of its
+// cores are recorded, 0 for the default.
+type StepCores struct {
+	Planning    float64 `yaml:"planning"`
+	Bookkeeping float64 `yaml:"bookkeeping"`
+	Prepare     float64 `yaml:"prepare"`
+	Whole       float64 `yaml:"whole"`
+}
+
+// The cores each kind of step asks for before any of its own are recorded. A plan runs Bazel's queries,
+// whose server keeps a few cores busy in bursts and waits on disk and network between them: two on
+// average. A report or another bookkeeping step is mostly git and HTTP, waiting on the store and the
+// forge: half a core. A suite's prepare builds what its batches need, and a whole-suite check runs its
+// tools across the whole tree: two each, as a batch's go test or Bazel build keeps busy.
+const (
+	defaultPlanningCores    = 2
+	defaultBookkeepingCores = 0.5
+	defaultPrepareCores     = 2
+	defaultWholeCores       = 2
+)
+
+// StepCores is the cores a step of kind is expected to keep busy before its own are recorded.
+func (c *Config) StepCores(kind string) float64 {
+	s := c.CPU.Steps
+
+	switch kind {
+	case StepPlanning:
+		return cmp.Or(s.Planning, defaultPlanningCores)
+	case StepPrepare:
+		return cmp.Or(s.Prepare, defaultPrepareCores)
+	case StepWhole:
+		return cmp.Or(s.Whole, defaultWholeCores)
+	}
+
+	return cmp.Or(s.Bookkeeping, defaultBookkeepingCores)
+}
+
+func (c *Config) validateStepCores(bad func(string, ...any)) {
+	if s := c.CPU.Steps; s.Planning < 0 || s.Bookkeeping < 0 || s.Prepare < 0 || s.Whole < 0 {
+		bad("cpu.steps: planning, bookkeeping, prepare and whole are cores, none of them negative")
+	}
 }
 
 // CPU is how batches share a worker's cores; the broker that grants them is memory.broker's.
@@ -734,7 +786,7 @@ func (c *Config) validateCPU(bad func(string, ...any)) {
 		}
 	}
 
-	check("", c.CPU)
+	check("", c.CPU.CPU)
 
 	for _, name := range slices.Sorted(maps.Keys(c.Suites)) {
 		check("suites."+name+".", c.Suites[name].CPU)

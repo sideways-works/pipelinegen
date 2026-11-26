@@ -21,8 +21,9 @@ const (
 
 func PeaksRef(suite string) string { return refRoot + "peaks/" + suite }
 
-// StepPeaksRef keeps the recent peaks of the pipeline's own planning and bookkeeping steps, by step:
-// such a step waits for the memory they predict before its heavy part.
+// StepPeaksRef keeps the recent peaks, cores and seconds of the pipeline's own steps, by step: such a step
+// waits for the memory and the cores they predict before its heavy part, and holds its cores for about as
+// long as it took.
 const StepPeaksRef = refRoot + "step-peaks"
 
 type peakSample struct {
@@ -30,12 +31,16 @@ type peakSample struct {
 	Commit string `json:"commit"`
 	// Cores is the slice's CPU seconds over its seconds: the cores it kept busy on average.
 	Cores float64 `json:"cores,omitempty"`
+	// Seconds is how long a step of the pipeline's own took from its start; a slice's are its durations'.
+	Seconds float64 `json:"seconds,omitempty"`
 }
 
-// Peak is what a slice used at one commit: the most memory, in MB, and its cores, either 0 when unmeasured.
+// Peak is what a slice or a step used at one commit: the most memory, in MB, its cores and, for a step,
+// its seconds, each 0 when unmeasured.
 type Peak struct {
-	MB    int64
-	Cores float64
+	MB      int64
+	Cores   float64
+	Seconds float64
 }
 
 type peaksDoc struct {
@@ -73,11 +78,41 @@ func Peaks(ctx context.Context, store *gitstore.Store, suite string) (map[string
 	return out, nil
 }
 
-// StepPeaks reads the recent peaks of the pipeline's own steps, oldest first, in MB, by step.
-func StepPeaks(ctx context.Context, store *gitstore.Store) (map[string][]int64, error) {
-	out, err := peaksAt(ctx, store, StepPeaksRef)
+// StepUse is what a step of the pipeline's own used at its recent commits, oldest first: its peaks in MB,
+// its cores and its seconds, each only where measured.
+type StepUse struct {
+	MB      []int64
+	Cores   []float64
+	Seconds []float64
+}
+
+// StepUses reads the recent use of the pipeline's own steps, by step.
+func StepUses(ctx context.Context, store *gitstore.Store) (map[string]StepUse, error) {
+	doc, _, err := readPeaks(ctx, store, StepPeaksRef)
 	if err != nil {
 		return nil, fmt.Errorf("the steps' peaks: %w", err)
+	}
+
+	out := map[string]StepUse{}
+
+	for name, samples := range doc.Slices {
+		var u StepUse
+
+		for _, s := range samples {
+			if s.MB > 0 {
+				u.MB = append(u.MB, s.MB)
+			}
+
+			if s.Cores > 0 {
+				u.Cores = append(u.Cores, s.Cores)
+			}
+
+			if s.Seconds > 0 {
+				u.Seconds = append(u.Seconds, s.Seconds)
+			}
+		}
+
+		out[name] = u
 	}
 
 	return out, nil
@@ -160,10 +195,10 @@ func AddPeaks(ctx context.Context, store *gitstore.Store, suite, commit string, 
 	return addPeaksAt(ctx, store, PeaksRef(suite), "peaks of "+suite, commit, measured)
 }
 
-// AddStepPeak adds the peak a step of the pipeline's own measured at commit to the steps' peaks, the last
-// PeaksKept of each step; a step that has one of the commit already keeps it.
-func AddStepPeak(ctx context.Context, store *gitstore.Store, step, commit string, mb int64) error {
-	return addPeaksAt(ctx, store, StepPeaksRef, "peak of "+step, commit, map[string]Peak{step: {MB: mb}})
+// AddStepPeak adds what a step of the pipeline's own used at commit, its peak, cores and seconds, to the
+// steps' peaks, the last PeaksKept of each step; a step that has one of the commit already keeps it.
+func AddStepPeak(ctx context.Context, store *gitstore.Store, step, commit string, used Peak) error {
+	return addPeaksAt(ctx, store, StepPeaksRef, "peak of "+step, commit, map[string]Peak{step: used})
 }
 
 func addPeaksAt(ctx context.Context, store *gitstore.Store, at, what, commit string, measured map[string]Peak) error {
@@ -192,7 +227,8 @@ func addPeaks(ctx context.Context, store *gitstore.Store, at, what, full string,
 			continue
 		}
 
-		samples = append(samples, peakSample{MB: measured[name].MB, Commit: commit, Cores: measured[name].Cores})
+		m := measured[name]
+		samples = append(samples, peakSample{MB: m.MB, Commit: commit, Cores: m.Cores, Seconds: m.Seconds})
 		doc.Slices[name], added = samples[max(len(samples)-PeaksKept, 0):], true
 	}
 
