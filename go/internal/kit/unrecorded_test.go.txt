@@ -1,0 +1,11 @@
+go:internal/kit#func:passesUnrecorded
+go:internal/kit#func:recordingStep
+go:internal/kit#func:swallowedUnrecorded
+go:internal/kit#func:unrecordedProblem
+go:internal/kit#method:taskRuns.result
+go:internal/kit#method:unrecordedWalk.in
+go:internal/kit#method:unrecordedWalk.task
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
