@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/explain_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:28:13.662406679Z",
+  "seconds": 142.5,
+  "recorded": true,
+  "cpu_seconds": 83.56725999999998,
+  "cpu_wall": 146.893843404,
+  "peak_mb": 1352
+}

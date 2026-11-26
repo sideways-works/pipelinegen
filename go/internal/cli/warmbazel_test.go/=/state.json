@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/warmbazel_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:37.249390844Z",
+  "seconds": 325.09,
+  "recorded": true,
+  "cpu_seconds": 281.3716250000002,
+  "cpu_wall": 326.229468097,
+  "peak_mb": 1077
+}

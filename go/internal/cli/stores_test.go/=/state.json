@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/stores_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:43.241542022Z",
+  "seconds": 0.04,
+  "recorded": true,
+  "cpu_seconds": 0.6693989999998848,
+  "cpu_wall": 1.424065297,
+  "peak_mb": 103
+}

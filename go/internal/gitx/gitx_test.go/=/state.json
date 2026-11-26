@@ -1,0 +1,10 @@
+{
+  "label": "internal/gitx/gitx_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:43.256142889Z",
+  "seconds": 0.4,
+  "recorded": true,
+  "cpu_seconds": 1.343058999999812,
+  "cpu_wall": 1.772169391,
+  "peak_mb": 296
+}

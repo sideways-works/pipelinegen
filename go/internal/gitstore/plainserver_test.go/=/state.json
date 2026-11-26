@@ -1,0 +1,10 @@
+{
+  "label": "internal/gitstore/plainserver_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.846999311Z",
+  "seconds": 1.6400000000000001,
+  "recorded": true,
+  "cpu_seconds": 1.5722040000000561,
+  "cpu_wall": 4.630963364,
+  "peak_mb": 393
+}

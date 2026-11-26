@@ -1,0 +1,10 @@
+{
+  "label": "internal/gitstore/refused_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:28:13.668636142Z",
+  "seconds": 31.23,
+  "recorded": true,
+  "cpu_seconds": 14.043782000000192,
+  "cpu_wall": 41.535040449,
+  "peak_mb": 304
+}

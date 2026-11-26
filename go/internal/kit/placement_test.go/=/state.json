@@ -1,0 +1,10 @@
+{
+  "label": "internal/kit/placement_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:43.257552266Z",
+  "seconds": 4.16,
+  "recorded": true,
+  "cpu_seconds": 2.436098000000129,
+  "cpu_wall": 5.36689416,
+  "peak_mb": 331
+}

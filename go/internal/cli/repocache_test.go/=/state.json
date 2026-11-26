@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/repocache_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:43.239995123Z",
+  "seconds": 0.25,
+  "recorded": true,
+  "cpu_seconds": 0.8068459999999504,
+  "cpu_wall": 2.148710821,
+  "peak_mb": 102
+}

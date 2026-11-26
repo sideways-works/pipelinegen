@@ -1,0 +1,10 @@
+{
+  "label": "internal/forgeplugin/fetch_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.846865032Z",
+  "seconds": 0.02,
+  "recorded": true,
+  "cpu_seconds": 2.9601080000002185,
+  "cpu_wall": 5.235339761,
+  "peak_mb": 401
+}

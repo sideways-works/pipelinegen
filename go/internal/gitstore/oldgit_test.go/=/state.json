@@ -1,0 +1,10 @@
+{
+  "label": "internal/gitstore/oldgit_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:37.253560918Z",
+  "seconds": 0.24,
+  "recorded": true,
+  "cpu_seconds": 4.036739000000125,
+  "cpu_wall": 19.226903008,
+  "peak_mb": 244
+}

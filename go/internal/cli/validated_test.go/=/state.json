@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/validated_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:43.24280556Z",
+  "seconds": 0.77,
+  "recorded": true,
+  "cpu_seconds": 1.084667999999965,
+  "cpu_wall": 2.063770604,
+  "peak_mb": 227
+}

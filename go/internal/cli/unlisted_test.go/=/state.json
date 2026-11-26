@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/unlisted_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:28:13.667401771Z",
+  "seconds": 1.115591804,
+  "recorded": true,
+  "cpu_seconds": 0.6579189999999926,
+  "cpu_wall": 1.115591804,
+  "peak_mb": 199
+}

@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/replay_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.844145859Z",
+  "seconds": 1.851326319,
+  "recorded": true,
+  "cpu_seconds": 0.6811319999999341,
+  "cpu_wall": 1.851326319,
+  "peak_mb": 142
+}

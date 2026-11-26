@@ -1,0 +1,10 @@
+{
+  "label": "internal/graph/sample_equiv_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:28:13.669250292Z",
+  "seconds": 17.32,
+  "recorded": true,
+  "cpu_seconds": 11.613346000000092,
+  "cpu_wall": 18.484023327,
+  "peak_mb": 331
+}

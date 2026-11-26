@@ -1,0 +1,10 @@
+{
+  "label": "internal/plugins/members_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:37.257533251Z",
+  "seconds": 4.13,
+  "recorded": true,
+  "cpu_seconds": 2.308314000000337,
+  "cpu_wall": 4.858210387,
+  "peak_mb": 275
+}

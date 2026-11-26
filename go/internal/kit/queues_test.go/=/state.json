@@ -1,0 +1,10 @@
+{
+  "label": "internal/kit/queues_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:28:13.669727136Z",
+  "seconds": 1.043331041,
+  "recorded": true,
+  "cpu_seconds": 0.49932300000000396,
+  "cpu_wall": 1.043331041,
+  "peak_mb": 318
+}

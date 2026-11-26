@@ -1,0 +1,10 @@
+{
+  "label": "internal/plugincache/generations_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.848348289Z",
+  "seconds": 74.78,
+  "recorded": true,
+  "cpu_seconds": 19.033856999999898,
+  "cpu_wall": 97.679373539,
+  "peak_mb": 330
+}
