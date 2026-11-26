@@ -1,0 +1,11 @@
+{
+  "label": "internal/report/partial_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T23:17:15.65713833Z",
+  "seconds": 39.93,
+  "recorded": true,
+  "cpu_seconds": 22.446613999999954,
+  "cpu_wall": 49.326184853,
+  "cpu_stall": 2.7663519999999835,
+  "peak_mb": 250
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/anchors_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T23:17:15.650615315Z",
+  "seconds": 395.71,
+  "recorded": true,
+  "cpu_seconds": 136.620746,
+  "cpu_wall": 402.898417142,
+  "cpu_stall": 29.384840000000004,
+  "peak_mb": 1433
+}

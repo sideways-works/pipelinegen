@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/childenv_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T23:17:15.651262199Z",
+  "seconds": 0.11,
+  "recorded": true,
+  "cpu_seconds": 0.7262069999999881,
+  "cpu_wall": 1.0866008,
+  "cpu_stall": 0.21284699999999646,
+  "peak_mb": 136
+}
