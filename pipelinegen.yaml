@@ -13,6 +13,15 @@ github:
   repository: sideways-works/pipelinegen
   token: github_token
 
+# the workers are shared with other pipelines: a batch, and the pipeline's own
+# steps, wait for the memory and cores they should use, asking each worker's
+# broker
+memory:
+  wait: true
+  broker: 10.80.0.1:7480
+cpu:
+  wait: true
+
 concourse:
   url: https://concourse.home.simulevski.at
   team: sideways-works
