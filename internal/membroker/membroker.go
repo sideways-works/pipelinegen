@@ -5,8 +5,9 @@
 //
 // Under cpu.wait a batch asks for its cores too: the broker grants it once the worker's CPU pressure is
 // below its hold and the cores its grants' leases hold leave room for the batch's. A grant's cores count
-// until the batch releases them at its end, or until its lease, the batch's expected time and half again,
-// runs out.
+// until the batch releases them at its end, until its task is gone, or until its lease, the batch's
+// expected time and half again, runs out. A batch that waits before its setup (slice memory) releases
+// nothing itself: its cores count while its task answers on the worker's network.
 //
 // Batches of one worker share no store and no file: the broker runs beside the worker, and a batch
 // reaches it over the network, its address in memory.broker. A batch that can't reach it waits by its
@@ -15,6 +16,7 @@ package membroker
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -23,6 +25,7 @@ import (
 	"net"
 	"slices"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/sideways-works/pipelinegen/internal/memory"
@@ -82,6 +85,12 @@ type Broker struct {
 	CPUHold float64
 	// ReadCPU reads the worker's CPU pressure now, -1 where it can't; nil reads none.
 	ReadCPU func() float64
+	// Gone says whether the task at a grant's address has ended. A grant whose task is gone on two
+	// probes in a row holds its cores no longer, its memory counting until its ramp ends. nil probes
+	// none, and a grant's cores count until its release or its lease's end.
+	Gone func(ctx context.Context, from string) bool
+	// ProbeEvery is how often the tasks of the grants holding cores are probed, 30 seconds when 0.
+	ProbeEvery time.Duration
 
 	mu      sync.Mutex
 	pending map[string]bool
@@ -108,6 +117,8 @@ type grant struct {
 	// cores count until coresUntil, or until the batch releases them.
 	cores      float64
 	coresUntil time.Time
+	// missed is how many probes in a row found the grant's task gone.
+	missed int
 }
 
 // reading is what the broker reads at once: the memory and its pressure, the CPU pressure, and what
@@ -325,6 +336,8 @@ func (b *Broker) Run(ctx context.Context) {
 	tick := time.NewTicker(every)
 	defer tick.Stop()
 
+	go b.probing(ctx)
+
 	for {
 		b.step()
 
@@ -335,6 +348,109 @@ func (b *Broker) Run(ctx context.Context) {
 		case <-b.wake:
 		}
 	}
+}
+
+// probing probes the tasks of the grants holding cores every ProbeEvery, until ctx ends.
+func (b *Broker) probing(ctx context.Context) {
+	if b.Gone == nil {
+		return
+	}
+
+	tick := time.NewTicker(cmp.Or(b.ProbeEvery, 30*time.Second))
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+			b.probe(ctx)
+		}
+	}
+}
+
+// probe asks whether the task of each grant holding cores is still there, and ends the cores of a
+// grant whose task was gone on this probe and the one before.
+func (b *Broker) probe(ctx context.Context) {
+	now := time.Now()
+
+	b.mu.Lock()
+
+	var froms []string
+
+	for _, g := range b.granted {
+		if g.cores > 0 && g.from != "" && now.Before(g.coresUntil) {
+			froms = append(froms, g.from)
+		}
+	}
+
+	b.mu.Unlock()
+
+	slices.Sort(froms)
+	froms = slices.Compact(froms)
+
+	// a gone task's address answers only once its probe times out, so they go at once
+	gone := make([]bool, len(froms))
+
+	var wg sync.WaitGroup
+
+	for i, from := range froms {
+		wg.Go(func() { gone[i] = b.Gone(ctx, from) })
+	}
+
+	wg.Wait()
+
+	if ctx.Err() != nil {
+		return
+	}
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	freed := false
+
+	for i := range b.granted {
+		g := &b.granted[i]
+
+		j, probed := slices.BinarySearch(froms, g.from)
+		if !probed || g.cores <= 0 {
+			continue
+		}
+
+		if !gone[j] {
+			g.missed = 0
+
+			continue
+		}
+
+		if g.missed++; g.missed >= 2 {
+			g.cores, freed = 0, true
+
+			_, cores := b.held(now)
+			b.logf("released %q: its task at %s is gone, %.1f cores granted lately now\n", g.who, g.from, cores)
+		}
+	}
+
+	if freed {
+		b.poke()
+	}
+}
+
+// TaskGone is whether nothing answers at the address from on the worker's network: a task's container
+// that is there refuses a connection to a port nothing listens on at once, while a gone one's address
+// answers nothing, or no route leads to it.
+func TaskGone(ctx context.Context, from string) bool {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	c, err := (&net.Dialer{}).DialContext(ctx, "tcp", net.JoinHostPort(from, "1"))
+	if err == nil {
+		_ = c.Close() //nolint:errcheck // only its answer counted
+
+		return false
+	}
+
+	return !errors.Is(err, syscall.ECONNREFUSED)
 }
 
 // step grants asks in their order while the memory covers them; once the first has held the others back

@@ -802,7 +802,8 @@ it grants the asks in the order they came, each once the worker's free
 memory, less what it granted within the ramp, covers it. A batch that waits
 for CPU too (`cpu.wait`) is granted once the CPU pressure is below
 `--cpu-pressure` and its predicted cores fit beside those of the grants
-whose leases run; its batch's end releases them. Run it beside the
+whose leases run; its batch's end releases them, and so does its task's
+going, for a batch that waited before its setup. Run it beside the
 Concourse worker, in its container, so it reads the worker's memory:
 
 ```
@@ -819,6 +820,7 @@ memory broker on [::]:7480, grants counting 5m0s, 20.0 cores
 | `--max-grant` | `16384` | The most one grant counts against the free memory, in MB: a batch predicted above it starts once that much is free. 0 is no cap. |
 | `--cpu-factor` | `1.25` | The cores the grants of batches that wait for CPU may hold at once, per core of the machine the broker runs on: a batch's predicted cores wait until they fit beside those of the grants whose leases run, and one predicted above them all starts at once. 0 counts no cores. |
 | `--cpu-pressure` | `40` | The CPU pressure (`/proc/pressure/cpu`, `some avg10`, percent) at or above which no batch or step that waits for CPU is granted. 0 holds none back. |
+| `--probe-every` | `30s` | How often it asks whether the task of each grant holding cores is still there: a connection to the task's address that is refused at once is a task there, while no answer, or no route, is one gone. A grant whose task is gone on two probes in a row holds its cores no longer. 0 never asks, and a grant's cores count until its release or its lease's end. |
 | `--cgroup` | the broker's own | The cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the line of `/proc/<the worker's pid>/cgroup` less its `0::`, such as `/system.slice/docker-<id>.scope`. |
 | `--root` | `/` | Where the machine's `/proc` and `/sys` are. |
 

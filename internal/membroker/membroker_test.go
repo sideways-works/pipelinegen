@@ -384,3 +384,78 @@ func TestAReleaseOverTheNetworkNeverWaits(t *testing.T) {
 		t.Fatalf("negative cores: %+v %v", ans, err)
 	}
 }
+
+// A batch that waited before its setup never releases its cores: they end once its task is gone on two
+// probes in a row, while a task that answers keeps them.
+func TestAGoneTasksCoresEndOnTheSecondProbeThatMissesIt(t *testing.T) {
+	b, _ := cpuBroker(t, 8, 0)
+
+	var gone sync.Map
+
+	b.Gone = func(_ context.Context, from string) bool {
+		_, ok := gone.Load(from)
+
+		return ok
+	}
+
+	for _, from := range []string{"10.80.0.7", "10.80.0.8"} {
+		if ans := b.ask(t.Context(), Request{MB: 1000, WaitSeconds: 1, Who: from, CPU: true, Cores: 3, LeaseSeconds: 600}, from); !ans.Granted {
+			t.Fatalf("%s: %+v", from, ans)
+		}
+	}
+
+	cores := func() float64 {
+		b.mu.Lock()
+		defer b.mu.Unlock()
+
+		_, c := b.held(time.Now())
+
+		return c
+	}
+
+	gone.Store("10.80.0.7", true)
+	b.probe(t.Context())
+
+	if c := cores(); c != 6 {
+		t.Fatalf("after one probe missing a task: %v cores, want 6", c)
+	}
+
+	// a task that answers again starts over
+	gone.Delete("10.80.0.7")
+	b.probe(t.Context())
+	gone.Store("10.80.0.7", true)
+	b.probe(t.Context())
+
+	if c := cores(); c != 6 {
+		t.Fatalf("after a probe between that found it: %v cores, want 6", c)
+	}
+
+	b.probe(t.Context())
+
+	if c := cores(); c != 3 {
+		t.Fatalf("after two probes in a row missing it: %v cores, want 3", c)
+	}
+
+	b.mu.Lock()
+	mb, _ := b.held(time.Now())
+	b.mu.Unlock()
+
+	if mb != 2000 {
+		t.Fatalf("held %d MB: the gone task's memory still ramps", mb)
+	}
+}
+
+func TestATaskThatRefusesIsThereAndOneNothingAnswersForIsGone(t *testing.T) {
+	// nothing listens on port 1 here: the host refuses at once
+	if TaskGone(t.Context(), "127.0.0.1") {
+		t.Error("a host that refuses reads as gone")
+	}
+
+	// TEST-NET-1 has no host: no answer, or no route
+	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+	defer cancel()
+
+	if !TaskGone(ctx, "192.0.2.1") {
+		t.Error("an address nothing answers for reads as there")
+	}
+}

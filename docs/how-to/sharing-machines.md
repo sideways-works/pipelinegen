@@ -180,8 +180,11 @@ and for as long as it could still finish within its time limit:
   pressure is below `--cpu-pressure`. A grant's cores count for the
   batch's expected time half again (for as long as it may wait, when its
   time is unknown); a suite of steps (`slice run`) releases them at its
-  batch's end, so the next batch starts at once, while a task file's
-  batch can't, and its lease runs out instead. A batch predicted more
+  batch's end, so the next batch starts at once. A task file's batch,
+  which asked from `slice memory` before its setup, releases nothing
+  itself: the broker asks every `--probe-every` (30s) whether the task's
+  container still answers on the worker's network, and ends the cores of
+  one gone on two probes in a row. A batch predicted more
   cores than the broker counts starts once the pressure allows.
 
 A batch still short of CPU when its wait ends leaves its slices not run as
