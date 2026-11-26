@@ -27,7 +27,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net"
+	"os"
 	"slices"
 	"sync"
 	"syscall"
@@ -111,6 +113,10 @@ type Broker struct {
 	Gone func(ctx context.Context, from string) bool
 	// ProbeEvery is how often the tasks of the grants holding cores are probed, 30 seconds when 0.
 	ProbeEvery time.Duration
+	// State is the file the broker keeps its grants in, so a restart forgets none: the batches it granted
+	// run on, and a broker that started empty would grant their memory and cores again beside them. ""
+	// keeps none.
+	State string
 
 	mu      sync.Mutex
 	pending map[string]bool
@@ -129,6 +135,73 @@ type ask struct {
 	at   time.Time
 	// from is the asking task's address: one ask at a time from it, and its grant replaces its last.
 	from string
+}
+
+// kept is a grant as State keeps it.
+type kept struct {
+	MB         int64     `json:"mb"`
+	Until      time.Time `json:"until"`
+	From       string    `json:"from,omitempty"`
+	Who        string    `json:"who"`
+	Cores      float64   `json:"cores,omitempty"`
+	CoresUntil time.Time `json:"cores_until,omitzero"`
+}
+
+// save writes the grants to State; b.mu is held. A grant that can't be kept still counts, until a restart.
+func (b *Broker) save() {
+	if b.State == "" {
+		return
+	}
+
+	out := make([]kept, 0, len(b.granted))
+	for _, g := range b.granted {
+		out = append(out, kept{MB: g.mb, Until: g.until, From: g.from, Who: g.who, Cores: g.cores, CoresUntil: g.coresUntil})
+	}
+
+	data, err := json.Marshal(out)
+
+	tmp := b.State + ".new"
+	if err == nil {
+		err = os.WriteFile(tmp, data, 0o600)
+	}
+
+	if err == nil {
+		err = os.Rename(tmp, b.State)
+	}
+
+	if err != nil {
+		b.logf("keeping the grants: %v\n", err)
+	}
+}
+
+// load takes the grants State kept that still count at now, and logs what they hold; b.mu is held.
+func (b *Broker) load(now time.Time) {
+	if b.State == "" {
+		return
+	}
+
+	data, err := os.ReadFile(b.State)
+	if errors.Is(err, fs.ErrNotExist) {
+		return
+	}
+
+	var saved []kept
+	if err == nil {
+		err = json.Unmarshal(data, &saved)
+	}
+
+	if err != nil {
+		b.logf("the grants kept: %v; the broker starts with none\n", err)
+
+		return
+	}
+
+	for _, k := range saved {
+		b.granted = append(b.granted, grant{mb: k.MB, until: k.Until, from: k.From, who: k.Who, cores: k.Cores, coresUntil: k.CoresUntil})
+	}
+
+	mb, cores := b.held(now)
+	b.logf("kept %d grants from before the start: %d MB and %.1f cores granted lately\n", len(b.granted), mb, cores)
 }
 
 type grant struct {
@@ -481,6 +554,8 @@ func (b *Broker) probe(ctx context.Context) {
 	}
 
 	_, cores := b.held(now)
+	b.save()
+
 	for _, g := range freed {
 		b.logf("released %q: its task at %s is gone, %.1f cores granted lately now\n", g.who, g.from, cores)
 	}
@@ -551,6 +626,7 @@ func (b *Broker) grant(a *ask, st reading, now time.Time, what string) Answer {
 
 	g := b.grantOf(a, now)
 	b.granted = append(b.granted, g)
+	b.save()
 
 	// the settle time spaces batches' grants, so the pressure each reads shows the batch before it; a
 	// step's grant starts none, and a batch after it reads the pressure as it finds it
@@ -654,6 +730,7 @@ func (b *Broker) drop(req Request, from string) Answer {
 	}
 
 	_, cores := b.held(time.Now())
+	b.save()
 	b.poke()
 	b.logf("released %q: the cores of %d grants, %.1f cores granted lately now\n", req.Who, dropped, cores)
 
@@ -668,6 +745,11 @@ func (b *Broker) logf(format string, args ...any) {
 
 // Serve answers each connection's one request, until ctx ends.
 func (b *Broker) Serve(ctx context.Context, l net.Listener) error {
+	// the grants kept from before a restart count before the first ask is read
+	b.mu.Lock()
+	b.load(time.Now())
+	b.mu.Unlock()
+
 	go b.Run(ctx)
 
 	go func() {
@@ -784,6 +866,46 @@ func answer(c net.Conn, ans Answer) {
 // ErrUnreachable is a broker the batch couldn't reach or that answered nothing it reads.
 var ErrUnreachable = errors.New("memory broker unreachable")
 
+// errBroke is a broker that took the ask and went away before it answered: it restarted.
+var errBroke = errors.New("the broker went away before it answered")
+
+const (
+	// redialFor is how long an ask keeps dialing a broker it can't reach: a broker that restarts is back
+	// within it, and one that isn't there leaves the asker to its own reading after it.
+	redialFor = 30 * time.Second
+	// askAgainAfter is the pause before asking again a broker that couldn't be reached or went away.
+	askAgainAfter = 3 * time.Second
+)
+
+// AskAgain asks as Ask does, and asks again when the broker goes away before it answers (a restart forgets
+// every ask, and an asker that then went by its own reading would start beside every other one at once),
+// within what is left of req's wait; it keeps dialing a broker it can't reach for redialFor. It ends with
+// ErrUnreachable when the broker can't be reached by then, or its wait ends without an answer.
+func AskAgain(ctx context.Context, addr string, req Request) (Answer, error) {
+	start := time.Now()
+	deadline := start.Add(time.Duration(req.WaitSeconds * float64(time.Second)))
+
+	for {
+		ans, err := Ask(ctx, addr, req)
+		if err == nil || ctx.Err() != nil || !errors.Is(err, ErrUnreachable) {
+			return ans, err
+		}
+
+		left := time.Until(deadline)
+		if left <= askAgainAfter || (!errors.Is(err, errBroke) && time.Since(start) >= redialFor) {
+			return ans, err
+		}
+
+		select {
+		case <-ctx.Done():
+			return Answer{}, fmt.Errorf("membroker: %w", ctx.Err())
+		case <-time.After(askAgainAfter):
+		}
+
+		req.WaitSeconds = time.Until(deadline).Seconds()
+	}
+}
+
 // ErrNotReleased is a release the broker refused.
 var ErrNotReleased = errors.New("the broker released nothing")
 
@@ -817,7 +939,7 @@ func Ask(ctx context.Context, addr string, req Request) (Answer, error) {
 	}
 
 	if _, err := c.Write(append(data, '\n')); err != nil {
-		return Answer{}, fmt.Errorf("%w: %s: %w", ErrUnreachable, addr, err)
+		return Answer{}, fmt.Errorf("%w: %s: %w: %w", ErrUnreachable, addr, errBroke, err)
 	}
 
 	// the broker answers within the wait, and a little more for its last reading
@@ -832,7 +954,7 @@ func Ask(ctx context.Context, addr string, req Request) (Answer, error) {
 			return Answer{}, fmt.Errorf("membroker: %w", ctx.Err())
 		}
 
-		return Answer{}, fmt.Errorf("%w: %s: %w", ErrUnreachable, addr, err)
+		return Answer{}, fmt.Errorf("%w: %s: %w: %w", ErrUnreachable, addr, errBroke, err)
 	}
 
 	return ans, nil

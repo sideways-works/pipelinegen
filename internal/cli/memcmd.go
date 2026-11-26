@@ -8,7 +8,9 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,6 +37,8 @@ const (
 	// how often the broker probes the tasks holding cores: a batch that waited before its setup never
 	// releases its own.
 	brokerProbeEvery = 30 * time.Second
+	// brokerStateFile is the file in systemd's STATE_DIRECTORY the broker keeps its grants in.
+	brokerStateFile = "grants.json"
 )
 
 func runMemory(ctx context.Context, args []string, stdout io.Writer) error {
@@ -52,7 +56,7 @@ func runMemory(ctx context.Context, args []string, stdout io.Writer) error {
 // so the memory it reads is what the worker's tasks may use.
 func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 	var (
-		listen, root, cgroup          string
+		listen, root, cgroup, state   string
 		ramp, firstFor, probe, settle time.Duration
 		maxGrant                      int64
 		cpuFactor, cpuHold            float64
@@ -67,6 +71,7 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 	fs.Float64Var(&cpuHold, "cpu-pressure", brokerCPUPressure, "the CPU pressure (PSI some avg10, percent) at or above which no batch that waits for CPU is granted; 0 holds none back")
 	fs.DurationVar(&settle, "cpu-settle", brokerCPUSettle, "how long after a grant of cores the next ask for cores waits, so the CPU pressure it reads shows the batch granted before it; 0 waits none")
 	fs.DurationVar(&probe, "probe-every", brokerProbeEvery, "how often the broker asks whether the tasks holding cores are still there, ending the cores of one gone twice in a row; 0 asks never")
+	textVar(fs, &state, "state", brokerState(), "the file the broker keeps its grants in, so a restart forgets none; \"\" keeps none (default grants.json in systemd's STATE_DIRECTORY, else none)")
 	textVar(fs, &root, "root", "/", "where the machine's /proc and /sys are")
 	textVar(fs, &cgroup, "cgroup", "", "the cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the first line of /proc/<the worker's pid>/cgroup less its 0::, such as /system.slice/docker-<id>.scope (default the broker's own)")
 
@@ -106,6 +111,7 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 		CPUHold:   cpuHold,
 		ReadCPU:   func() float64 { return memory.CPUPressure(root) },
 		CPUSettle: settle,
+		State:     state,
 	}
 
 	if probe > 0 {
@@ -117,4 +123,18 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	return b.Serve(ctx, l)
+}
+
+// brokerState is where the broker keeps its grants by default: in the state directory systemd gives its
+// unit (StateDirectory=), and nowhere without one.
+func brokerState() string {
+	dir := os.Getenv("STATE_DIRECTORY")
+	if dir == "" {
+		return ""
+	}
+
+	// systemd lists one directory per StateDirectory= entry
+	dir, _, _ = strings.Cut(dir, ":")
+
+	return filepath.Join(dir, brokerStateFile)
 }

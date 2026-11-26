@@ -20,9 +20,11 @@ minor version may change the config or the protocol.
 - A suite job's `tree` (when it runs something), `batches` and `slice bookkeeping-files`, and a whole-suite check's `report collect` and `report whole`, wait for their memory and cores under the top-level `memory.wait` and `cpu.wait`, as the other bookkeeping steps do; `slice bookkeeping-files` opens no store, so it asks for its kind's defaults and keeps nothing
 - The broker books a step that starts anyway: a step's ask whose wait ends is granted then ("granted anyway", with what the broker read), its memory and cores counted and leased, so the asks after it see the work that started under pressure; a batch's is refused as before. A step's ask goes ahead of the first in line, which holds batches back for `--first-for`, when the worker has room for it, and its grant of cores starts no `--cpu-settle`. An older broker refuses a step's ask when its wait ends and the step starts unbooked: upgrade each worker's `memory serve` with the pipelinegen the pipeline runs
 - `memory serve --probe-every` (30s): the broker asks whether the task of each grant holding cores is gone from the worker's network (no route leads to its address), and ends the cores of one gone on two probes in a row, so a task file's batch, which asks from `slice memory` and releases nothing, holds its cores only while its task runs and no longer until its lease ends
+- `memory serve --state`: the broker keeps its grants in a file (`grants.json` in systemd's `STATE_DIRECTORY` by default), so a restart forgets none and the batches it granted still count beside the next asks.
 
 ### Changed
 
+- A batch or step whose broker goes away while it waits (a restart forgets every ask) asks again within its wait, instead of going by its own reading: batches that all did so at once saw the same room and started together. A broker that can't be reached for 30 seconds still leaves the asker to its own reading.
 - A suite's status counts the slices not run for room as "not run (worker short of memory or CPU)", since a batch may now wait for either
 
 ### Fixed

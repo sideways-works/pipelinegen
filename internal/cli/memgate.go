@@ -454,7 +454,7 @@ func (g gate) askBroker(ctx context.Context, need int64, req membroker.Request, 
 
 	start := time.Now()
 
-	ans, err := membroker.Ask(ctx, addr, req)
+	ans, err := membroker.AskAgain(ctx, addr, req)
 	if err != nil {
 		if ctx.Err() != nil {
 			return true, fmt.Errorf("memory: %w", ctx.Err())

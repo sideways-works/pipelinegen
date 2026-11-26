@@ -306,7 +306,7 @@ func (s stepMemory) askBroker(ctx context.Context, req membroker.Request, log io
 
 	start := time.Now()
 
-	ans, err := membroker.Ask(ctx, addr, req)
+	ans, err := membroker.AskAgain(ctx, addr, req)
 	if err != nil {
 		if ctx.Err() == nil {
 			warnf(log, "memory: %v; the step waits by its own reading\n", err)

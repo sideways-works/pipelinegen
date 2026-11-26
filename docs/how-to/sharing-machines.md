@@ -126,8 +126,13 @@ holds. The broker grants the asks in the order they came, each once the
 worker's free memory, less what it granted in the last `--ramp` (5
 minutes by default), covers it: by then a batch's own use shows in the
 free memory itself. A batch whose wait ends before its grant leaves its
-slices not run, as above, and one that can't reach the broker waits by its
-own reading. The broker runs beside the Concourse worker, in its
+slices not run, as above. A batch whose broker goes away while it waits (a
+restart forgets every ask) asks again within its wait, a few seconds
+later, since batches that all went by their own readings then would see
+the same room and start together; one that can't reach the broker for 30
+seconds waits by its own reading. The broker keeps its grants in
+`--state` (in its unit's `StateDirectory=` under systemd), so after a
+restart the batches it granted still count. The broker runs beside the Concourse worker, in its
 container (`docker exec <worker> pipelinegen memory serve`), so the memory
 it reads is the worker's, cgroup limit and all; it holds nothing a batch
 must give back, so a batch that dies frees its grant when the ramp ends.

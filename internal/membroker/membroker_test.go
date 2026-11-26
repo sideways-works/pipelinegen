@@ -1,9 +1,12 @@
 package membroker
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"net"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -663,5 +666,116 @@ func TestAnAskForMoreThanAllTheCoresHoldsThemAll(t *testing.T) {
 
 	if cores != 8 {
 		t.Fatalf("held %v cores, want 8", cores)
+	}
+}
+
+// A broker that restarts while an ask waits forgets it: the asker asks again within its wait, and only a
+// broker that keeps going away until the wait ends leaves it to its own reading.
+func TestAnAskTheBrokerDroppedIsAskedAgain(t *testing.T) {
+	l, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() { _ = l.Close() }) //nolint:errcheck // the test's own listener
+
+	// the broker answers from its answerFrom'th ask on, and drops those before
+	var asks, answerFrom atomic.Int64
+
+	go func() {
+		for {
+			c, err := l.Accept()
+			if err != nil {
+				return
+			}
+
+			n := asks.Add(1)
+
+			_, _ = bufio.NewReader(c).ReadBytes('\n') //nolint:errcheck // the ask's content doesn't matter
+			if n >= answerFrom.Load() {
+				_, _ = c.Write([]byte(`{"granted":true}` + "\n")) //nolint:errcheck // the asker reads it
+			}
+
+			_ = c.Close() //nolint:errcheck // a dropped ask is the point
+		}
+	}()
+
+	answerFrom.Store(100)
+
+	if _, err := AskAgain(t.Context(), l.Addr().String(), Request{MB: 1, WaitSeconds: 4}); !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("a broker that drops every ask within the wait: %v, want ErrUnreachable", err)
+	}
+
+	if n := asks.Swap(0); n != 2 {
+		t.Fatalf("asked %d times within a 4s wait, want 2", n)
+	}
+
+	answerFrom.Store(2)
+
+	ans, err := AskAgain(t.Context(), l.Addr().String(), Request{MB: 1, WaitSeconds: 30})
+	if err != nil || !ans.Granted {
+		t.Fatalf("a broker back after dropping the first ask: %+v %v", ans, err)
+	}
+
+	if n := asks.Load(); n != 2 {
+		t.Fatalf("asked %d times, want 2", n)
+	}
+}
+
+// A broker that restarts keeps its grants: the batches it granted run on, and their memory and cores still
+// count against the next ask; a released grant's cores stay released.
+func TestARestartedBrokerKeepsItsGrants(t *testing.T) {
+	state := filepath.Join(t.TempDir(), "grants.json")
+
+	start := func() (string, context.CancelFunc) {
+		f := &fake{}
+		f.free.Store(8000)
+
+		l, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		b := &Broker{Read: f.read, Ramp: time.Minute, Every: 10 * time.Millisecond, CPUs: 8, State: state}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		t.Cleanup(cancel)
+
+		done := make(chan struct{})
+
+		go func() {
+			defer close(done)
+
+			_ = b.Serve(ctx, l) //nolint:errcheck // ends with cancel
+		}()
+
+		return l.Addr().String(), func() { cancel(); <-done }
+	}
+
+	addr, stop := start()
+
+	for _, who := range []string{"a", "b"} {
+		if ans, err := Ask(t.Context(), addr, Request{MB: 3000, WaitSeconds: 1, Who: who, CPU: true, Cores: 3, LeaseSeconds: 600}); err != nil || !ans.Granted {
+			t.Fatalf("%s: %+v %v", who, ans, err)
+		}
+	}
+
+	if err := Release(t.Context(), addr, "b"); err != nil {
+		t.Fatal(err)
+	}
+
+	stop()
+
+	addr, stop = start()
+	defer stop()
+
+	// a's 3 cores still count and b's don't: 5 more fit, 6 don't
+	if ans, err := Ask(t.Context(), addr, Request{MB: 1, WaitSeconds: 0.3, Who: "c", CPU: true, Cores: 6, LeaseSeconds: 600}); err != nil || ans.Granted {
+		t.Fatalf("6 cores beside the kept grant's 3 of 8: %+v %v", ans, err)
+	}
+
+	ans, err := Ask(t.Context(), addr, Request{MB: 1, WaitSeconds: 1, Who: "d", CPU: true, Cores: 5, LeaseSeconds: 600})
+	if err != nil || !ans.Granted || ans.HeldMB != 6001 {
+		t.Fatalf("5 cores beside the kept grant's 3 of 8, both grants' memory still ramping: %+v %v", ans, err)
 	}
 }
