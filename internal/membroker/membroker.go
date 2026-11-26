@@ -91,6 +91,8 @@ type Broker struct {
 	// FirstFor is how long the first ask in line holds back the asks after it: past it, an ask behind
 	// it that the memory covers goes first, so one ask for most of the worker, from a proposed
 	// change's batch say, delays the others at most this long. 0 holds them back as long as it waits.
+	// Past it the first of the batches' asks for cores keeps its cores: the asks after it are granted
+	// only while their cores fit beside its own and those held.
 	FirstFor time.Duration
 	// MaxGrant is the most one grant counts against the free memory, in MB, and the most an ask waits
 	// for: a batch predicted above it starts once that much is free. 0 is no cap.
@@ -292,9 +294,16 @@ func (b *Broker) freeCores(cores float64) float64 {
 	return max(b.CPUs-cores, 0)
 }
 
-// cpuSaid is what the broker read of the CPU, for a refusal of an ask that waits for it.
-func (b *Broker) cpuSaid(st reading, req Request) string {
-	return fmt.Sprintf("; %.1f of %.1f cores granted lately, CPU pressure %s, for %.1f cores asked", st.cores, b.CPUs, cpuPSI(st.cpu), req.Cores)
+// cpuSaid is what the broker read of the CPU, for a refusal of an ask that waits for it, and the cores an
+// ask before it keeps.
+func (b *Broker) cpuSaid(st reading, a *ask, now time.Time) string {
+	said := fmt.Sprintf("; %.1f of %.1f cores granted lately, CPU pressure %s, for %.1f cores asked", st.cores, b.CPUs, cpuPSI(st.cpu), a.req.Cores)
+
+	if keep := b.keeping(now); a.req.Cores > 0 && b.kept(a, keep) > 0 {
+		said += fmt.Sprintf(", %.1f kept for %q, waiting %s", b.kept(a, keep), keep.req.Who, now.Sub(keep.at).Round(time.Second))
+	}
+
+	return said
 }
 
 // cpuPSI says a CPU pressure read, "unknown" where it couldn't be.
@@ -419,7 +428,7 @@ func (b *Broker) ended(a *ask, wait time.Duration, anyway bool) Answer {
 	why := fmt.Sprintf("%d MB free less %d MB granted lately, pressure %.1f%%, for %d MB asked", st.r.Free(), st.held, st.pressure, req.MB)
 
 	if req.CPU {
-		why += b.cpuSaid(st, req)
+		why += b.cpuSaid(st, a, now)
 	}
 
 	if anyway {
@@ -664,9 +673,10 @@ func (b *Broker) grantOf(a *ask, now time.Time) grant {
 // next is the queue's index of the ask to grant now, -1 for none.
 func (b *Broker) next(st reading, now time.Time) int {
 	held := false
+	keep := b.keeping(now)
 
 	for i, a := range b.queue {
-		if (!held || a.req.Step) && memoryFits(a, st) && b.cpuFits(a, st) && !b.settling(a, now) {
+		if (!held || a.req.Step) && memoryFits(a, st) && b.cpuFits(a, st, keep) && !b.settling(a, now) {
 			return i
 		}
 
@@ -697,15 +707,51 @@ func (b *Broker) settling(a *ask, now time.Time) bool {
 	return a.req.CPU && a.req.Cores > 0 && b.CPUSettle > 0 && !b.coresAt.IsZero() && now.Sub(b.coresAt) < b.CPUSettle
 }
 
+// keeping is the ask for cores that keeps them from the batches' asks after it: the first in line of the
+// batches' asks for cores, once it has waited FirstFor. Past that the asks after it the worker has room
+// for go ahead of it, and on a worker whose cores free a few at a time the smaller asks would take each
+// core that frees, so an ask for many waited until its wait ended; their cores now fit beside its own, and
+// it starts once enough of the cores held have ended. nil for none; b.mu is held.
+func (b *Broker) keeping(now time.Time) *ask {
+	if b.CPUs <= 0 || b.FirstFor <= 0 {
+		return nil
+	}
+
+	for _, a := range b.queue {
+		if a.req.CPU && a.req.Cores > 0 && !a.req.Step {
+			if now.Sub(a.at) < b.FirstFor {
+				return nil
+			}
+
+			return a
+		}
+	}
+
+	return nil
+}
+
+// kept is the cores keep keeps from a, 0 when keep is none or a itself, or a is a step's ask, which goes
+// ahead whenever the worker has room for it.
+func (b *Broker) kept(a, keep *ask) float64 {
+	if keep == nil || keep == a || a.req.Step {
+		return 0
+	}
+
+	return min(keep.req.Cores, b.CPUs)
+}
+
 // cpuFits is whether an ask that waits for CPU may start: the CPU pressure, where it can be read, below
-// the hold, and its cores beside those held within the worker's. An ask for more cores than the worker
-// has starts at once, as one for more memory than it has does.
-func (b *Broker) cpuFits(a *ask, st reading) bool {
+// the hold, and its cores beside those held, and those keep keeps, within the worker's. An ask for more
+// cores than the worker has starts at once, as one for more memory than it has does, unless an ask
+// before it keeps cores.
+func (b *Broker) cpuFits(a *ask, st reading, keep *ask) bool {
 	switch {
 	case !a.req.CPU:
 		return true
 	case b.CPUHold > 0 && st.cpu >= b.CPUHold:
 		return false
+	case b.CPUs > 0 && a.req.Cores > 0 && b.kept(a, keep) > 0:
+		return st.cores+min(a.req.Cores, b.CPUs)+b.kept(a, keep) <= b.CPUs
 	default:
 		return b.CPUs <= 0 || a.req.Cores <= 0 || a.req.Cores > b.CPUs || st.cores+a.req.Cores <= b.CPUs
 	}

@@ -839,7 +839,7 @@ memory broker on [::]:7480, grants counting 5m0s, 20.0 cores
 |---|---|---|
 | `--listen` | `:7480` | The address it listens on. |
 | `--ramp` | `5m` | How long a grant counts against the free memory, by when the batch's own use shows in it. |
-| `--first-for` | `10m` | How long the first ask in line holds back later asks the memory covers: an ask for most of the worker, from a proposed change's batch say, delays the others at most this long. A step's ask the worker has room for is never held back. |
+| `--first-for` | `10m` | How long the first ask in line holds back later asks the memory covers: an ask for most of the worker, from a proposed change's batch say, delays the others at most this long. Past it, the first batch's ask for cores keeps them: a later batch is granted only while its cores fit beside those and the ones held, so an ask for many cores starts once enough have ended instead of losing each core that frees to smaller asks. A step's ask the worker has room for is never held back. |
 | `--max-grant` | `16384` | The most one grant counts against the free memory, in MB: a batch predicted above it starts once that much is free. 0 is no cap. |
 | `--cpu-factor` | `1.25` | The cores the grants of batches that wait for CPU may hold at once, per core of the machine the broker runs on: a batch's predicted cores wait until they fit beside those of the grants whose leases run, and one predicted above them all starts at once. 0 counts no cores. |
 | `--cpu-pressure` | `40` | The CPU pressure (`/proc/pressure/cpu`, the larger of `some avg10` and `avg60`, percent) at or above which no batch or step that waits for CPU is granted. 0 holds none back. |

@@ -199,7 +199,11 @@ and for as long as it could still finish within its time limit:
   fit beside those of the grants whose leases still run, and the CPU
   pressure is below `--cpu-pressure`. Grants of cores go `--cpu-settle`
   (15s) apart, so the pressure each reads shows the batch granted before
-  it, and batches that fit at once don't start together. A grant's cores
+  it, and batches that fit at once don't start together. A batch whose
+  ask for cores has waited `--first-for` (10m) first in line keeps its
+  cores: the batches asking after it start only while their cores fit
+  beside those and the ones held, so on a worker whose cores free a few
+  at a time an ask for many still starts. A grant's cores
   count for the
   batch's expected time half again (for as long as it may wait, when its
   time is unknown); a suite of steps (`slice run`) releases them at its

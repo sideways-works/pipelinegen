@@ -303,6 +303,47 @@ func TestCoresHeldBlockASecondAskUntilTheFirstsLeaseEndsOrItReleases(t *testing.
 	}
 }
 
+// A batch's ask for many cores, first in line past FirstFor, keeps its cores: a smaller batch's ask the
+// free cores cover no longer takes them ahead of it, a step's still does, and it starts once the cores
+// held have ended.
+func TestAnAskWaitingPastFirstForKeepsItsCores(t *testing.T) {
+	b, _ := cpuBroker(t, 8, 0)
+	b.FirstFor = 100 * time.Millisecond
+
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 1, Who: "running", CPU: true, Cores: 4, LeaseSeconds: 60}, "10.80.0.7"); !ans.Granted {
+		t.Fatalf("running: %+v", ans)
+	}
+
+	big := make(chan Answer, 1)
+
+	go func() {
+		big <- b.ask(t.Context(), Request{MB: 100, WaitSeconds: 5, Who: "big", CPU: true, Cores: 6}, "10.80.0.8")
+	}()
+
+	time.Sleep(150 * time.Millisecond)
+
+	// 4 of 8 cores held cover 2 more, but big keeps 6
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 0.1, Who: "small", CPU: true, Cores: 2}, "10.80.0.9"); ans.Granted ||
+		!strings.Contains(ans.Why, `4.0 of 8.0 cores granted lately, CPU pressure 0.0%, for 2.0 cores asked, 6.0 kept for "big", waiting`) {
+		t.Fatalf("small behind big: %+v", ans)
+	}
+
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 1, Who: "report batch-end", Step: true, CPU: true, Cores: 1, LeaseSeconds: 60}, "10.80.0.10"); !ans.Granted {
+		t.Fatalf("a step behind big: %+v", ans)
+	}
+
+	b.drop(Request{Release: true, Who: "running"}, "10.80.0.7")
+
+	// beside the step's 1
+	if ans := <-big; !ans.Granted || ans.HeldCores != 7 {
+		t.Fatalf("big once the cores held ended: %+v", ans)
+	}
+
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 1, Who: "small", CPU: true, Cores: 1}, "10.80.0.9"); !ans.Granted || ans.HeldCores != 8 {
+		t.Fatalf("small after big: %+v", ans)
+	}
+}
+
 func TestAnAskForMoreCoresThanTheWorkerHasStartsAtOnce(t *testing.T) {
 	b, _ := cpuBroker(t, 4, 0)
 

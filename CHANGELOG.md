@@ -31,6 +31,7 @@ minor version may change the config or the protocol.
 
 ### Fixed
 
+- A batch asking the broker for many cores no longer waits until its wait ends while smaller asks take each core that frees: once it has waited `--first-for` (10m) first in line, the batches asking after it are granted only while their cores fit beside its own, and a refusal says which ask keeps how many.
 - A task file that runs `slice memory` before its set-up waits there only: it marks the batch admitted, so its first `slice start` no longer asks the broker again after the set-up, a second wait that could leave the slices not run.
 - A slice's recorded cores are its CPU seconds over the time they were read over: a driver's own measure of the slice, without a bundle's compile, made some slices' cores many times the machine's, and a batch predicted from them waited for or held the whole worker; recorded cores above the machine's count for nothing, and an ask for more cores than the broker counts holds all of them, no more
 - A write to a branch store (`store.backend: branch`) names the tip it was made on when it pushes, so a remote whose answer briefly leaves out the branch while another push replaces it (seen with git's files backend on btrfs) costs the write a replay; it used to push as if creating the branch and fail with "a push needed an object the store never had", since that pack holds every file of the tree, most never fetched
