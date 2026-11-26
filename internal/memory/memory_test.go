@@ -135,6 +135,7 @@ func TestMeasureACgroupsUse(t *testing.T) {
 		"proc/pressure/memory":         "some avg10=12.50 avg60=3.00 avg300=1.00 total=99\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
 		"proc/self/cgroup":             "0::/\n",
 		"sys/fs/cgroup/cpu.stat":       "usage_usec 2500000\nuser_usec 2000000\n",
+		"sys/fs/cgroup/cpu.pressure":   "some avg10=0.00 avg60=0.00 avg300=0.00 total=750000\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
 		"sys/fs/cgroup/memory.current": "3145728000\n",
 		"sys/fs/cgroup/memory.peak":    "5242880000\n",
 		"sys/fs/cgroup/memory.stat":    "inactive_file 1048576000\n",
@@ -146,7 +147,7 @@ func TestMeasureACgroupsUse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if u.CPU != 2.5 || u.Set != 2000 || u.Peak != 4000 || u.OOM != 1 || u.Free != 8000 || u.Pressure != 12.5 {
+	if u.CPU != 2.5 || u.Stall != 0.75 || u.Set != 2000 || u.Peak != 4000 || u.OOM != 1 || u.Free != 8000 || u.Pressure != 12.5 {
 		t.Fatalf("%+v", u)
 	}
 

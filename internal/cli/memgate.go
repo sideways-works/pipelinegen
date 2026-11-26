@@ -248,11 +248,9 @@ func (g gate) who() string {
 
 // coresOf is the cores the batch should keep busy: its prediction's, else the suite's cpu.cores.
 func (g gate) coresOf(p prediction) float64 {
-	if p.Cores > 0 {
-		return p.Cores
-	}
-
-	return g.cores
+	// cpu.cores is the least a batch is predicted: slices recorded while the worker was short of cores
+	// kept busy only what they got
+	return max(p.Cores, g.cores)
 }
 
 // cpuAdmits is whether the worker's CPU pressure lets the batch start: always when it doesn't wait for
@@ -637,8 +635,8 @@ func sayMemoryCoverage(ctx context.Context, cfg *config.Config, store *gitstore.
 	}
 }
 
-// sayCoresCoverage says how many of a suite's selected slices have recorded cores: a batch none of whose
-// slices has any is predicted the suite's cpu.cores.
+// sayCoresCoverage says how many of a suite's selected slices have recorded cores: a batch is predicted
+// at least the suite's cpu.cores, and that for a batch of none.
 func sayCoresCoverage(ctx context.Context, cfg *config.Config, store *gitstore.Store, sp affected.SuitePlan, out io.Writer) {
 	cores, err := report.Cores(ctx, store, sp.Suite)
 	if err != nil {
@@ -653,7 +651,7 @@ func sayCoresCoverage(ctx context.Context, cfg *config.Config, store *gitstore.S
 		}
 	}
 
-	_ = say(out, "cpu: %s: %d of %d selected slices have recorded cores; its batches wait for their predicted cores (cpu.wait), %.1f for a batch of none\n", //nolint:errcheck // a line of the log
+	_ = say(out, "cpu: %s: %d of %d selected slices have recorded cores; its batches wait for their predicted cores (cpu.wait), at least %.1f\n", //nolint:errcheck // a line of the log
 		sp.Suite, measured, len(sp.Selected), cfg.CPUCores(sp.Suite))
 }
 
@@ -900,7 +898,7 @@ func cgroupMeter() report.Meter {
 			return nil
 		}
 
-		return &report.Use{CPU: u.CPU, Peak: max(u.Set, u.Peak), OOM: u.OOM, Room: u.Set + u.Free, Pressure: u.Pressure}
+		return &report.Use{CPU: u.CPU, Stall: u.Stall, Peak: max(u.Set, u.Peak), OOM: u.OOM, Room: u.Set + u.Free, Pressure: u.Pressure}
 	}
 }
 
@@ -927,7 +925,7 @@ func (s *sampler) meter() report.Meter {
 
 		s.peak = max(s.peak, u.Set)
 
-		return &report.Use{CPU: u.CPU, Peak: s.peak, OOM: u.OOM, Room: u.Set + u.Free, Pressure: u.Pressure}
+		return &report.Use{CPU: u.CPU, Stall: u.Stall, Peak: s.peak, OOM: u.OOM, Room: u.Set + u.Free, Pressure: u.Pressure}
 	}
 }
 

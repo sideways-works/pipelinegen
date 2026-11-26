@@ -13,6 +13,9 @@ import (
 // container.
 type Usage struct {
 	CPU float64
+	// Stall is the seconds some task of it waited for a core since it began (its cgroup's PSI "some
+	// total" for CPU); 0 where the kernel doesn't say.
+	Stall float64
 	// Set is its working set now, in MB: its usage less the file cache the kernel reclaims first.
 	Set int64
 	// Peak is the most it used since it began less the file cache it holds now, an approximation;
@@ -48,6 +51,7 @@ func Measure(root string) (Usage, error) {
 
 		cpu := fieldsOf(filepath.Join(dir, "cpu.stat"), " ")
 		u.CPU = float64(atoi(cpu["usage_usec"])) / 1e6
+		u.Stall = someTotal(filepath.Join(dir, "cpu.pressure"))
 		cur, _ := number(filepath.Join(dir, "memory.current"))
 		u.Set = workingSet(cur, dir, "inactive_file") / MB
 
@@ -105,6 +109,22 @@ func someAvg(root, resource, window string) float64 {
 	}
 
 	return -1
+}
+
+// someTotal is the seconds a PSI file's "some" line counts in its total, 0 where it can't be read.
+func someTotal(p string) float64 {
+	psi, err := fields(p, " ")
+	if err != nil {
+		return 0
+	}
+
+	for f := range strings.FieldsSeq(psi["some"]) {
+		if v, ok := strings.CutPrefix(f, "total="); ok {
+			return float64(atoi(v)) / 1e6
+		}
+	}
+
+	return 0
 }
 
 // atoi reads a number, 0 for what isn't one: a file the kernel doesn't keep counts nothing.

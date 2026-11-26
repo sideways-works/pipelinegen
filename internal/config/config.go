@@ -744,12 +744,12 @@ type CPU struct {
 	Wait *bool `yaml:"wait"`
 	// Pressure is the CPU pressure (PSI "some avg10", percent) at or above which a batch waits.
 	Pressure *float64 `yaml:"pressure"`
-	// Cores is what a batch whose slices have no recorded cores is predicted to use.
+	// Cores is the least a batch is predicted to use, and what one whose slices have no recorded cores is.
 	Cores *float64 `yaml:"cores"`
 }
 
-// The defaults of cpu: the pressure a batch waits below, in percent, and the cores of a batch with
-// no recorded use.
+// The defaults of cpu: the pressure a batch waits below, in percent, and the least cores a batch is
+// predicted.
 const (
 	DefaultCPUPressure = 40
 	DefaultCPUCores    = 1
@@ -770,7 +770,8 @@ func (c *Config) CPUPressure(suite string) float64 {
 	return *cmp.Or(c.Suites[suite].CPU.Pressure, c.CPU.Pressure, new(float64(DefaultCPUPressure)))
 }
 
-// CPUCores is the cores a batch of suite whose slices have no recorded cores is predicted to use.
+// CPUCores is the least cores a batch of suite is predicted to use, and those of one whose slices have no
+// recorded cores.
 func (c *Config) CPUCores(suite string) float64 {
 	return *cmp.Or(c.Suites[suite].CPU.Cores, c.CPU.Cores, new(float64(DefaultCPUCores)))
 }

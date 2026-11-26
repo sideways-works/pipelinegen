@@ -10,6 +10,8 @@ import (
 type Use struct {
 	// CPU is seconds of CPU: the cgroup's since it began in a reading, the slice's own in Used.
 	CPU float64 `json:"cpu"`
+	// Stall is the seconds some task of the batch waited for a core, as CPU is counted.
+	Stall float64 `json:"stall,omitempty"`
 	// Peak is the most memory the batch held while the slice ran, in MB.
 	Peak int64 `json:"peak_mb"`
 	// OOM counts processes the OOM killer killed: since the cgroup began in a reading, while the slice
@@ -61,6 +63,7 @@ func closeUse(sum *useSum, now *Use) *Use {
 
 	if from := sum.From; from != nil {
 		used.CPU += max(now.CPU-from.CPU, 0)
+		used.Stall += max(now.Stall-from.Stall, 0)
 		used.OOM += max(now.OOM-from.OOM, 0)
 
 		if used.Room == 0 || from.Room > 0 && from.Room < used.Room {
@@ -104,7 +107,7 @@ func usedIn(sf *StateFile, used *Use) {
 		return
 	}
 
-	sf.CPUSeconds, sf.CPUWall, sf.PeakMB = used.CPU, used.Wall, used.Peak
+	sf.CPUSeconds, sf.CPUStall, sf.CPUWall, sf.PeakMB = used.CPU, used.Stall, used.Wall, used.Peak
 
 	var why string
 

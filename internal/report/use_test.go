@@ -1,6 +1,7 @@
 package report
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -75,5 +76,36 @@ func TestASlicesCoresAreItsCPUOverTheTimeItWasReadOver(t *testing.T) {
 
 	if sf.CPUSeconds != 120 || sf.CPUWall != 60 {
 		t.Fatalf("%+v", sf)
+	}
+}
+
+// A slice that waited for a core much of its time kept busy what other batches left it: its cores say
+// nothing of what it needs, unless it kept most of the machine busy itself.
+func TestAStarvedSlicesCoresAreUnknown(t *testing.T) {
+	machine := float64(runtime.NumCPU())
+
+	for _, tc := range []struct {
+		name string
+		sf   StateFile
+		want float64
+	}{
+		{"waited a tenth of its time", StateFile{CPUSeconds: 120, CPUWall: 60, CPUStall: 6}, 2},
+		{"waited half its time", StateFile{CPUSeconds: 120, CPUWall: 60, CPUStall: 30}, 0},
+		{"waited half its time on its own threads, the machine busy", StateFile{CPUSeconds: 60 * machine, CPUWall: 60, CPUStall: 30}, machine},
+		{"an older state without stalls", StateFile{CPUSeconds: 120, CPUWall: 60}, 2},
+	} {
+		if got := tc.sf.cores(); got != tc.want {
+			t.Errorf("%s: %v, want %v", tc.name, got, tc.want)
+		}
+	}
+
+	from := &Use{CPU: 10, Stall: 4}
+	used := closeUse(&useSum{From: from}, &Use{CPU: 130, Stall: 34})
+
+	sf := StateFile{State: Passed}
+	usedIn(&sf, &Use{CPU: used.CPU, Stall: used.Stall, Wall: 60})
+
+	if sf.CPUStall != 30 || sf.cores() != 0 {
+		t.Fatalf("a slice's stall is its own: %+v, cores %v", sf, sf.cores())
 	}
 }

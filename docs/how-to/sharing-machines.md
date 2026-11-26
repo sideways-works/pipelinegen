@@ -185,8 +185,13 @@ and for as long as it could still finish within its time limit:
   average. A batch runs its slices one at a time, so its prediction,
   `cores` in `batches/<n>/memory.json`, is the most any of its slices
   should keep busy, each the 90th percentile of its recent cores and 10%
-  more; a batch none of whose slices has any is predicted `cpu.cores` (1
-  by default). The plan's log says, per suite that waits for CPU, how many
+  more, and at least `cpu.cores` (1 by default), the prediction too of a
+  batch none of whose slices has any. A slice that waited for a core a
+  fifth of its time or more (its batch's cgroup `cpu.pressure`, over the
+  same time as its CPU) while it kept less than 80% of the machine's cores
+  busy keeps no cores: it kept busy what other batches left it, and a
+  prediction from that would admit more batches and starve the next ones
+  more. The plan's log says, per suite that waits for CPU, how many
   selected slices have recorded cores.
 - **Core grants are leases.** With `memory.broker`, the batch asks the
   broker for its cores with its memory. The broker counts `--cpu-factor`

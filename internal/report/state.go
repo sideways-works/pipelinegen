@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
 	"time"
@@ -221,7 +222,9 @@ type StateFile struct {
 	CPUSeconds float64 `json:"cpu_seconds,omitempty"`
 	// CPUWall is the seconds CPUSeconds was read over, the slice's parts' time; none in older states.
 	CPUWall float64 `json:"cpu_wall,omitempty"`
-	PeakMB  int64   `json:"peak_mb,omitempty"`
+	// CPUStall is the seconds within CPUWall some task of the batch waited for a core.
+	CPUStall float64 `json:"cpu_stall,omitempty"`
+	PeakMB   int64   `json:"peak_mb,omitempty"`
 }
 
 type endMark struct {
@@ -1259,14 +1262,29 @@ func Seconds(ctx context.Context, store *gitstore.Store, id ID, suite string) (m
 	return out, nil
 }
 
+// starved is the share of a slice's time, at or above which, waiting for a core while it kept less
+// than most of the machine busy, the cores it kept busy are what it got and not what it needs.
+const starved = 0.2
+
+// mostOfTheMachine is the share of the machine's cores a slice keeps busy that makes its waits its own.
+const mostOfTheMachine = 0.8
+
 // cores is the cores the slice kept busy on average: its CPU seconds over the time they were read over,
-// else, in an older state, over its seconds; 0 unknown.
+// else, in an older state, over its seconds; 0 unknown. A slice that waited for a core a starved share of
+// that time or more, while it kept less than most of the machine busy, kept busy only what other
+// batches left it: its cores are unknown, since a prediction from them would admit more batches and
+// starve the next even more. A slice that kept most of the machine busy waited on itself.
 func (sf StateFile) cores() float64 {
 	switch {
 	case sf.CPUSeconds <= 0:
 		return 0
 	case sf.CPUWall > 0:
-		return sf.CPUSeconds / sf.CPUWall
+		cores := sf.CPUSeconds / sf.CPUWall
+		if sf.CPUStall/sf.CPUWall >= starved && cores < mostOfTheMachine*float64(runtime.NumCPU()) {
+			return 0
+		}
+
+		return cores
 	case sf.Seconds > 0:
 		return sf.CPUSeconds / sf.Seconds
 	default:
