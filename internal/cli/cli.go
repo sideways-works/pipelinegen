@@ -63,6 +63,7 @@ func commands() []command {
 		{"version", "print pipelinegen's version", runVersion},
 		{"plugin", "check, pin and start plugins: test, add, upgrade, new", runPlugin},
 		{"plugins", "inspect the configured sbom and correlator plugins: claims", runPlugins},
+		{"wait", "wait, first in a suite's prepare or whole-suite check task, while the worker is under CPU or memory pressure (cpu.wait, memory.wait), then start: prepare | whole", runWait},
 		{"git-auth", "print shell lines that have git authenticate with the token in a variable: <ENV_NAME>", runGitAuth},
 		{"help", "list the commands, or describe one with its flags: [<command>]", runHelp},
 	}

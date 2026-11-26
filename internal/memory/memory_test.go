@@ -213,7 +213,7 @@ func TestAReaderOutsideACgroupReadsItsLimitByPath(t *testing.T) {
 	}
 }
 
-func TestCPUPressureIsTheCPUsOwnSomeAvg10(t *testing.T) {
+func TestCPUPressureIsTheLargerOfTheCPUsSomeAvg10AndAvg60(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, map[string]string{
 		"proc/pressure/memory": "some avg10=1.00 avg60=0.00 avg300=0.00 total=1\n",
@@ -230,6 +230,13 @@ func TestCPUPressureIsTheCPUsOwnSomeAvg10(t *testing.T) {
 
 	if p := CPUPressure(t.TempDir()); p != -1 {
 		t.Fatalf("no file: %v", p)
+	}
+
+	// a quiet ten seconds under a busy minute is no room
+	write(t, root, map[string]string{"proc/pressure/cpu": "some avg10=12.00 avg60=63.50 avg300=40.00 total=99\n"})
+
+	if p := CPUPressure(root); p != 63.5 {
+		t.Fatalf("a quiet ten seconds: %v", p)
 	}
 }
 

@@ -3,9 +3,12 @@ package membroker
 import (
 	"context"
 	"net"
+	"os"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -445,17 +448,61 @@ func TestAGoneTasksCoresEndOnTheSecondProbeThatMissesIt(t *testing.T) {
 	}
 }
 
-func TestATaskThatRefusesIsThereAndOneNothingAnswersForIsGone(t *testing.T) {
+func TestATaskIsGoneOnlyWhenNoRouteLeadsToIt(t *testing.T) {
 	// nothing listens on port 1 here: the host refuses at once
 	if TaskGone(t.Context(), "127.0.0.1") {
 		t.Error("a host that refuses reads as gone")
 	}
 
-	// TEST-NET-1 has no host: no answer, or no route
-	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
-	defer cancel()
+	for _, tc := range []struct {
+		err  error
+		gone bool
+	}{
+		{nil, false},
+		{&net.OpError{Op: "dial", Err: os.NewSyscallError("connect", syscall.ECONNREFUSED)}, false},
+		{&net.OpError{Op: "dial", Err: os.NewSyscallError("connect", syscall.EHOSTUNREACH)}, true},
+		{&net.OpError{Op: "dial", Err: os.NewSyscallError("connect", syscall.ENETUNREACH)}, true},
+		// a firewall that drops the refusal leaves the probe to time out: no proof the task is gone
+		{context.DeadlineExceeded, false},
+	} {
+		if got := goneBy(tc.err); got != tc.gone {
+			t.Errorf("%v: gone %v, want %v", tc.err, got, tc.gone)
+		}
+	}
+}
 
-	if !TaskGone(ctx, "192.0.2.1") {
-		t.Error("an address nothing answers for reads as there")
+// Asks for cores that fit at once still start one after the other, the settle time apart: the pressure
+// each reads has to show the batch granted before it.
+func TestAsksForCoresAreGrantedTheSettleTimeApart(t *testing.T) {
+	b, _ := cpuBroker(t, 16, 0)
+	b.mu.Lock()
+	b.CPUSettle = 300 * time.Millisecond
+	b.mu.Unlock()
+
+	start := time.Now()
+	at := make(chan time.Duration, 3)
+
+	for _, from := range []string{"10.80.0.7", "10.80.0.8", "10.80.0.9"} {
+		go func() {
+			if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 10, Who: from, CPU: true, Cores: 2, LeaseSeconds: 60}, from); ans.Granted {
+				at <- time.Since(start)
+			}
+		}()
+	}
+
+	var got []time.Duration
+	for range 3 {
+		got = append(got, <-at)
+	}
+
+	slices.Sort(got)
+
+	if got[0] > 200*time.Millisecond || got[1] < 300*time.Millisecond || got[2] < 600*time.Millisecond {
+		t.Fatalf("granted after %v: want the first at once and each next 300ms on", got)
+	}
+
+	// an ask that waits for the pressure alone, as a step's, isn't held back by the settle time
+	if ans := b.ask(t.Context(), Request{MB: 100, WaitSeconds: 1, Who: "step", CPU: true}, "10.80.0.10"); !ans.Granted {
+		t.Fatalf("a step's ask: %+v", ans)
 	}
 }

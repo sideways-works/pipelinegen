@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"testing"
@@ -140,5 +141,61 @@ func TestAStepUnderCPUWaitAsksTheBrokerForThePressureAlone(t *testing.T) {
 				t.Fatalf("%s", log.String())
 			}
 		})
+	}
+}
+
+// A prepare and a whole-suite check are a suite's steps: its own cpu.wait, cpu.pressure and memory.broker
+// hold for them, not the top level's alone.
+func TestASuitesPrepareWaitsUnderTheSuitesOwnSettings(t *testing.T) {
+	root := fakeMemory(t, 8000, time.Minute)
+	setCPUPressure(t, root, 70)
+
+	on, high := true, 80.0
+	addr := startCPUBroker(t, time.Minute, 4)
+
+	cfg := &config.Config{Suites: map[string]config.Suite{
+		"e2e":     {CPU: config.CPU{Wait: &on}, Memory: config.Memory{Broker: addr}},
+		"backend": {CPU: config.CPU{Wait: &on, Pressure: &high}},
+	}}
+
+	var log strings.Builder
+
+	// the broker holds back an ask at 70% CPU pressure: the check waits its while, then starts anyway
+	if s := suiteStepMemory(cfg, config.StepWhole, "pr", "e2e", ""); !s.askBroker(t.Context(), 0, 100*time.Millisecond, &log) ||
+		!strings.Contains(log.String(), "the worker's broker granted nothing after 0s (") {
+		t.Fatalf("e2e's check: %s", log.String())
+	}
+
+	// backend's own cpu.pressure, 80%, lets it start at 70%
+	log.Reset()
+
+	done := make(chan struct{})
+
+	go func() {
+		suiteStepMemory(cfg, config.StepPrepare, "pr", "backend", "").awaitReading(t.Context(), 0, time.Minute, &log)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatal("backend's prepare waited below its suite's cpu.pressure")
+	}
+
+	// a suite without cpu.wait, under a top level without it, never waits
+	if s := suiteStepMemory(cfg, config.StepPrepare, "pr", "web", ""); s.waitsForCPU() {
+		t.Fatal("web's prepare waits for CPU")
+	}
+}
+
+func TestWaitNamesAKindOfTheSuitesTasks(t *testing.T) {
+	t.Setenv(envSuite, "e2e")
+
+	if err := runWait(t.Context(), []string{"batch"}, nil); !errors.Is(err, errUsage) {
+		t.Fatalf("wait batch: %v", err)
+	}
+
+	if err := runWait(t.Context(), nil, nil); !errors.Is(err, errUsage) {
+		t.Fatalf("wait: %v", err)
 	}
 }

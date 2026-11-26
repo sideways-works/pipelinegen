@@ -641,6 +641,9 @@ type StepMemory struct {
 const (
 	StepPlanning    = "planning"
 	StepBookkeeping = "bookkeeping"
+	// StepWhole is a suite's whole-suite check which, as its prepare (StepPrepare), waits for the
+	// pressures alone and keeps no peak.
+	StepWhole = "whole"
 
 	defaultPlanningMB    = 4096
 	defaultBookkeepingMB = 1024

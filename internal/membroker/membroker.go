@@ -85,6 +85,10 @@ type Broker struct {
 	CPUHold float64
 	// ReadCPU reads the worker's CPU pressure now, -1 where it can't; nil reads none.
 	ReadCPU func() float64
+	// CPUSettle is how long after a grant of cores the next ask for cores waits, so the pressure it
+	// reads shows the batch granted before it: grants read the same pressure until the batches they
+	// started run, and asks granted at once would start together on a busy worker. 0 settles for none.
+	CPUSettle time.Duration
 	// Gone says whether the task at a grant's address has ended. A grant whose task is gone on two
 	// probes in a row holds its cores no longer, its memory counting until its ramp ends. nil probes
 	// none, and a grant's cores count until its release or its lease's end.
@@ -99,6 +103,8 @@ type Broker struct {
 	wake    chan struct{}
 	conns   chan struct{}
 	once    sync.Once
+	// coresAt is when cores were last granted.
+	coresAt time.Time
 }
 
 type ask struct {
@@ -199,12 +205,16 @@ func (b *Broker) freeCores(cores float64) float64 {
 
 // cpuSaid is what the broker read of the CPU, for a refusal of an ask that waits for it.
 func (b *Broker) cpuSaid(st reading, req Request) string {
-	psi := "unknown"
-	if st.cpu >= 0 {
-		psi = fmt.Sprintf("%.1f%%", st.cpu)
+	return fmt.Sprintf("; %.1f of %.1f cores granted lately, CPU pressure %s, for %.1f cores asked", st.cores, b.CPUs, cpuPSI(st.cpu), req.Cores)
+}
+
+// cpuPSI says a CPU pressure read, "unknown" where it couldn't be.
+func cpuPSI(cpu float64) string {
+	if cpu < 0 {
+		return "unknown"
 	}
 
-	return fmt.Sprintf("; %.1f of %.1f cores granted lately, CPU pressure %s, for %.1f cores asked", st.cores, b.CPUs, psi, req.Cores)
+	return fmt.Sprintf("%.1f%%", cpu)
 }
 
 // Ask queues req and waits for its answer: granted once it is first in line and the memory covers it,
@@ -436,21 +446,35 @@ func (b *Broker) probe(ctx context.Context) {
 	}
 }
 
-// TaskGone is whether nothing answers at the address from on the worker's network: a task's container
-// that is there refuses a connection to a port nothing listens on at once, while a gone one's address
-// answers nothing, or no route leads to it.
+// TaskGone is whether the task at the address from is gone from the worker's network: no host answers
+// for its address, so no route leads to it. A task's container that is there refuses a connection to a
+// port nothing listens on at once. A connection that times out says neither: a firewall may drop the
+// refusal, so the task counts as there, and its cores count until its release or its lease's end.
 func TaskGone(ctx context.Context, from string) bool {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	// the kernel gives up on an address no host answers for after about three seconds
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	c, err := (&net.Dialer{}).DialContext(ctx, "tcp", net.JoinHostPort(from, "1"))
 	if err == nil {
 		_ = c.Close() //nolint:errcheck // only its answer counted
-
-		return false
 	}
 
-	return !errors.Is(err, syscall.ECONNREFUSED)
+	return goneBy(err)
+}
+
+// taskAt names the asking task's address for the log, which the probes and a release go by.
+func taskAt(from string) string {
+	if from == "" {
+		return ""
+	}
+
+	return "; task at " + from
+}
+
+// goneBy is whether a probe's error says no host has the address.
+func goneBy(err error) bool {
+	return errors.Is(err, syscall.EHOSTUNREACH) || errors.Is(err, syscall.ENETUNREACH)
 }
 
 // step grants asks in their order while the memory covers them; once the first has held the others back
@@ -479,8 +503,13 @@ func (b *Broker) step() {
 		g := b.grantOf(a, now)
 		b.granted = append(b.granted, g)
 
+		if g.cores > 0 {
+			b.coresAt = now
+		}
+
 		ans := Answer{Granted: true, FreeMB: st.r.Free() - st.held, HeldMB: st.held + a.req.MB, HeldCores: st.cores + g.cores, FreeCores: b.freeCores(st.cores)}
-		b.logf("granted %q %d MB, %.1f cores: %d MB free less %d MB granted lately, %.1f cores granted lately\n", a.req.Who, a.req.MB, g.cores, st.r.Free(), st.held, st.cores)
+		b.logf("granted %q %d MB, %.1f cores: %d MB free less %d MB granted lately, pressure %.1f%%, %.1f cores granted lately, CPU pressure %s%s\n",
+			a.req.Who, a.req.MB, g.cores, st.r.Free(), st.held, st.pressure, st.cores, cpuPSI(st.cpu), taskAt(a.from))
 
 		a.done <- ans
 	}
@@ -506,7 +535,7 @@ func (b *Broker) grantOf(a *ask, now time.Time) grant {
 // next is the queue's index of the ask to grant now, -1 for none.
 func (b *Broker) next(st reading, now time.Time) int {
 	for i, a := range b.queue {
-		if memoryFits(a, st) && b.cpuFits(a, st) {
+		if memoryFits(a, st) && b.cpuFits(a, st) && !b.settling(a, now) {
 			return i
 		}
 
@@ -530,6 +559,11 @@ func memoryFits(a *ask, st reading) bool {
 	default:
 		return st.r.Free()-st.held >= a.req.MB && st.pressure < admitPressure
 	}
+}
+
+// settling is whether an ask for cores waits for the last grant of cores to show in the pressure.
+func (b *Broker) settling(a *ask, now time.Time) bool {
+	return a.req.CPU && a.req.Cores > 0 && b.CPUSettle > 0 && !b.coresAt.IsZero() && now.Sub(b.coresAt) < b.CPUSettle
 }
 
 // cpuFits is whether an ask that waits for CPU may start: the CPU pressure, where it can be read, below

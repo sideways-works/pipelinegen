@@ -35,6 +35,7 @@ image_resource:
   source: {repository: golang, tag: 1.27.1}
 inputs:
   - name: source
+  - name: tools
 outputs:
   - name: prepared
 run:
@@ -42,10 +43,16 @@ run:
   args:
     - -euc
     - |
+      tools/pipelinegen wait prepare || true   # while the worker is busy
       cd source
       go build -trimpath -cover -covermode=atomic -coverpkg=./... -tags pipelinegen_cover \
         -o ../prepared/bin/server ./cmd/server
 ```
+
+`wait prepare` holds the build back while the worker's CPU or memory is
+under pressure, under the suite's `cpu.wait` or `memory.wait`, and lets
+it go once the pressure eases or its wait is over
+([`pipelinegen wait`](../reference/commands.md#pipelinegen-wait)).
 
 Prepare builds; it never starts a server. Each batch starts its own. The
 task gets `PIPELINEGEN_RECORD`, so it can build with coverage only when
@@ -290,6 +297,8 @@ list stays as it was either way.
 ## Whole-suite checks
 
 A check's task takes `source` and `prepared` and writes
-`result/result.json` in the same format. It runs after the batches, and
+`result/result.json` in the same format. Under the suite's `cpu.wait` or
+`memory.wait` it starts with `tools/pipelinegen wait whole || true`, with
+`tools` among its inputs, as a prepare does. It runs after the batches, and
 only when every batch passed: a failed slice skips it, and the report says
 so.

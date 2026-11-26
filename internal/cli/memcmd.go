@@ -30,6 +30,8 @@ const (
 	brokerCPUFactor = 1.25
 	// the CPU pressure, in percent, at or above which no ask that waits for CPU is granted.
 	brokerCPUPressure = 40
+	// how long after a grant of cores the next waits: avg10 shows a started batch within seconds.
+	brokerCPUSettle = 15 * time.Second
 	// how often the broker probes the tasks holding cores: a batch that waited before its setup never
 	// releases its own.
 	brokerProbeEvery = 30 * time.Second
@@ -50,10 +52,10 @@ func runMemory(ctx context.Context, args []string, stdout io.Writer) error {
 // so the memory it reads is what the worker's tasks may use.
 func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 	var (
-		listen, root, cgroup  string
-		ramp, firstFor, probe time.Duration
-		maxGrant              int64
-		cpuFactor, cpuHold    float64
+		listen, root, cgroup          string
+		ramp, firstFor, probe, settle time.Duration
+		maxGrant                      int64
+		cpuFactor, cpuHold            float64
 	)
 
 	fs := flag.NewFlagSet("memory serve", flag.ContinueOnError)
@@ -63,6 +65,7 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 	fs.Int64Var(&maxGrant, "max-grant", brokerMaxGrant, "the most one grant counts against the free memory, in MB; 0 is no cap")
 	fs.Float64Var(&cpuFactor, "cpu-factor", brokerCPUFactor, "the cores the grants of batches that wait for CPU may hold at once, per core of this machine; 0 counts no cores")
 	fs.Float64Var(&cpuHold, "cpu-pressure", brokerCPUPressure, "the CPU pressure (PSI some avg10, percent) at or above which no batch that waits for CPU is granted; 0 holds none back")
+	fs.DurationVar(&settle, "cpu-settle", brokerCPUSettle, "how long after a grant of cores the next ask for cores waits, so the CPU pressure it reads shows the batch granted before it; 0 waits none")
 	fs.DurationVar(&probe, "probe-every", brokerProbeEvery, "how often the broker asks whether the tasks holding cores are still there, ending the cores of one gone twice in a row; 0 asks never")
 	textVar(fs, &root, "root", "/", "where the machine's /proc and /sys are")
 	textVar(fs, &cgroup, "cgroup", "", "the cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the first line of /proc/<the worker's pid>/cgroup less its 0::, such as /system.slice/docker-<id>.scope (default the broker's own)")
@@ -71,8 +74,8 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	if cpuFactor < 0 || cpuHold < 0 || cpuHold > 100 || probe < 0 {
-		return fmt.Errorf("%w: --cpu-factor and --probe-every are at least 0, and --cpu-pressure a percentage", errUsage)
+	if cpuFactor < 0 || cpuHold < 0 || cpuHold > 100 || probe < 0 || settle < 0 {
+		return fmt.Errorf("%w: --cpu-factor, --cpu-settle and --probe-every are at least 0, and --cpu-pressure a percentage", errUsage)
 	}
 
 	l, err := (&net.ListenConfig{}).Listen(ctx, "tcp", listen)
@@ -99,9 +102,10 @@ func memoryServe(ctx context.Context, args []string, stdout io.Writer) error {
 		MaxGrant: maxGrant,
 		Log:      stdout,
 		// the broker runs on the worker's host, whose cores its tasks share
-		CPUs:    float64(runtime.NumCPU()) * cpuFactor,
-		CPUHold: cpuHold,
-		ReadCPU: func() float64 { return memory.CPUPressure(root) },
+		CPUs:      float64(runtime.NumCPU()) * cpuFactor,
+		CPUHold:   cpuHold,
+		ReadCPU:   func() float64 { return memory.CPUPressure(root) },
+		CPUSettle: settle,
 	}
 
 	if probe > 0 {

@@ -79,18 +79,24 @@ func Measure(root string) (Usage, error) {
 // Pressure is the machine's PSI "some avg10" for memory, -1 where the kernel doesn't say.
 func Pressure(root string) float64 { return someAvg10(root, "memory") }
 
-// CPUPressure is the machine's PSI "some avg10" for CPU: the share of the last 10 seconds some
-// runnable task waited for a core, in percent; -1 where the kernel doesn't say.
-func CPUPressure(root string) float64 { return someAvg10(root, "cpu") }
+// CPUPressure is the machine's PSI "some" for CPU, the larger of its avg10 and avg60: the share of the
+// last 10 seconds, or of the last minute, some runnable task waited for a core, in percent; -1 where the
+// kernel doesn't say. The minute's keeps a few quiet seconds under load from reading as room.
+func CPUPressure(root string) float64 {
+	return max(someAvg(root, "cpu", "avg10"), someAvg(root, "cpu", "avg60"))
+}
 
-func someAvg10(root, resource string) float64 {
+func someAvg10(root, resource string) float64 { return someAvg(root, resource, "avg10") }
+
+// someAvg is the "some" line's average over the window named, -1 where it can't be read.
+func someAvg(root, resource, window string) float64 {
 	psi, err := fields(filepath.Join(root, "proc", "pressure", resource), " ")
 	if err != nil {
 		return -1
 	}
 
 	for f := range strings.FieldsSeq(psi["some"]) {
-		if v, ok := strings.CutPrefix(f, "avg10="); ok {
+		if v, ok := strings.CutPrefix(f, window+"="); ok {
 			if n, err := strconv.ParseFloat(v, 64); err == nil {
 				return n
 			}

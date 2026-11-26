@@ -162,9 +162,10 @@ own `cpu.wait`), a batch also waits for the worker's CPU, in the same wait
 and for as long as it could still finish within its time limit:
 
 - **The pressure hold.** It starts only while the worker's CPU pressure
-  (`/proc/pressure/cpu`, `some avg10`: the share of the last 10 seconds
-  some runnable task waited for a core) is below `cpu.pressure`, 40% by
-  default. An unreadable pressure holds nothing back.
+  (`/proc/pressure/cpu`, the larger of `some avg10` and `avg60`: the
+  share of the last 10 seconds, or of the last minute, some runnable task
+  waited for a core) is below `cpu.pressure`, 40% by default; the
+  minute's keeps a few quiet seconds under load from reading as room. An unreadable pressure holds nothing back.
 - **Cores.** A trusted run's suite end keeps each slice's cores beside its
   peak: its `cpu_seconds` over its `seconds`, the cores it kept busy on
   average. A batch runs its slices one at a time, so its prediction,
@@ -177,14 +178,18 @@ and for as long as it could still finish within its time limit:
   broker for its cores with its memory. The broker counts `--cpu-factor`
   (1.25) cores per core of its machine, and grants the ask once its cores
   fit beside those of the grants whose leases still run, and the CPU
-  pressure is below `--cpu-pressure`. A grant's cores count for the
+  pressure is below `--cpu-pressure`. Grants of cores go `--cpu-settle`
+  (15s) apart, so the pressure each reads shows the batch granted before
+  it, and batches that fit at once don't start together. A grant's cores
+  count for the
   batch's expected time half again (for as long as it may wait, when its
   time is unknown); a suite of steps (`slice run`) releases them at its
   batch's end, so the next batch starts at once. A task file's batch,
   which asked from `slice memory` before its setup, releases nothing
   itself: the broker asks every `--probe-every` (30s) whether the task's
-  container still answers on the worker's network, and ends the cores of
-  one gone on two probes in a row. A batch predicted more
+  container is still on the worker's network, and ends the cores of one
+  no route led to on two probes in a row. A probe that times out, as
+  behind a firewall that drops the refusal, ends nothing. A batch predicted more
   cores than the broker counts starts once the pressure allows.
 
 A batch still short of CPU when its wait ends leaves its slices not run as
@@ -192,7 +197,12 @@ one short of memory does, and says so: "not run: the worker's CPU pressure
 was 63%, at or above the 40% a batch waits below (cpu.pressure), after
 waiting 45m0s". Under the top-level `cpu.wait` the planning and
 bookkeeping steps wait for the CPU pressure too, keeping no cores, and
-start anyway when their wait ends. Once the suites that run heavy batches
+start anyway when their wait ends. A suite's prepare and its whole-suite
+checks run the change's code outside a batch: under the suite's
+`cpu.wait` or `memory.wait` they wait while the worker is under CPU or
+memory pressure, `slice prepare` by itself and a task of the
+repository's by calling `tools/pipelinegen wait prepare` (or `wait
+whole`) first, and start anyway when their wait ends. Once the suites that run heavy batches
 wait for CPU as well as memory, Concourse's task limit can rise further:
 pipelinegen then holds a batch back when the worker is busy, whichever
 runs short.

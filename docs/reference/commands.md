@@ -819,8 +819,9 @@ memory broker on [::]:7480, grants counting 5m0s, 20.0 cores
 | `--first-for` | `10m` | How long the first ask in line holds back later asks the memory covers: an ask for most of the worker, from a proposed change's batch say, delays the others at most this long. |
 | `--max-grant` | `16384` | The most one grant counts against the free memory, in MB: a batch predicted above it starts once that much is free. 0 is no cap. |
 | `--cpu-factor` | `1.25` | The cores the grants of batches that wait for CPU may hold at once, per core of the machine the broker runs on: a batch's predicted cores wait until they fit beside those of the grants whose leases run, and one predicted above them all starts at once. 0 counts no cores. |
-| `--cpu-pressure` | `40` | The CPU pressure (`/proc/pressure/cpu`, `some avg10`, percent) at or above which no batch or step that waits for CPU is granted. 0 holds none back. |
-| `--probe-every` | `30s` | How often it asks whether the task of each grant holding cores is still there: a connection to the task's address that is refused at once is a task there, while no answer, or no route, is one gone. A grant whose task is gone on two probes in a row holds its cores no longer. 0 never asks, and a grant's cores count until its release or its lease's end. |
+| `--cpu-pressure` | `40` | The CPU pressure (`/proc/pressure/cpu`, the larger of `some avg10` and `avg60`, percent) at or above which no batch or step that waits for CPU is granted. 0 holds none back. |
+| `--cpu-settle` | `15s` | How long after a grant of cores the next ask for cores waits, so the CPU pressure it reads shows the batch granted before it: asks that fit at once start this far apart, not together. An ask that waits for the pressure alone, as a step's, isn't held back. 0 waits none. |
+| `--probe-every` | `30s` | How often it asks whether the task of each grant holding cores is still there: a connection to the task's address that is refused at once is a task there, while no route to it (no host answers for the address) is one gone; a connection that times out, as behind a firewall that drops the refusal, counts as there. A grant whose task is gone on two probes in a row holds its cores no longer. 0 never asks, and a grant's cores count until its release or its lease's end. |
 | `--cgroup` | the broker's own | The cgroup v2 path whose limit holds the worker's tasks, for a broker outside it: the line of `/proc/<the worker's pid>/cgroup` less its `0::`, such as `/system.slice/docker-<id>.scope`. |
 | `--root` | `/` | Where the machine's `/proc` and `/sys` are. |
 
@@ -906,6 +907,34 @@ $ go mod download
 | Flag | Default | What it does |
 |---|---|---|
 | `--host` | `github.com` | The host git authenticates to. |
+
+## `pipelinegen wait`
+
+Waits, first in a suite's own prepare task or whole-suite check task,
+while the worker is under CPU or memory pressure, then lets the task go
+on. It is the wait `slice memory` is for a batch, for the tasks that run
+the change's code outside one: under the suite's `cpu.wait` it waits while
+the CPU pressure (`/proc/pressure/cpu`, the larger of `some avg10` and `avg60`) is at or above
+`cpu.pressure`, and under its `memory.wait` while the memory pressure is
+10% or more, asking the worker's broker when `memory.broker` names one,
+else by its own reading. It asks no cores and keeps no peak. Its wait is a
+third of what the task's deadline leaves (`PIPELINEGEN_DEADLINE`), at most
+15 minutes, else 10 minutes; past it the task starts anyway, and it never
+fails for room. A suite with `steps` needs none: `slice prepare` waits the
+same way. On this machine (`run`, `record`) it does nothing.
+
+```sh
+tools/pipelinegen wait prepare || true   # first in ci/e2e-prepare.yml
+```
+
+The argument is the task's kind: `prepare` or `whole`. The task declares
+`tools` as an input, and gets `PIPELINEGEN_RUN` and `PIPELINEGEN_SUITE`
+from the pipeline.
+
+| Flag | Default | What it does |
+|---|---|---|
+| `--root` | `source` | The tree whose `pipelinegen.yaml` it reads. |
+| `--config` | `<root>/pipelinegen.yaml` | The config file, when it is elsewhere. |
 
 ## `pipelinegen help`
 

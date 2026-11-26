@@ -36,6 +36,8 @@ var stepNeeds = map[string]toolcalls.Command{
 	"slice flush":     {Needs: sliceNeeds()},
 	// runPipeline needs Concourse's address (config.EnvConcourseURL when the config leaves it out).
 	"pipeline": {Needs: toolcalls.Needs{ConcourseURL: true}},
+	// runWait takes the task's kind first and reads the tree's config from --root.
+	"wait": {Named: true},
 	// runGitAuth takes the variable's name first.
 	"git-auth": {Named: true},
 	// runAlsoTo takes pull requests' numbers after its flags.
