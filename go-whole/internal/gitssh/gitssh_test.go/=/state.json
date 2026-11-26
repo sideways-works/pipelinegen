@@ -1,0 +1,9 @@
+{
+  "label": "internal/gitssh/gitssh_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T16:55:34.232358054Z",
+  "seconds": 0.22999999999999998,
+  "cpu_seconds": 0.5350790000000001,
+  "cpu_wall": 0.199185938,
+  "peak_mb": 106
+}
