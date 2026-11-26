@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/calls_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.403185597Z",
+  "seconds": 0.326049209,
+  "recorded": true,
+  "cpu_seconds": 0.46953300000001263,
+  "cpu_wall": 0.326049209,
+  "peak_mb": 333
+}

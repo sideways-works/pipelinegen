@@ -1,0 +1,10 @@
+{
+  "label": "internal/graph/walk_budget_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.409846813Z",
+  "seconds": 6.36,
+  "recorded": true,
+  "cpu_seconds": 9.973874999999907,
+  "cpu_wall": 6.669371243,
+  "peak_mb": 886
+}

@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/narrowed_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.405145088Z",
+  "seconds": 76.814300606,
+  "recorded": true,
+  "cpu_seconds": 494.140528,
+  "cpu_wall": 76.814300606,
+  "peak_mb": 4341
+}

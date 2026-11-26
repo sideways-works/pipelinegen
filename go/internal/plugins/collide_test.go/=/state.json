@@ -1,0 +1,10 @@
+{
+  "label": "internal/plugins/collide_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.4103384Z",
+  "seconds": 0.175771034,
+  "recorded": true,
+  "cpu_seconds": 0.3853590000001077,
+  "cpu_wall": 0.175771034,
+  "peak_mb": 375
+}

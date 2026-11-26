@@ -1,0 +1,10 @@
+{
+  "label": "internal/docscheck/docscheck_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.409215693Z",
+  "seconds": 0.12000000000000001,
+  "recorded": true,
+  "cpu_seconds": 16.54065700000001,
+  "cpu_wall": 4.83647206,
+  "peak_mb": 690
+}

@@ -1,0 +1,10 @@
+{
+  "label": "internal/runs/onbranch_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:16:19.411215182Z",
+  "seconds": 0.19,
+  "recorded": true,
+  "cpu_seconds": 0.6193379999999706,
+  "cpu_wall": 0.341110695,
+  "peak_mb": 397
+}
