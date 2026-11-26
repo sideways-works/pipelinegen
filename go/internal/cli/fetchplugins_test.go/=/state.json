@@ -1,0 +1,12 @@
+{
+  "label": "internal/cli/fetchplugins_test.go",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-26T14:47:07.861060836Z",
+  "failures": [
+    {
+      "test": "(memory)",
+      "tail": "not run: the worker's broker found no room for its CPU: 26920 MB free less 1661 MB granted lately, pressure 0.4%, for 871 MB asked; 65.8 of 32.0 cores granted lately, CPU pressure 29.1%, for 3.2 cores asked, after waiting 8m56s"
+    }
+  ]
+}
