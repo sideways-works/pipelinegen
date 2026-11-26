@@ -1,0 +1,12 @@
+{
+  "label": "internal/cli/recordwork_test.go",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go",
+  "updated": "2026-11-26T14:47:06.466887516Z",
+  "failures": [
+    {
+      "test": "(memory)",
+      "tail": "not run: the worker's broker found no room for its CPU: 26918 MB free less 1661 MB granted lately, pressure 0.4%, for 1383 MB asked; 65.8 of 32.0 cores granted lately, CPU pressure 29.1%, for 121.8 cores asked, after waiting 8m53s"
+    }
+  ]
+}
