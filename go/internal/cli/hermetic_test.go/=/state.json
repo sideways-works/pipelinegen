@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/hermetic_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:51:30.890709416Z",
+  "seconds": 1.071447448,
+  "recorded": true,
+  "cpu_seconds": 0.6917809999999918,
+  "peak_mb": 101
+}
