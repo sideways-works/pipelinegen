@@ -1,0 +1,4 @@
+{
+  "ended": "2026-11-26T11:27:02.508171726Z",
+  "why": "suite lint stopped 16 minutes after its work began, before these slices reported: not its time limit of 120 minutes (suites.lint.minutes); its prepare or a batch failed, or the build was aborted: the build log says which"
+}
