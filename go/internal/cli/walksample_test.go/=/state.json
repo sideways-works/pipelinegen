@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/walksample_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:34:42.220123175Z",
+  "seconds": 1.15,
+  "recorded": true,
+  "cpu_seconds": 1.6303490000000238,
+  "peak_mb": 131
+}

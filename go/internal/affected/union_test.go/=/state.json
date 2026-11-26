@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/union_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:34:42.213690035Z",
+  "seconds": 0.864886129,
+  "recorded": true,
+  "cpu_seconds": 0.4356369999999856,
+  "peak_mb": 92
+}

@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/memsweep_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:34:42.216766099Z",
+  "seconds": 34.31,
+  "recorded": true,
+  "cpu_seconds": 9.510124999999903,
+  "peak_mb": 135
+}
