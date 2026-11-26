@@ -131,7 +131,7 @@ broker that stops drops the asks still waiting, unanswered, and the one
 started after it knows none) asks again within its wait, a few seconds
 later, since batches that all went by their own readings then would see
 the same room and start together; one that can't reach the broker for 30
-seconds waits by its own reading. The broker keeps its grants in
+seconds since it last did waits by its own reading. The broker keeps its grants in
 `--state` (in its unit's `StateDirectory=` under systemd), so after a
 restart the batches it granted still count. The broker runs beside the Concourse worker, in its
 container (`docker exec <worker> pipelinegen memory serve`), so the memory

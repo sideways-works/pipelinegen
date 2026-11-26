@@ -766,8 +766,13 @@ func TestAnAskTheBrokerDroppedIsAskedAgain(t *testing.T) {
 // A broker that restarts keeps its grants: the batches it granted run on, and their memory and cores still
 // count against the next ask; a released grant's cores stay released.
 // A broker that ends drops the asks still waiting instead of refusing them, so each asks the broker that
-// starts after it.
+// starts after it, though it is not back at once and the ask had waited longer than redialFor.
 func TestAnAskWaitingWhileTheBrokerEndsAsksTheNextOne(t *testing.T) {
+	redial, again := redialFor, askAgainAfter
+	redialFor, askAgainAfter = 300*time.Millisecond, 50*time.Millisecond
+
+	t.Cleanup(func() { redialFor, askAgainAfter = redial, again })
+
 	l, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -796,10 +801,12 @@ func TestAnAskWaitingWhileTheBrokerEndsAsksTheNextOne(t *testing.T) {
 		got <- ans
 	}()
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 	cancel()
 	<-ended
 
+	// the next broker starts a while later: the ask's dials meanwhile are refused
+	time.Sleep(150 * time.Millisecond)
 	f.free.Store(5000)
 
 	next, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", addr)

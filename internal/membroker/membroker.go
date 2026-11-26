@@ -921,9 +921,10 @@ var ErrUnreachable = errors.New("memory broker unreachable")
 // errBroke is a broker that took the ask and went away before it answered: it restarted.
 var errBroke = errors.New("the broker went away before it answered")
 
-const (
-	// redialFor is how long an ask keeps dialing a broker it can't reach: a broker that restarts is back
-	// within it, and one that isn't there leaves the asker to its own reading after it.
+var (
+	// redialFor is how long an ask keeps dialing a broker it can't reach, since it last reached it: a
+	// broker that restarts is back within it, and one that isn't there leaves the asker to its own reading
+	// after it.
 	redialFor = 30 * time.Second
 	// askAgainAfter is the pause before asking again a broker that couldn't be reached or went away.
 	askAgainAfter = 3 * time.Second
@@ -931,11 +932,12 @@ const (
 
 // AskAgain asks as Ask does, and asks again when the broker goes away before it answers (a restart forgets
 // every ask, and an asker that then went by its own reading would start beside every other one at once),
-// within what is left of req's wait; it keeps dialing a broker it can't reach for redialFor. It ends with
+// within what is left of req's wait; it keeps dialing a broker it can't reach for redialFor since it last
+// reached it, or since the first ask. It ends with
 // ErrUnreachable when the broker can't be reached by then, or its wait ends without an answer.
 func AskAgain(ctx context.Context, addr string, req Request) (Answer, error) {
-	start := time.Now()
-	deadline := start.Add(time.Duration(req.WaitSeconds * float64(time.Second)))
+	reached := time.Now()
+	deadline := reached.Add(time.Duration(req.WaitSeconds * float64(time.Second)))
 
 	for {
 		ans, err := Ask(ctx, addr, req)
@@ -943,8 +945,14 @@ func AskAgain(ctx context.Context, addr string, req Request) (Answer, error) {
 			return ans, err
 		}
 
+		// a broker that took the ask was reached: one that restarts is dialed for redialFor from here,
+		// however long the ask had waited
+		if errors.Is(err, errBroke) {
+			reached = time.Now()
+		}
+
 		left := time.Until(deadline)
-		if left <= askAgainAfter || (!errors.Is(err, errBroke) && time.Since(start) >= redialFor) {
+		if left <= askAgainAfter || time.Since(reached) >= redialFor {
 			return ans, err
 		}
 

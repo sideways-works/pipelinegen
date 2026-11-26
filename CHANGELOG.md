@@ -26,7 +26,7 @@ minor version may change the config or the protocol.
 ### Changed
 
 - `cpu.cores` is the least cores a batch is predicted, not only the prediction of a batch without recorded cores. A slice that waited for a core a fifth of its time or more (its batch cgroup's `cpu.pressure`) while it kept less than 80% of the machine busy keeps no cores: on a crowded worker a slice keeps busy only what it gets, and predictions from such readings admitted more batches, which starved the next ones more.
-- A batch or step whose broker goes away while it waits (a restart forgets every ask) asks again within its wait, instead of going by its own reading: batches that all did so at once saw the same room and started together. A broker that can't be reached for 30 seconds still leaves the asker to its own reading.
+- A batch or step whose broker goes away while it waits (a restart forgets every ask) asks again within its wait, instead of going by its own reading: batches that all did so at once saw the same room and started together. A broker that can't be reached for 30 seconds since the asker last reached it still leaves the asker to its own reading.
 - A suite's status counts the slices not run for room as "not run (worker short of memory or CPU)", since a batch may now wait for either
 
 ### Fixed
