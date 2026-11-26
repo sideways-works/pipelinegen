@@ -1,0 +1,9 @@
+{
+  "label": "internal/runs/branches_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:33:10.170629183Z",
+  "seconds": 0.1,
+  "recorded": true,
+  "cpu_seconds": 0.42537399999991976,
+  "peak_mb": 367
+}
