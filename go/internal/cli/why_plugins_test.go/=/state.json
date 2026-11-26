@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/why_plugins_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:28:13.667549344Z",
+  "seconds": 0.44,
+  "recorded": true,
+  "cpu_seconds": 0.9676150000000234,
+  "cpu_wall": 1.31339251,
+  "peak_mb": 197
+}

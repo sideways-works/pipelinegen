@@ -1,0 +1,10 @@
+{
+  "label": "internal/toolcalls/toolcalls_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:28:13.671543093Z",
+  "seconds": 2.730826902,
+  "recorded": true,
+  "cpu_seconds": 1.5017400000001544,
+  "cpu_wall": 2.730826902,
+  "peak_mb": 370
+}

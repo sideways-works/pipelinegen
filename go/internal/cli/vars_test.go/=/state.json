@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/vars_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:28:13.667437005Z",
+  "seconds": 1.329694962,
+  "recorded": true,
+  "cpu_seconds": 0.6494430000000193,
+  "cpu_wall": 1.329694962,
+  "peak_mb": 198
+}

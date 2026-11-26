@@ -1,0 +1,10 @@
+{
+  "label": "internal/launch/launch_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:28:13.669806006Z",
+  "seconds": 1.37,
+  "recorded": true,
+  "cpu_seconds": 1.8178560000001198,
+  "cpu_wall": 3.793849646,
+  "peak_mb": 363
+}
