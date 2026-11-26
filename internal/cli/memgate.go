@@ -692,11 +692,17 @@ func awaitMemoryOnce(ctx context.Context, r *report.Reporter, batches, suite, re
 		return err
 	}
 
+	return markAdmitted(result)
+}
+
+// markAdmitted marks the batch's result as past its wait for memory, so its first slice's start waits no
+// more: a task file that ran slice memory before its set-up waited then.
+func markAdmitted(result string) error {
 	if err := os.MkdirAll(result, 0o750); err != nil {
 		return fmt.Errorf("memory: %w", err)
 	}
 
-	if err := os.WriteFile(mark, nil, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(result, memoryAdmitted), nil, 0o600); err != nil {
 		return fmt.Errorf("memory: %w", err)
 	}
 
@@ -801,7 +807,11 @@ func sliceMemory(ctx context.Context, args []string) error {
 		return nil
 	}
 
-	return awaitMemory(ctx, batchGate(cfg, run, suite, batches, os.Getenv(envBatch), result), os.Stderr)
+	if err := awaitMemory(ctx, batchGate(cfg, run, suite, batches, os.Getenv(envBatch), result), os.Stderr); err != nil {
+		return err
+	}
+
+	return markAdmitted(result)
 }
 
 // releaseVerb is the slice subcommand that hands a batch's cores back.

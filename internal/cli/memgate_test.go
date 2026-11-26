@@ -684,6 +684,27 @@ func TestATaskFilesBatchReleasesItsCoresBySliceRelease(t *testing.T) {
 	}
 }
 
+// A task file that runs slice memory before its set-up waits there only: its first slice's start, after
+// the set-up, asks the broker nothing more.
+func TestATaskFileThatRanSliceMemoryWaitsNoMoreAtItsFirstSlice(t *testing.T) {
+	root := memoryBatch(t).root
+	mem := fakeMemory(t, 8000, 50*time.Millisecond)
+	setCPUPressure(t, mem, 0)
+
+	addr := startCPUBroker(t, 10*time.Millisecond, 4)
+	writeFile(t, filepath.Join(root, config.FileName), reportConfig+"cpu: {wait: true}\nmemory: {broker: \""+addr+"\"}\n")
+	predictedUse(t, "batches", "1", 1000, 3, 600)
+
+	if _, stderr, code := run(t, "slice", "memory", "-root", root); code != 0 {
+		t.Fatalf("slice memory: %d %s", code, stderr)
+	}
+
+	_, stderr, code := run(t, "slice", "start", "e2e.a", "-root", root)
+	if code != 0 || strings.Contains(stderr, "memory:") || strings.Contains(stderr, "cpu:") {
+		t.Fatalf("the first slice's start after slice memory: %d %s", code, stderr)
+	}
+}
+
 // A batch asks the broker for its predicted cores, held for half again its expected time, and without a
 // prediction for the suite's cpu.cores, held for as long as it may wait.
 func TestABatchAsksForItsCoresForHalfAgainItsTime(t *testing.T) {
