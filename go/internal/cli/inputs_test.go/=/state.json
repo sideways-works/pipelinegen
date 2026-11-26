@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/inputs_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.431685818Z",
+  "seconds": 0.299854846,
+  "recorded": true,
+  "cpu_seconds": 0.5231589999999642,
+  "cpu_wall": 0.299854846,
+  "peak_mb": 347
+}

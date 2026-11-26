@@ -1,0 +1,9 @@
+{
+  "label": "example/words/upper_smoke.sh",
+  "state": "passed",
+  "updated": "2026-11-26T18:06:04.34086744Z",
+  "seconds": 0.005158162,
+  "cpu_seconds": 0.015821,
+  "cpu_wall": 0.019478307,
+  "peak_mb": 35
+}

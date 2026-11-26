@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/reportfiles_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.434634113Z",
+  "seconds": 7.14,
+  "recorded": true,
+  "cpu_seconds": 3.1055200000000696,
+  "cpu_wall": 9.417089094,
+  "peak_mb": 355
+}

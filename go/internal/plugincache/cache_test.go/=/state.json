@@ -1,0 +1,10 @@
+{
+  "label": "internal/plugincache/cache_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.439107095Z",
+  "seconds": 9.500000000000002,
+  "recorded": true,
+  "cpu_seconds": 10.533065999999963,
+  "cpu_wall": 12.881543308,
+  "peak_mb": 273
+}

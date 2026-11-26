@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/canttell_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.42937621Z",
+  "seconds": 42.36,
+  "recorded": true,
+  "cpu_seconds": 90.81032300000004,
+  "cpu_wall": 43.2569664,
+  "peak_mb": 1452
+}

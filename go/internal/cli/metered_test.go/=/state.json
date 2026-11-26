@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/metered_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.432183146Z",
+  "seconds": 0.362004599,
+  "recorded": true,
+  "cpu_seconds": 0.49812000000019907,
+  "cpu_wall": 0.362004599,
+  "peak_mb": 338
+}
