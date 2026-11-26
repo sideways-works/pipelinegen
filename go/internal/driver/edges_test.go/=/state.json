@@ -1,0 +1,10 @@
+{
+  "label": "internal/driver/edges_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.846738698Z",
+  "seconds": 0.21,
+  "recorded": true,
+  "cpu_seconds": 1.5736679999999978,
+  "cpu_wall": 2.699331418,
+  "peak_mb": 380
+}

@@ -1,0 +1,10 @@
+{
+  "label": "internal/gitstore/samesecond_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.847082383Z",
+  "seconds": 0.03,
+  "recorded": true,
+  "cpu_seconds": 1.550083000000086,
+  "cpu_wall": 4.791628674,
+  "peak_mb": 395
+}

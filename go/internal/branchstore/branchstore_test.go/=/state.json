@@ -1,0 +1,10 @@
+{
+  "label": "internal/branchstore/branchstore_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.84029457Z",
+  "seconds": 257.05,
+  "recorded": true,
+  "cpu_seconds": 69.543622,
+  "cpu_wall": 276.620589721,
+  "peak_mb": 212
+}

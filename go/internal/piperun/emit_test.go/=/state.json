@@ -1,0 +1,10 @@
+{
+  "label": "internal/piperun/emit_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.84829442Z",
+  "seconds": 0.01,
+  "recorded": true,
+  "cpu_seconds": 1.4498469999998633,
+  "cpu_wall": 1.924801726,
+  "peak_mb": 284
+}

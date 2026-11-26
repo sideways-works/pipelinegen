@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/trustform_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.84551739Z",
+  "seconds": 0.38,
+  "recorded": true,
+  "cpu_seconds": 1.003212000000076,
+  "cpu_wall": 1.204035334,
+  "peak_mb": 124
+}

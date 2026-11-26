@@ -1,0 +1,10 @@
+{
+  "label": "internal/report/meeting_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.849497373Z",
+  "seconds": 26.02,
+  "recorded": true,
+  "cpu_seconds": 24.183508000000074,
+  "cpu_wall": 43.065275242,
+  "peak_mb": 376
+}

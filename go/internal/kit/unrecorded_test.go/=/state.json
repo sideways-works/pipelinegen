@@ -1,0 +1,10 @@
+{
+  "label": "internal/kit/unrecorded_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.8480891Z",
+  "seconds": 0.06,
+  "recorded": true,
+  "cpu_seconds": 0.492471999999907,
+  "cpu_wall": 1.33298516,
+  "peak_mb": 233
+}

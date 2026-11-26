@@ -1,0 +1,10 @@
+{
+  "label": "internal/plugins/pins_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:39:46.848851597Z",
+  "seconds": 1.107819459,
+  "recorded": true,
+  "cpu_seconds": 0.4691490000000158,
+  "cpu_wall": 1.107819459,
+  "peak_mb": 237
+}
