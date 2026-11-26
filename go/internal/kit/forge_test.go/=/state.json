@@ -1,0 +1,10 @@
+{
+  "label": "internal/kit/forge_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:37.255690165Z",
+  "seconds": 6.31,
+  "recorded": true,
+  "cpu_seconds": 5.368081000000075,
+  "cpu_wall": 8.026645206,
+  "peak_mb": 267
+}

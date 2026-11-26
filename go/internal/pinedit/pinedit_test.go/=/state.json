@@ -1,0 +1,10 @@
+{
+  "label": "internal/pinedit/pinedit_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:37.256829721Z",
+  "seconds": 0.01,
+  "recorded": true,
+  "cpu_seconds": 1.9634280000000217,
+  "cpu_wall": 2.517738217,
+  "peak_mb": 292
+}

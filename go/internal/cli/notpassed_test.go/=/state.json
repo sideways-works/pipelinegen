@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/notpassed_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:37.241308266Z",
+  "seconds": 11.14,
+  "recorded": true,
+  "cpu_seconds": 4.206006000000343,
+  "cpu_wall": 13.140776695,
+  "peak_mb": 110
+}

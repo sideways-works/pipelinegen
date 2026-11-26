@@ -1,0 +1,10 @@
+{
+  "label": "internal/report/untold_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:37.260774864Z",
+  "seconds": 0.639502544,
+  "recorded": true,
+  "cpu_seconds": 0.5042499999999563,
+  "cpu_wall": 0.639502544,
+  "peak_mb": 364
+}

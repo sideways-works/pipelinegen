@@ -1,0 +1,10 @@
+{
+  "label": "internal/lists/lists_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:37.256432419Z",
+  "seconds": 38.74,
+  "recorded": true,
+  "cpu_seconds": 20.663143999999647,
+  "cpu_wall": 48.724886466,
+  "peak_mb": 397
+}
