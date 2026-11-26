@@ -1,0 +1,12 @@
+{
+  "label": "internal/scratch/scratch_test.go",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-go-whole",
+  "updated": "2026-11-26T21:33:27.137769561Z",
+  "failures": [
+    {
+      "test": "(memory)",
+      "tail": "not run: the worker's broker found no room for its CPU: 34445 MB free less 26030 MB granted lately, pressure 0.1%, for 186 MB asked; 20.0 of 20.0 cores granted lately, CPU pressure 5.8%, for 13.9 cores asked, after waiting 1h0m0s"
+    }
+  ]
+}

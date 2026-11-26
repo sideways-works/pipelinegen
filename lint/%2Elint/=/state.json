@@ -1,0 +1,12 @@
+{
+  "label": "//:lint",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/main-lint",
+  "updated": "2026-11-26T21:32:18.836569466Z",
+  "failures": [
+    {
+      "test": "(memory)",
+      "tail": "not run: the worker's broker found no room for its CPU: 33672 MB free less 10714 MB granted lately, pressure 4.5%, for 2268 MB asked; 16.8 of 20.0 cores granted lately, CPU pressure 11.5%, for 7.5 cores asked, after waiting 1h0m0s"
+    }
+  ]
+}
