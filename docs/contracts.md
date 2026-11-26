@@ -957,6 +957,7 @@ The change and its commit come from the trigger's input (`--trigger <dir>`).
 | suite job, after the tree | `tools/pipelinegen slice bookkeeping-files --root source --out bookkeeping`: what each batch's end reads of the tree under test, the config, for ends placed on other workers than the batch: they take `bookkeeping` and stream no tree | `tools`, `source` | `bookkeeping` | none |
 | suite job, before the batches | `tools/pipelinegen batches --run <run> --suite <s> --trigger trigger --out batches --root source`: deals the plan's selected slices of the suite, leaving out those already passed for this change (a rerun), and writes each batch's predicted memory peak beside its slices (`batches/<n>/memory.json`) from the suite's peaks | `tools`, `trigger`, `source` | `batches` | `GITHUB_TOKEN` |
 | the batch task, before its setup | `tools/pipelinegen slice memory` | see (a) | see (a) | see (a) |
+| the batch task, in its exit trap | `tools/pipelinegen slice release`: hands back the cores the broker granted `slice memory` | see (a) | see (a) | see (a) |
 | the batch task, after its setup | `tools/pipelinegen slice setup-end` | see (a) | see (a) | see (a) |
 | the batch task, per slice | `tools/pipelinegen slice start <name>`, `tools/pipelinegen slice end <name>` | see (a) | see (a) | see (a) |
 | a suite with steps: the prepare task | `tools/pipelinegen slice prepare`: waits as `wait prepare` does, then runs the suite's prepare steps | see (a) | see (a) | see (a) |

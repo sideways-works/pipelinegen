@@ -898,6 +898,7 @@ func runSlice(ctx context.Context, args []string, stdout io.Writer) error {
 		{"end", "end a slice of the running batch: its result, recording and final state: <name>", func(ctx context.Context, args []string) error { return sliceStep(ctx, args, false, stdout) }},
 		{"list", "print the running batch's slices, one per line", func(ctx context.Context, args []string) error { return runSliceList(ctx, args, stdout) }},
 		{"memory", "wait, before the batch's setup, until the worker has the memory the batch should use, or leave the batch's slices not run", sliceMemory},
+		{releaseVerb, "hand back, at the batch's end, the cores the worker's broker granted slice memory: trap 'tools/pipelinegen slice release' EXIT", sliceRelease},
 		{"setup-end", "close what the batch's setup ran, once before its first slice", func(ctx context.Context, args []string) error { return sliceSetupEnd(ctx, args, stdout) }},
 		{"flush", "write the starts and ends the batch's journal holds", func(ctx context.Context, args []string) error { return sliceFlush(ctx, args, stdout) }},
 		{runVerb, "run the batch's slices through the suite's steps, or a suite's slices on this machine: [--suite <s>] [--slice <name>]...", func(ctx context.Context, args []string) error { return sliceRun(ctx, args, stdout) }},

@@ -271,6 +271,7 @@ What a suite's batch task calls around each of its slices, in order:
 
 ```sh
 tools/pipelinegen slice memory                    # first, before the setup: wait for room
+trap 'tools/pipelinegen slice release' EXIT       # hand the batch's cores back at its end
 tools/pipelinegen slice start calc/add_test.sh    # noted in the batch's journal
 # ... run the slice's tests, write result/calc/add_test.sh.json ...
 tools/pipelinegen slice end calc/add_test.sh      # its result, recording and final state
@@ -295,6 +296,14 @@ logs what it read either way. A batch still short then exits 1, leaving
 `slice run` does the same before its set-up steps. On this machine, where
 `run` and `record` checked before the batch, it does nothing. See [sharing
 machines](../how-to/sharing-machines.md#memory-a-batch-waits-for-room).
+
+`slice release` hands back, at the batch's end, the cores the worker's
+broker granted `slice memory` under `cpu.wait`, so they count no longer
+and the next batch needn't wait for the grant's lease to end. A task file
+calls it in its exit trap; `slice run` does the same itself. Without it,
+the cores count until the lease ends: a finished task's container can stay
+on the worker a while, so the broker can't tell the batch is over. A
+broker it can't reach only warns, and it does nothing on this machine.
 
 Starts and ends go into the batch's journal,
 `<result>/.pipelinegen/journal.jsonl`, each with a reading of the task's

@@ -654,6 +654,36 @@ func TestSliceRunReleasesItsCoresAtItsEnd(t *testing.T) {
 	}
 }
 
+// A task file's batch asks from slice memory and hands its cores back in its exit trap: the next batch
+// needn't wait for the lease, nor for a finished container the worker keeps a while.
+func TestATaskFilesBatchReleasesItsCoresBySliceRelease(t *testing.T) {
+	root := memoryBatch(t).root
+	mem := fakeMemory(t, 8000, 50*time.Millisecond)
+	setCPUPressure(t, mem, 0)
+
+	addr := startCPUBroker(t, 10*time.Millisecond, 4)
+	writeFile(t, filepath.Join(root, config.FileName), reportConfig+"cpu: {wait: true}\nmemory: {broker: \""+addr+"\"}\n")
+	predictedUse(t, "batches", "1", 1000, 3, 600)
+
+	if _, stderr, code := run(t, "slice", "memory", "-root", root); code != 0 {
+		t.Fatalf("slice memory: %d %s", code, stderr)
+	}
+
+	next := membroker.Request{MB: 100, WaitSeconds: 0.3, Who: "next", CPU: true, Cores: 3}
+
+	if ans, err := membroker.Ask(t.Context(), addr, next); err != nil || ans.Granted {
+		t.Fatalf("the next batch while the first holds its cores: %+v %v", ans, err)
+	}
+
+	if _, stderr, code := run(t, "slice", "release", "-root", root); code != 0 {
+		t.Fatalf("slice release: %d %s", code, stderr)
+	}
+
+	if ans, err := membroker.Ask(t.Context(), addr, next); err != nil || !ans.Granted {
+		t.Fatalf("the next batch: %+v %v", ans, err)
+	}
+}
+
 // A batch asks the broker for its predicted cores, held for half again its expected time, and without a
 // prediction for the suite's cpu.cores, held for as long as it may wait.
 func TestABatchAsksForItsCoresForHalfAgainItsTime(t *testing.T) {

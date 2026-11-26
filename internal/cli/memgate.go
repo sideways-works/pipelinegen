@@ -804,6 +804,44 @@ func sliceMemory(ctx context.Context, args []string) error {
 	return awaitMemory(ctx, batchGate(cfg, run, suite, batches, os.Getenv(envBatch), result), os.Stderr)
 }
 
+// releaseVerb is the slice subcommand that hands a batch's cores back.
+const releaseVerb = "release"
+
+// sliceRelease is a task file's own call at its batch's end, in its exit trap: it hands back the cores
+// the worker's broker granted slice memory, so they count no longer once the batch is done. A finished
+// task's container may stay on the worker for a while, so the broker's probe can't tell it ended. It
+// only warns when the broker can't be told, and does nothing on this machine.
+func sliceRelease(ctx context.Context, args []string) error {
+	var c common
+
+	fs := flag.NewFlagSet(sliceCommand, flag.ContinueOnError)
+	c.register(fs)
+	fs.Lookup("root").DefValue = treeDir
+	c.root = treeDir
+
+	if err := parse(ctx, fs, args); err != nil {
+		return err
+	}
+
+	if err := needEnv(envSuite, envBatch); err != nil {
+		return err
+	}
+
+	run, suite := os.Getenv(envRun), os.Getenv(envSuite)
+	if run == localRun {
+		return nil
+	}
+
+	cfg, err := c.load()
+	if err != nil {
+		return err
+	}
+
+	batchGate(cfg, run, suite, "", os.Getenv(envBatch), "").releaseCores(ctx, os.Stderr)
+
+	return nil
+}
+
 // admit waits for a batch's memory, then samples each slice's use until stop, which also hands back
 // the cores the worker's broker granted it; on this machine run and record checked beforehand and nothing
 // is measured, since its cgroup holds more than the batch.

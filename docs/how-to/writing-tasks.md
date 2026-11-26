@@ -141,7 +141,7 @@ A batch task in outline:
 set -u
 tools/pipelinegen slice memory || exit 1   # wait for the room the batch should need
 start_stack            # database, server: once per batch
-trap stop_stack EXIT   # stop cleanly, so coverage is written
+trap 'stop_stack; tools/pipelinegen slice release' EXIT   # stop cleanly, so coverage is written; hand back the cores
 tools/pipelinegen slice setup-end
 
 tools/pipelinegen slice list | while IFS="$(printf '\t')" read -r name label target sources tests; do
