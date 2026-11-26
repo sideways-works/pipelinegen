@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/gitauth_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:43.233587666Z",
+  "seconds": 0.05,
+  "recorded": true,
+  "cpu_seconds": 0.9232509999999365,
+  "cpu_wall": 2.322980928,
+  "peak_mb": 119
+}

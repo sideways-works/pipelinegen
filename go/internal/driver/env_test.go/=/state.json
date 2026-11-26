@@ -1,0 +1,10 @@
+{
+  "label": "internal/driver/env_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:43.254881653Z",
+  "seconds": 2.517457667,
+  "recorded": true,
+  "cpu_seconds": 1.6538730000002033,
+  "cpu_wall": 2.517457667,
+  "peak_mb": 488
+}

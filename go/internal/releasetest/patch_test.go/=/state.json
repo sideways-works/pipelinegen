@@ -1,0 +1,10 @@
+{
+  "label": "internal/releasetest/patch_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:43.265255863Z",
+  "seconds": 13.86,
+  "recorded": true,
+  "cpu_seconds": 11.138605000000098,
+  "cpu_wall": 17.407216093,
+  "peak_mb": 549
+}

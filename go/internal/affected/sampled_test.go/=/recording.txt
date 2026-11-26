@@ -1,0 +1,26 @@
+# observed
+go:internal/affected#func:EntryTarget
+go:internal/affected#func:SampleBoundTarget
+go:internal/affected#func:SampleTarget
+go:internal/affected#func:entrySample
+go:internal/affected#func:mustRun
+go:internal/affected#func:pool
+go:internal/affected#func:sampleSuite
+go:internal/affected#func:selectSuite
+go:internal/bazel#func:SelectorLabel
+go:internal/recording#func:SetupTarget
+go:internal/sample#func:Pick
+go:internal/sample#func:groupOrder
+go:internal/sample#func:keys
+go:internal/sample#func:neediest
+go:internal/sample#func:order
+go:internal/sample#func:rank
+go:internal/sample#func:shares
+go:internal/sample#func:take
+go:internal/testenv#func:Bazel
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:defaultRoots
+go:internal/testenv#func:outputBases
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp

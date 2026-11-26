@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/plans_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T17:55:43.238294963Z",
+  "seconds": 2.28,
+  "recorded": true,
+  "cpu_seconds": 1.5710480000002462,
+  "cpu_wall": 3.7405994380000003,
+  "peak_mb": 105
+}
