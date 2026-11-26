@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/listless_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.431770552Z",
+  "seconds": 32,
+  "recorded": true,
+  "cpu_seconds": 86.83714000000009,
+  "cpu_wall": 33.314680615,
+  "peak_mb": 1224
+}

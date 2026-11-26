@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/builtplugins_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.429180585Z",
+  "seconds": 0.47,
+  "recorded": true,
+  "cpu_seconds": 1.027592000000027,
+  "cpu_wall": 0.905018029,
+  "peak_mb": 348
+}

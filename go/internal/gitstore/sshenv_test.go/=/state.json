@@ -1,0 +1,10 @@
+{
+  "label": "internal/gitstore/sshenv_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.437867768Z",
+  "seconds": 0.01,
+  "recorded": true,
+  "cpu_seconds": 0.7238019999999779,
+  "cpu_wall": 1.604325449,
+  "peak_mb": 264
+}

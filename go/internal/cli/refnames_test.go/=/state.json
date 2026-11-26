@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/refnames_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.434600832Z",
+  "seconds": 1.025838744,
+  "recorded": true,
+  "cpu_seconds": 0.5982899999999063,
+  "cpu_wall": 1.025838744,
+  "peak_mb": 350
+}

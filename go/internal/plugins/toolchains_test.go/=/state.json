@@ -1,0 +1,10 @@
+{
+  "label": "internal/plugins/toolchains_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T18:47:36.439750768Z",
+  "seconds": 0.427805122,
+  "recorded": true,
+  "cpu_seconds": 0.3771969999997964,
+  "cpu_wall": 0.427805122,
+  "peak_mb": 203
+}
