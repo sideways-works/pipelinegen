@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/narrowing_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T02:30:42.535798161Z",
+  "seconds": 0.820600226,
+  "recorded": true,
+  "cpu_seconds": 0.6038240000000314,
+  "peak_mb": 360
+}
