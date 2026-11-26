@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/batchend_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T02:32:14.998565476Z",
+  "seconds": 3.27114598,
+  "recorded": true,
+  "cpu_seconds": 4.501693999999986,
+  "peak_mb": 344
+}

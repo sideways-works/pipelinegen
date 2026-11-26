@@ -1,0 +1,9 @@
+{
+  "label": "internal/runs/auth_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T02:58:03.518601048Z",
+  "seconds": 0.03,
+  "recorded": true,
+  "cpu_seconds": 0.3773519999999735,
+  "peak_mb": 458
+}

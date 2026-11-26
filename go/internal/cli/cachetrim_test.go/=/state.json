@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/cachetrim_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T02:58:03.510787279Z",
+  "seconds": 4.15,
+  "recorded": true,
+  "cpu_seconds": 12.066622999999993,
+  "peak_mb": 672
+}

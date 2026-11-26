@@ -1,0 +1,9 @@
+{
+  "label": "internal/launch/gate_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T02:58:03.517014472Z",
+  "seconds": 5.6,
+  "recorded": true,
+  "cpu_seconds": 0.4157020000002376,
+  "peak_mb": 593
+}
