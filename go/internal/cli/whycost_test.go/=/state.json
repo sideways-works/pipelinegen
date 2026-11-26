@@ -1,0 +1,9 @@
+{
+  "label": "internal/cli/whycost_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:45:24.388910135Z",
+  "seconds": 12.281468713,
+  "recorded": true,
+  "cpu_seconds": 0.8006920000002538,
+  "peak_mb": 178
+}

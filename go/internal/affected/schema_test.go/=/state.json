@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/schema_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:34:42.213662109Z",
+  "seconds": 0.878327398,
+  "recorded": true,
+  "cpu_seconds": 0.451215000000019,
+  "peak_mb": 92
+}

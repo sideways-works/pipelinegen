@@ -1,0 +1,9 @@
+{
+  "label": "internal/bazel/groups_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:51:30.888463447Z",
+  "seconds": 40.56,
+  "recorded": true,
+  "cpu_seconds": 27.806901999999994,
+  "peak_mb": 621
+}

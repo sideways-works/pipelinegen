@@ -1,0 +1,9 @@
+{
+  "label": "internal/affected/walked_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T12:51:30.888401986Z",
+  "seconds": 0.06,
+  "recorded": true,
+  "cpu_seconds": 0.5606269999999967,
+  "peak_mb": 309
+}
