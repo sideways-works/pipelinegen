@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/sharedcause_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:28:22.962862207Z",
+  "seconds": 139.07,
+  "recorded": true,
+  "cpu_seconds": 397.90270699999996,
+  "cpu_wall": 76.803888193,
+  "peak_mb": 2819
+}

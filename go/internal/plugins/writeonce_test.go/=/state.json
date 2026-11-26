@@ -1,0 +1,10 @@
+{
+  "label": "internal/plugins/writeonce_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:28:22.967031975Z",
+  "seconds": 2.97,
+  "recorded": true,
+  "cpu_seconds": 3.5763999999999214,
+  "cpu_wall": 3.192449517,
+  "peak_mb": 406
+}

@@ -1,0 +1,10 @@
+{
+  "label": "internal/cli/pluginpins_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:28:22.961569947Z",
+  "seconds": 0.06999999999999999,
+  "recorded": true,
+  "cpu_seconds": 0.5937880000000177,
+  "cpu_wall": 0.383740047,
+  "peak_mb": 356
+}

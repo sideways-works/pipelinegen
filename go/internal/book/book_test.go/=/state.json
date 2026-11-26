@@ -1,0 +1,10 @@
+{
+  "label": "internal/book/book_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T15:28:22.958115841Z",
+  "seconds": 0.01,
+  "recorded": true,
+  "cpu_seconds": 2.6986399999999975,
+  "cpu_wall": 1.074836922,
+  "peak_mb": 334
+}
