@@ -1,0 +1,10 @@
+{
+  "label": "internal/docscheck/narrowings_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T16:56:49.111235041Z",
+  "seconds": 6.38379662,
+  "recorded": true,
+  "cpu_seconds": 16.991557,
+  "cpu_wall": 6.38379662,
+  "peak_mb": 555
+}

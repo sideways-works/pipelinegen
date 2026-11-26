@@ -1,0 +1,7 @@
+# observed
+go:internal/cli#func:reportNeeds
+go:internal/cli#func:sliceNeeds
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
