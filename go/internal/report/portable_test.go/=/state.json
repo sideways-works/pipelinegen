@@ -1,0 +1,11 @@
+{
+  "label": "internal/report/portable_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:20:56.410864969Z",
+  "seconds": 0.216498248,
+  "recorded": true,
+  "cpu_seconds": 0.4488179999998465,
+  "cpu_wall": 0.216498248,
+  "cpu_stall": 0.0008219999999994343,
+  "peak_mb": 456
+}

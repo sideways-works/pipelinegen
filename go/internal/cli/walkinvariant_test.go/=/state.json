@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/walkinvariant_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:20:56.4077769Z",
+  "seconds": 2.98,
+  "recorded": true,
+  "cpu_seconds": 4.163127999999915,
+  "cpu_wall": 3.3062054229999998,
+  "cpu_stall": 0.009927999999998605,
+  "peak_mb": 372
+}

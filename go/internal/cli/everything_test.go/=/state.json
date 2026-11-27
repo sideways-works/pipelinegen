@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/everything_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:20:56.393992077Z",
+  "seconds": 24.009999999999998,
+  "recorded": true,
+  "cpu_seconds": 51.584136,
+  "cpu_wall": 12.547367559,
+  "cpu_stall": 0.35784400000000005,
+  "peak_mb": 1079
+}

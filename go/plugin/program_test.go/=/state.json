@@ -1,0 +1,11 @@
+{
+  "label": "plugin/program_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:20:56.411255921Z",
+  "seconds": 0.132996295,
+  "recorded": true,
+  "cpu_seconds": 0.3354580000000169,
+  "cpu_wall": 0.132996295,
+  "cpu_stall": 0.0008759999999981005,
+  "peak_mb": 478
+}

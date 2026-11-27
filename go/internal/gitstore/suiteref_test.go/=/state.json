@@ -1,0 +1,11 @@
+{
+  "label": "internal/gitstore/suiteref_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:20:56.408929437Z",
+  "seconds": 0.03,
+  "recorded": true,
+  "cpu_seconds": 2.5902759999999034,
+  "cpu_wall": 1.771071422,
+  "cpu_stall": 0.006311000000000178,
+  "peak_mb": 385
+}
