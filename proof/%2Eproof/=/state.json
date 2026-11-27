@@ -1,0 +1,10 @@
+{
+  "label": "//:proof",
+  "state": "passed",
+  "updated": "2026-11-27T06:46:32.577673394Z",
+  "seconds": 399.565719384,
+  "cpu_seconds": 1716.765832,
+  "cpu_wall": 399.569325138,
+  "cpu_stall": 13.774078,
+  "peak_mb": 5270
+}
