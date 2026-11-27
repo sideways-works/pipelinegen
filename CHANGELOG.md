@@ -7,14 +7,11 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-27
+
 ### Added
 
 - `pipelinegen wait job <name>`, first in a task of a job the repository writes itself (one in `concourse.include`), and `wait job <name> --release` in its exit trap: the task waits under the top-level `memory.wait` and `cpu.wait`, asking `memory.broker`, for its `--mb` and `--cores`, else a bookkeeping step's, then starts anyway; it needs no pipeline variable, so a job outside every suite is gated as the suites are
-
-## [0.12.0] - 2026-11-26
-
-### Added
-
 - `memory.wait` makes the pipeline's own planning steps (a branch's plan, a pull request's first step) and bookkeeping steps (a batch's end, a suite's end) wait for their memory too, asking `memory.broker` when it names one, before their heavy part: each trusted run's such step records its task's peak by step, and a step expects what its recent peaks predict, else what the same command's steps of other runs use, else `memory.steps.planning` (4096 MB) or `memory.steps.bookkeeping` (1024 MB). Such a step waits at most a third of what its limit leaves, then starts anyway, since a plan or report that failed for memory would stop its run
 - `cpu.wait` (top level, or a suite's own): a batch also waits, in its wait for memory, until the worker's CPU pressure (`/proc/pressure/cpu`, the larger of `some avg10` and `avg60`) is below `cpu.pressure` (40%) and, with `memory.broker`, until the broker's cores leave room for its predicted cores: a trusted run's suite end keeps each slice's cores (its CPU seconds over its seconds) beside its peak, and a batch is predicted the most any of its slices should keep busy, else `cpu.cores` (1). The broker counts `--cpu-factor` (1.25) cores per core of its machine and holds back asks for CPU at or above `--cpu-pressure` (40%); a grant's cores are a lease of the batch's expected time half again, which a `slice run` batch releases at its end. A batch still short of CPU leaves its slices not run and says so, and under the top-level `cpu.wait` the pipeline's own steps wait for their cores (below), then start anyway. Upgrade each worker's `memory serve` before turning `cpu.wait` on: an older broker grants an ask for CPU as one for memory alone
 - `pipelinegen wait prepare` and `wait whole`, first in a suite's own prepare or whole-suite check task: under the suite's `cpu.wait` or `memory.wait` the task waits while the worker is under CPU or memory pressure, asking memory.broker when it names one, and starts anyway when its wait ends; `slice prepare` waits the same way for a suite with steps
