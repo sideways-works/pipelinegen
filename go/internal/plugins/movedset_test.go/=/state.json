@@ -1,0 +1,11 @@
+{
+  "label": "internal/plugins/movedset_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:35:44.273871747Z",
+  "seconds": 0.29,
+  "recorded": true,
+  "cpu_seconds": 9.880227999999988,
+  "cpu_wall": 2.6003562909999998,
+  "cpu_stall": 0.1294719999999998,
+  "peak_mb": 572
+}

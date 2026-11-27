@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/byunits_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:35:44.272253331Z",
+  "seconds": 34.77,
+  "recorded": true,
+  "cpu_seconds": 133.94322,
+  "cpu_wall": 43.149243814,
+  "cpu_stall": 2.526327,
+  "peak_mb": 1565
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/proof/proof_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:35:44.274021897Z",
+  "seconds": 0.21000000000000002,
+  "recorded": true,
+  "cpu_seconds": 4.9084170000000995,
+  "cpu_wall": 1.607017952,
+  "cpu_stall": 0.044482999999999606,
+  "peak_mb": 553
+}

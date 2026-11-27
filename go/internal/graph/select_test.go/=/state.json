@@ -1,0 +1,11 @@
+{
+  "label": "internal/graph/select_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:35:44.273742429Z",
+  "seconds": 0.203126047,
+  "recorded": true,
+  "cpu_seconds": 0.40349700000001576,
+  "cpu_wall": 0.203126047,
+  "cpu_stall": 0.001661000000002133,
+  "peak_mb": 364
+}

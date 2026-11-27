@@ -1,0 +1,11 @@
+{
+  "label": "internal/gitstore/gitstore_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:35:44.273661085Z",
+  "seconds": 5.34,
+  "recorded": true,
+  "cpu_seconds": 11.057992000000013,
+  "cpu_wall": 11.866860987,
+  "cpu_stall": 0.18554400000000015,
+  "peak_mb": 424
+}

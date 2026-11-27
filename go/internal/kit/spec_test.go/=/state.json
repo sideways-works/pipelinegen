@@ -1,0 +1,11 @@
+{
+  "label": "internal/kit/spec_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:35:44.273785651Z",
+  "seconds": 2.533201865,
+  "recorded": true,
+  "cpu_seconds": 10.249193999999989,
+  "cpu_wall": 2.533201865,
+  "cpu_stall": 0.1840510000000002,
+  "peak_mb": 633
+}
