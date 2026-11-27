@@ -1,12 +1,11 @@
 {
   "label": "internal/bazel/bazel_test.go",
-  "state": "not run",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
-  "updated": "2026-11-27T03:48:53.957516506Z",
-  "failures": [
-    {
-      "test": "(memory)",
-      "tail": "not run: the worker's broker found no room for its CPU: 48090 MB free less 6357 MB granted lately, pressure 0.0%, for 3357 MB asked; 14.8 of 24.0 cores granted lately, CPU pressure 10.2%, for 9.4 cores asked, 13.9 kept for \"nightly  go-whole batch 0\", waiting 59m34s, after waiting 1h0m0s"
-    }
-  ]
+  "state": "passed",
+  "updated": "2026-11-27T06:40:55.6241886Z",
+  "seconds": 15.76,
+  "recorded": true,
+  "cpu_seconds": 28.155403,
+  "cpu_wall": 17.92890113,
+  "cpu_stall": 1.025364,
+  "peak_mb": 655
 }
