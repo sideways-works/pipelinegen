@@ -1,0 +1,11 @@
+{
+  "label": "internal/report/runsuites_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:21:52.412790066Z",
+  "seconds": 2.6100000000000003,
+  "recorded": true,
+  "cpu_seconds": 4.488769999999931,
+  "cpu_wall": 4.302776648,
+  "cpu_stall": 0.061035999999999646,
+  "peak_mb": 370
+}
