@@ -1,0 +1,11 @@
+{
+  "label": "internal/graph/oracle_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:40:55.627368246Z",
+  "seconds": 0.36,
+  "recorded": true,
+  "cpu_seconds": 3.5215279999999964,
+  "cpu_wall": 1.420674729,
+  "cpu_stall": 0.04608800000000013,
+  "peak_mb": 433
+}
