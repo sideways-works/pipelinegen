@@ -1,12 +1,10 @@
 {
   "label": "example/calc/mul_test.sh",
-  "state": "not run",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-unit",
-  "updated": "2026-11-27T03:49:50.931104076Z",
-  "failures": [
-    {
-      "test": "(memory)",
-      "tail": "not run: the worker's broker found no room for its CPU: 40834 MB free less 11360 MB granted lately, pressure 0.0%, for 28 MB asked; 23.6 of 24.0 cores granted lately, CPU pressure 22.0%, for 2.0 cores asked, 2.0 kept for \"nightly  smoke batch 0\", waiting 59m10s, after waiting 1h0m0s"
-    }
-  ]
+  "state": "passed",
+  "updated": "2026-11-27T06:39:34.723439566Z",
+  "seconds": 0.004451254,
+  "cpu_seconds": 0.012554999999999983,
+  "cpu_wall": 0.009836544,
+  "cpu_stall": 0.00009200000000000001,
+  "peak_mb": 25
 }
