@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/storekeys_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T00:11:21.55888382Z",
+  "seconds": 0.304622965,
+  "recorded": true,
+  "cpu_seconds": 0.4845709999999599,
+  "cpu_wall": 0.304622965,
+  "cpu_stall": 0.002592000000007033,
+  "peak_mb": 150
+}

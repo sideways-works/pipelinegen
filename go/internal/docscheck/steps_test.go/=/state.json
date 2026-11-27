@@ -1,0 +1,11 @@
+{
+  "label": "internal/docscheck/steps_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T00:11:21.559467862Z",
+  "seconds": 0.02,
+  "recorded": true,
+  "cpu_seconds": 18.698604999999816,
+  "cpu_wall": 11.905283196,
+  "cpu_stall": 3.699855999999997,
+  "peak_mb": 531
+}

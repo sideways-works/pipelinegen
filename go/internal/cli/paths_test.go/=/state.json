@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/paths_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T00:11:21.55677298Z",
+  "seconds": 23.82,
+  "recorded": true,
+  "cpu_seconds": 24.74393500000008,
+  "cpu_wall": 24.23077818,
+  "cpu_stall": 0.30844599999998934,
+  "peak_mb": 716
+}
