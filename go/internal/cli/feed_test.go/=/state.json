@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/feed_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T23:17:15.651611082Z",
+  "seconds": 38.97,
+  "recorded": true,
+  "cpu_seconds": 9.402003000000036,
+  "cpu_wall": 40.299352934,
+  "cpu_stall": 5.007942000000014,
+  "peak_mb": 177
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/handoffssh_test.go",
+  "state": "passed",
+  "updated": "2026-11-26T23:17:15.652148496Z",
+  "seconds": 0.56,
+  "recorded": true,
+  "cpu_seconds": 1.0271750000001703,
+  "cpu_wall": 2.451856858,
+  "cpu_stall": 0.30314200000000824,
+  "peak_mb": 154
+}
