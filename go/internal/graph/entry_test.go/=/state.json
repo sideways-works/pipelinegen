@@ -1,0 +1,11 @@
+{
+  "label": "internal/graph/entry_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:35:24.245672877Z",
+  "seconds": 0.174844757,
+  "recorded": true,
+  "cpu_seconds": 0.3976790000001529,
+  "cpu_wall": 0.174844757,
+  "cpu_stall": 0.0006900000000022999,
+  "peak_mb": 375
+}

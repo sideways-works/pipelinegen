@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/stepscache_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.979985572Z",
+  "seconds": 0.06,
+  "recorded": true,
+  "cpu_seconds": 0.6644259999998212,
+  "cpu_wall": 0.380754044,
+  "cpu_stall": 0.0010239999999974714,
+  "peak_mb": 333
+}

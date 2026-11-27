@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/why_chain_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.98062902Z",
+  "seconds": 0.341255955,
+  "recorded": true,
+  "cpu_seconds": 0.5736139999999068,
+  "cpu_wall": 0.341255955,
+  "cpu_stall": 0.0008189999999999031,
+  "peak_mb": 356
+}

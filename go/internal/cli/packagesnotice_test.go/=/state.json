@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/packagesnotice_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.978456813Z",
+  "seconds": 0.316065278,
+  "recorded": true,
+  "cpu_seconds": 0.5479020000000219,
+  "cpu_wall": 0.316065278,
+  "cpu_stall": 0.0010049999999992565,
+  "peak_mb": 336
+}

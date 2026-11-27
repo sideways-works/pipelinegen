@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/mixed_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:20:56.397967926Z",
+  "seconds": 108.25,
+  "recorded": true,
+  "cpu_seconds": 270.220412,
+  "cpu_wall": 44.303889111,
+  "cpu_stall": 6.570649,
+  "peak_mb": 2901
+}

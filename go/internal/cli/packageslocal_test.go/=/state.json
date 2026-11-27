@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/packageslocal_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:20:56.401045509Z",
+  "seconds": 0.18000000000000002,
+  "recorded": true,
+  "cpu_seconds": 0.7513969999999972,
+  "cpu_wall": 0.503681929,
+  "cpu_stall": 0.0013649999999998386,
+  "peak_mb": 355
+}

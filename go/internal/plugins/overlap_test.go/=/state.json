@@ -1,0 +1,11 @@
+{
+  "label": "internal/plugins/overlap_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:19:00.446329347Z",
+  "seconds": 1.79,
+  "recorded": true,
+  "cpu_seconds": 2.4761250000001382,
+  "cpu_wall": 2.054261392,
+  "cpu_stall": 0.005931000000000353,
+  "peak_mb": 434
+}

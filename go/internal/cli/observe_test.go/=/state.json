@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/observe_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.978141601Z",
+  "seconds": 5.72,
+  "recorded": true,
+  "cpu_seconds": 7.075698000000102,
+  "cpu_wall": 6.139725952,
+  "cpu_stall": 0.012436999999998477,
+  "peak_mb": 354
+}

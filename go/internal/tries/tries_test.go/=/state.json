@@ -1,0 +1,11 @@
+{
+  "label": "internal/tries/tries_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:35:24.253832894Z",
+  "seconds": 0.465245441,
+  "recorded": true,
+  "cpu_seconds": 1.1037060000003294,
+  "cpu_wall": 0.465245441,
+  "cpu_stall": 0.0017800000000001148,
+  "peak_mb": 462
+}

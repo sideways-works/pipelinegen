@@ -1,0 +1,11 @@
+{
+  "label": "internal/gitx/harden_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:19:00.445396943Z",
+  "seconds": 0.06,
+  "recorded": true,
+  "cpu_seconds": 1.3069969999999103,
+  "cpu_wall": 0.690447639,
+  "cpu_stall": 0.021433999999999287,
+  "peak_mb": 409
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/gitstore/roundtrips_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:35:24.245151839Z",
+  "seconds": 0.04,
+  "recorded": true,
+  "cpu_seconds": 1.6604099999999562,
+  "cpu_wall": 1.284982328,
+  "cpu_stall": 0.003294000000000352,
+  "peak_mb": 384
+}

@@ -1,0 +1,11 @@
+{
+  "label": "plugin/forge_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:20:56.411234907Z",
+  "seconds": 0.160059527,
+  "recorded": true,
+  "cpu_seconds": 0.3806610000001456,
+  "cpu_wall": 0.160059527,
+  "cpu_stall": 0.0007789999999978647,
+  "peak_mb": 466
+}

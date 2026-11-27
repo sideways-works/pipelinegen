@@ -1,0 +1,11 @@
+{
+  "label": "internal/report/journal_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.983993898Z",
+  "seconds": 4.170000000000001,
+  "recorded": true,
+  "cpu_seconds": 8.425031999999646,
+  "cpu_wall": 7.316732927,
+  "cpu_stall": 0.01703499999999991,
+  "peak_mb": 442
+}

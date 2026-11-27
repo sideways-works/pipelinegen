@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/unrecorded_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:20:56.407468926Z",
+  "seconds": 0.72,
+  "recorded": true,
+  "cpu_seconds": 1.3209209999999985,
+  "cpu_wall": 1.037587344,
+  "cpu_stall": 0.020749999999999602,
+  "peak_mb": 359
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/tokenhost_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.980124842Z",
+  "seconds": 25.5,
+  "recorded": true,
+  "cpu_seconds": 2.6540899999999965,
+  "cpu_wall": 25.887415862,
+  "cpu_stall": 0.03929600000000022,
+  "peak_mb": 358
+}

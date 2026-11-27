@@ -1,0 +1,11 @@
+{
+  "label": "internal/plugins/rounds_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:19:00.446460477Z",
+  "seconds": 0.06,
+  "recorded": true,
+  "cpu_seconds": 0.4503859999999804,
+  "cpu_wall": 0.236510734,
+  "cpu_stall": 0.0012529999999983943,
+  "peak_mb": 412
+}

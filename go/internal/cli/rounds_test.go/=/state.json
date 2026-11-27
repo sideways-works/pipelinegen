@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/rounds_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.97919536Z",
+  "seconds": 22.830000000000002,
+  "recorded": true,
+  "cpu_seconds": 20.6170589999997,
+  "cpu_wall": 23.229907978,
+  "cpu_stall": 0.04503400000000113,
+  "peak_mb": 342
+}
