@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/flush_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:19:00.437542849Z",
+  "seconds": 1.18,
+  "recorded": true,
+  "cpu_seconds": 1.853968000000009,
+  "cpu_wall": 1.562513973,
+  "cpu_stall": 0.004247000000000334,
+  "peak_mb": 343
+}

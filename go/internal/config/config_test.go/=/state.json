@@ -1,0 +1,11 @@
+{
+  "label": "internal/config/config_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:19:00.443977053Z",
+  "seconds": 0.05,
+  "recorded": true,
+  "cpu_seconds": 0.4100659999999152,
+  "cpu_wall": 0.235888102,
+  "cpu_stall": 0.0008629999999989479,
+  "peak_mb": 328
+}

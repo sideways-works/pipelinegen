@@ -1,0 +1,11 @@
+{
+  "label": "internal/release/licence_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:19:00.446668799Z",
+  "seconds": 1.26406437,
+  "recorded": true,
+  "cpu_seconds": 4.185819000000038,
+  "cpu_wall": 1.26406437,
+  "cpu_stall": 0.0447679999999977,
+  "peak_mb": 600
+}

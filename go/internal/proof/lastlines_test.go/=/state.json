@@ -1,0 +1,11 @@
+{
+  "label": "internal/proof/lastlines_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:19:00.446638806Z",
+  "seconds": 0.566506309,
+  "recorded": true,
+  "cpu_seconds": 1.1395629999999528,
+  "cpu_wall": 0.566506309,
+  "cpu_stall": 0.0027720000000002187,
+  "peak_mb": 466
+}

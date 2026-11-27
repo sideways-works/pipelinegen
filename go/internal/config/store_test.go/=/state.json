@@ -1,0 +1,11 @@
+{
+  "label": "internal/config/store_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:19:00.444337314Z",
+  "seconds": 0.01,
+  "recorded": true,
+  "cpu_seconds": 0.35021099999994476,
+  "cpu_wall": 0.152492326,
+  "cpu_stall": 0.0008330000000000837,
+  "peak_mb": 345
+}
