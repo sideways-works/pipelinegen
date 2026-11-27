@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/trusted_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:02:43.8532458Z",
+  "seconds": 0.06,
+  "recorded": true,
+  "cpu_seconds": 0.5255839999999807,
+  "cpu_wall": 0.336504598,
+  "cpu_stall": 0.0014240000000000919,
+  "peak_mb": 350
+}

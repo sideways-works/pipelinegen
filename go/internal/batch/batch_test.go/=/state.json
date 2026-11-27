@@ -1,0 +1,11 @@
+{
+  "label": "internal/batch/batch_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:02:43.831379176Z",
+  "seconds": 0.108355655,
+  "recorded": true,
+  "cpu_seconds": 0.3786750000000012,
+  "cpu_wall": 0.108355655,
+  "cpu_stall": 0.0012270000000000336,
+  "peak_mb": 289
+}

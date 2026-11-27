@@ -1,0 +1,11 @@
+{
+  "label": "internal/gitstore/conform_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:02:43.858762647Z",
+  "seconds": 4.449999999999999,
+  "recorded": true,
+  "cpu_seconds": 16.72440800000004,
+  "cpu_wall": 8.84407081,
+  "cpu_stall": 0.10766300000000228,
+  "peak_mb": 383
+}

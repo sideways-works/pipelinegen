@@ -1,0 +1,11 @@
+{
+  "label": "internal/report/levels_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:02:43.862955968Z",
+  "seconds": 0.203135874,
+  "recorded": true,
+  "cpu_seconds": 0.40152000000034604,
+  "cpu_wall": 0.203135874,
+  "cpu_stall": 0.0017029999999920165,
+  "peak_mb": 407
+}
