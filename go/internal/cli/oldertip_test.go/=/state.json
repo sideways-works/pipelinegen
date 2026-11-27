@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/oldertip_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.341812547Z",
+  "seconds": 0.62,
+  "recorded": true,
+  "cpu_seconds": 1.2648819999999432,
+  "cpu_wall": 0.950533003,
+  "cpu_stall": 0.0029839999999996536,
+  "peak_mb": 334
+}

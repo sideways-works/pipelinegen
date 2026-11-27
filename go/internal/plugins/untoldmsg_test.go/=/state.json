@@ -1,0 +1,11 @@
+{
+  "label": "internal/plugins/untoldmsg_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.361996917Z",
+  "seconds": 0.12,
+  "recorded": true,
+  "cpu_seconds": 0.5180569999999989,
+  "cpu_wall": 0.318518235,
+  "cpu_stall": 0.0014780000000005344,
+  "peak_mb": 423
+}

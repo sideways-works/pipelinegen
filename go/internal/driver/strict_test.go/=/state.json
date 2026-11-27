@@ -1,0 +1,11 @@
+{
+  "label": "internal/driver/strict_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.356843943Z",
+  "seconds": 10.23,
+  "recorded": true,
+  "cpu_seconds": 0.8266180000000531,
+  "cpu_wall": 10.371349524,
+  "cpu_stall": 0.014174999999999827,
+  "peak_mb": 353
+}

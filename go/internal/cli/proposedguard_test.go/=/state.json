@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/proposedguard_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.346154358Z",
+  "seconds": 0.347196817,
+  "recorded": true,
+  "cpu_seconds": 0.5509789999998702,
+  "cpu_wall": 0.347196817,
+  "cpu_stall": 0.0010659999999997893,
+  "peak_mb": 325
+}
