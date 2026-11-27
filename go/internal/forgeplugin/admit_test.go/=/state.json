@@ -1,0 +1,11 @@
+{
+  "label": "internal/forgeplugin/admit_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:35:24.24453451Z",
+  "seconds": 0.957771429,
+  "recorded": true,
+  "cpu_seconds": 2.496422000000166,
+  "cpu_wall": 0.957771429,
+  "cpu_stall": 0.004008999999999929,
+  "peak_mb": 398
+}

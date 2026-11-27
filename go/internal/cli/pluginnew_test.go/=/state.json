@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/pluginnew_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:35:24.228660848Z",
+  "seconds": 1.27,
+  "recorded": true,
+  "cpu_seconds": 2.0215039999998226,
+  "cpu_wall": 1.6119610450000001,
+  "cpu_stall": 0.003261999999999432,
+  "peak_mb": 339
+}
