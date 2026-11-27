@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/slice_plugins_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.55826529Z",
+  "seconds": 52.91,
+  "recorded": true,
+  "cpu_seconds": 32.88580700000011,
+  "cpu_wall": 10.541804329,
+  "cpu_stall": 0.17273699999999792,
+  "peak_mb": 405
+}

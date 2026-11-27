@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/memmeasure_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.554595625Z",
+  "seconds": 5.76,
+  "recorded": true,
+  "cpu_seconds": 5.726032999999916,
+  "cpu_wall": 6.134193458,
+  "cpu_stall": 0.011199000000004844,
+  "peak_mb": 333
+}

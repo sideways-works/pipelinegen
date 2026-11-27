@@ -1,0 +1,11 @@
+{
+  "label": "internal/gitstore/seed_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.56301544Z",
+  "seconds": 1.8599999999999999,
+  "recorded": true,
+  "cpu_seconds": 8.216450999999779,
+  "cpu_wall": 6.387220974,
+  "cpu_stall": 0.01116299999999626,
+  "peak_mb": 378
+}

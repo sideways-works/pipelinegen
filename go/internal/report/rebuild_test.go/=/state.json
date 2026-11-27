@@ -1,0 +1,11 @@
+{
+  "label": "internal/report/rebuild_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.567405553Z",
+  "seconds": 0.216328454,
+  "recorded": true,
+  "cpu_seconds": 0.4759089999997741,
+  "cpu_wall": 0.216328454,
+  "cpu_stall": 0.0009230000000002292,
+  "peak_mb": 410
+}

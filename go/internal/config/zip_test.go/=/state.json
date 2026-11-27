@@ -1,0 +1,11 @@
+{
+  "label": "internal/config/zip_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.561077497Z",
+  "seconds": 0.02,
+  "recorded": true,
+  "cpu_seconds": 0.3234130000000732,
+  "cpu_wall": 0.158543399,
+  "cpu_stall": 0.003008000000001232,
+  "peak_mb": 339
+}

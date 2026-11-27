@@ -1,0 +1,11 @@
+{
+  "label": "internal/progress/progress_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.566034548Z",
+  "seconds": 0.2,
+  "recorded": true,
+  "cpu_seconds": 0.49867900000026566,
+  "cpu_wall": 0.158009448,
+  "cpu_stall": 0.0009580000000042332,
+  "peak_mb": 389
+}

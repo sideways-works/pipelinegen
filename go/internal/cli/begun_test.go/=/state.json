@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/begun_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.549751941Z",
+  "seconds": 13.249999999999998,
+  "recorded": true,
+  "cpu_seconds": 5.608783000000017,
+  "cpu_wall": 13.610436388,
+  "cpu_stall": 0.01892299999999958,
+  "peak_mb": 334
+}

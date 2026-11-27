@@ -1,0 +1,11 @@
+{
+  "label": "internal/forgeplugin/fetchpath_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.561912406Z",
+  "seconds": 1.142934856,
+  "recorded": true,
+  "cpu_seconds": 2.4568960000001425,
+  "cpu_wall": 1.142934856,
+  "cpu_stall": 0.005403999999998632,
+  "peak_mb": 409
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/report/attach_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.566306299Z",
+  "seconds": 5.109999999999999,
+  "recorded": true,
+  "cpu_seconds": 7.305378999999903,
+  "cpu_wall": 7.594115644,
+  "cpu_stall": 0.01690500000000128,
+  "peak_mb": 422
+}

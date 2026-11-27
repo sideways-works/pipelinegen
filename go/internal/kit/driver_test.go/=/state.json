@@ -1,0 +1,11 @@
+{
+  "label": "internal/kit/driver_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.563745672Z",
+  "seconds": 2.7199999999999998,
+  "recorded": true,
+  "cpu_seconds": 3.263214000000062,
+  "cpu_wall": 3.083137281,
+  "cpu_stall": 0.0073419999999941865,
+  "peak_mb": 401
+}
