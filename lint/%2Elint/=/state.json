@@ -1,0 +1,10 @@
+{
+  "label": "//:lint",
+  "state": "passed",
+  "updated": "2026-11-27T06:55:35.368505808Z",
+  "seconds": 52.937637261,
+  "cpu_seconds": 317.65756799999997,
+  "cpu_wall": 52.94215928,
+  "cpu_stall": 9.473887,
+  "peak_mb": 1849
+}

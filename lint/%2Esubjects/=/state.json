@@ -1,0 +1,10 @@
+{
+  "label": "//:subjects",
+  "state": "passed",
+  "updated": "2026-11-27T06:55:35.368653697Z",
+  "seconds": 0.440529337,
+  "cpu_seconds": 0.9914839999999572,
+  "cpu_wall": 0.443676475,
+  "cpu_stall": 0.10399099999999883,
+  "peak_mb": 949
+}
