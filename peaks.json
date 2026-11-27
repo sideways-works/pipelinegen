@@ -1,0 +1,150 @@
+{
+  "slices": {
+    "internal/gitssh/gitssh_test.go": [
+      {
+        "mb": 32,
+        "commit": "6bd471a53a9f"
+      },
+      {
+        "mb": 169,
+        "commit": "81bb76cb8095"
+      },
+      {
+        "mb": 246,
+        "commit": "3827ace4f223"
+      },
+      {
+        "mb": 159,
+        "commit": "6da03bc13bed",
+        "cores": 2.346328571428557
+      },
+      {
+        "mb": 126,
+        "commit": "ed7914e93204",
+        "cores": 12.633771428571423
+      },
+      {
+        "mb": 113,
+        "commit": "f42627679984",
+        "cores": 3.1835680466415646
+      },
+      {
+        "mb": 106,
+        "commit": "6acb36a64ec4",
+        "cores": 2.6863291925758337
+      },
+      {
+        "mb": 124,
+        "commit": "22b17f9a51e1",
+        "cores": 0.058376622812331136
+      },
+      {
+        "mb": 159,
+        "commit": "f42e5fcfdf61"
+      },
+      {
+        "mb": 217,
+        "commit": "22ea6677d7a0",
+        "cores": 2.666502559727198
+      }
+    ],
+    "internal/gitstore/storetest/daemon_test.go": [
+      {
+        "mb": 13,
+        "commit": "6bd471a53a9f"
+      },
+      {
+        "mb": 156,
+        "commit": "81bb76cb8095"
+      },
+      {
+        "mb": 148,
+        "commit": "3827ace4f223"
+      },
+      {
+        "mb": 154,
+        "commit": "6da03bc13bed",
+        "cores": 0.766750000000016
+      },
+      {
+        "mb": 105,
+        "commit": "ed7914e93204",
+        "cores": 0.03184999999998883
+      },
+      {
+        "mb": 93,
+        "commit": "f42627679984",
+        "cores": 0.6236697685251696
+      },
+      {
+        "mb": 94,
+        "commit": "6acb36a64ec4",
+        "cores": 0.035959026375579205
+      },
+      {
+        "mb": 105,
+        "commit": "22b17f9a51e1",
+        "cores": 0.0074653309007920105
+      },
+      {
+        "mb": 157,
+        "commit": "f42e5fcfdf61",
+        "cores": 1.3015476465892521
+      },
+      {
+        "mb": 180,
+        "commit": "22ea6677d7a0",
+        "cores": 1.2341747635133715
+      }
+    ],
+    "internal/scratch/scratch_test.go": [
+      {
+        "mb": 12,
+        "commit": "6bd471a53a9f"
+      },
+      {
+        "mb": 149,
+        "commit": "81bb76cb8095"
+      },
+      {
+        "mb": 148,
+        "commit": "3827ace4f223"
+      },
+      {
+        "mb": 150,
+        "commit": "6da03bc13bed",
+        "cores": 0.24030000000010432
+      },
+      {
+        "mb": 105,
+        "commit": "ed7914e93204",
+        "cores": 0.12369999999997106
+      },
+      {
+        "mb": 94,
+        "commit": "f42627679984",
+        "cores": 1.0508968833585164
+      },
+      {
+        "mb": 94,
+        "commit": "6acb36a64ec4",
+        "cores": 0.021867031481094708
+      },
+      {
+        "mb": 105,
+        "commit": "22b17f9a51e1",
+        "cores": 0.023187481464915536
+      },
+      {
+        "mb": 155,
+        "commit": "f42e5fcfdf61",
+        "cores": 0.30056478484037547
+      },
+      {
+        "mb": 151,
+        "commit": "22ea6677d7a0",
+        "cores": 0.21633318454965814
+      }
+    ]
+  }
+}
