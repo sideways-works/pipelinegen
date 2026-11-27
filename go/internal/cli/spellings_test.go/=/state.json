@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/spellings_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:21:52.411048886Z",
+  "seconds": 0.300018789,
+  "recorded": true,
+  "cpu_seconds": 0.46085900000002766,
+  "cpu_wall": 0.300018789,
+  "cpu_stall": 0.001862999999999282,
+  "peak_mb": 357
+}

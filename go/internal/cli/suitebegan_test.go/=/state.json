@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/suitebegan_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:21:52.411129045Z",
+  "seconds": 4.31,
+  "recorded": true,
+  "cpu_seconds": 4.970440999999994,
+  "cpu_wall": 4.609858237,
+  "cpu_stall": 0.016513999999999918,
+  "peak_mb": 361
+}

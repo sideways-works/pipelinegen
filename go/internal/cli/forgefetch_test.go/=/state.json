@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/forgefetch_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:27:01.069320662Z",
+  "seconds": 1,
+  "recorded": true,
+  "cpu_seconds": 0.996374000000003,
+  "cpu_wall": 1.338405865,
+  "cpu_stall": 0.0070030000000000925,
+  "peak_mb": 349
+}

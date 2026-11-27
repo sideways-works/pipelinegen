@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/help_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:19:46.851666507Z",
+  "seconds": 0.08,
+  "recorded": true,
+  "cpu_seconds": 0.573978000000011,
+  "cpu_wall": 0.390824201,
+  "cpu_stall": 0.010308999999999457,
+  "peak_mb": 338
+}
