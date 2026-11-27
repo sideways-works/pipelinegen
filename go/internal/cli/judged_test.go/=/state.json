@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/judged_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:21:41.5472382Z",
+  "seconds": 0.05,
+  "recorded": true,
+  "cpu_seconds": 0.571793999999997,
+  "cpu_wall": 0.37666522,
+  "cpu_stall": 0.004591000000000012,
+  "peak_mb": 398
+}

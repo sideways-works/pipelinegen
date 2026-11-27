@@ -1,0 +1,11 @@
+{
+  "label": "internal/lists/marks_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:21:41.550316676Z",
+  "seconds": 1.6,
+  "recorded": true,
+  "cpu_seconds": 3.7276180000000068,
+  "cpu_wall": 3.025615068,
+  "cpu_stall": 0.015454000000000079,
+  "peak_mb": 454
+}

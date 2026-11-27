@@ -1,0 +1,11 @@
+{
+  "label": "internal/plugins/typed_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:21:41.551696977Z",
+  "seconds": 1.11,
+  "recorded": true,
+  "cpu_seconds": 1.5730159999999387,
+  "cpu_wall": 1.27851924,
+  "cpu_stall": 0.01054700000000075,
+  "peak_mb": 430
+}
