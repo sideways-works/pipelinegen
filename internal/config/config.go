@@ -644,6 +644,9 @@ const (
 	// StepWhole is a suite's whole-suite check which, as its prepare (StepPrepare), waits under its
 	// suite's own memory.wait and cpu.wait.
 	StepWhole = "whole"
+	// StepJob is a task of a job the repository writes itself, outside every suite: it waits under the
+	// top-level memory.wait and cpu.wait, for a bookkeeping step's memory and cores unless it says more.
+	StepJob = "job"
 
 	defaultPlanningMB    = 4096
 	defaultBookkeepingMB = 1024

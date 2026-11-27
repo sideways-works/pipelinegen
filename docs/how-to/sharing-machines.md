@@ -239,7 +239,11 @@ cores the suite's recorded prepares used, else `cpu.steps.prepare` (2) or
 them at its end and keeps what it used; `wait`, which ends before the
 task's work, keeps nothing, and the task releases its cores in its exit
 trap with `wait <kind> --release`, since the worker keeps a finished
-task's container a while and the broker's probe sees it there. Once the suites that run heavy batches
+task's container a while and the broker's probe sees it there. A task of
+a job the repository writes itself, outside every suite, waits the same way
+under the top-level gate by calling `tools/pipelinegen wait job <name>`
+first, for its `--mb` and `--cores` or a bookkeeping step's, and
+`wait job <name> --release` in its exit trap. Once the suites that run heavy batches
 wait for CPU as well as memory, Concourse's task limit can rise further:
 pipelinegen then holds a batch back when the worker is busy, whichever
 runs short.

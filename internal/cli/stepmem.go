@@ -42,6 +42,7 @@ var stepLeases = map[string]time.Duration{
 	config.StepBookkeeping: 5 * time.Minute,
 	config.StepPrepare:     30 * time.Minute,
 	config.StepWhole:       30 * time.Minute,
+	config.StepJob:         10 * time.Minute,
 }
 
 const (
@@ -69,6 +70,9 @@ type stepMemory struct {
 	// record is whether the step may keep what it used: a trusted run's step, holding the store's
 	// writing key.
 	record bool
+	// mb and cores are what a job's task asks for by its own flags; 0 is its kind's default.
+	mb    int64
+	cores float64
 }
 
 // stepWait is how long a step may wait for its memory: a share of what its deadline leaves, at most
@@ -162,15 +166,20 @@ func (s stepMemory) need(uses map[string]report.StepUse, now, deadline time.Time
 		n.mbWhy += " recent peaks"
 	case s.suiteTask():
 		n.mbWhy = "with no peaks recorded yet"
+	case s.mb > 0:
+		n.mb, n.mbWhy = s.mb, "its --mb"
 	default:
-		n.mb, n.mbWhy = s.cfg.StepMemoryMB(s.kind), "memory.steps."+s.kind+", with no peaks recorded yet"
+		n.mb, n.mbWhy = s.cfg.StepMemoryMB(s.defaults()), "memory.steps."+s.defaults()+", with no peaks recorded yet"
 	}
 
 	n.cores, n.coresWhy = recent(s, uses, func(u report.StepUse) []float64 { return u.Cores }, memory.PredictCores)
-	if n.cores > 0 {
+	switch {
+	case n.cores > 0:
 		n.coresWhy += " recent cores"
-	} else {
-		n.cores, n.coresWhy = s.cfg.StepCores(s.kind), "cpu.steps."+s.kind+", with no cores recorded yet"
+	case s.cores > 0:
+		n.cores, n.coresWhy = s.cores, "its --cores"
+	default:
+		n.cores, n.coresWhy = s.cfg.StepCores(s.defaults()), "cpu.steps."+s.defaults()+", with no cores recorded yet"
 	}
 
 	n.lease = stepLeases[s.kind]
@@ -221,7 +230,7 @@ func (s stepMemory) uses(ctx context.Context, log io.Writer) map[string]report.S
 // granted the step cores, which its end releases.
 func (s stepMemory) admit(ctx context.Context, log io.Writer) bool {
 	waitsForMemory, waitsForCPU := s.cfg.WaitsForMemory(s.suite), s.waitsForCPU()
-	if !s.suiteTask() && !secret.InPipeline() || !waitsForMemory && !waitsForCPU {
+	if !s.taskWait() && !secret.InPipeline() || !waitsForMemory && !waitsForCPU {
 		return false
 	}
 
@@ -507,6 +516,29 @@ func (s *step) prepareMemory(suite string) stepMemory {
 // whatever its environment says, since its callers leave out a run on this machine.
 func (s stepMemory) suiteTask() bool {
 	return s.kind == config.StepPrepare || s.kind == config.StepWhole
+}
+
+// defaults is the kind whose memory.steps and cpu.steps the step asks for with nothing recorded: a job's
+// task asks for a bookkeeping step's.
+func (s stepMemory) defaults() string {
+	if s.kind == config.StepJob {
+		return config.StepBookkeeping
+	}
+
+	return s.kind
+}
+
+// taskWait is whether the step is a task's own wait: a suite's prepare or check, or a job's task, which
+// waits wherever it runs, as its task calls it only in a pipeline.
+func (s stepMemory) taskWait() bool {
+	return s.suiteTask() || s.kind == config.StepJob
+}
+
+// jobStepMemory is the wait of the task name of a job the repository writes itself: under the top-level
+// memory.wait or cpu.wait it waits for mb and cores, else a bookkeeping step's defaults, then starts
+// anyway. As a task file's wait it reads and keeps none.
+func jobStepMemory(cfg *config.Config, name string, mb int64, cores float64) stepMemory {
+	return stepMemory{cfg: cfg, kind: config.StepJob, step: config.StepJob + " " + name, mb: mb, cores: cores}
 }
 
 // suiteStepMemory is the wait of a suite's prepare or whole-suite check, kind: under the suite's

@@ -964,10 +964,25 @@ The argument is the task's kind: `prepare` or `whole`. The task declares
 `tools` as an input, and gets `PIPELINEGEN_RUN` and `PIPELINEGEN_SUITE`
 from the pipeline.
 
+A task of a job the repository writes itself, outside every suite (one in
+`concourse.include`, say), waits with `wait job <name>`, the name its own
+among the broker's grants (letters, digits and `. _ -`). It waits under the
+top-level `memory.wait` and `cpu.wait`, asking `memory.broker`, for
+`--mb` and `--cores`, else a bookkeeping step's `memory.steps.bookkeeping`
+(1024 MB) and `cpu.steps.bookkeeping` (0.5), its cores leased for 10
+minutes; it needs no pipeline variable, and keeps nothing:
+
+```sh
+trap 'tools/pipelinegen wait job rewire --release --root repo || true' EXIT
+tools/pipelinegen wait job rewire --cores 2 --root repo || true
+```
+
 | Flag | Default | What it does |
 |---|---|---|
 | `--release` | `false` | Hands back the cores the worker's broker granted the task's wait, in the task's exit trap; it waits for nothing. |
 | `--root` | `source` | The tree whose `pipelinegen.yaml` it reads. |
+| `--mb` | `0` | `wait job`: the memory the task waits for, in MB; 0 is `memory.steps.bookkeeping`'s. |
+| `--cores` | `0` | `wait job`: the cores the task waits for; 0 is `cpu.steps.bookkeeping`'s. |
 | `--config` | `<root>/pipelinegen.yaml` | The config file, when it is elsewhere. |
 
 ## `pipelinegen help`

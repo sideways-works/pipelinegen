@@ -18,6 +18,7 @@ import (
 	"github.com/sideways-works/pipelinegen/internal/membroker"
 	"github.com/sideways-works/pipelinegen/internal/memory"
 	"github.com/sideways-works/pipelinegen/internal/report"
+	"github.com/sideways-works/pipelinegen/internal/secret"
 )
 
 // fakeMemory points the memory's reading at files of the test's, read every few milliseconds, with
@@ -731,6 +732,70 @@ func TestAPreparesWaitReleasesItsCoresAtTheTasksEnd(t *testing.T) {
 
 	if ans, err := membroker.Ask(t.Context(), addr, next); err != nil || !ans.Granted {
 		t.Fatalf("a batch once the prepare released its cores: %+v %v", ans, err)
+	}
+}
+
+// A job's task outside every suite, with nothing naming a suite, a run or a step of the pipeline's own,
+// asks the broker under the top-level gate: a bookkeeping step's memory and cores, or what its flags say,
+// and hands the cores back in its exit trap.
+func TestAJobsTaskAsksTheBrokerAndReleasesItsCores(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		flags []string
+		mb    int64
+		// cores is the job's: a next ask for the rest of the 4 cores and a little more is refused
+		cores float64
+	}{
+		{"its kind's defaults", nil, 1024, 0.5},
+		{"its flags", []string{"--mb", "300", "--cores", "3"}, 300, 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, v := range []string{envSuite, envRun, envCommit, envDeadline, secret.PipelineStepVar, "PIPELINEGEN_JOB_URL"} {
+				t.Setenv(v, "")
+			}
+
+			root := t.TempDir()
+			mem := fakeMemory(t, 8000, 50*time.Millisecond)
+			setCPUPressure(t, mem, 0)
+
+			addr := startCPUBroker(t, time.Minute, 4)
+			writeFile(t, filepath.Join(root, config.FileName), reportConfig+"cpu: {wait: true}\nmemory: {wait: true, broker: \""+addr+"\"}\n")
+
+			args := append([]string{"wait", "job", "message"}, tc.flags...)
+			if _, stderr, code := run(t, append(args, "-root", root)...); code != 0 {
+				t.Fatalf("wait job: %d %s", code, stderr)
+			}
+
+			over := membroker.Request{MB: 100, WaitSeconds: 0.3, Who: "next", CPU: true, Cores: 4 - tc.cores + 0.25}
+			if ans, err := membroker.Ask(t.Context(), addr, over); err != nil || ans.Granted {
+				t.Fatalf("a batch beside the job's %.1f cores of 4: %+v %v", tc.cores, ans, err)
+			}
+
+			fits := membroker.Request{MB: 100, WaitSeconds: 1, Who: "fits", CPU: true, Cores: 4 - tc.cores}
+
+			ans, err := membroker.Ask(t.Context(), addr, fits)
+			if err != nil || !ans.Granted || ans.HeldMB != tc.mb+100 {
+				t.Fatalf("a batch beside the job's %d MB and %.1f cores: %+v %v", tc.mb, tc.cores, ans, err)
+			}
+
+			if _, stderr, code := run(t, "wait", "job", "message", "--release", "-root", root); code != 0 {
+				t.Fatalf("wait job --release: %d %s", code, stderr)
+			}
+
+			// the job's cores are back: the 4 cores less fits's leave the job's own and no more
+			back := membroker.Request{MB: 100, WaitSeconds: 1, Who: "back", CPU: true, Cores: tc.cores}
+			if ans, err := membroker.Ask(t.Context(), addr, back); err != nil || !ans.Granted {
+				t.Fatalf("a batch once the job released its cores: %+v %v", ans, err)
+			}
+		})
+	}
+}
+
+func TestWaitJobRefusesABadName(t *testing.T) {
+	for _, args := range [][]string{{"wait", "job"}, {"wait", "job", "a b"}, {"wait", "job", "../x"}, {"wait", "job", "x", "--cores", "-1"}, {"wait", "prepare", "--cores", "2"}} {
+		if _, _, code := run(t, args...); code != 2 {
+			t.Fatalf("%v: exit %d, want the usage's 2", args, code)
+		}
 	}
 }
 

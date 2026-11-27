@@ -7,6 +7,10 @@ minor version may change the config or the protocol.
 
 ## [Unreleased]
 
+### Added
+
+- `pipelinegen wait job <name>`, first in a task of a job the repository writes itself (one in `concourse.include`), and `wait job <name> --release` in its exit trap: the task waits under the top-level `memory.wait` and `cpu.wait`, asking `memory.broker`, for its `--mb` and `--cores`, else a bookkeeping step's, then starts anyway; it needs no pipeline variable, so a job outside every suite is gated as the suites are
+
 ## [0.12.0] - 2026-11-26
 
 ### Added
