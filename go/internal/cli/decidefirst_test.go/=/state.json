@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/decidefirst_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:27:01.0689223Z",
+  "seconds": 2.12,
+  "recorded": true,
+  "cpu_seconds": 2.8906089999999836,
+  "cpu_wall": 2.465951527,
+  "cpu_stall": 0.005041999999999547,
+  "peak_mb": 340
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/carriedrounds_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:27:01.068583313Z",
+  "seconds": 96.51,
+  "recorded": true,
+  "cpu_seconds": 330.047442,
+  "cpu_wall": 97.329568511,
+  "cpu_stall": 4.395881,
+  "peak_mb": 1175
+}
