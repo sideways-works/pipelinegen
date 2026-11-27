@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/stopbazel_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.350837762Z",
+  "seconds": 15.58,
+  "recorded": true,
+  "cpu_seconds": 58.28142200000002,
+  "cpu_wall": 15.918109938,
+  "cpu_stall": 0.2761250000000004,
+  "peak_mb": 1172
+}

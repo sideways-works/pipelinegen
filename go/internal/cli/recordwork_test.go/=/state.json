@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/recordwork_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.346473208Z",
+  "seconds": 7.63,
+  "recorded": true,
+  "cpu_seconds": 8.930591999999933,
+  "cpu_wall": 8.033072382,
+  "cpu_stall": 0.015378999999999365,
+  "peak_mb": 368
+}

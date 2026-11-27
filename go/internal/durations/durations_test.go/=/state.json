@@ -1,0 +1,11 @@
+{
+  "label": "internal/durations/durations_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:02:43.858617923Z",
+  "seconds": 0.812474902,
+  "recorded": true,
+  "cpu_seconds": 2.303816000000097,
+  "cpu_wall": 0.812474902,
+  "cpu_stall": 0.004659999999994113,
+  "peak_mb": 392
+}

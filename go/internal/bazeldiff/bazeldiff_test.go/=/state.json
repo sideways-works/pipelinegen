@@ -1,0 +1,11 @@
+{
+  "label": "internal/bazeldiff/bazeldiff_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.334089844Z",
+  "seconds": 12.6,
+  "recorded": true,
+  "cpu_seconds": 60.15709199999998,
+  "cpu_wall": 14.956527648,
+  "cpu_stall": 0.30245500000000003,
+  "peak_mb": 1157
+}

@@ -1,0 +1,11 @@
+{
+  "label": "plugin/kinds_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.569375754Z",
+  "seconds": 0.219202714,
+  "recorded": true,
+  "cpu_seconds": 0.31361199999992095,
+  "cpu_wall": 0.219202714,
+  "cpu_stall": 0.0007200000000011642,
+  "peak_mb": 420
+}

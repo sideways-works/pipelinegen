@@ -1,0 +1,11 @@
+{
+  "label": "internal/report/planonce_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.365118625Z",
+  "seconds": 0.75,
+  "recorded": true,
+  "cpu_seconds": 2.460735999999997,
+  "cpu_wall": 1.479818649,
+  "cpu_stall": 0.005463999999999913,
+  "peak_mb": 523
+}

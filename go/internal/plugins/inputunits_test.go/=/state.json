@@ -1,0 +1,11 @@
+{
+  "label": "internal/plugins/inputunits_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.56490828Z",
+  "seconds": 2.52,
+  "recorded": true,
+  "cpu_seconds": 3.3491469999999026,
+  "cpu_wall": 2.768283094,
+  "cpu_stall": 0.007470000000004973,
+  "peak_mb": 411
+}

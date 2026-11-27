@@ -1,0 +1,11 @@
+{
+  "label": "plugin/settings_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.367717811Z",
+  "seconds": 0.192067849,
+  "recorded": true,
+  "cpu_seconds": 0.27925600000003215,
+  "cpu_wall": 0.192067849,
+  "cpu_stall": 0.018477000000000743,
+  "peak_mb": 536
+}

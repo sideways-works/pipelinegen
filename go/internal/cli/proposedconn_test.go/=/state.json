@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/proposedconn_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:36:25.557420731Z",
+  "seconds": 0.08,
+  "recorded": true,
+  "cpu_seconds": 0.6148760000000948,
+  "cpu_wall": 0.411089809,
+  "cpu_stall": 0.0011870000000016034,
+  "peak_mb": 332
+}

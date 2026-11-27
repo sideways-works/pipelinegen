@@ -1,0 +1,11 @@
+{
+  "label": "internal/testenv/bazel_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:02:43.864004428Z",
+  "seconds": 0.05,
+  "recorded": true,
+  "cpu_seconds": 0.48608799999965413,
+  "cpu_wall": 0.399894786,
+  "cpu_stall": 0.08065999999999462,
+  "peak_mb": 430
+}

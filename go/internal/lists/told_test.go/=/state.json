@@ -1,0 +1,11 @@
+{
+  "label": "internal/lists/told_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.359942069Z",
+  "seconds": 1.194698201,
+  "recorded": true,
+  "cpu_seconds": 4.140573000000131,
+  "cpu_wall": 1.194698201,
+  "cpu_stall": 0.021734999999999616,
+  "peak_mb": 452
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/outward_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:02:43.839582889Z",
+  "seconds": 56.53,
+  "recorded": true,
+  "cpu_seconds": 142.76046700000006,
+  "cpu_wall": 57.616368778,
+  "cpu_stall": 2.720952000000004,
+  "peak_mb": 1500
+}

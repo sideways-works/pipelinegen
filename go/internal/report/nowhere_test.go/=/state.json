@@ -1,0 +1,11 @@
+{
+  "label": "internal/report/nowhere_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:02:43.863036063Z",
+  "seconds": 3.12,
+  "recorded": true,
+  "cpu_seconds": 4.679201999999805,
+  "cpu_wall": 4.757069325,
+  "cpu_stall": 0.013247999999990157,
+  "peak_mb": 427
+}

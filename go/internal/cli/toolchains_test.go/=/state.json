@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/toolchains_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.352667797Z",
+  "seconds": 0.317495147,
+  "recorded": true,
+  "cpu_seconds": 0.5333789999999681,
+  "cpu_wall": 0.317495147,
+  "cpu_stall": 0.0010580000000004475,
+  "peak_mb": 333
+}

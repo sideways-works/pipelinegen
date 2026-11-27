@@ -1,0 +1,12 @@
+{
+  "label": "internal/gitstore/suiteref_test.go",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
+  "updated": "2026-11-27T03:48:53.957530437Z",
+  "failures": [
+    {
+      "test": "(memory)",
+      "tail": "not run: the worker's broker found no room for its CPU: 48090 MB free less 6357 MB granted lately, pressure 0.0%, for 3357 MB asked; 14.8 of 24.0 cores granted lately, CPU pressure 10.2%, for 9.4 cores asked, 13.9 kept for \"nightly  go-whole batch 0\", waiting 59m34s, after waiting 1h0m0s"
+    }
+  ]
+}

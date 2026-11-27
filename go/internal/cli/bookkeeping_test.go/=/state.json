@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/bookkeeping_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T03:46:12.334459617Z",
+  "seconds": 0.07,
+  "recorded": true,
+  "cpu_seconds": 3.5016769999999724,
+  "cpu_wall": 1.719046508,
+  "cpu_stall": 0.005120999999999931,
+  "peak_mb": 346
+}
