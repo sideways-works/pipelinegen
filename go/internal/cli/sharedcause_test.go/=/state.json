@@ -1,12 +1,11 @@
 {
   "label": "internal/cli/sharedcause_test.go",
-  "state": "not run",
-  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go",
-  "updated": "2026-11-27T03:48:53.95752487Z",
-  "failures": [
-    {
-      "test": "(memory)",
-      "tail": "not run: the worker's broker found no room for its CPU: 48090 MB free less 6357 MB granted lately, pressure 0.0%, for 3357 MB asked; 14.8 of 24.0 cores granted lately, CPU pressure 10.2%, for 9.4 cores asked, 13.9 kept for \"nightly  go-whole batch 0\", waiting 59m34s, after waiting 1h0m0s"
-    }
-  ]
+  "state": "passed",
+  "updated": "2026-11-27T06:21:41.548387737Z",
+  "seconds": 157.8,
+  "recorded": true,
+  "cpu_seconds": 404.44100000000003,
+  "cpu_wall": 83.493678843,
+  "cpu_stall": 10.25891,
+  "peak_mb": 2905
 }
