@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/carried_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:42:35.686926154Z",
+  "seconds": 16.87,
+  "recorded": true,
+  "cpu_seconds": 2.266533,
+  "cpu_wall": 17.519927701,
+  "cpu_stall": 0.063727,
+  "peak_mb": 270
+}
