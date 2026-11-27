@@ -1,0 +1,7 @@
+go:internal/tries#func:HardEnd
+go:internal/tries#func:Of
+go:internal/tries#method:Run.Again
+go:internal/tries#method:Run.Err
+go:internal/tries#method:Run.jittered
+go:internal/tries#method:Run.spent
+go:internal/tries#method:Run.wait
