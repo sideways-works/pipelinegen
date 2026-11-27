@@ -1,0 +1,11 @@
+{
+  "label": "internal/check/packages_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:41:33.637237068Z",
+  "seconds": 1.620224462,
+  "recorded": true,
+  "cpu_seconds": 3.910947,
+  "cpu_wall": 1.620224462,
+  "cpu_stall": 0.034489,
+  "peak_mb": 250
+}
