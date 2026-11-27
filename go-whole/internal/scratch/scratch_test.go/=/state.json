@@ -1,0 +1,10 @@
+{
+  "label": "internal/scratch/scratch_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T04:40:07.414921239Z",
+  "seconds": 0.01,
+  "cpu_seconds": 0.0039720000000045275,
+  "cpu_wall": 0.013215121,
+  "cpu_stall": 0.0019580000000001263,
+  "peak_mb": 155
+}
