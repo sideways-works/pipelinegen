@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/learn_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.976698179Z",
+  "seconds": 0.07,
+  "recorded": true,
+  "cpu_seconds": 0.6490679999999429,
+  "cpu_wall": 0.418779729,
+  "cpu_stall": 0.0011790000000004852,
+  "peak_mb": 333
+}

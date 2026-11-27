@@ -1,0 +1,11 @@
+{
+  "label": "internal/kit/sums_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.982549696Z",
+  "seconds": 0.79,
+  "recorded": true,
+  "cpu_seconds": 1.420802999999978,
+  "cpu_wall": 1.079103169,
+  "cpu_stall": 0.0031119999999980053,
+  "peak_mb": 406
+}

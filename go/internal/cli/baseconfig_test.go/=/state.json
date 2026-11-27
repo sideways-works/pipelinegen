@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/baseconfig_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.971922049Z",
+  "seconds": 78.05000000000001,
+  "recorded": true,
+  "cpu_seconds": 204.19253799999998,
+  "cpu_wall": 32.390759829,
+  "cpu_stall": 1.988007,
+  "peak_mb": 2718
+}

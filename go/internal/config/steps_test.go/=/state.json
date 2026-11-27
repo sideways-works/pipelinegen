@@ -1,0 +1,11 @@
+{
+  "label": "internal/config/steps_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.980788477Z",
+  "seconds": 0.132356782,
+  "recorded": true,
+  "cpu_seconds": 0.3381050000002688,
+  "cpu_wall": 0.132356782,
+  "cpu_stall": 0.0006950000000003342,
+  "peak_mb": 346
+}

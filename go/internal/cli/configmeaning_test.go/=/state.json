@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/configmeaning_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.974619009Z",
+  "seconds": 27.01,
+  "recorded": true,
+  "cpu_seconds": 90.62613700000009,
+  "cpu_wall": 27.848049959,
+  "cpu_stall": 0.36396799999999985,
+  "peak_mb": 1200
+}

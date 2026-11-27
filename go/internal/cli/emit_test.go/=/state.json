@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/emit_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.975383972Z",
+  "seconds": 1.5999999999999999,
+  "recorded": true,
+  "cpu_seconds": 2.488382999999999,
+  "cpu_wall": 1.966346698,
+  "cpu_stall": 0.0048440000000002925,
+  "peak_mb": 340
+}

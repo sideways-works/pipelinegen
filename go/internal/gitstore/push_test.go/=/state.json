@@ -1,0 +1,11 @@
+{
+  "label": "internal/gitstore/push_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.981709114Z",
+  "seconds": 0.03,
+  "recorded": true,
+  "cpu_seconds": 1.235967999999957,
+  "cpu_wall": 0.915683855,
+  "cpu_stall": 0.002625999999999351,
+  "peak_mb": 379
+}

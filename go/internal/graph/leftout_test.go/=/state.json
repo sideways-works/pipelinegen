@@ -1,0 +1,11 @@
+{
+  "label": "internal/graph/leftout_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.981995166Z",
+  "seconds": 0.65,
+  "recorded": true,
+  "cpu_seconds": 1.1855439999999362,
+  "cpu_wall": 0.840484653,
+  "cpu_stall": 0.002264000000000266,
+  "peak_mb": 392
+}

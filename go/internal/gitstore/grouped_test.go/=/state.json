@@ -1,0 +1,11 @@
+{
+  "label": "internal/gitstore/grouped_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T07:08:37.981606033Z",
+  "seconds": 0.12000000000000001,
+  "recorded": true,
+  "cpu_seconds": 9.057338000000072,
+  "cpu_wall": 8.222699394,
+  "cpu_stall": 0.020059999999997302,
+  "peak_mb": 386
+}
