@@ -1,0 +1,10 @@
+{
+  "label": "internal/gitstore/storetest/daemon_test.go",
+  "state": "passed",
+  "updated": "2026-11-27T06:40:12.15159946Z",
+  "seconds": 0.08,
+  "cpu_seconds": 0.009382999999999697,
+  "cpu_wall": 0.007602651,
+  "cpu_stall": 0.000004999999999810711,
+  "peak_mb": 180
+}
