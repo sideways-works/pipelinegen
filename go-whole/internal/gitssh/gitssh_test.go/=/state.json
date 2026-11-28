@@ -1,0 +1,12 @@
+{
+  "label": "internal/gitssh/gitssh_test.go",
+  "state": "not run",
+  "url": "https://concourse.home.simulevski.at/teams/sideways-works/pipelines/pipelinegen/jobs/nightly-go-whole",
+  "updated": "2026-11-28T03:23:34.810971434Z",
+  "failures": [
+    {
+      "test": "(memory)",
+      "tail": "not run: the worker's broker found no room for its CPU: 32833 MB free less 283 MB granted lately, pressure 2.4%, for 239 MB asked; 26.6 of 24.0 cores granted lately, CPU pressure 39.2%, for 13.9 cores asked, 3.5 kept for \"nightly  web batch 2\", waiting 59m47s, after waiting 1h0m0s"
+    }
+  ]
+}
