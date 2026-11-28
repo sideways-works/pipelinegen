@@ -1,0 +1,11 @@
+{
+  "label": "internal/driver/command_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.70548334Z",
+  "seconds": 0.32,
+  "recorded": true,
+  "cpu_seconds": 0.7424080000000686,
+  "cpu_wall": 0.198414058,
+  "cpu_stall": 0.0026769999999913807,
+  "peak_mb": 383
+}

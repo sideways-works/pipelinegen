@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/why_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.702073568Z",
+  "seconds": 96.05,
+  "recorded": true,
+  "cpu_seconds": 147.04076899999973,
+  "cpu_wall": 36.382819289,
+  "cpu_stall": 2.0539019999999937,
+  "peak_mb": 2038
+}

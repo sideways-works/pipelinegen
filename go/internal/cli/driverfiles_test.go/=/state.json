@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/driverfiles_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.681261268Z",
+  "seconds": 0.399806839,
+  "recorded": true,
+  "cpu_seconds": 0.5231809999999086,
+  "cpu_wall": 0.399806839,
+  "cpu_stall": 0.015210999999997199,
+  "peak_mb": 353
+}

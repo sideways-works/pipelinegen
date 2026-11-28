@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/passedsince_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.689524512Z",
+  "seconds": 144.89,
+  "recorded": true,
+  "cpu_seconds": 270.88735899999983,
+  "cpu_wall": 146.800133087,
+  "cpu_stall": 8.072269999999996,
+  "peak_mb": 1150
+}

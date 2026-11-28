@@ -1,0 +1,11 @@
+{
+  "label": "internal/kit/render_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.710090087Z",
+  "seconds": 1.3,
+  "recorded": true,
+  "cpu_seconds": 1.9613420000000588,
+  "cpu_wall": 1.561384815,
+  "cpu_stall": 0.0038610000000005584,
+  "peak_mb": 442
+}

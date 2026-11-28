@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/estimate_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.682248849Z",
+  "seconds": 0.378153002,
+  "recorded": true,
+  "cpu_seconds": 0.5365669999999909,
+  "cpu_wall": 0.378153002,
+  "cpu_stall": 0.016919999999998936,
+  "peak_mb": 354
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/gotests/gotests_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.707483011Z",
+  "seconds": 0.151830787,
+  "recorded": true,
+  "cpu_seconds": 0.481047999999646,
+  "cpu_wall": 0.151830787,
+  "cpu_stall": 0.00105100000000391,
+  "peak_mb": 398
+}
