@@ -1,0 +1,11 @@
+{
+  "label": "internal/pluginstore/pluginstore_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:16:21.183579888Z",
+  "seconds": 0.15,
+  "recorded": true,
+  "cpu_seconds": 2.152136000000155,
+  "cpu_wall": 0.964246035,
+  "cpu_stall": 0.0063969999999926586,
+  "peak_mb": 467
+}

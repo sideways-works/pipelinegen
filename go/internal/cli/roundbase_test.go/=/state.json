@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/roundbase_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:16:21.174530165Z",
+  "seconds": 103.8,
+  "recorded": true,
+  "cpu_seconds": 177.62642600000004,
+  "cpu_wall": 105.576425989,
+  "cpu_stall": 9.616517000000002,
+  "peak_mb": 1245
+}
