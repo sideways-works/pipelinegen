@@ -1,0 +1,195 @@
+{
+  "slices": {
+    "example/calc/add_test.sh": [
+      {
+        "mb": 6,
+        "commit": "5323c41dcde3"
+      },
+      {
+        "mb": 6,
+        "commit": "6bd471a53a9f"
+      },
+      {
+        "mb": 23,
+        "commit": "81bb76cb8095"
+      },
+      {
+        "mb": 23,
+        "commit": "3827ace4f223"
+      },
+      {
+        "mb": 24,
+        "commit": "f42627679984",
+        "cores": 0.03926058821504386
+      },
+      {
+        "mb": 24,
+        "commit": "6acb36a64ec4",
+        "cores": 0.8193520152665688
+      },
+      {
+        "mb": 8,
+        "commit": "3e6bd5c5920d",
+        "cores": 0.6201421835982259
+      },
+      {
+        "mb": 24,
+        "commit": "22ea6677d7a0",
+        "cores": 0.8173501310455796
+      },
+      {
+        "mb": 25,
+        "commit": "f42e5fcfdf61",
+        "cores": 0.84098125539742
+      },
+      {
+        "mb": 17,
+        "commit": "b5880988504f",
+        "cores": 0.08151204974750909
+      }
+    ],
+    "example/calc/lib_test.sh": [
+      {
+        "mb": 6,
+        "commit": "5323c41dcde3"
+      },
+      {
+        "mb": 5,
+        "commit": "6bd471a53a9f"
+      },
+      {
+        "mb": 25,
+        "commit": "81bb76cb8095"
+      },
+      {
+        "mb": 23,
+        "commit": "3827ace4f223"
+      },
+      {
+        "mb": 24,
+        "commit": "f42627679984",
+        "cores": 0.1323516889999032
+      },
+      {
+        "mb": 24,
+        "commit": "6acb36a64ec4",
+        "cores": 0.7439760768212181
+      },
+      {
+        "mb": 8,
+        "commit": "3e6bd5c5920d"
+      },
+      {
+        "mb": 25,
+        "commit": "22ea6677d7a0",
+        "cores": 1.2620884095902882
+      },
+      {
+        "mb": 26,
+        "commit": "f42e5fcfdf61",
+        "cores": 1.2173568230021765
+      },
+      {
+        "mb": 19,
+        "commit": "b5880988504f",
+        "cores": 0.17667522177430361
+      }
+    ],
+    "example/calc/mul_test.sh": [
+      {
+        "mb": 7,
+        "commit": "5323c41dcde3"
+      },
+      {
+        "mb": 6,
+        "commit": "6bd471a53a9f"
+      },
+      {
+        "mb": 23,
+        "commit": "81bb76cb8095"
+      },
+      {
+        "mb": 24,
+        "commit": "3827ace4f223"
+      },
+      {
+        "mb": 24,
+        "commit": "f42627679984",
+        "cores": 0.13400173000240143
+      },
+      {
+        "mb": 25,
+        "commit": "6acb36a64ec4",
+        "cores": 0.9284770433811158
+      },
+      {
+        "mb": 9,
+        "commit": "3e6bd5c5920d",
+        "cores": 0.9704521664727807
+      },
+      {
+        "mb": 25,
+        "commit": "22ea6677d7a0",
+        "cores": 1.276362917707681
+      },
+      {
+        "mb": 27,
+        "commit": "f42e5fcfdf61",
+        "cores": 1.1241081872932965
+      },
+      {
+        "mb": 19,
+        "commit": "b5880988504f",
+        "cores": 0.6142154257951232
+      }
+    ],
+    "example/text/upper_test.sh": [
+      {
+        "mb": 7,
+        "commit": "5323c41dcde3"
+      },
+      {
+        "mb": 6,
+        "commit": "6bd471a53a9f"
+      },
+      {
+        "mb": 24,
+        "commit": "81bb76cb8095"
+      },
+      {
+        "mb": 25,
+        "commit": "3827ace4f223"
+      },
+      {
+        "mb": 25,
+        "commit": "f42627679984",
+        "cores": 0.0722606228841705
+      },
+      {
+        "mb": 26,
+        "commit": "6acb36a64ec4",
+        "cores": 1.4697735998157104
+      },
+      {
+        "mb": 10,
+        "commit": "3e6bd5c5920d",
+        "cores": 1.1082444817384556
+      },
+      {
+        "mb": 25,
+        "commit": "22ea6677d7a0",
+        "cores": 1.1982658201217071
+      },
+      {
+        "mb": 27,
+        "commit": "f42e5fcfdf61",
+        "cores": 1.1960317676560313
+      },
+      {
+        "mb": 18,
+        "commit": "b5880988504f",
+        "cores": 0.5482593876530035
+      }
+    ]
+  }
+}
