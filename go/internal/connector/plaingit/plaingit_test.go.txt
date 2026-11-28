@@ -1,0 +1,13 @@
+go:internal/connector/plaingit#func:ChangeID
+go:internal/connector/plaingit#func:Changes
+go:internal/connector/plaingit#func:Describe
+go:internal/connector/plaingit#func:Links
+go:internal/connector/plaingit#func:matches
+go:internal/report#func:RefPart
+go:internal/report#func:refByte
+go:internal/secret#func:GitEnv
+go:internal/secret#func:HardenGit
+go:internal/secret#func:InPipeline
+go:internal/secret#func:Redact
+go:internal/secret#func:load
+go:internal/secret#func:secretName

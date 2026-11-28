@@ -1,0 +1,7 @@
+go:internal/gitstore/storetest#func:Both
+go:internal/lists#func:remembered
+go:internal/lists#func:toldSince
+go:internal/testenv#func:Git
+go:internal/testenv#func:Scrubbed
+go:internal/testenv#func:scrub
+go:internal/testenv#var:cp
