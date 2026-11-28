@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/sweepgit_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:16:21.177270322Z",
+  "seconds": 1.5699999999999998,
+  "recorded": true,
+  "cpu_seconds": 1.629271000000017,
+  "cpu_wall": 1.855440794,
+  "cpu_stall": 0.0038650000000046703,
+  "peak_mb": 388
+}

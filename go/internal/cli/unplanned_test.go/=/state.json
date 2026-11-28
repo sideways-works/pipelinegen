@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/unplanned_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.700365163Z",
+  "seconds": 3.69,
+  "recorded": true,
+  "cpu_seconds": 4.596782999999959,
+  "cpu_wall": 4.043226959,
+  "cpu_stall": 0.015885999999994738,
+  "peak_mb": 391
+}

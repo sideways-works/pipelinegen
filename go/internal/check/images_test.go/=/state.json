@@ -1,0 +1,11 @@
+{
+  "label": "internal/check/images_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.676274015Z",
+  "seconds": 1.46524329,
+  "recorded": true,
+  "cpu_seconds": 4.0409799999999905,
+  "cpu_wall": 1.46524329,
+  "cpu_stall": 0.11153699999999978,
+  "peak_mb": 440
+}

@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/seed_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:37:15.697237229Z",
+  "seconds": 75.50999999999999,
+  "recorded": true,
+  "cpu_seconds": 99.21264500000007,
+  "cpu_wall": 76.877642708,
+  "cpu_stall": 0.5823779999999914,
+  "peak_mb": 1210
+}

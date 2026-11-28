@@ -1,0 +1,11 @@
+{
+  "label": "internal/config/ssh_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:16:21.17938279Z",
+  "seconds": 0.01,
+  "recorded": true,
+  "cpu_seconds": 0.3068620000001374,
+  "cpu_wall": 0.135100234,
+  "cpu_stall": 0.0009489999999914289,
+  "peak_mb": 367
+}

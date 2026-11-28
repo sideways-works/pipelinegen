@@ -1,0 +1,11 @@
+{
+  "label": "internal/cli/fetchplugins_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:16:21.170125459Z",
+  "seconds": 0.53,
+  "recorded": true,
+  "cpu_seconds": 1.1369740000000093,
+  "cpu_wall": 0.882446433,
+  "cpu_stall": 0.01123500000000277,
+  "peak_mb": 372
+}

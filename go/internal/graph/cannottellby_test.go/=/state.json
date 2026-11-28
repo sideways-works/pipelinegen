@@ -1,0 +1,11 @@
+{
+  "label": "internal/graph/cannottellby_test.go",
+  "state": "passed",
+  "updated": "2026-11-28T03:16:21.180510221Z",
+  "seconds": 0.20221931,
+  "recorded": true,
+  "cpu_seconds": 0.4341300000000956,
+  "cpu_wall": 0.20221931,
+  "cpu_stall": 0.0008119999999962602,
+  "peak_mb": 405
+}
