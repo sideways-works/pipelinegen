@@ -1,0 +1,100 @@
+{
+  "slices": {
+    "example/words/count_smoke.sh": [
+      {
+        "mb": 11,
+        "commit": "5323c41dcde3"
+      },
+      {
+        "mb": 10,
+        "commit": "6bd471a53a9f"
+      },
+      {
+        "mb": 34,
+        "commit": "81bb76cb8095"
+      },
+      {
+        "mb": 35,
+        "commit": "3827ace4f223"
+      },
+      {
+        "mb": 35,
+        "commit": "f42627679984",
+        "cores": 0.22277843554442253
+      },
+      {
+        "mb": 33,
+        "commit": "6acb36a64ec4",
+        "cores": 0.5855898116066927
+      },
+      {
+        "mb": 34,
+        "commit": "3e6bd5c5920d",
+        "cores": 0.6453262153869868
+      },
+      {
+        "mb": 32,
+        "commit": "22ea6677d7a0",
+        "cores": 0.7378584541332617
+      },
+      {
+        "mb": 34,
+        "commit": "f42e5fcfdf61",
+        "cores": 0.827418750304644
+      },
+      {
+        "mb": 24,
+        "commit": "b5880988504f",
+        "cores": 0.1864745142619166
+      }
+    ],
+    "example/words/upper_smoke.sh": [
+      {
+        "mb": 12,
+        "commit": "5323c41dcde3"
+      },
+      {
+        "mb": 11,
+        "commit": "6bd471a53a9f"
+      },
+      {
+        "mb": 35,
+        "commit": "81bb76cb8095"
+      },
+      {
+        "mb": 35,
+        "commit": "3827ace4f223"
+      },
+      {
+        "mb": 34,
+        "commit": "f42627679984",
+        "cores": 0.3185356636829914
+      },
+      {
+        "mb": 35,
+        "commit": "6acb36a64ec4",
+        "cores": 0.8122369156621262
+      },
+      {
+        "mb": 35,
+        "commit": "3e6bd5c5920d",
+        "cores": 0.19256767551823903
+      },
+      {
+        "mb": 32,
+        "commit": "22ea6677d7a0",
+        "cores": 1.0051384667067014
+      },
+      {
+        "mb": 34,
+        "commit": "f42e5fcfdf61",
+        "cores": 1.040347613593814
+      },
+      {
+        "mb": 26,
+        "commit": "b5880988504f",
+        "cores": 0.09723468249089533
+      }
+    ]
+  }
+}
