@@ -1,0 +1,10 @@
+{
+  "label": "example/text/upper_test.sh",
+  "state": "passed",
+  "updated": "2026-11-28T03:28:18.592063786Z",
+  "seconds": 0.003808018,
+  "cpu_seconds": 0.010846000000000022,
+  "cpu_wall": 0.019782607,
+  "cpu_stall": 0.0000449999999999999,
+  "peak_mb": 18
+}
