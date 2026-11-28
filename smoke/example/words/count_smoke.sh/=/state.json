@@ -1,0 +1,10 @@
+{
+  "label": "example/words/count_smoke.sh",
+  "state": "passed",
+  "updated": "2026-11-28T02:53:24.491146233Z",
+  "seconds": 0.068596521,
+  "cpu_seconds": 0.030806,
+  "cpu_wall": 0.1652022,
+  "cpu_stall": 0.01734399999999999,
+  "peak_mb": 24
+}
